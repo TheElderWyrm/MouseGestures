@@ -235,7 +235,7 @@ open class BaseServicePlugin: ServicePlugin {
 // MARK: - Service Plugin Info
 /// Information about a loaded service plugin
 public struct ServicePluginInfo: Identifiable, Codable {
-    public let id = UUID()
+    public let id: UUID
     public let identifier: String
     public let name: String
     public let description: String
@@ -246,7 +246,12 @@ public struct ServicePluginInfo: Identifiable, Codable {
     public let isEnabled: Bool
     public let requiredPermissions: ServicePermissions
     
+    private enum CodingKeys: String, CodingKey {
+        case identifier, name, description, category, version, author, isBuiltIn, isEnabled, requiredPermissions
+    }
+    
     public init(from plugin: ServicePlugin) {
+        self.id = UUID()
         self.identifier = plugin.identifier
         self.name = plugin.name
         self.description = plugin.description
@@ -256,6 +261,20 @@ public struct ServicePluginInfo: Identifiable, Codable {
         self.isBuiltIn = plugin.isBuiltIn
         self.isEnabled = plugin.isEnabled
         self.requiredPermissions = plugin.requiredPermissions
+    }
+    
+    public init(from decoder: Decoder) throws {
+        self.id = UUID()
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.identifier = try container.decode(String.self, forKey: .identifier)
+        self.name = try container.decode(String.self, forKey: .name)
+        self.description = try container.decode(String.self, forKey: .description)
+        self.category = try container.decode(ServiceCategory.self, forKey: .category)
+        self.version = try container.decode(String.self, forKey: .version)
+        self.author = try container.decode(String.self, forKey: .author)
+        self.isBuiltIn = try container.decode(Bool.self, forKey: .isBuiltIn)
+        self.isEnabled = try container.decode(Bool.self, forKey: .isEnabled)
+        self.requiredPermissions = try container.decode(ServicePermissions.self, forKey: .requiredPermissions)
     }
 }
 

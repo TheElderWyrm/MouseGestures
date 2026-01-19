@@ -1,7 +1,7 @@
 import Cocoa
 import Carbon
 
-extension NSEvent.ModifierFlags: Codable {
+extension NSEvent.ModifierFlags: @retroactive Codable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         let rawValue = try container.decode(UInt.self)
@@ -15,7 +15,7 @@ extension NSEvent.ModifierFlags: Codable {
 }
 
 
-extension CGEventFlags: Codable {
+extension CGEventFlags: @retroactive Codable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         let rawValue = try container.decode(UInt64.self)

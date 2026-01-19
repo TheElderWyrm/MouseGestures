@@ -1,7 +1,6 @@
 General:
 - Remove Duplicate code, unify architectures
 - Work to reduce CPU/Memory Usage
-- Fix Compilation Warnings
 
 - Rework Add Gesture UI to respond to activation type (So, for example, if 'Keyboard Only' is selected then it hides the options related to other activation types 
 Future Features
@@ -13,7 +12,6 @@ Actions:
 
 Bugs
 - Window Actions targeting multiple windows doesn't work
-- When an action is set to Repeat on hold it repeats even if the modifier is no longer held
 
 Improve UI
 - Unify UI Styles throughout the app
@@ -22,5 +20,3 @@ Improve UI
 - More configuration options
 - Split action menu into section tabs
 - Split actions into cascading menus (Media, System Control, Window Control, etc)
-
-

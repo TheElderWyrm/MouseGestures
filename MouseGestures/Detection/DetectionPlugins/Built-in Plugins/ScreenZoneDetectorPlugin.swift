@@ -397,15 +397,39 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin {
     }
     
     private func shouldContinueRepeating() -> Bool {
-        // Continue repeating if modifiers are still held
-        return hasModifiers()
+        guard let gesture = currentRepeatingGesture else { return false }
+        
+        // Get real-time system modifier state
+        let currentSystemModifiers = ModifierKeyDetectorPlugin.currentSystemModifiers()
+        
+        // Check if required modifiers for the gesture are still held
+        let requiredModifiers = gesture.modifiers
+        
+        // If gesture has no modifier requirements, check if any modifiers are held or if dragging
+        if requiredModifiers.isEmpty {
+            // For drag-based gestures, continue while still dragging
+            if gesture.dragModifier != .none {
+                return dragState == gesture.dragModifier
+            }
+            // For modifier-based gestures without specific modifiers, any modifier counts
+            return !currentSystemModifiers.isEmpty
+        }
+        
+        // For gestures with specific modifier requirements, check if those modifiers are still held
+        let hasRequiredModifiers = currentSystemModifiers.contains(requiredModifiers)
+        
+        // Also check drag state if the gesture requires it
+        if gesture.dragModifier != .none {
+            return hasRequiredModifiers && dragState == gesture.dragModifier
+        }
+        
+        return hasRequiredModifiers
     }
     
     private func hasModifiers() -> Bool {
-        guard let modifierPlugin = context?.pluginManager?.getPlugin(ModifierKeyDetectorPlugin.pluginIdentifier) as? ModifierKeyDetectorPlugin else {
-            return false
-        }
-        return !modifierPlugin.currentModifiers.isEmpty
+        // Use real-time system modifier check instead of potentially stale plugin state
+        let currentSystemModifiers = ModifierKeyDetectorPlugin.currentSystemModifiers()
+        return !currentSystemModifiers.isEmpty
     }
     
     private func getCurrentModifiers() -> NSEvent.ModifierFlags {

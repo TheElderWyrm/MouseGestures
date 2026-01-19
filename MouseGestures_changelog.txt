@@ -1,0 +1,14 @@
+## 2026-01-18
+
+### Bug Fixes
+- Fixed "Repeat on Hold" continuing after modifier released
+  - Now uses real-time system modifier checking via `NSEvent.modifierFlags`
+  - Validates gesture-specific modifier and drag requirements before repeating
+  - Properly stops repeat timer when triggering conditions are no longer met
+
+### Code Quality
+- Fixed compilation warnings:
+  - ServicePluginInfo: Resolved Codable warning for `id` property with initial value
+    by implementing custom CodingKeys and `init(from:)` decoder
+  - Extensions: Added `@retroactive` attribute to NSEvent.ModifierFlags and
+    CGEventFlags Codable conformances to acknowledge intentional retroactive conformances
