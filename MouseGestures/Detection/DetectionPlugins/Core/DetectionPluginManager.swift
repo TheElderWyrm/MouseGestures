@@ -1,0 +1,467 @@
+import Foundation
+import Cocoa
+
+// MARK: - Detection Plugin Manager
+
+/// Manages all detection plugins and coordinates their operation
+class DetectionPluginManager: NSObject {
+    
+    // MARK: - Singleton
+    
+    static let shared = DetectionPluginManager()
+    
+    // MARK: - Properties
+    
+    private var plugins: [String: DetectionPlugin] = [:]
+    private var pluginOrder: [String] = [] // Ordered by priority
+    private var isRunning = false
+    
+    var isEnabled: Bool {
+        return isRunning
+    }
+    
+    // Detection delegate (forwards to ActionExecutionManager)
+    weak var delegate: DetectionManagerDelegate?
+    
+    // Configuration access adapter
+    private let configurationAccess: ConfigurationAccessAdapter
+    
+    // Plugin storage directory
+    private let storageDirectory: URL
+    
+    // Statistics
+    private var startTime: Date?
+    
+    // MARK: - Initialization
+    
+    private override init() {
+        // Set up storage directory
+        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        self.storageDirectory = appSupport
+            .appendingPathComponent("MouseGestures", isDirectory: true)
+            .appendingPathComponent("DetectionPlugins", isDirectory: true)
+        
+        // Create configuration adapter
+        self.configurationAccess = ConfigurationAccessAdapter()
+        
+        super.init()
+        
+        // Create storage directory if needed
+        try? FileManager.default.createDirectory(at: storageDirectory, withIntermediateDirectories: true)
+        
+        // Load built-in plugins
+        loadBuiltInPlugins()
+        
+        // Listen for configuration changes
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(configurationChanged),
+            name: NSNotification.Name("GestureConfigurationChanged"),
+            object: nil
+        )
+    }
+    
+    deinit {
+        stop()
+        NotificationCenter.default.removeObserver(self)
+    }
+    
+    // MARK: - Plugin Loading
+    
+    private func loadBuiltInPlugins() {
+        // Load all built-in detection plugins
+        let builtInPlugins: [DetectionPlugin] = [
+            ModifierKeyDetectorPlugin(),
+            ScreenZoneDetectorPlugin(),
+            KeyboardShortcutDetectorPlugin(),
+            MouseButtonDetectorPlugin(),
+            AppConfigurationDetectorPlugin()
+        ]
+        
+        for plugin in builtInPlugins {
+            registerPlugin(plugin)
+        }
+        
+        log.log("Loaded \(plugins.count) built-in detection plugins")
+    }
+    
+    /// Register a detection plugin
+    func registerPlugin(_ plugin: DetectionPlugin) {
+        let identifier = plugin.identifier
+        
+        // Create plugin context
+        let logger = DetectionPluginLogger(pluginId: identifier)
+        let pluginStorage = storageDirectory.appendingPathComponent(identifier, isDirectory: true)
+        try? FileManager.default.createDirectory(at: pluginStorage, withIntermediateDirectories: true)
+        
+        let context = DetectionContext(
+            delegate: self,
+            logger: logger,
+            configuration: configurationAccess,
+            pluginManager: self,
+            storageDirectory: pluginStorage
+        )
+        
+        // Initialize the plugin
+        do {
+            try plugin.initialize(context: context)
+            plugins[identifier] = plugin
+            updatePluginOrder()
+            log.log("Registered detection plugin: \(plugin.name) v\(plugin.version)")
+        } catch {
+            log.log("Failed to initialize detection plugin \(plugin.name): \(error)")
+        }
+    }
+    
+    /// Unregister a detection plugin
+    func unregisterPlugin(identifier: String) {
+        guard let plugin = plugins[identifier] else { return }
+        
+        // Stop if running
+        if isRunning {
+            plugin.stop()
+        }
+        
+        // Clean up
+        plugin.cleanup()
+        
+        // Remove from registry
+        plugins.removeValue(forKey: identifier)
+        updatePluginOrder()
+        
+        log.log("Unregistered detection plugin: \(plugin.name)")
+    }
+    
+    // MARK: - Plugin Control
+    
+    /// Start all enabled detection plugins
+    func start() {
+        guard !isRunning else { return }
+        
+        // Check for accessibility permissions
+        guard AccessibilityPermissionManager.hasPermission() else {
+            log.log("Cannot start detection plugins: Accessibility permissions not granted")
+            NotificationCenter.default.post(name: NSNotification.Name("AccessibilityPermissionNeeded"), object: nil)
+            return
+        }
+        
+        isRunning = true
+        startTime = Date()
+        
+        // Start plugins in priority order
+        for identifier in pluginOrder {
+            guard let plugin = plugins[identifier], plugin.isEnabled else { continue }
+            
+            do {
+                try plugin.start()
+            } catch {
+                log.log("Failed to start plugin \(plugin.name): \(error)")
+            }
+        }
+        
+        // Start zone highlighting if enabled
+        ZoneHighlightManager.shared.startHighlighting()
+        
+        log.log("Detection plugin system started with \(getActivePluginCount()) active plugins")
+    }
+    
+    /// Stop all detection plugins
+    func stop() {
+        guard isRunning else { return }
+        
+        isRunning = false
+        
+        // Stop plugins in reverse priority order
+        for identifier in pluginOrder.reversed() {
+            guard let plugin = plugins[identifier] else { continue }
+            plugin.stop()
+        }
+        
+        // Stop zone highlighting
+        ZoneHighlightManager.shared.stopHighlighting()
+        
+        log.log("Detection plugin system stopped")
+    }
+    
+    /// Enable/disable a specific plugin
+    func setPluginEnabled(_ identifier: String, enabled: Bool) {
+        guard let plugin = plugins[identifier] else { return }
+        
+        plugin.isEnabled = enabled
+        
+        if isRunning {
+            if enabled {
+                do {
+                    try plugin.start()
+                    log.log("Started plugin: \(plugin.name)")
+                } catch {
+                    log.log("Failed to start plugin \(plugin.name): \(error)")
+                }
+            } else {
+                plugin.stop()
+                log.log("Stopped plugin: \(plugin.name)")
+            }
+        }
+    }
+    
+    // MARK: - Plugin Query
+    
+    /// Get all registered plugins
+    func getAllPlugins() -> [DetectionPlugin] {
+        return pluginOrder.compactMap { plugins[$0] }
+    }
+    
+    /// Get a specific plugin
+    func getPlugin(_ identifier: String) -> DetectionPlugin? {
+        return plugins[identifier]
+    }
+    
+    /// Get active plugin count
+    func getActivePluginCount() -> Int {
+        return plugins.values.filter { $0.isEnabled }.count
+    }
+    
+    /// Get plugin statistics
+    func getPluginStatistics(_ identifier: String) -> DetectionPluginStatistics? {
+        return plugins[identifier]?.getStatistics()
+    }
+    
+    /// Get overall statistics
+    func getOverallStatistics() -> DetectionSystemStatistics {
+        var totalEvents = 0
+        var totalGestures = 0
+        var totalErrors = 0
+        var pluginStats: [String: DetectionPluginStatistics] = [:]
+        
+        for (identifier, plugin) in plugins {
+            let stats = plugin.getStatistics()
+            totalEvents += stats.eventsDetected
+            totalGestures += stats.gesturesTriggered
+            totalErrors += stats.errorsEncountered
+            pluginStats[identifier] = stats
+        }
+        
+        let uptime = startTime.map { Date().timeIntervalSince($0) } ?? 0
+        
+        return DetectionSystemStatistics(
+            totalEventsDetected: totalEvents,
+            totalGesturesTriggered: totalGestures,
+            totalErrorsEncountered: totalErrors,
+            activePlugins: getActivePluginCount(),
+            totalPlugins: plugins.count,
+            uptime: uptime,
+            pluginStatistics: pluginStats
+        )
+    }
+    
+    // MARK: - Configuration
+    
+    @objc private func configurationChanged() {
+        log.log("Detection plugins received configuration change")
+        
+        // Notify all plugins of configuration change
+        for plugin in plugins.values {
+            plugin.configurationChanged()
+        }
+    }
+    
+    // MARK: - Plugin Coordination
+    
+    /// Get modifier key state from ModifierKeyDetectorPlugin
+    func getCurrentModifiers() -> NSEvent.ModifierFlags {
+        guard let modifierPlugin = plugins[ModifierKeyDetectorPlugin.pluginIdentifier] as? ModifierKeyDetectorPlugin else {
+            return []
+        }
+        return modifierPlugin.currentModifiers
+    }
+    
+    /// Check if app is disabled from AppConfigurationDetectorPlugin
+    func isCurrentAppDisabled() -> Bool {
+        guard let appPlugin = plugins[AppConfigurationDetectorPlugin.pluginIdentifier] as? AppConfigurationDetectorPlugin else {
+            return false
+        }
+        return appPlugin.isCurrentAppDisabled()
+    }
+    
+    /// Enable mouse tracking in ScreenZoneDetectorPlugin
+    func enableMouseTracking() {
+        guard let zonePlugin = plugins[ScreenZoneDetectorPlugin.pluginIdentifier] as? ScreenZoneDetectorPlugin else {
+            return
+        }
+        zonePlugin.enableMouseTracking()
+    }
+    
+    /// Disable mouse tracking in ScreenZoneDetectorPlugin
+    func disableMouseTracking() {
+        guard let zonePlugin = plugins[ScreenZoneDetectorPlugin.pluginIdentifier] as? ScreenZoneDetectorPlugin else {
+            return
+        }
+        zonePlugin.disableMouseTracking()
+    }
+    
+    // MARK: - Helpers
+    
+    private func updatePluginOrder() {
+        pluginOrder = plugins.keys.sorted { id1, id2 in
+            let priority1 = plugins[id1]?.priority ?? 0
+            let priority2 = plugins[id2]?.priority ?? 0
+            return priority1 > priority2
+        }
+    }
+}
+
+// MARK: - DetectionPluginDelegate Implementation
+
+extension DetectionPluginManager: DetectionPluginDelegate {
+    
+    func detectionPlugin(_ plugin: DetectionPlugin, didDetectGesture gesture: Gesture, context: GestureContext) {
+        // Check if app is disabled (except for AppConfigurationDetectorPlugin itself)
+        if plugin.identifier != AppConfigurationDetectorPlugin.pluginIdentifier && isCurrentAppDisabled() {
+            return
+        }
+        
+        // Forward to delegate based on context
+        switch context.source {
+        case .screenZone(let zone, let dragState):
+            delegate?.detectionManager(self, executeGesture: gesture, fromZone: zone, withDragState: dragState, modifiers: context.modifiers)
+            
+        case .keyboard(let trigger):
+            delegate?.detectionManager(self, executeKeyboardTriggeredGesture: gesture, trigger: trigger)
+            
+        case .mouseButton(let button, let modifiers):
+            delegate?.detectionManager(self, executeMouseButtonTriggeredGesture: gesture, button: button, modifiers: modifiers)
+            
+        case .`repeat`:
+            delegate?.detectionManager(self, executeRepeatedGesture: gesture)
+            
+        case .custom(let description):
+            log.log("Custom gesture trigger: \(description)")
+            // For custom triggers, we don't have a specific zone, so we skip zone-specific handling
+            delegate?.detectionManager(self, executeRepeatedGesture: gesture)
+        }
+    }
+    
+    func detectionPlugin(_ plugin: DetectionPlugin, didTriggerProfileSwitch profile: ConfigurationProfile) {
+        delegate?.detectionManager(self, executeProfileSwitch: profile)
+    }
+    
+    func detectionPlugin(_ plugin: DetectionPlugin, stateChanged state: DetectionPluginState) {
+        log.log("Plugin \(plugin.name) state changed to: \(state)")
+    }
+    
+    func detectionPlugin(_ plugin: DetectionPlugin, didEncounterError error: Error) {
+        log.log("Error in plugin \(plugin.name): \(error)")
+    }
+    
+    func detectionPluginShouldContinue(_ plugin: DetectionPlugin) -> Bool {
+        return isRunning && plugin.isEnabled
+    }
+}
+
+// MARK: - Detection Plugin Logger
+
+/// Logger implementation for detection plugins
+class DetectionPluginLogger: PluginLogger {
+    let pluginId: String
+    
+    init(pluginId: String) {
+        self.pluginId = pluginId
+    }
+    
+    func log(_ message: String, file: String = #file, function: String = #function, line: Int = #line) {
+        MouseGestures.log.log("[DetectionPlugin:\(pluginId)] \(message)")
+    }
+    
+    // Note: LogLevel overload is not available in the current Logger implementation
+    // Plugin should use the basic log method
+    
+    var isDebugEnabled: Bool {
+        return MouseGestures.log.isDebugEnabled
+    }
+}
+
+// MARK: - Configuration Access Adapter
+
+/// Adapter to provide configuration access to plugins
+class ConfigurationAccessAdapter: ConfigurationAccess {
+    
+    var gestures: [Gesture] {
+        return Configuration.shared.gestures
+    }
+    
+    var profiles: [ConfigurationProfile] {
+        return Configuration.shared.profiles
+    }
+    
+    var activeProfileId: String? {
+        return Configuration.shared.activeProfileId?.uuidString
+    }
+    
+    var edgeThreshold: CGFloat {
+        return Configuration.shared.edgeThreshold
+    }
+    
+    var cornerSize: CGFloat {
+        return Configuration.shared.cornerSize
+    }
+    
+    var cornerBuffer: CGFloat {
+        return Configuration.shared.cornerBuffer
+    }
+    
+    var hapticFeedbackEnabled: Bool {
+        return Configuration.shared.hapticFeedbackEnabled
+    }
+    
+    var isEnabled: Bool {
+        return Configuration.shared.isEnabled
+    }
+    
+    func getAppConfiguration(bundleId: String) -> AppConfiguration? {
+        // Check if app is disabled
+        let disabledApp = Configuration.shared.disabledApps.first { $0.appBundleIdentifier == bundleId }
+        if disabledApp != nil {
+            return AppConfiguration(appName: disabledApp!.appName,
+                                  bundleId: bundleId,
+                                  profileId: nil,
+                                  isDisabled: true)
+        }
+        
+        // Check for profile mapping
+        let mapping = Configuration.shared.appProfileMappings.first { $0.appBundleIdentifier == bundleId }
+        if let mapping = mapping {
+            return AppConfiguration(appName: mapping.appName,
+                                  bundleId: bundleId,
+                                  profileId: mapping.profileId,
+                                  isDisabled: false)
+        }
+        
+        return nil
+    }
+    
+    func isAppDisabled(bundleId: String) -> Bool {
+        return Configuration.shared.disabledApps.contains { $0.appBundleIdentifier == bundleId }
+    }
+}
+
+// MARK: - Detection System Statistics
+
+/// Overall statistics for the detection system
+struct DetectionSystemStatistics {
+    let totalEventsDetected: Int
+    let totalGesturesTriggered: Int
+    let totalErrorsEncountered: Int
+    let activePlugins: Int
+    let totalPlugins: Int
+    let uptime: TimeInterval
+    let pluginStatistics: [String: DetectionPluginStatistics]
+}
+
+/// Protocol for handling gesture execution requests from DetectionManager
+protocol DetectionManagerDelegate: AnyObject {
+    func detectionManager(_ manager: Any, executeGesture gesture: Gesture, fromZone zone: ScreenZone, withDragState dragState: DragModifier, modifiers: NSEvent.ModifierFlags)
+    func detectionManager(_ manager: Any, executeRepeatedGesture gesture: Gesture)
+    func detectionManager(_ manager: Any, executeKeyboardTriggeredGesture gesture: Gesture, trigger: KeyboardTrigger)
+    func detectionManager(_ manager: Any, executeMouseButtonTriggeredGesture gesture: Gesture, button: MouseButtonTrigger.MouseButton, modifiers: NSEvent.ModifierFlags)
+    func detectionManager(_ manager: Any, executeProfileSwitch profile: ConfigurationProfile)
+}
