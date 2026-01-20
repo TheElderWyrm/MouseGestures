@@ -10,12 +10,55 @@ class ModifierKeyDetectorPlugin: BaseDetectionPlugin {
     
     public static let pluginIdentifier = "com.mousegestures.detection.modifierkey"
     
+    // MARK: - Setting Keys
+    
+    enum SettingKeys {
+        static let cooldownPeriod = "cooldownPeriod"
+        static let enableCooldown = "enableCooldown"
+    }
+    
     // MARK: - Properties
     
     override var identifier: String { Self.pluginIdentifier }
     override var name: String { "Modifier Key Detector" }
     override var description: String { "Detects modifier key presses (Cmd, Ctrl, Option, Shift)" }
     override var priority: Int { 200 } // High priority
+    
+    // MARK: - Settings Definitions
+    
+    override var settingsDefinitions: [PluginSettingDefinition] {
+        [
+            PluginSettingDefinition(
+                key: SettingKeys.enableCooldown,
+                displayName: "Enable Cooldown",
+                description: "Prevent rapid re-triggering of gestures after modifier release",
+                category: .detection,
+                type: .toggle(label: "Enabled"),
+                defaultValue: true,
+                isAdvanced: false
+            ),
+            PluginSettingDefinition(
+                key: SettingKeys.cooldownPeriod,
+                displayName: "Cooldown Duration",
+                description: "Time to wait before allowing new gestures (in seconds)",
+                category: .detection,
+                type: .slider(min: 0.1, max: 2.0, step: 0.1, unit: "sec"),
+                defaultValue: 0.5,
+                isAdvanced: true,
+                dependsOn: .init(key: SettingKeys.enableCooldown, condition: .isTrue)
+            )
+        ]
+    }
+    
+    // MARK: - Computed Settings Properties
+    
+    private var cooldownPeriod: TimeInterval {
+        settings.getDouble(SettingKeys.cooldownPeriod, default: 0.5)
+    }
+    
+    private var cooldownEnabled: Bool {
+        settings.getBool(SettingKeys.enableCooldown, default: true)
+    }
     
     // State tracking
     private(set) var currentModifiers: NSEvent.ModifierFlags = []
@@ -24,7 +67,6 @@ class ModifierKeyDetectorPlugin: BaseDetectionPlugin {
     
     // Cooldown tracking
     private var lastActionTime: Date?
-    private var cooldownPeriod: TimeInterval = 0.5
     
     // Event monitors
     private var globalModifierMonitor: Any?
@@ -210,6 +252,7 @@ class ModifierKeyDetectorPlugin: BaseDetectionPlugin {
     
     /// Check if we're in cooldown period
     var isInCooldownPeriod: Bool {
+        guard cooldownEnabled else { return false }
         guard let lastTime = lastActionTime else { return false }
         return Date().timeIntervalSince(lastTime) < cooldownPeriod
     }

@@ -82,6 +82,9 @@ class DetectionPluginManager: NSObject {
             registerPlugin(plugin)
         }
         
+        // Load saved settings for all plugins
+        loadAllPluginSettings()
+        
         log.log("Loaded \(plugins.count) built-in detection plugins")
     }
     
@@ -263,6 +266,91 @@ class DetectionPluginManager: NSObject {
         for plugin in plugins.values {
             plugin.configurationChanged()
         }
+    }
+    
+    // MARK: - Settings Management
+    
+    /// Get all settings definitions from all plugins, grouped by category
+    func getAllSettingsDefinitions() -> [PluginSettingDefinition.SettingCategory: [(plugin: DetectionPlugin, definition: PluginSettingDefinition)]] {
+        var grouped: [PluginSettingDefinition.SettingCategory: [(plugin: DetectionPlugin, definition: PluginSettingDefinition)]] = [:]
+        
+        for plugin in getAllPlugins() {
+            for definition in plugin.settingsDefinitions {
+                if grouped[definition.category] == nil {
+                    grouped[definition.category] = []
+                }
+                grouped[definition.category]?.append((plugin: plugin, definition: definition))
+            }
+        }
+        
+        return grouped
+    }
+    
+    /// Get settings definitions for a specific plugin
+    func getSettingsDefinitions(for pluginId: String) -> [PluginSettingDefinition] {
+        return plugins[pluginId]?.settingsDefinitions ?? []
+    }
+    
+    /// Load settings for all plugins from Configuration
+    func loadAllPluginSettings() {
+        for (identifier, plugin) in plugins {
+            loadPluginSettings(plugin, identifier: identifier)
+        }
+    }
+    
+    /// Load settings for a specific plugin
+    private func loadPluginSettings(_ plugin: DetectionPlugin, identifier: String) {
+        let savedSettings = Configuration.shared.getPluginSettings(identifier)
+        if !savedSettings.isEmpty {
+            plugin.settings.load(from: savedSettings)
+            log.log("Loaded \(savedSettings.count) settings for plugin: \(plugin.name)")
+        }
+    }
+    
+    /// Save settings for all plugins to Configuration
+    func saveAllPluginSettings() {
+        for (identifier, plugin) in plugins {
+            savePluginSettings(plugin, identifier: identifier)
+        }
+    }
+    
+    /// Save settings for a specific plugin
+    func savePluginSettings(_ plugin: DetectionPlugin, identifier: String) {
+        let settingsDict = plugin.settings.toDictionary()
+        Configuration.shared.setPluginSettings(identifier, settings: settingsDict)
+    }
+    
+    /// Update a single setting for a plugin
+    func updatePluginSetting(_ pluginId: String, key: String, value: Any) {
+        guard let plugin = plugins[pluginId] else {
+            log.log("Cannot update setting: plugin \(pluginId) not found")
+            return
+        }
+        
+        // Validate the setting
+        let (isValid, errorMessage) = plugin.settings.validate(key, value: value)
+        if !isValid {
+            log.log("Setting validation failed for \(key): \(errorMessage ?? "unknown error")")
+            return
+        }
+        
+        // Update the setting
+        plugin.settings.set(key, value: value)
+        
+        // Persist to Configuration
+        savePluginSettings(plugin, identifier: pluginId)
+        
+        log.log("Updated setting \(key) for plugin \(plugin.name)")
+    }
+    
+    /// Reset all settings for a plugin to defaults
+    func resetPluginSettings(_ pluginId: String) {
+        guard let plugin = plugins[pluginId] else { return }
+        
+        plugin.settings.resetToDefaults()
+        savePluginSettings(plugin, identifier: pluginId)
+        
+        log.log("Reset all settings for plugin: \(plugin.name)")
     }
     
     // MARK: - Plugin Coordination

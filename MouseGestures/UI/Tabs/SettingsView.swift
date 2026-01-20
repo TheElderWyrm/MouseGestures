@@ -37,6 +37,7 @@ struct SettingsView: View {
     
     enum SettingsSection: String, CaseIterable {
         case general = "General"
+        case detection = "Detection"
         case zones = "Zone Configuration"
         case menuBar = "Menu Bar"
         case dataManagement = "Data Management"
@@ -46,6 +47,7 @@ struct SettingsView: View {
         var icon: String {
             switch self {
             case .general: return "gear"
+            case .detection: return "hand.tap"
             case .zones: return "rectangle.split.3x3"
             case .menuBar: return "menubar.rectangle"
             case .dataManagement: return "externaldrive"
@@ -67,6 +69,8 @@ struct SettingsView: View {
                     switch selectedSection {
                     case .general:
                         generalSettingsSection
+                    case .detection:
+                        detectionPluginSettingsSection
                     case .zones:
                         zoneConfigurationSection
                     case .menuBar:
@@ -238,6 +242,20 @@ struct SettingsView: View {
             }
             .padding()
             .background(RoundedRectangle(cornerRadius: 8).fill(Color(NSColor.controlBackgroundColor)))
+        }
+    }
+    
+    // MARK: - Detection Plugin Settings Section
+    
+    private var detectionPluginSettingsSection: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            sectionHeader("Detection Settings")
+            
+            Text("Configure how gestures are detected. These settings are provided by detection plugins.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+            
+            PluginSettingsView()
         }
     }
     

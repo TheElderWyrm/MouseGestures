@@ -1,5 +1,31 @@
 ## 2026-01-20
 
+### New Features
+- Implemented plugin-based settings system for detection plugins
+  - New `PluginSettingDefinition` struct for declaratively defining plugin settings
+  - Settings types: toggle, slider, stepper, picker, segmented picker, color, text, button, info
+  - Support for setting dependencies (show setting B only when setting A is enabled)
+  - Support for setting validation with error messages
+  - Settings are persisted in Configuration and loaded on app launch
+  
+- Updated all built-in detection plugins with configurable settings:
+  - ScreenZoneDetectorPlugin: edge threshold, corner size, corner buffer, zone highlights, tracking rate
+  - ModifierKeyDetectorPlugin: cooldown enable/disable, cooldown duration
+  - KeyboardShortcutDetectorPlugin: double-tap prevention, prevention interval
+  - MouseButtonDetectorPlugin: require modifiers, allowed buttons filter
+  - AppConfigurationDetectorPlugin: auto-switch profiles, haptic feedback, app history size
+  
+- Added new "Detection" section in Settings UI
+  - PluginSettingsView renders all plugin settings dynamically
+  - Settings grouped by category (Detection, Appearance, Performance, etc.)
+  - Show/hide advanced settings toggle
+  - Real-time updates with dependent settings visibility
+  
+- DetectionPluginManager now handles settings persistence:
+  - `getAllSettingsDefinitions()` - get all settings from all plugins
+  - `updatePluginSetting()` - update and persist a single setting
+  - `resetPluginSettings()` - reset all settings for a plugin
+
 ### Bug Fixes
 - Fixed unreliable gesture detection when modifiers are already pressed at startup
   - Issue: If user held modifier keys before detection started, gestures wouldn't trigger

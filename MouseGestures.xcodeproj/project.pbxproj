@@ -17,6 +17,7 @@
 		2689491DA50245B9B79FE8BE /* DataStructures.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28CADE3D233B4F0396659877 /* DataStructures.swift */; };
 		296E40239BBC58CA2E864DC3 /* SavedActionsSortService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20954817AF5D280D472F66A0 /* SavedActionsSortService.swift */; };
 		29DC475BA2F176359F14368D /* PluginManagementService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22CC45C7BE16E2CDADAC3796 /* PluginManagementService.swift */; };
+		30EC453FA0EE9126694C82C7 /* PluginSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D7A41F0BE26A4E0C4F63167 /* PluginSettings.swift */; };
 		35C84BDEB33503AFFDFB58B1 /* PerformanceMonitorService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0AC42869CAF595045A859AC /* PerformanceMonitorService.swift */; };
 		413443399AD7BBC1AAE77456 /* Gesture.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7CE4325B6AB1394B42630FE /* Gesture.swift */; };
 		52E709306F884244BD613F97 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CF07C161A504F75B8A0A765 /* Extensions.swift */; };
@@ -94,6 +95,7 @@
 		C01600E1A9514C79A132AE69 /* ScreenZone.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3221DCB96B494D9D905A31B2 /* ScreenZone.swift */; };
 		C0A54E61B88488747F7D5296 /* GestureConfigurationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 433840B5B9F1147FC61DC27E /* GestureConfigurationService.swift */; };
 		E292A83EE5464D3E8BF033F2 /* AccessibilityPermissionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E386CFA344A4F3BAE86AA69 /* AccessibilityPermissionManager.swift */; };
+		E428403AB531AD17009BBC21 /* PluginSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B04479CA1BDB08A127B0C23 /* PluginSettingsView.swift */; };
 		EB1B5E3B9B524356AABB6955 /* DragModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63032B792A3E44658CB3B3E0 /* DragModifier.swift */; };
 		F73542A9A287AE81831E2F50 /* GestureSearchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FFC4FFEA31B6BBC4C4E95A6 /* GestureSearchService.swift */; };
 		FA066BEEC1454388BD508E44 /* BundleConditions.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEAAED1697EA449AB0149A1F /* BundleConditions.swift */; };
@@ -101,6 +103,7 @@
 
 /* Begin PBXFileReference section */
 		03E3F17EF2DF4ECEBD90F308 /* Configuration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Configuration.swift; sourceTree = "<group>"; };
+		0B04479CA1BDB08A127B0C23 /* PluginSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PluginSettingsView.swift; path = MouseGestures/UI/PluginSettingsView.swift; sourceTree = SOURCE_ROOT; };
 		0FFC4FFEA31B6BBC4C4E95A6 /* GestureSearchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GestureSearchService.swift; path = MouseGestures/Services/GestureSearchService.swift; sourceTree = SOURCE_ROOT; };
 		1CF07C161A504F75B8A0A765 /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
 		1D5C419C8DE02A83EAFE0F15 /* SystemInformationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SystemInformationService.swift; path = MouseGestures/Services/SystemInformationService.swift; sourceTree = SOURCE_ROOT; };
@@ -118,6 +121,7 @@
 		57784DFF8F977E6D68D3DA4A /* DeveloperModeToggleService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DeveloperModeToggleService.swift; path = MouseGestures/Services/DeveloperModeToggleService.swift; sourceTree = SOURCE_ROOT; };
 		582555CD45A64163BBFF3D18 /* ProfileStructures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileStructures.swift; sourceTree = "<group>"; };
 		5925D19D6F114550AC9B9DE4 /* AnyCodable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnyCodable.swift; sourceTree = "<group>"; };
+		5D7A41F0BE26A4E0C4F63167 /* PluginSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PluginSettings.swift; path = MouseGestures/Detection/DetectionPlugins/Core/PluginSettings.swift; sourceTree = SOURCE_ROOT; };
 		5E386CFA344A4F3BAE86AA69 /* AccessibilityPermissionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityPermissionManager.swift; sourceTree = "<group>"; };
 		63032B792A3E44658CB3B3E0 /* DragModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DragModifier.swift; sourceTree = "<group>"; };
 		63B74950926A0B57E73C1F71 /* ApplicationResetService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ApplicationResetService.swift; path = MouseGestures/Services/ApplicationResetService.swift; sourceTree = SOURCE_ROOT; };
@@ -323,6 +327,7 @@
 				772C728E2E6A5C5A00ECD900 /* Tabs */,
 				7757E0E42E63BD9100630BE5 /* KeyboardShortcutField.swift */,
 				7757E0ED2E63BD9100630BE5 /* ZoneHighlightWindow.swift */,
+				0B04479CA1BDB08A127B0C23 /* PluginSettingsView.swift */,
 			);
 			path = UI;
 			sourceTree = "<group>";
@@ -424,6 +429,7 @@
 			children = (
 				77EA22442E69256D00A45D6A /* DetectionPlugin.swift */,
 				77EA22452E69256D00A45D6A /* DetectionPluginManager.swift */,
+				5D7A41F0BE26A4E0C4F63167 /* PluginSettings.swift */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -630,6 +636,8 @@
 				296E40239BBC58CA2E864DC3 /* SavedActionsSortService.swift in Sources */,
 				AEF041F99279BC95F17C4E75 /* SystemInformationService.swift in Sources */,
 				A95E441BBF2000EDC808ED37 /* ApplicationDiscoveryService.swift in Sources */,
+				30EC453FA0EE9126694C82C7 /* PluginSettings.swift in Sources */,
+				E428403AB531AD17009BBC21 /* PluginSettingsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

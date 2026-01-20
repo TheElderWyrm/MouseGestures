@@ -9,12 +9,104 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin {
     
     public static let pluginIdentifier = "com.mousegestures.detection.screenzone"
     
+    // MARK: - Setting Keys
+    
+    enum SettingKeys {
+        static let edgeThreshold = "edgeThreshold"
+        static let cornerSize = "cornerSize"
+        static let cornerBuffer = "cornerBuffer"
+        static let showZoneHighlights = "showZoneHighlights"
+        static let zoneHighlightColor = "zoneHighlightColor"
+        static let mouseTrackingThrottle = "mouseTrackingThrottle"
+    }
+    
     // MARK: - Properties
     
     override var identifier: String { Self.pluginIdentifier }
     override var name: String { "Screen Zone Detector" }
     override var description: String { "Detects mouse movement in screen edge and corner zones" }
     override var priority: Int { 150 } // Medium-high priority
+    override var dependencies: [String] { [ModifierKeyDetectorPlugin.pluginIdentifier] }
+    
+    // MARK: - Settings Definitions
+    
+    override var settingsDefinitions: [PluginSettingDefinition] {
+        [
+            PluginSettingDefinition(
+                key: SettingKeys.edgeThreshold,
+                displayName: "Edge Threshold",
+                description: "How close to screen edge to trigger detection (in pixels)",
+                category: .detection,
+                type: .slider(min: 1, max: 50, step: 1, unit: "px"),
+                defaultValue: CGFloat(5),
+                isAdvanced: false,
+                validation: .init(rule: .range(min: 1, max: 50), errorMessage: "Edge threshold must be between 1 and 50 pixels")
+            ),
+            PluginSettingDefinition(
+                key: SettingKeys.cornerSize,
+                displayName: "Corner Size",
+                description: "Size of corner detection zones (in pixels)",
+                category: .detection,
+                type: .slider(min: 10, max: 150, step: 5, unit: "px"),
+                defaultValue: CGFloat(30),
+                isAdvanced: false,
+                validation: .init(rule: .range(min: 10, max: 150), errorMessage: "Corner size must be between 10 and 150 pixels")
+            ),
+            PluginSettingDefinition(
+                key: SettingKeys.cornerBuffer,
+                displayName: "Corner Buffer",
+                description: "Gap between corner and edge zones (in pixels)",
+                category: .detection,
+                type: .slider(min: 0, max: 50, step: 1, unit: "px"),
+                defaultValue: CGFloat(5),
+                isAdvanced: true,
+                validation: .init(rule: .range(min: 0, max: 50), errorMessage: "Corner buffer must be between 0 and 50 pixels")
+            ),
+            PluginSettingDefinition(
+                key: SettingKeys.showZoneHighlights,
+                displayName: "Show Zone Highlights",
+                description: "Display visual overlay showing detection zones",
+                category: .appearance,
+                type: .toggle(label: "Enabled"),
+                defaultValue: false,
+                isAdvanced: false
+            ),
+            PluginSettingDefinition(
+                key: SettingKeys.zoneHighlightColor,
+                displayName: "Highlight Color",
+                description: "Color used for zone highlight overlay",
+                category: .appearance,
+                type: .color,
+                defaultValue: NSColor.systemBlue.withAlphaComponent(0.3),
+                isAdvanced: true,
+                dependsOn: .init(key: SettingKeys.showZoneHighlights, condition: .isTrue)
+            ),
+            PluginSettingDefinition(
+                key: SettingKeys.mouseTrackingThrottle,
+                displayName: "Tracking Update Rate",
+                description: "How often to check mouse position (lower = more responsive but higher CPU)",
+                category: .performance,
+                type: .slider(min: 8, max: 50, step: 1, unit: "ms"),
+                defaultValue: 16.0, // ~60 FPS
+                isAdvanced: true,
+                validation: .init(rule: .range(min: 8, max: 50), errorMessage: "Update rate must be between 8 and 50 ms")
+            )
+        ]
+    }
+    
+    // MARK: - Computed Settings Properties
+    
+    var edgeThreshold: CGFloat {
+        settings.getCGFloat(SettingKeys.edgeThreshold, default: 5)
+    }
+    
+    var cornerSize: CGFloat {
+        settings.getCGFloat(SettingKeys.cornerSize, default: 30)
+    }
+    
+    var cornerBuffer: CGFloat {
+        settings.getCGFloat(SettingKeys.cornerBuffer, default: 5)
+    }
     
     // Event monitors
     private var mouseMonitor: Any?
@@ -31,7 +123,9 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin {
     
     // Performance optimizations
     private var lastProcessedMouseTime = Date()
-    private let mouseProcessingInterval: TimeInterval = 0.016 // 60 FPS max
+    private var mouseProcessingInterval: TimeInterval { 
+        settings.getDouble(SettingKeys.mouseTrackingThrottle, default: 16.0) / 1000.0 
+    }
     
     // Zone boundary caching
     private struct ZoneBounds {
@@ -555,11 +649,10 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin {
         lastScreenFrame = screenFrame
         zoneBoundsCache.removeAll()
         
-        guard let config = context?.configuration else { return }
-        
-        let threshold = config.edgeThreshold
-        let cornerSize = config.cornerSize
-        let cornerBuffer = config.cornerBuffer
+        // Use plugin settings (not Configuration)
+        let threshold = edgeThreshold
+        let cornerSize = self.cornerSize
+        let cornerBuffer = self.cornerBuffer
         
         // Pre-calculate bounds for all zones
         for zone in ScreenZone.allCases {
@@ -631,6 +724,30 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin {
         super.configurationChanged()
         rebuildZoneBoundsCache()
         gestureLookup?.rebuild()
+    }
+    
+    override func settingChanged(_ key: String, value: Any, oldValue: Any?) {
+        super.settingChanged(key, value: value, oldValue: oldValue)
+        
+        // Rebuild zone cache when zone-related settings change
+        switch key {
+        case SettingKeys.edgeThreshold, SettingKeys.cornerSize, SettingKeys.cornerBuffer:
+            lastScreenFrame = .zero  // Force rebuild
+            rebuildZoneBoundsCache()
+            context?.logger.log("Zone bounds rebuilt due to setting change: \(key)", file: #file, function: #function, line: #line)
+            
+        case SettingKeys.showZoneHighlights:
+            if let show = value as? Bool {
+                if show {
+                    ZoneHighlightManager.shared.startHighlighting()
+                } else {
+                    ZoneHighlightManager.shared.stopHighlighting()
+                }
+            }
+            
+        default:
+            break
+        }
     }
     
     // MARK: - Statistics

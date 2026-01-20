@@ -9,12 +9,69 @@ class AppConfigurationDetectorPlugin: BaseDetectionPlugin {
     
     public static let pluginIdentifier = "com.mousegestures.detection.appconfig"
     
+    // MARK: - Setting Keys
+    
+    enum SettingKeys {
+        static let autoProfileSwitch = "autoProfileSwitch"
+        static let hapticOnSwitch = "hapticOnSwitch"
+        static let appHistorySize = "appHistorySize"
+    }
+    
     // MARK: - Properties
     
     override var identifier: String { Self.pluginIdentifier }
     override var name: String { "App Configuration Detector" }
     override var description: String { "Detects app switches and manages per-app gesture profiles" }
     override var priority: Int { 250 } // Very high priority - needs to run before other detectors
+    
+    // MARK: - Settings Definitions
+    
+    override var settingsDefinitions: [PluginSettingDefinition] {
+        [
+            PluginSettingDefinition(
+                key: SettingKeys.autoProfileSwitch,
+                displayName: "Auto-Switch Profiles",
+                description: "Automatically switch to app-specific profiles when changing apps",
+                category: .general,
+                type: .toggle(label: "Enabled"),
+                defaultValue: true,
+                isAdvanced: false
+            ),
+            PluginSettingDefinition(
+                key: SettingKeys.hapticOnSwitch,
+                displayName: "Haptic Feedback on Switch",
+                description: "Provide haptic feedback when profile auto-switches",
+                category: .general,
+                type: .toggle(label: "Enabled"),
+                defaultValue: true,
+                isAdvanced: false,
+                dependsOn: .init(key: SettingKeys.autoProfileSwitch, condition: .isTrue)
+            ),
+            PluginSettingDefinition(
+                key: SettingKeys.appHistorySize,
+                displayName: "App History Size",
+                description: "Number of recent apps to remember for quick configuration",
+                category: .general,
+                type: .stepper(min: 5, max: 25, step: 5),
+                defaultValue: 10,
+                isAdvanced: true
+            )
+        ]
+    }
+    
+    // MARK: - Computed Settings
+    
+    private var autoProfileSwitchEnabled: Bool {
+        settings.getBool(SettingKeys.autoProfileSwitch, default: true)
+    }
+    
+    private var hapticOnSwitchEnabled: Bool {
+        settings.getBool(SettingKeys.hapticOnSwitch, default: true)
+    }
+    
+    private var maxAppHistoryFromSettings: Int {
+        settings.getInt(SettingKeys.appHistorySize, default: 10)
+    }
     
     // State tracking
     private var currentAppBundleId: String?
@@ -23,7 +80,6 @@ class AppConfigurationDetectorPlugin: BaseDetectionPlugin {
     
     // Recent app history for "Use Current App" feature
     private var recentAppHistory: [(bundleId: String, name: String)] = []
-    private let maxAppHistory = 10
     
     // Statistics
     private var appSwitchCount = 0
@@ -137,15 +193,18 @@ class AppConfigurationDetectorPlugin: BaseDetectionPlugin {
         // Add to front
         recentAppHistory.insert((bundleId, name), at: 0)
         
-        // Limit size
-        if recentAppHistory.count > maxAppHistory {
-            recentAppHistory = Array(recentAppHistory.prefix(maxAppHistory))
+        // Limit size using setting
+        let maxSize = maxAppHistoryFromSettings
+        if recentAppHistory.count > maxSize {
+            recentAppHistory = Array(recentAppHistory.prefix(maxSize))
         }
     }
     
     // MARK: - Profile Management
     
     private func checkForAppProfile(bundleId: String, appName: String) {
+        // Check if auto-switching is enabled
+        guard autoProfileSwitchEnabled else { return }
         guard let config = context?.configuration else { return }
         
         // Check if app has a specific profile mapping
@@ -165,7 +224,8 @@ class AppConfigurationDetectorPlugin: BaseDetectionPlugin {
     }
     
     private func showProfileSwitchNotification(profile: ConfigurationProfile, appName: String) {
-        guard context?.configuration.hapticFeedbackEnabled ?? false else { return }
+        // Check both global haptic setting and plugin-specific setting
+        guard (context?.configuration.hapticFeedbackEnabled ?? false) && hapticOnSwitchEnabled else { return }
         
         DispatchQueue.main.async {
             // Haptic feedback

@@ -9,12 +9,71 @@ class MouseButtonDetectorPlugin: BaseDetectionPlugin {
     
     public static let pluginIdentifier = "com.mousegestures.detection.mousebutton"
     
+    // MARK: - Setting Keys
+    
+    enum SettingKeys {
+        static let requireModifiers = "requireModifiers"
+        static let allowedButtons = "allowedButtons"
+    }
+    
     // MARK: - Properties
     
     override var identifier: String { Self.pluginIdentifier }
     override var name: String { "Mouse Button Detector" }
     override var description: String { "Detects mouse button clicks combined with modifier keys" }
     override var priority: Int { 90 } // Medium-low priority
+    
+    // MARK: - Settings Definitions
+    
+    override var settingsDefinitions: [PluginSettingDefinition] {
+        [
+            PluginSettingDefinition(
+                key: SettingKeys.requireModifiers,
+                displayName: "Require Modifiers",
+                description: "Only detect mouse buttons when modifier keys are held",
+                category: .detection,
+                type: .toggle(label: "Enabled"),
+                defaultValue: true,
+                isAdvanced: false
+            ),
+            PluginSettingDefinition(
+                key: SettingKeys.allowedButtons,
+                displayName: "Allowed Buttons",
+                description: "Which mouse buttons can trigger gestures",
+                category: .detection,
+                type: .picker(options: [
+                    .init(value: "all", displayName: "All Buttons"),
+                    .init(value: "extended", displayName: "Extended Only (Middle, Button 4/5)"),
+                    .init(value: "middle", displayName: "Middle Button Only")
+                ]),
+                defaultValue: "all",
+                isAdvanced: true
+            )
+        ]
+    }
+    
+    // MARK: - Computed Settings
+    
+    private var requireModifiers: Bool {
+        settings.getBool(SettingKeys.requireModifiers, default: true)
+    }
+    
+    private var allowedButtons: String {
+        settings.getString(SettingKeys.allowedButtons, default: "all")
+    }
+    
+    private func isButtonAllowed(_ button: MouseButtonTrigger.MouseButton) -> Bool {
+        switch allowedButtons {
+        case "all":
+            return true
+        case "extended":
+            return button == .middle || button == .button4 || button == .button5
+        case "middle":
+            return button == .middle
+        default:
+            return true
+        }
+    }
     
     // Event monitors
     private var leftMouseMonitor: Any?
@@ -77,11 +136,14 @@ class MouseButtonDetectorPlugin: BaseDetectionPlugin {
             return
         }
         
+        // Check if this button is allowed by settings
+        guard isButtonAllowed(button) else { return }
+        
         // Get current modifiers
         let modifiers = normalizeModifiers(event.modifierFlags)
         
-        // Skip if no modifiers (we don't want to trigger on plain clicks)
-        guard !modifiers.isEmpty else { return }
+        // Skip if no modifiers when required
+        if requireModifiers && modifiers.isEmpty { return }
         
         guard let config = context?.configuration else { return }
         

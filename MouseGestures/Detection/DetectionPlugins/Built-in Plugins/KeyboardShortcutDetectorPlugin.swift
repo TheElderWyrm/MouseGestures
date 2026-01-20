@@ -10,12 +10,55 @@ class KeyboardShortcutDetectorPlugin: BaseDetectionPlugin {
     
     public static let pluginIdentifier = "com.mousegestures.detection.keyboard"
     
+    // MARK: - Setting Keys
+    
+    enum SettingKeys {
+        static let doubleTapPrevention = "doubleTapPrevention"
+        static let preventionInterval = "preventionInterval"
+    }
+    
     // MARK: - Properties
     
     override var identifier: String { Self.pluginIdentifier }
     override var name: String { "Keyboard Shortcut Detector" }
     override var description: String { "Detects keyboard shortcuts and key combinations" }
     override var priority: Int { 100 } // Medium priority
+    
+    // MARK: - Settings Definitions
+    
+    override var settingsDefinitions: [PluginSettingDefinition] {
+        [
+            PluginSettingDefinition(
+                key: SettingKeys.doubleTapPrevention,
+                displayName: "Prevent Double Triggering",
+                description: "Ignore rapid repeated presses of the same shortcut",
+                category: .detection,
+                type: .toggle(label: "Enabled"),
+                defaultValue: true,
+                isAdvanced: false
+            ),
+            PluginSettingDefinition(
+                key: SettingKeys.preventionInterval,
+                displayName: "Double-Tap Interval",
+                description: "Minimum time between repeated shortcut triggers (in seconds)",
+                category: .detection,
+                type: .slider(min: 0.1, max: 1.0, step: 0.1, unit: "sec"),
+                defaultValue: 0.3,
+                isAdvanced: true,
+                dependsOn: .init(key: SettingKeys.doubleTapPrevention, condition: .isTrue)
+            )
+        ]
+    }
+    
+    // MARK: - Computed Settings
+    
+    private var doubleTapPreventionEnabled: Bool {
+        settings.getBool(SettingKeys.doubleTapPrevention, default: true)
+    }
+    
+    private var preventionInterval: TimeInterval {
+        settings.getDouble(SettingKeys.preventionInterval, default: 0.3)
+    }
     
     // Event monitors
     private var globalKeyboardMonitor: Any?
@@ -101,8 +144,9 @@ class KeyboardShortcutDetectorPlugin: BaseDetectionPlugin {
     
     private func handleKeyPress(_ event: NSEvent) -> Bool {
         // Prevent double-triggering
-        if let lastTime = lastKeyPressTime,
-           Date().timeIntervalSince(lastTime) < 0.3 {
+        if doubleTapPreventionEnabled,
+           let lastTime = lastKeyPressTime,
+           Date().timeIntervalSince(lastTime) < preventionInterval {
             return false
         }
         

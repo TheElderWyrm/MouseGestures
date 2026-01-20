@@ -4,7 +4,7 @@ import Cocoa
 // MARK: - Detection Plugin Protocol
 
 /// Protocol that all detection plugins must conform to
-protocol DetectionPlugin: AnyObject {
+protocol DetectionPlugin: AnyObject, PluginSettingsProvider {
     /// Unique identifier for the plugin
     var identifier: String { get }
     
@@ -23,6 +23,9 @@ protocol DetectionPlugin: AnyObject {
     /// Priority for plugin execution (higher = earlier)
     var priority: Int { get }
     
+    /// Plugin dependencies (identifiers of plugins this one depends on)
+    var dependencies: [String] { get }
+    
     /// Initialize the plugin with context
     func initialize(context: DetectionContext) throws
     
@@ -35,10 +38,10 @@ protocol DetectionPlugin: AnyObject {
     /// Clean up resources
     func cleanup()
     
-    /// Configuration view for the plugin
+    /// Configuration view for the plugin (for per-gesture trigger configuration)
     func configurationView() -> NSView?
     
-    /// Handle configuration changes
+    /// Handle global configuration changes (gestures, profiles, etc.)
     func configurationChanged()
     
     /// Get plugin statistics
@@ -245,7 +248,7 @@ protocol ConfigurationAccess {
 // MARK: - Base Detection Plugin
 
 /// Base class for detection plugins with common functionality
-open class BaseDetectionPlugin: NSObject, DetectionPlugin {
+open class BaseDetectionPlugin: NSObject, DetectionPlugin, PluginSettingsDelegate {
     // MARK: - Properties
     
     open var identifier: String { 
@@ -266,9 +269,26 @@ open class BaseDetectionPlugin: NSObject, DetectionPlugin {
     
     open var priority: Int { 100 }
     
+    /// Plugin dependencies - override in subclasses if needed
+    open var dependencies: [String] { [] }
+    
     internal var context: DetectionContext?
     internal var state: DetectionPluginState = .uninitialized
     internal var statistics = DetectionPluginStatistics()
+    
+    // MARK: - Settings
+    
+    /// Override in subclasses to provide setting definitions
+    open var settingsDefinitions: [PluginSettingDefinition] { [] }
+    
+    /// Settings storage - lazily initialized
+    private var _settings: PluginSettings?
+    public var settings: PluginSettings {
+        if _settings == nil {
+            _settings = PluginSettings(pluginId: identifier, definitions: settingsDefinitions, delegate: self)
+        }
+        return _settings!
+    }
     
     // MARK: - Initialization
     
@@ -354,6 +374,20 @@ open class BaseDetectionPlugin: NSObject, DetectionPlugin {
     /// Check if detection should continue
     internal func shouldContinue() -> Bool {
         return context?.delegate?.detectionPluginShouldContinue(self) ?? false
+    }
+    
+    // MARK: - PluginSettingsDelegate
+    
+    public func pluginSettings(_ settings: PluginSettings, didChangeValue value: Any, forKey key: String, oldValue: Any?) {
+        // Forward to the settingChanged method that subclasses can override
+        settingChanged(key, value: value, oldValue: oldValue)
+    }
+    
+    // MARK: - PluginSettingsProvider
+    
+    /// Override in subclasses to react to setting changes
+    open func settingChanged(_ key: String, value: Any, oldValue: Any?) {
+        context?.logger.log("\(name) setting changed: \(key)", file: #file, function: #function, line: #line)
     }
 }
 

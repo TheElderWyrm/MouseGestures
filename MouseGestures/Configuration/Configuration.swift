@@ -465,6 +465,27 @@ public class Configuration: Codable {
         }
     }
     
+    // MARK: - Detection Plugin Settings (convenience methods)
+    
+    /// Get all settings for a detection plugin as a dictionary
+    func getPluginSettings(_ pluginIdentifier: String) -> [String: Any] {
+        return configQueue.sync {
+            if let config = pluginConfigurations[pluginIdentifier],
+               let dict = config.value as? [String: Any] {
+                return dict
+            }
+            return [:]
+        }
+    }
+    
+    /// Set all settings for a detection plugin from a dictionary
+    func setPluginSettings(_ pluginIdentifier: String, settings: [String: Any]) {
+        configQueue.async(flags: .barrier) {
+            self.pluginConfigurations[pluginIdentifier] = AnyCodable(settings)
+            self.save()
+        }
+    }
+    
     // Reset entire configuration to defaults
     func resetToDefaults() {
         let defaultProfile = ConfigurationProfile(name: "Default", gestures: Configuration.defaultGestures, isDefault: true)
