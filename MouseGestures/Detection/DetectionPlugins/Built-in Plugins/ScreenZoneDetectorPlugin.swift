@@ -83,11 +83,19 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin {
             self?.handleMouseUp(event)
         }
         
-        // DO NOT monitor mouse movement initially - will be enabled when modifiers are pressed
+        // Reset mouse tracking state
         mouseMonitor = nil
         isMouseTrackingActive = false
         
-        context?.logger.log("Screen zone detection started (mouse tracking will activate on demand)", file: #file, function: #function, line: #line)
+        // Check if modifiers are already pressed at startup
+        // This handles the case where user holds modifiers before detection starts
+        let currentSystemModifiers = ModifierKeyDetectorPlugin.currentSystemModifiers()
+        if !currentSystemModifiers.isEmpty {
+            context?.logger.log("Modifiers already pressed at startup, enabling mouse tracking", file: #file, function: #function, line: #line)
+            enableMouseTracking()
+        } else {
+            context?.logger.log("Screen zone detection started (mouse tracking will activate on demand)", file: #file, function: #function, line: #line)
+        }
     }
     
     override func stop() {

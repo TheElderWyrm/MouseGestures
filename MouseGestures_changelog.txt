@@ -1,3 +1,16 @@
+## 2026-01-20
+
+### Bug Fixes
+- Fixed unreliable gesture detection when modifiers are already pressed at startup
+  - Issue: If user held modifier keys before detection started, gestures wouldn't trigger
+    until modifiers were released and re-pressed
+  - Root cause: `flagsChanged` events only fire on modifier state *changes*, not when
+    modifiers are already held
+  - Fix: Both ModifierKeyDetectorPlugin and ScreenZoneDetectorPlugin now check current
+    system modifier state on startup via `NSEvent.modifierFlags`
+  - ModifierKeyDetectorPlugin initializes its internal state if modifiers are already held
+  - ScreenZoneDetectorPlugin enables mouse tracking immediately if modifiers are pressed
+
 ## 2026-01-18
 
 ### Bug Fixes

@@ -49,7 +49,29 @@ class ModifierKeyDetectorPlugin: BaseDetectionPlugin {
             return event
         }
         
+        // Check if modifiers are already pressed at startup
+        // This handles the case where the user holds modifiers before detection starts
+        initializeModifierState()
+        
         context?.logger.log("Modifier key detection started", file: #file, function: #function, line: #line)
+    }
+    
+    /// Initialize modifier state from current system state
+    /// Handles case where modifiers are already pressed when detection starts
+    private func initializeModifierState() {
+        let systemModifiers = Self.currentSystemModifiers()
+        
+        if !systemModifiers.isEmpty {
+            context?.logger.log("Initializing with modifiers already pressed: \(modifierString(systemModifiers))", file: #file, function: #function, line: #line)
+            
+            // Set current state
+            currentModifiers = systemModifiers
+            lastModifiers = systemModifiers
+            hasModifiers = true
+            
+            // Enable mouse tracking since modifiers are held
+            modifierPressed()
+        }
     }
     
     override func stop() {
