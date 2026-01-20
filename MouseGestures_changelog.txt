@@ -11,6 +11,21 @@
   - ModifierKeyDetectorPlugin initializes its internal state if modifiers are already held
   - ScreenZoneDetectorPlugin enables mouse tracking immediately if modifiers are pressed
 
+- Fixed gesture detection using stale cached modifier state
+  - Changed `detectGesture()` to use real-time system modifiers via 
+    `ModifierKeyDetectorPlugin.currentSystemModifiers()` instead of cached plugin state
+  - Prevents missed gestures due to timing lag between system events and plugin state
+
+- Fixed gestures not triggering when mouse is stationary in zone and modifiers are pressed
+  - Added `checkCurrentMousePosition()` that runs when mouse tracking is enabled
+  - If mouse is already in a zone when modifiers are pressed, gesture now triggers immediately
+
+- Fixed gestures not re-triggering when modifiers change while mouse is in zone
+  - ScreenZoneDetectorPlugin now monitors modifier changes directly
+  - When modifiers change and mouse is in a zone, re-checks for matching gesture
+  - Added `lastTriggeredModifiers` tracking to detect modifier-only changes
+  - Allows different gestures for same zone with different modifier combinations
+
 ## 2026-01-18
 
 ### Bug Fixes

@@ -20,12 +20,14 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin {
     private var mouseMonitor: Any?
     private var dragMonitor: Any?
     private var dragEndMonitor: Any?
+    private var modifierMonitor: Any?
     
     // State tracking
     private var isMouseTrackingActive = false
     private(set) var dragState: DragModifier = .none
     private var lastTriggeredZone: ScreenZone?
     private var lastDragModifier: DragModifier = .none
+    private var lastTriggeredModifiers: NSEvent.ModifierFlags = []
     
     // Performance optimizations
     private var lastProcessedMouseTime = Date()
@@ -83,6 +85,11 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin {
             self?.handleMouseUp(event)
         }
         
+        // Monitor modifier key changes to re-check zone when modifiers change
+        modifierMonitor = NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
+            self?.handleModifierChange(event)
+        }
+        
         // Reset mouse tracking state
         mouseMonitor = nil
         isMouseTrackingActive = false
@@ -111,10 +118,16 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin {
             dragEndMonitor = nil
         }
         
+        if let monitor = modifierMonitor {
+            NSEvent.removeMonitor(monitor)
+            modifierMonitor = nil
+        }
+        
         stopRepeatTimer()
         dragState = .none
         lastTriggeredZone = nil
         lastDragModifier = .none
+        lastTriggeredModifiers = []
         zoneBoundsCache.removeAll()
         
         super.stop()
@@ -144,6 +157,23 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin {
             if context?.logger.isDebugEnabled == true {
                 context?.logger.log("Zone mouse tracking ENABLED", file: #file, function: #function, line: #line)
             }
+        }
+        
+        // Immediately check current mouse position
+        // This handles the case where mouse is already in a zone when modifiers are pressed
+        checkCurrentMousePosition()
+    }
+    
+    /// Check if mouse is currently in a zone and trigger gesture if so
+    private func checkCurrentMousePosition() {
+        let mouseLocation = NSEvent.mouseLocation
+        
+        // Use cached zone detection
+        if let zone = detectZoneFromCache(point: mouseLocation) {
+            if context?.logger.isDebugEnabled ?? false {
+                context?.logger.log("Mouse already in zone \(zone.rawValue) when tracking enabled", file: #file, function: #function, line: #line)
+            }
+            processZoneEntry(zone)
         }
     }
     
@@ -255,11 +285,40 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin {
         }
     }
     
+    private func handleModifierChange(_ event: NSEvent) {
+        let currentModifiers = ModifierKeyDetectorPlugin.currentSystemModifiers()
+        
+        if currentModifiers.isEmpty {
+            // All modifiers released
+            if dragState == .none {
+                // Only disable tracking if not dragging
+                lastTriggeredZone = nil
+                lastTriggeredModifiers = []
+                stopRepeatTimer()
+                disableMouseTracking()
+            }
+        } else {
+            // Modifiers are held - ensure tracking is enabled
+            if !isMouseTrackingActive {
+                enableMouseTracking()
+            } else {
+                // Tracking already active, but modifiers changed
+                // Re-check current mouse position to potentially trigger a different gesture
+                checkCurrentMousePosition()
+            }
+        }
+    }
+    
     // MARK: - Zone Processing
     
     private func processZoneEntry(_ zone: ScreenZone) {
-        // Check if we're still in the same zone with the same modifiers
-        let isNewTrigger = lastTriggeredZone != zone || lastDragModifier != dragState
+        // Get current modifiers
+        let currentModifiers = ModifierKeyDetectorPlugin.currentSystemModifiers()
+        
+        // Check if we're still in the same zone with the same modifiers and drag state
+        let isNewTrigger = lastTriggeredZone != zone || 
+                           lastDragModifier != dragState ||
+                           lastTriggeredModifiers != currentModifiers
         
         if isNewTrigger {
             // Stop any existing repeat timer before starting a new gesture
@@ -267,6 +326,7 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin {
             
             lastTriggeredZone = zone
             lastDragModifier = dragState
+            lastTriggeredModifiers = currentModifiers
             zoneEnterCount += 1
             
             if context?.logger.isDebugEnabled ?? false {
@@ -278,7 +338,7 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin {
             // Check for matching gestures
             detectGesture(zone: zone, dragState: dragState)
         }
-        // If we're still in the same zone, don't retrigger but keep any active repeat timer running
+        // If we're still in the same zone with same modifiers, don't retrigger but keep any active repeat timer running
     }
     
     private func processZoneExit() {
@@ -296,8 +356,9 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin {
     }
     
     private func detectGesture(zone: ScreenZone, dragState: DragModifier) {
-        // Get current modifiers
-        let modifiers = getCurrentModifiers()
+        // Get current modifiers using real-time system state (not cached plugin state)
+        // This ensures we don't miss gestures due to timing lag in event processing
+        let modifiers = ModifierKeyDetectorPlugin.currentSystemModifiers()
         
         // Check if in cooldown period
         if isInCooldownPeriod() {
