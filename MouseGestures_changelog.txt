@@ -8,8 +8,12 @@
 
 ### Memory Optimizations
 - Reduced idle memory usage from ~125 MB toward 45-65 MB target
+- **Zone Highlights: Replaced full-screen window with individual zone windows**
+  - Full-screen backing store was ~60 MB on Retina (5120x3200 × 4 bytes)
+  - Now uses 8 small windows, one per zone (~1-2 MB total)
+  - New ZoneWindow/ZoneView classes for lightweight per-zone rendering
 - AppDelegate: Removed hidden SettingsActionHandler NSWindow that was keeping SwiftUI layers alive
-  - Now uses direct NSApp.sendAction for opening settings window
+  - Now finds and triggers Settings menu item directly, with Cmd+, fallback
 - TabManager: Implemented lazy tab loading with LazyTabPlaceholder
   - Only renders tabs when first selected instead of all 8+ at startup
   - Prevents CoreAnimation layer explosion from pre-rendering all views
