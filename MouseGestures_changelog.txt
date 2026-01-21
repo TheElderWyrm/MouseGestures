@@ -1,6 +1,22 @@
 ## 2026-01-20
 
 ### New Features
+- Implemented ActivationCoordinator for efficiency-based detector gating
+  - New `ActivationType` enum with efficiency scores (0-100) for each detection type
+  - `ActivationCoordinator` singleton manages activation states across all plugins
+  - `ActivationProvider` protocol for plugins to declare their activation capabilities
+  - Dependency graph auto-built by analyzing gesture configurations
+  - Low-efficiency detectors (screenZone: 20) gated behind high-efficiency ones (modifierKey: 100)
+  - Fully generalizable: any new plugin can participate in the efficiency system
+  - Removes hardcoded coupling between ModifierKeyDetector and ScreenZoneDetector
+  
+- All detection plugins now implement ActivationProvider:
+  - ModifierKeyDetectorPlugin: provides `.modifierKey` activation
+  - ScreenZoneDetectorPlugin: provides `.screenZone` and `.mouseDrag` activations
+  - KeyboardShortcutDetectorPlugin: provides `.keyboardShortcut` activation
+  - MouseButtonDetectorPlugin: provides `.mouseButton` activation  
+  - AppConfigurationDetectorPlugin: provides `.appChange` activation
+
 - Implemented plugin-based settings system for detection plugins
   - New `PluginSettingDefinition` struct for declaratively defining plugin settings
   - Settings types: toggle, slider, stepper, picker, segmented picker, color, text, button, info
