@@ -229,7 +229,7 @@ class ActivationCoordinator {
         return activationStates[type] ?? ActivationState(type: type)
     }
     
-    /// Check if an activation type is currently engaged
+    /// Check if an activation type is currently   engaged
     func isEngaged(_ type: ActivationType) -> Bool {
         return getState(for: type).isEngaged
     }

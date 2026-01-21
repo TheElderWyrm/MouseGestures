@@ -4,29 +4,15 @@ import UserNotifications
 import SwiftUI
 import Foundation
 
-/// A helper view that listens for a notification and opens the Settings scene.
-@available(macOS 14.0, *)
-struct SettingsActionHandler: View {
-    @Environment(\.openSettings) var openSettings
-
-    var body: some View {
-        // This view is completely hidden. Its only job is to listen.
-        EmptyView()
-            .frame(width: 0, height: 0)
-            .onReceive(NotificationCenter.default.publisher(for: .openSettingsWindow)) { _ in
-                // When the notification is received, call the official SwiftUI action.
-                NSApp.activate(ignoringOtherApps: true)
-                openSettings()
-            }
-    }
-}
+// MARK: - Settings Window Helper
+// Memory optimization: Removed SettingsActionHandler view that required a hidden NSWindow.
+// Now using direct NSApp.sendAction approach which doesn't require hosting SwiftUI views.
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     
     var menuIcon: MenuIcon!
     var detectionPluginManager: DetectionPluginManager!
     var accessibilityManager: AccessibilityPermissionManager!
-    var hiddenWindow: NSWindow?
     
     override init() {
         super.init()
@@ -77,19 +63,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             showPreferences()
         }
         
-        if #available(macOS 14.0, *) {
-            // Create a hidden window to host the SettingsActionHandler,
-            // which is needed to programmatically open the Settings scene.
-            let handlerView = SettingsActionHandler()
-            let window = NSWindow(
-                contentRect: NSRect(x: -1, y: -1, width: 1, height: 1), // Position off-screen
-                styleMask: .borderless,
-                backing: .buffered,
-                defer: false)
-            window.contentView = NSHostingView(rootView: handlerView)
-            window.alphaValue = 0.0 // Make it completely invisible
-            self.hiddenWindow = window // Keep a strong reference
-        }
+        // Memory optimization: Removed hidden window for SettingsActionHandler
+        // Settings are now opened via NSApp.sendAction in showPreferences()
     }
     
     func applicationWillTerminate(_ aNotification: Notification) {
@@ -118,11 +93,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         return false  // Disable state restoration
     }
     
-    // Replace the showPreferences function in AppDelegate.swift with this
     @objc func showPreferences() {
-        // Post a notification that our SwiftUI view will be listening for.
-        NotificationCenter.default.post(name: .openSettingsWindow, object: nil)
-        log.log("Posted notification to open preferences window")
+        NSApp.activate(ignoringOtherApps: true)
+        
+        // Use the system's built-in settings window action
+        // This works for SwiftUI Settings scenes without requiring a hidden window
+        if #available(macOS 14.0, *) {
+            NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        } else if #available(macOS 13.0, *) {
+            NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        } else {
+            // Fallback for macOS 12 and earlier
+            NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
+        }
+        log.log("Opened preferences window via sendAction")
     }
     
     // MARK: - Private Methods

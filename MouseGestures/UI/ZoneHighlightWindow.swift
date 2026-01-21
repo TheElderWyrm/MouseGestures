@@ -2,7 +2,7 @@ import Cocoa
 
 // Window for showing gesture zone highlights
 class ZoneHighlightWindow: NSWindow {
-    private var highlightView: ZoneHighlightView!
+    private var highlightView: ZoneHighlightView?
     
     override init(contentRect: NSRect, styleMask style: NSWindow.StyleMask, backing backingStoreType: NSWindow.BackingStoreType, defer flag: Bool) {
         super.init(contentRect: contentRect, styleMask: .borderless, backing: .buffered, defer: false)
@@ -20,8 +20,8 @@ class ZoneHighlightWindow: NSWindow {
         ignoresMouseEvents = true
         hasShadow = false
         
-        // Make sure it stays on all spaces
-        isReleasedWhenClosed = false
+        // Memory optimization: Allow window to be released when closed
+        isReleasedWhenClosed = true
     }
     
     private func setupHighlightView() {
@@ -29,14 +29,21 @@ class ZoneHighlightWindow: NSWindow {
         contentView = highlightView
     }
     
+    // Memory optimization: Ensure view hierarchy is released
+    override func close() {
+        highlightView = nil
+        contentView = nil
+        super.close()
+    }
+    
     func showZones(withModifiers modifiers: NSEvent.ModifierFlags = []) {
         // Update frame to match current screen
         if let screen = NSScreen.main {
             setFrame(screen.frame, display: true)
-            highlightView.frame = screen.frame
+            highlightView?.frame = screen.frame
         }
-        highlightView.currentModifiers = modifiers
-        highlightView.needsDisplay = true
+        highlightView?.currentModifiers = modifiers
+        highlightView?.needsDisplay = true
         orderFront(nil)
         alphaValue = 1.0
     }
@@ -45,8 +52,8 @@ class ZoneHighlightWindow: NSWindow {
         NSAnimationContext.runAnimationGroup { context in
             context.duration = 0.2
             animator().alphaValue = 0.0
-        } completionHandler: {
-            self.orderOut(nil)
+        } completionHandler: { [weak self] in
+            self?.orderOut(nil)
         }
     }
     
@@ -54,10 +61,10 @@ class ZoneHighlightWindow: NSWindow {
         // Update frame to match current screen
         if let screen = NSScreen.main {
             setFrame(screen.frame, display: true)
-            highlightView.frame = screen.frame
+            highlightView?.frame = screen.frame
         }
-        highlightView.currentModifiers = modifiers
-        highlightView.needsDisplay = true
+        highlightView?.currentModifiers = modifiers
+        highlightView?.needsDisplay = true
     }
 }
 
@@ -300,6 +307,7 @@ class ZoneHighlightManager {
     private var modifierMonitor: Any?
     private var hideTimer: Timer?
     private var configChangeObserver: Any?
+    private var screenChangeObserver: Any?
     
     private init() {
         // Listen for configuration changes to refresh the window
@@ -313,9 +321,29 @@ class ZoneHighlightManager {
     }
     
     deinit {
+        // Memory optimization: Ensure all observers are cleaned up
+        cleanup()
+    }
+    
+    private func cleanup() {
+        hideTimer?.invalidate()
+        hideTimer = nil
+        
         if let observer = configChangeObserver {
             NotificationCenter.default.removeObserver(observer)
+            configChangeObserver = nil
         }
+        if let observer = screenChangeObserver {
+            NotificationCenter.default.removeObserver(observer)
+            screenChangeObserver = nil
+        }
+        if let monitor = modifierMonitor {
+            NSEvent.removeMonitor(monitor)
+            modifierMonitor = nil
+        }
+        
+        highlightWindow?.close()
+        highlightWindow = nil
     }
     
     private func refreshHighlightWindow() {
@@ -345,16 +373,23 @@ class ZoneHighlightManager {
         // Start monitoring modifier keys
         startModifierMonitoring()
         
-        // Also start monitoring for screen changes
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(screenDidChange),
-            name: NSApplication.didChangeScreenParametersNotification,
-            object: nil
-        )
+        // Memory optimization: Use stored observer reference for proper cleanup
+        if screenChangeObserver == nil {
+            screenChangeObserver = NotificationCenter.default.addObserver(
+                forName: NSApplication.didChangeScreenParametersNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                self?.screenDidChange()
+            }
+        }
     }
     
-    @objc private func screenDidChange(_ notification: Notification) {
+    private func screenDidChange() {
+        // Close old window first to release memory
+        highlightWindow?.close()
+        highlightWindow = nil
+        
         // Recreate highlight window with new screen dimensions
         if let screen = NSScreen.main {
             highlightWindow = ZoneHighlightWindow(contentRect: screen.frame,
@@ -366,15 +401,15 @@ class ZoneHighlightManager {
     
     func stopHighlighting() {
         stopModifierMonitoring()
-        highlightWindow?.hideZones()
+        // Memory optimization: Close the window to release view hierarchy
+        highlightWindow?.close()
         highlightWindow = nil
         
         // Remove screen change observer
-        NotificationCenter.default.removeObserver(
-            self,
-            name: NSApplication.didChangeScreenParametersNotification,
-            object: nil
-        )
+        if let observer = screenChangeObserver {
+            NotificationCenter.default.removeObserver(observer)
+            screenChangeObserver = nil
+        }
     }
     
     private func startModifierMonitoring() {

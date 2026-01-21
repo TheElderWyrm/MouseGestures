@@ -7,6 +7,8 @@ struct TabManager: View {
     @StateObject private var uiPluginManager = UIPluginManager.shared
     @StateObject private var uiServices = UIServices.shared
     @State private var previousSelectedTab = 0
+    // Memory optimization: Track which tabs have been loaded to enable lazy loading
+    @State private var loadedTabs: Set<Int> = [0]
     
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -16,6 +18,8 @@ struct TabManager: View {
         }
         .frame(width: 1000, height: 700)
         .onChange(of: selectedTab) { newValue in
+            // Mark the new tab as loaded before handling the change
+            loadedTabs.insert(newValue)
             handleTabChange(from: previousSelectedTab, to: newValue)
             previousSelectedTab = newValue
         }
@@ -31,11 +35,20 @@ struct TabManager: View {
     
     @ViewBuilder
     private func createTabItem(for plugin: any UIPlugin, tag: Int) -> some View {
-        plugin.createView()
-            .tabItem {
-                Label(plugin.displayName, systemImage: plugin.iconName)
+        // Memory optimization: Only create the actual view if this tab has been selected
+        // This prevents all 8+ tabs from being rendered at startup
+        Group {
+            if loadedTabs.contains(tag) {
+                plugin.createView()
+            } else {
+                // Lightweight placeholder until tab is first selected
+                LazyTabPlaceholder(pluginName: plugin.displayName)
             }
-            .tag(tag)
+        }
+        .tabItem {
+            Label(plugin.displayName, systemImage: plugin.iconName)
+        }
+        .tag(tag)
     }
     
     private func handleTabChange(from oldIndex: Int, to newIndex: Int) {
@@ -273,5 +286,24 @@ struct PluginManagerView: View {
         }
         .padding()
         .frame(width: 500, height: 400)
+    }
+}
+
+// MARK: - Lazy Tab Placeholder
+
+/// Memory optimization: Lightweight placeholder shown for tabs that haven't been selected yet
+/// This prevents all plugin views from being instantiated at startup
+struct LazyTabPlaceholder: View {
+    let pluginName: String
+    
+    var body: some View {
+        VStack(spacing: 16) {
+            ProgressView()
+                .scaleEffect(1.5)
+            Text("Loading \(pluginName)...")
+                .font(.headline)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }

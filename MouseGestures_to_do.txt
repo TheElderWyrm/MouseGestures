@@ -11,6 +11,7 @@ Actions:
 - Not all actions work.
 
 Bugs
+- Zone Highlights can get stuck if modifiers are released during certain actions (Example, entering full screen)
 - Window Actions targeting multiple windows doesn't work
 
 Improve UI
