@@ -1,329 +1,119 @@
 import Cocoa
 
-// Window for showing gesture zone highlights
-class ZoneHighlightWindow: NSWindow {
-    private var highlightView: ZoneHighlightView?
+// MARK: - Individual Zone Window (Memory Optimized)
+
+/// A small window that highlights a single zone - much more memory efficient than a full-screen window
+class ZoneWindow: NSWindow {
+    let zone: ScreenZone
+    private var zoneView: ZoneView?
     
-    override init(contentRect: NSRect, styleMask style: NSWindow.StyleMask, backing backingStoreType: NSWindow.BackingStoreType, defer flag: Bool) {
-        super.init(contentRect: contentRect, styleMask: .borderless, backing: .buffered, defer: false)
-        
+    init(zone: ScreenZone, frame: NSRect) {
+        self.zone = zone
+        super.init(contentRect: frame, styleMask: .borderless, backing: .buffered, defer: true)
         setupWindow()
-        setupHighlightView()
+        setupView()
     }
     
     private func setupWindow() {
-        // Make window transparent and non-interactive
         isOpaque = false
         backgroundColor = NSColor.clear
         level = .floating
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
         ignoresMouseEvents = true
         hasShadow = false
-        
-        // Note: Do NOT use isReleasedWhenClosed = true
-        // Window lifecycle is managed by ZoneHighlightManager setting its reference to nil
-        // Using isReleasedWhenClosed causes EXC_BAD_ACCESS during autorelease pool drain
         isReleasedWhenClosed = false
     }
     
-    private func setupHighlightView() {
-        highlightView = ZoneHighlightView(frame: frame)
-        contentView = highlightView
+    private func setupView() {
+        zoneView = ZoneView(frame: NSRect(origin: .zero, size: frame.size), zone: zone)
+        contentView = zoneView
+    }
+    
+    func updateState(isActive: Bool, label: String?) {
+        zoneView?.isActive = isActive
+        zoneView?.label = label
+        zoneView?.needsDisplay = true
     }
     
     override func close() {
-        // Clear our strong reference to the view
-        // contentView is managed by NSWindow and will be released properly
-        highlightView = nil
+        zoneView = nil
         super.close()
-    }
-    
-    func showZones(withModifiers modifiers: NSEvent.ModifierFlags = []) {
-        // Update frame to match current screen
-        if let screen = NSScreen.main {
-            setFrame(screen.frame, display: true)
-            highlightView?.frame = screen.frame
-        }
-        highlightView?.currentModifiers = modifiers
-        highlightView?.needsDisplay = true
-        orderFront(nil)
-        alphaValue = 1.0
-    }
-    
-    func hideZones() {
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.2
-            animator().alphaValue = 0.0
-        } completionHandler: { [weak self] in
-            self?.orderOut(nil)
-        }
-    }
-    
-    func updateModifiers(_ modifiers: NSEvent.ModifierFlags) {
-        // Update frame to match current screen
-        if let screen = NSScreen.main {
-            setFrame(screen.frame, display: true)
-            highlightView?.frame = screen.frame
-        }
-        highlightView?.currentModifiers = modifiers
-        highlightView?.needsDisplay = true
     }
 }
 
-// Custom view for drawing zone highlights
-class ZoneHighlightView: NSView {
-    var currentModifiers: NSEvent.ModifierFlags = []
+/// View for a single zone
+class ZoneView: NSView {
+    let zone: ScreenZone
+    var isActive: Bool = false
+    var label: String?
     
-    // Colors for different zone states
     private let inactiveColor = NSColor.systemBlue.withAlphaComponent(0.1)
     private let activeColor = NSColor.systemGreen.withAlphaComponent(0.3)
-    private let hoverColor = NSColor.systemYellow.withAlphaComponent(0.4)
     private let borderColor = NSColor.white.withAlphaComponent(0.5)
     
-    override func draw(_ dirtyRect: NSRect) {
-        super.draw(dirtyRect)
-        
-        guard let screen = NSScreen.main else { return }
-        let config = Configuration.shared
-        
-        // Draw all zones
-        for zone in ScreenZone.allCases {
-            drawZone(zone, 
-                    screenFrame: screen.frame,
-                    threshold: config.edgeThreshold,
-                    cornerSize: config.cornerSize,
-                    cornerBuffer: config.cornerBuffer)
-        }
-        
-        // Draw labels if enabled
-        if config.showZoneLabels {
-            drawZoneLabels(screenFrame: screen.frame,
-                          threshold: config.edgeThreshold,
-                          cornerSize: config.cornerSize,
-                          cornerBuffer: config.cornerBuffer)
-        }
+    init(frame: NSRect, zone: ScreenZone) {
+        self.zone = zone
+        super.init(frame: frame)
     }
     
-    private func drawZone(_ zone: ScreenZone, screenFrame: NSRect, threshold: CGFloat, cornerSize: CGFloat, cornerBuffer: CGFloat) {
-        let zonePath = createPath(for: zone, screenFrame: screenFrame, threshold: threshold, cornerSize: cornerSize, cornerBuffer: cornerBuffer)
-        
-        // Check if this zone has an active gesture for current modifiers
-        let hasActiveGesture = Configuration.shared.gestures.contains { gesture in
-            gesture.zone == zone &&
-            gesture.modifiers == currentModifiers &&
-            gesture.isEnabled &&
-            (gesture.activationType == .gesture || gesture.activationType == .both)
-        }
-        
-        // Set fill color based on state
-        if hasActiveGesture {
-            activeColor.setFill()
-        } else {
-            inactiveColor.setFill()
-        }
-        
-        zonePath.fill()
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) not implemented")
+    }
+    
+    override func draw(_ dirtyRect: NSRect) {
+        // Fill the entire view (the window is already sized to the zone)
+        let fillColor = isActive ? activeColor : inactiveColor
+        fillColor.setFill()
+        bounds.fill()
         
         // Draw border
         borderColor.setStroke()
-        zonePath.lineWidth = 1.0
-        zonePath.stroke()
-    }
-    
-    private func createPath(for zone: ScreenZone, screenFrame: NSRect, threshold: CGFloat, cornerSize: CGFloat, cornerBuffer: CGFloat) -> NSBezierPath {
-        let path = NSBezierPath()
+        let borderPath = NSBezierPath(rect: bounds.insetBy(dx: 0.5, dy: 0.5))
+        borderPath.lineWidth = 1.0
+        borderPath.stroke()
         
-        // Account for menu bar height
-        let menuBarHeight: CGFloat = 38
-        let adjustedMaxY = screenFrame.maxY - menuBarHeight
-        
-        switch zone {
-        case .topLeft:
-            path.move(to: NSPoint(x: screenFrame.minX, y: adjustedMaxY))
-            path.line(to: NSPoint(x: screenFrame.minX + cornerSize, y: adjustedMaxY))
-            path.line(to: NSPoint(x: screenFrame.minX + cornerSize, y: adjustedMaxY - cornerSize))
-            path.line(to: NSPoint(x: screenFrame.minX, y: adjustedMaxY - cornerSize))
-            path.close()
-            
-        case .top:
-            let leftBoundary = screenFrame.minX + cornerSize + cornerBuffer
-            let rightBoundary = screenFrame.maxX - cornerSize - cornerBuffer
-            path.move(to: NSPoint(x: leftBoundary, y: adjustedMaxY))
-            path.line(to: NSPoint(x: rightBoundary, y: adjustedMaxY))
-            path.line(to: NSPoint(x: rightBoundary, y: adjustedMaxY - threshold))
-            path.line(to: NSPoint(x: leftBoundary, y: adjustedMaxY - threshold))
-            path.close()
-            
-        case .topRight:
-            path.move(to: NSPoint(x: screenFrame.maxX - cornerSize, y: adjustedMaxY))
-            path.line(to: NSPoint(x: screenFrame.maxX, y: adjustedMaxY))
-            path.line(to: NSPoint(x: screenFrame.maxX, y: adjustedMaxY - cornerSize))
-            path.line(to: NSPoint(x: screenFrame.maxX - cornerSize, y: adjustedMaxY - cornerSize))
-            path.close()
-            
-        case .left:
-            let menuBarHeight: CGFloat = 25
-            let topBoundary = (screenFrame.maxY - menuBarHeight) - cornerSize - cornerBuffer
-            let bottomBoundary = screenFrame.minY + cornerSize + cornerBuffer
-            path.move(to: NSPoint(x: screenFrame.minX, y: topBoundary))
-            path.line(to: NSPoint(x: screenFrame.minX + threshold, y: topBoundary))
-            path.line(to: NSPoint(x: screenFrame.minX + threshold, y: bottomBoundary))
-            path.line(to: NSPoint(x: screenFrame.minX, y: bottomBoundary))
-            path.close()
-            
-        case .right:
-            let menuBarHeight: CGFloat = 25
-            let topBoundary = (screenFrame.maxY - menuBarHeight) - cornerSize - cornerBuffer
-            let bottomBoundary = screenFrame.minY + cornerSize + cornerBuffer
-            path.move(to: NSPoint(x: screenFrame.maxX - threshold, y: topBoundary))
-            path.line(to: NSPoint(x: screenFrame.maxX, y: topBoundary))
-            path.line(to: NSPoint(x: screenFrame.maxX, y: bottomBoundary))
-            path.line(to: NSPoint(x: screenFrame.maxX - threshold, y: bottomBoundary))
-            path.close()
-            
-        case .bottomLeft:
-            path.move(to: NSPoint(x: screenFrame.minX, y: screenFrame.minY))
-            path.line(to: NSPoint(x: screenFrame.minX, y: screenFrame.minY + cornerSize))
-            path.line(to: NSPoint(x: screenFrame.minX + cornerSize, y: screenFrame.minY + cornerSize))
-            path.line(to: NSPoint(x: screenFrame.minX + cornerSize, y: screenFrame.minY))
-            path.close()
-            
-        case .bottom:
-            let leftBoundary = screenFrame.minX + cornerSize + cornerBuffer
-            let rightBoundary = screenFrame.maxX - cornerSize - cornerBuffer
-            path.move(to: NSPoint(x: leftBoundary, y: screenFrame.minY))
-            path.line(to: NSPoint(x: leftBoundary, y: screenFrame.minY + threshold))
-            path.line(to: NSPoint(x: rightBoundary, y: screenFrame.minY + threshold))
-            path.line(to: NSPoint(x: rightBoundary, y: screenFrame.minY))
-            path.close()
-            
-        case .bottomRight:
-            path.move(to: NSPoint(x: screenFrame.maxX - cornerSize, y: screenFrame.minY))
-            path.line(to: NSPoint(x: screenFrame.maxX - cornerSize, y: screenFrame.minY + cornerSize))
-            path.line(to: NSPoint(x: screenFrame.maxX, y: screenFrame.minY + cornerSize))
-            path.line(to: NSPoint(x: screenFrame.maxX, y: screenFrame.minY))
-            path.close()
-        }
-        
-        return path
-    }
-    
-    private func drawZoneLabels(screenFrame: NSRect, threshold: CGFloat, cornerSize: CGFloat, cornerBuffer: CGFloat) {
-        let attributes: [NSAttributedString.Key: Any] = [
-            .font: NSFont.systemFont(ofSize: 12, weight: .medium),
-            .foregroundColor: NSColor.white,
-            .strokeColor: NSColor.black,
-            .strokeWidth: -2.0
-        ]
-        
-        for zone in ScreenZone.allCases {
-            let label = getZoneLabel(for: zone)
-            let labelSize = label.size(withAttributes: attributes)
-            let labelPoint = getLabelPosition(for: zone, screenFrame: screenFrame, 
-                                             labelSize: labelSize, threshold: threshold, 
-                                             cornerSize: cornerSize, cornerBuffer: cornerBuffer)
-            
-            label.draw(at: labelPoint, withAttributes: attributes)
-        }
-    }
-    
-    private func getZoneLabel(for zone: ScreenZone) -> String {
-        // Check if zone has active gesture
-        if let gesture = Configuration.shared.gestures.first(where: { 
-            $0.zone == zone && 
-            $0.modifiers == currentModifiers && 
-            $0.isEnabled &&
-            ($0.activationType == .gesture || $0.activationType == .both)
-        }) {
-            // Show the action for this zone
-            // Check if this is a runShortcut action
-            if gesture.actionIdentifier == "com.mousegestures.automation.run_shortcut",
-               let name = gesture.parameters["shortcut_name"]?.value as? String {
-                return name
-            } else {
-                // Get plugin action name from the identifier
-                if let (_, action) = PluginManager.shared.getAction(identifier: gesture.actionIdentifier) {
-                    return action.name
-                } else {
-                    return gesture.actionIdentifier // Fallback to raw identifier
-                }
-            }
-        }
-        
-        // Show zone name if no active gesture
-        switch zone {
-        case .topLeft: return "↖"
-        case .top: return "↑"
-        case .topRight: return "↗"
-        case .left: return "←"
-        case .right: return "→"
-        case .bottomLeft: return "↙"
-        case .bottom: return "↓"
-        case .bottomRight: return "↘"
-        }
-    }
-    
-    private func getLabelPosition(for zone: ScreenZone, screenFrame: NSRect, labelSize: NSSize, 
-                                  threshold: CGFloat, cornerSize: CGFloat, cornerBuffer: CGFloat) -> NSPoint {
-        // Account for menu bar height
-        let menuBarHeight: CGFloat = 25
-        let adjustedMaxY = screenFrame.maxY - menuBarHeight
-        let padding: CGFloat = 5
-        
-        switch zone {
-        case .topLeft:
-            return NSPoint(x: screenFrame.minX + padding, 
-                          y: adjustedMaxY - cornerSize/2 - labelSize.height/2)
-        case .top:
-            return NSPoint(x: screenFrame.midX - labelSize.width/2, 
-                          y: adjustedMaxY - threshold/2 - labelSize.height/2)
-        case .topRight:
-            // Keep label inside the zone, aligned to the right edge minus padding and label width
-            return NSPoint(x: screenFrame.maxX - labelSize.width - padding, 
-                          y: adjustedMaxY - cornerSize/2 - labelSize.height/2)
-        case .left:
-            return NSPoint(x: screenFrame.minX + padding, 
-                          y: screenFrame.midY - labelSize.height/2)
-        case .right:
-            // Keep label inside the zone, aligned to the right edge minus padding and label width
-            return NSPoint(x: screenFrame.maxX - labelSize.width - padding, 
-                          y: screenFrame.midY - labelSize.height/2)
-        case .bottomLeft:
-            return NSPoint(x: screenFrame.minX + padding, 
-                          y: screenFrame.minY + cornerSize/2 - labelSize.height/2)
-        case .bottom:
-            return NSPoint(x: screenFrame.midX - labelSize.width/2, 
-                          y: screenFrame.minY + threshold/2 - labelSize.height/2)
-        case .bottomRight:
-            // Keep label inside the zone, aligned to the right edge minus padding and label width
-            return NSPoint(x: screenFrame.maxX - labelSize.width - padding, 
-                          y: screenFrame.minY + cornerSize/2 - labelSize.height/2)
+        // Draw label if present
+        if let label = label, Configuration.shared.showZoneLabels {
+            let attrs: [NSAttributedString.Key: Any] = [
+                .font: NSFont.systemFont(ofSize: 11, weight: .medium),
+                .foregroundColor: NSColor.white,
+                .strokeColor: NSColor.black,
+                .strokeWidth: -2.0
+            ]
+            let size = label.size(withAttributes: attrs)
+            let point = NSPoint(
+                x: (bounds.width - size.width) / 2,
+                y: (bounds.height - size.height) / 2
+            )
+            label.draw(at: point, withAttributes: attrs)
         }
     }
 }
 
-// Manager for controlling zone highlights
+// MARK: - Zone Highlight Manager (Memory Optimized)
+
+/// Manages zone highlight windows using individual small windows per zone
 class ZoneHighlightManager {
     static let shared = ZoneHighlightManager()
-    private var highlightWindow: ZoneHighlightWindow?
+    
+    private var zoneWindows: [ScreenZone: ZoneWindow] = [:]
     private var modifierMonitor: Any?
     private var hideTimer: Timer?
     private var configChangeObserver: Any?
     private var screenChangeObserver: Any?
+    private var currentModifiers: NSEvent.ModifierFlags = []
     
     private init() {
-        // Listen for configuration changes to refresh the window
         configChangeObserver = NotificationCenter.default.addObserver(
             forName: NSNotification.Name("GestureConfigurationChanged"),
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            self?.refreshHighlightWindow()
+            self?.refreshZoneStates()
         }
     }
     
     deinit {
-        // Memory optimization: Ensure all observers are cleaned up
         cleanup()
     }
     
@@ -344,32 +134,23 @@ class ZoneHighlightManager {
             modifierMonitor = nil
         }
         
-        highlightWindow?.close()
-        highlightWindow = nil
+        closeAllWindows()
     }
     
-    private func refreshHighlightWindow() {
-        // If highlights are visible, refresh the window frame
-        if highlightWindow?.isVisible == true {
-            if let screen = NSScreen.main {
-                highlightWindow?.setFrame(screen.frame, display: true)
-                highlightWindow?.contentView?.frame = screen.frame
-                highlightWindow?.contentView?.needsDisplay = true
-            }
+    private func closeAllWindows() {
+        for (_, window) in zoneWindows {
+            window.close()
         }
+        zoneWindows.removeAll()
     }
+    
+    // MARK: - Public Interface
     
     func startHighlighting() {
         guard Configuration.shared.showZoneHighlights else { return }
         
-        // Memory optimization: Don't pre-create the window
-        // It will be created on-demand when modifiers are pressed and there are matching gestures
-        // This saves ~30 MB of memory when the app is idle
-        
-        // Start monitoring modifier keys
         startModifierMonitoring()
         
-        // Memory optimization: Use stored observer reference for proper cleanup
         if screenChangeObserver == nil {
             screenChangeObserver = NotificationCenter.default.addObserver(
                 forName: NSApplication.didChangeScreenParametersNotification,
@@ -381,28 +162,142 @@ class ZoneHighlightManager {
         }
     }
     
-    private func screenDidChange() {
-        // Close old window to release memory - it will be recreated on-demand
-        highlightWindow?.close()
-        highlightWindow = nil
-        // Don't recreate immediately - let handleModifierChange create it when needed
-    }
-    
     func stopHighlighting() {
         stopModifierMonitoring()
-        // Memory optimization: Close the window to release view hierarchy
-        highlightWindow?.close()
-        highlightWindow = nil
+        closeAllWindows()
         
-        // Remove screen change observer
         if let observer = screenChangeObserver {
             NotificationCenter.default.removeObserver(observer)
             screenChangeObserver = nil
         }
     }
     
+    // MARK: - Zone Frame Calculations
+    
+    private func frameForZone(_ zone: ScreenZone, screen: NSScreen) -> NSRect {
+        let config = Configuration.shared
+        let threshold = config.edgeThreshold
+        let cornerSize = config.cornerSize
+        let cornerBuffer = config.cornerBuffer
+        let screenFrame = screen.frame
+        let menuBarHeight: CGFloat = 38
+        let adjustedMaxY = screenFrame.maxY - menuBarHeight
+        
+        switch zone {
+        case .topLeft:
+            return NSRect(x: screenFrame.minX, y: adjustedMaxY - cornerSize,
+                         width: cornerSize, height: cornerSize)
+        case .top:
+            let left = screenFrame.minX + cornerSize + cornerBuffer
+            let right = screenFrame.maxX - cornerSize - cornerBuffer
+            return NSRect(x: left, y: adjustedMaxY - threshold,
+                         width: right - left, height: threshold)
+        case .topRight:
+            return NSRect(x: screenFrame.maxX - cornerSize, y: adjustedMaxY - cornerSize,
+                         width: cornerSize, height: cornerSize)
+        case .left:
+            let top = adjustedMaxY - cornerSize - cornerBuffer
+            let bottom = screenFrame.minY + cornerSize + cornerBuffer
+            return NSRect(x: screenFrame.minX, y: bottom,
+                         width: threshold, height: top - bottom)
+        case .right:
+            let top = adjustedMaxY - cornerSize - cornerBuffer
+            let bottom = screenFrame.minY + cornerSize + cornerBuffer
+            return NSRect(x: screenFrame.maxX - threshold, y: bottom,
+                         width: threshold, height: top - bottom)
+        case .bottomLeft:
+            return NSRect(x: screenFrame.minX, y: screenFrame.minY,
+                         width: cornerSize, height: cornerSize)
+        case .bottom:
+            let left = screenFrame.minX + cornerSize + cornerBuffer
+            let right = screenFrame.maxX - cornerSize - cornerBuffer
+            return NSRect(x: left, y: screenFrame.minY,
+                         width: right - left, height: threshold)
+        case .bottomRight:
+            return NSRect(x: screenFrame.maxX - cornerSize, y: screenFrame.minY,
+                         width: cornerSize, height: cornerSize)
+        }
+    }
+    
+    // MARK: - Window Management
+    
+    private func showZones(modifiers: NSEvent.ModifierFlags) {
+        guard let screen = NSScreen.main else { return }
+        let config = Configuration.shared
+        
+        for zone in ScreenZone.allCases {
+            let frame = frameForZone(zone, screen: screen)
+            
+            // Create window on demand
+            if zoneWindows[zone] == nil {
+                zoneWindows[zone] = ZoneWindow(zone: zone, frame: frame)
+            }
+            
+            guard let window = zoneWindows[zone] else { continue }
+            
+            // Update frame if screen changed
+            if window.frame != frame {
+                window.setFrame(frame, display: true)
+            }
+            
+            // Check if zone has active gesture
+            let gesture = config.gestures.first { g in
+                g.zone == zone &&
+                g.modifiers == modifiers &&
+                g.isEnabled &&
+                (g.activationType == .gesture || g.activationType == .both)
+            }
+            
+            let isActive = gesture != nil
+            let label = getLabel(for: gesture)
+            
+            window.updateState(isActive: isActive, label: label)
+            window.orderFront(nil)
+            window.alphaValue = 1.0
+        }
+    }
+    
+    private func hideZones() {
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.15
+            for (_, window) in zoneWindows {
+                window.animator().alphaValue = 0.0
+            }
+        } completionHandler: { [weak self] in
+            for (_, window) in self?.zoneWindows ?? [:] {
+                window.orderOut(nil)
+            }
+        }
+    }
+    
+    private func getLabel(for gesture: Gesture?) -> String? {
+        guard let gesture = gesture else { return nil }
+        
+        if gesture.actionIdentifier == "com.mousegestures.automation.run_shortcut",
+           let name = gesture.parameters["shortcut_name"]?.value as? String {
+            return name
+        }
+        
+        if let (_, action) = PluginManager.shared.getAction(identifier: gesture.actionIdentifier) {
+            return action.name
+        }
+        
+        return nil
+    }
+    
+    private func refreshZoneStates() {
+        if !currentModifiers.isEmpty && !zoneWindows.isEmpty {
+            showZones(modifiers: currentModifiers)
+        }
+    }
+    
+    private func screenDidChange() {
+        closeAllWindows()
+    }
+    
+    // MARK: - Modifier Monitoring
+    
     private func startModifierMonitoring() {
-        // Monitor modifier key changes
         modifierMonitor = NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
             self?.handleModifierChange(event)
         }
@@ -418,52 +313,27 @@ class ZoneHighlightManager {
     }
     
     private func handleModifierChange(_ event: NSEvent) {
-        let config = Configuration.shared
-        guard config.showZoneHighlights else { return }
+        guard Configuration.shared.showZoneHighlights else { return }
         
         let modifiers = normalizeModifiers(event.modifierFlags)
+        currentModifiers = modifiers
         
-        // Cancel any pending hide timer
         hideTimer?.invalidate()
         hideTimer = nil
         
         if !modifiers.isEmpty {
-            // Check if we should show highlights based on settings
-            let shouldShow: Bool
-            
-            // Simplified logic - show if there are active gestures for these modifiers
-            shouldShow = config.gestures.contains { gesture in
-                gesture.modifiers == modifiers &&
-                gesture.isEnabled &&
-                (gesture.activationType == .gesture || gesture.activationType == .both)
+            let hasMatchingGestures = Configuration.shared.gestures.contains { g in
+                g.modifiers == modifiers &&
+                g.isEnabled &&
+                (g.activationType == .gesture || g.activationType == .both)
             }
             
-            if shouldShow {
-                // Ensure window is on correct screen and properly sized
-                if let screen = NSScreen.main {
-                    // Create window on-demand or recreate if screen changed
-                    // Using defer: true delays backing store creation until window is shown
-                    if highlightWindow == nil || !highlightWindow!.frame.equalTo(screen.frame) {
-                        highlightWindow?.close()
-                        highlightWindow = ZoneHighlightWindow(contentRect: screen.frame,
-                                                             styleMask: .borderless,
-                                                             backing: .buffered,
-                                                             defer: true)
-                    }
-                }
-                
-                // Force window to front even if already visible
-                highlightWindow?.orderFront(nil)
-                highlightWindow?.alphaValue = 1.0
-                highlightWindow?.showZones(withModifiers: modifiers)
-                highlightWindow?.updateModifiers(modifiers)
-                
-                // Hide timer removed - highlights stay while modifiers are held
+            if hasMatchingGestures {
+                showZones(modifiers: modifiers)
             }
         } else {
-            // All modifiers released - hide highlights with a small delay to prevent flicker
             hideTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: false) { [weak self] _ in
-                self?.highlightWindow?.hideZones()
+                self?.hideZones()
             }
         }
     }
@@ -478,3 +348,72 @@ class ZoneHighlightManager {
     }
 }
 
+// MARK: - Legacy Compatibility (Unused but kept for reference)
+
+/// Legacy full-screen window - kept for reference but no longer used
+/// Memory cost was ~60MB on Retina displays due to full-screen backing store
+@available(*, deprecated, message: "Use ZoneHighlightManager with individual ZoneWindows instead")
+class ZoneHighlightWindow: NSWindow {
+    private var highlightView: ZoneHighlightView?
+    
+    override init(contentRect: NSRect, styleMask style: NSWindow.StyleMask, backing backingStoreType: NSWindow.BackingStoreType, defer flag: Bool) {
+        super.init(contentRect: contentRect, styleMask: .borderless, backing: .buffered, defer: false)
+        isOpaque = false
+        backgroundColor = NSColor.clear
+        level = .floating
+        collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
+        ignoresMouseEvents = true
+        hasShadow = false
+        isReleasedWhenClosed = false
+        highlightView = ZoneHighlightView(frame: frame)
+        contentView = highlightView
+    }
+    
+    override func close() {
+        highlightView = nil
+        super.close()
+    }
+    
+    func showZones(withModifiers modifiers: NSEvent.ModifierFlags = []) {
+        if let screen = NSScreen.main {
+            setFrame(screen.frame, display: true)
+            highlightView?.frame = screen.frame
+        }
+        highlightView?.currentModifiers = modifiers
+        highlightView?.needsDisplay = true
+        orderFront(nil)
+        alphaValue = 1.0
+    }
+    
+    func hideZones() {
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.2
+            animator().alphaValue = 0.0
+        } completionHandler: { [weak self] in
+            self?.orderOut(nil)
+        }
+    }
+    
+    func updateModifiers(_ modifiers: NSEvent.ModifierFlags) {
+        if let screen = NSScreen.main {
+            setFrame(screen.frame, display: true)
+            highlightView?.frame = screen.frame
+        }
+        highlightView?.currentModifiers = modifiers
+        highlightView?.needsDisplay = true
+    }
+}
+
+/// Legacy full-screen view - kept for reference
+@available(*, deprecated, message: "Use ZoneView instead")
+class ZoneHighlightView: NSView {
+    var currentModifiers: NSEvent.ModifierFlags = []
+    
+    private let inactiveColor = NSColor.systemBlue.withAlphaComponent(0.1)
+    private let activeColor = NSColor.systemGreen.withAlphaComponent(0.3)
+    private let borderColor = NSColor.white.withAlphaComponent(0.5)
+    
+    override func draw(_ dirtyRect: NSRect) {
+        // Minimal implementation for compatibility
+    }
+}
