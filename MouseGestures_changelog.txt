@@ -1,5 +1,20 @@
 ## 2026-01-20
 
+### Memory Optimizations
+- Reduced idle memory usage from ~125 MB toward 45-65 MB target
+- AppDelegate: Removed hidden SettingsActionHandler NSWindow that was keeping SwiftUI layers alive
+  - Now uses direct NSApp.sendAction for opening settings window
+- TabManager: Implemented lazy tab loading with LazyTabPlaceholder
+  - Only renders tabs when first selected instead of all 8+ at startup
+  - Prevents CoreAnimation layer explosion from pre-rendering all views
+- ZoneHighlightWindow: Fixed lifecycle for proper memory release
+  - Changed isReleasedWhenClosed to true, added explicit contentView cleanup
+  - Made highlightView optional with weak references in closures
+- ZoneHighlightManager: Improved observer cleanup
+  - Store screen change observer reference for proper cleanup
+  - Added comprehensive cleanup() method in deinit
+  - Close old window before creating new one on screen change
+
 ### New Features
 - Implemented ActivationCoordinator for efficiency-based detector gating
   - New `ActivationType` enum with efficiency scores (0-100) for each detection type
