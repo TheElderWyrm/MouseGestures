@@ -4,7 +4,8 @@ import Carbon
 // MARK: - Modifier Key Detector Plugin
 
 /// Plugin that detects modifier key presses and releases
-class ModifierKeyDetectorPlugin: BaseDetectionPlugin {
+/// Reports state changes to ActivationCoordinator for efficiency-based gating
+class ModifierKeyDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     
     // MARK: - Constants
     
@@ -76,7 +77,44 @@ class ModifierKeyDetectorPlugin: BaseDetectionPlugin {
     private var modifierPressCount = 0
     private var lastEventTime: Date?
     
+    // MARK: - ActivationProvider Protocol
+    
+    var providedActivationTypes: [ActivationType] {
+        return [.modifierKey]
+    }
+    
+    func getActivationState(for type: ActivationType) -> ActivationState? {
+        guard type == .modifierKey else { return nil }
+        return ActivationState(
+            type: .modifierKey,
+            isEngaged: hasModifiers,
+            metadata: ["modifiers": currentModifiers.rawValue]
+        )
+    }
+    
+    func enableDetection(for type: ActivationType) {
+        // Modifier detection is always active - nothing to enable
+        // This plugin is always listening for modifier events
+    }
+    
+    func disableDetection(for type: ActivationType) {
+        // Modifier detection is always active - nothing to disable
+        // This plugin is always listening for modifier events
+    }
+    
+    func isDetectionActive(for type: ActivationType) -> Bool {
+        // Modifier detection is always active when plugin is running
+        return state == .running
+    }
+    
     // MARK: - Plugin Lifecycle
+    
+    override func initialize(context: DetectionContext) throws {
+        try super.initialize(context: context)
+        
+        // Register with ActivationCoordinator
+        ActivationCoordinator.shared.registerProvider(self, for: providedActivationTypes)
+    }
     
     override func start() throws {
         try super.start()
@@ -92,14 +130,12 @@ class ModifierKeyDetectorPlugin: BaseDetectionPlugin {
         }
         
         // Check if modifiers are already pressed at startup
-        // This handles the case where the user holds modifiers before detection starts
         initializeModifierState()
         
         context?.logger.log("Modifier key detection started", file: #file, function: #function, line: #line)
     }
     
     /// Initialize modifier state from current system state
-    /// Handles case where modifiers are already pressed when detection starts
     private func initializeModifierState() {
         let systemModifiers = Self.currentSystemModifiers()
         
@@ -111,8 +147,8 @@ class ModifierKeyDetectorPlugin: BaseDetectionPlugin {
             lastModifiers = systemModifiers
             hasModifiers = true
             
-            // Enable mouse tracking since modifiers are held
-            modifierPressed()
+            // Notify coordinator that modifiers are engaged
+            notifyModifierEngaged()
         }
     }
     
@@ -128,6 +164,11 @@ class ModifierKeyDetectorPlugin: BaseDetectionPlugin {
             localModifierMonitor = nil
         }
         
+        // Notify coordinator that modifiers are disengaged
+        if hasModifiers {
+            ActivationCoordinator.shared.activationDisengaged(.modifierKey)
+        }
+        
         // Reset state
         currentModifiers = []
         lastModifiers = []
@@ -135,6 +176,11 @@ class ModifierKeyDetectorPlugin: BaseDetectionPlugin {
         lastActionTime = nil
         
         super.stop()
+    }
+    
+    override func cleanup() {
+        ActivationCoordinator.shared.unregisterProvider(self)
+        super.cleanup()
     }
     
     // MARK: - Event Handling
@@ -177,39 +223,36 @@ class ModifierKeyDetectorPlugin: BaseDetectionPlugin {
     private func modifierPressed() {
         context?.logger.log("First modifier pressed: \(modifierString(currentModifiers))", file: #file, function: #function, line: #line)
         
-        // Enable mouse tracking in zone detector
-        context?.pluginManager?.enableMouseTracking()
-        
-        // Notify other plugins through shared state
-        notifyModifierStateChange()
+        // Notify coordinator - this will trigger gated detectors
+        notifyModifierEngaged()
     }
     
     private func allModifiersReleased() {
         context?.logger.log("All modifiers released", file: #file, function: #function, line: #line)
         
-        // Disable mouse tracking if not dragging
-        if let zonePlugin = context?.pluginManager?.getPlugin(ScreenZoneDetectorPlugin.pluginIdentifier) as? ScreenZoneDetectorPlugin {
-            if zonePlugin.dragState == .none {
-                context?.pluginManager?.disableMouseTracking()
-            }
-        }
-        
         // Mark action executed for cooldown
         markActionExecuted()
         
-        // Notify other plugins
-        notifyModifierStateChange()
+        // Notify coordinator - this will deactivate gated detectors
+        ActivationCoordinator.shared.activationDisengaged(.modifierKey)
     }
     
     private func modifierCombinationChanged(from oldModifiers: NSEvent.ModifierFlags, to newModifiers: NSEvent.ModifierFlags) {
         if context?.logger.isDebugEnabled ?? false {
-            if context?.logger.isDebugEnabled == true {
-                context?.logger.log("Modifiers changed from \(modifierString(oldModifiers)) to \(modifierString(newModifiers))", file: #file, function: #function, line: #line)
-            }
+            context?.logger.log("Modifiers changed from \(modifierString(oldModifiers)) to \(modifierString(newModifiers))", file: #file, function: #function, line: #line)
         }
         
-        // Notify other plugins
-        notifyModifierStateChange()
+        // Update coordinator with new modifier metadata
+        ActivationCoordinator.shared.activationEngaged(.modifierKey, metadata: [
+            "modifiers": newModifiers.rawValue,
+            "previous": oldModifiers.rawValue
+        ])
+    }
+    
+    private func notifyModifierEngaged() {
+        ActivationCoordinator.shared.activationEngaged(.modifierKey, metadata: [
+            "modifiers": currentModifiers.rawValue
+        ])
     }
     
     // MARK: - Helper Methods
@@ -257,12 +300,6 @@ class ModifierKeyDetectorPlugin: BaseDetectionPlugin {
         return Date().timeIntervalSince(lastTime) < cooldownPeriod
     }
     
-    /// Notify other plugins of modifier state change
-    private func notifyModifierStateChange() {
-        // This could be expanded to a formal notification system
-        // For now, other plugins can query current state directly
-    }
-    
     // MARK: - Statistics
     
     override func getStatistics() -> DetectionPluginStatistics {
@@ -284,7 +321,6 @@ class ModifierKeyDetectorPlugin: BaseDetectionPlugin {
     // MARK: - Configuration
     
     override func configurationView() -> NSView? {
-        // Could provide UI for cooldown period adjustment
         return nil
     }
 }

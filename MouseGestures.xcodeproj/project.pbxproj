@@ -20,6 +20,7 @@
 		30EC453FA0EE9126694C82C7 /* PluginSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D7A41F0BE26A4E0C4F63167 /* PluginSettings.swift */; };
 		35C84BDEB33503AFFDFB58B1 /* PerformanceMonitorService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0AC42869CAF595045A859AC /* PerformanceMonitorService.swift */; };
 		413443399AD7BBC1AAE77456 /* Gesture.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7CE4325B6AB1394B42630FE /* Gesture.swift */; };
+		48434A8CB7E58785D8D9C991 /* ActivationCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BBF432DA1F9D4523F59E042 /* ActivationCoordinator.swift */; };
 		52E709306F884244BD613F97 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CF07C161A504F75B8A0A765 /* Extensions.swift */; };
 		57E74A98887D752E12341EAB /* MenuBarVisibilityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 819645EF96808A0694813132 /* MenuBarVisibilityService.swift */; };
 		6D5D446ABEF1AB23538FA065 /* GestureConfigurationSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64C5479DA96DBB3B6574282B /* GestureConfigurationSheet.swift */; };
@@ -114,6 +115,7 @@
 		2DD322307C9B449E9DF25288 /* ProfileManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileManager.swift; sourceTree = "<group>"; };
 		3221DCB96B494D9D905A31B2 /* ScreenZone.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenZone.swift; sourceTree = "<group>"; };
 		327F4731AEF9672A01457921 /* SettingsImportExportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SettingsImportExportService.swift; path = MouseGestures/Services/SettingsImportExportService.swift; sourceTree = SOURCE_ROOT; };
+		3BBF432DA1F9D4523F59E042 /* ActivationCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActivationCoordinator.swift; path = MouseGestures/Detection/DetectionPlugins/Core/ActivationCoordinator.swift; sourceTree = SOURCE_ROOT; };
 		433840B5B9F1147FC61DC27E /* GestureConfigurationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GestureConfigurationService.swift; path = MouseGestures/Services/GestureConfigurationService.swift; sourceTree = SOURCE_ROOT; };
 		44834482B8DEA27DF530548D /* UpdateCheckService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UpdateCheckService.swift; path = MouseGestures/Services/UpdateCheckService.swift; sourceTree = SOURCE_ROOT; };
 		4E6440BE9ABAFA4BC5A0BD24 /* MouseGesturesApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MouseGesturesApp.swift; path = MouseGestures/Initilization/MouseGesturesApp.swift; sourceTree = SOURCE_ROOT; };
@@ -430,6 +432,7 @@
 				77EA22442E69256D00A45D6A /* DetectionPlugin.swift */,
 				77EA22452E69256D00A45D6A /* DetectionPluginManager.swift */,
 				5D7A41F0BE26A4E0C4F63167 /* PluginSettings.swift */,
+				3BBF432DA1F9D4523F59E042 /* ActivationCoordinator.swift */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -638,6 +641,7 @@
 				A95E441BBF2000EDC808ED37 /* ApplicationDiscoveryService.swift in Sources */,
 				30EC453FA0EE9126694C82C7 /* PluginSettings.swift in Sources */,
 				E428403AB531AD17009BBC21 /* PluginSettingsView.swift in Sources */,
+				48434A8CB7E58785D8D9C991 /* ActivationCoordinator.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

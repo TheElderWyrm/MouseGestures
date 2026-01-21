@@ -162,6 +162,9 @@ class DetectionPluginManager: NSObject {
             }
         }
         
+        // Initialize activation coordinator dependencies after plugins are started
+        ActivationCoordinator.shared.rebuildDependencies()
+        
         // Start zone highlighting if enabled
         ZoneHighlightManager.shared.startHighlighting()
         
@@ -196,12 +199,16 @@ class DetectionPluginManager: NSObject {
             if enabled {
                 do {
                     try plugin.start()
+                    // Rebuild dependencies when plugin is enabled
+                    ActivationCoordinator.shared.rebuildDependencies()
                     log.log("Started plugin: \(plugin.name)")
                 } catch {
                     log.log("Failed to start plugin \(plugin.name): \(error)")
                 }
             } else {
                 plugin.stop()
+                // Rebuild dependencies when plugin is disabled
+                ActivationCoordinator.shared.rebuildDependencies()
                 log.log("Stopped plugin: \(plugin.name)")
             }
         }
@@ -266,6 +273,9 @@ class DetectionPluginManager: NSObject {
         for plugin in plugins.values {
             plugin.configurationChanged()
         }
+        
+        // Coordinator also listens for this, but ensure dependencies are rebuilt
+        ActivationCoordinator.shared.rebuildDependencies()
     }
     
     // MARK: - Settings Management
@@ -371,20 +381,22 @@ class DetectionPluginManager: NSObject {
         return appPlugin.isCurrentAppDisabled()
     }
     
+    // MARK: - Deprecated Methods (Kept for compatibility, but now no-ops)
+    
     /// Enable mouse tracking in ScreenZoneDetectorPlugin
+    /// @deprecated Use ActivationCoordinator instead
     func enableMouseTracking() {
-        guard let zonePlugin = plugins[ScreenZoneDetectorPlugin.pluginIdentifier] as? ScreenZoneDetectorPlugin else {
-            return
-        }
-        zonePlugin.enableMouseTracking()
+        // This is now handled by ActivationCoordinator
+        // Kept for backward compatibility but does nothing
+        log.log("⚠️ enableMouseTracking() called directly - use ActivationCoordinator instead")
     }
     
     /// Disable mouse tracking in ScreenZoneDetectorPlugin
+    /// @deprecated Use ActivationCoordinator instead
     func disableMouseTracking() {
-        guard let zonePlugin = plugins[ScreenZoneDetectorPlugin.pluginIdentifier] as? ScreenZoneDetectorPlugin else {
-            return
-        }
-        zonePlugin.disableMouseTracking()
+        // This is now handled by ActivationCoordinator
+        // Kept for backward compatibility but does nothing
+        log.log("⚠️ disableMouseTracking() called directly - use ActivationCoordinator instead")
     }
     
     // MARK: - Helpers
@@ -424,7 +436,6 @@ extension DetectionPluginManager: DetectionPluginDelegate {
             
         case .custom(let description):
             log.log("Custom gesture trigger: \(description)")
-            // For custom triggers, we don't have a specific zone, so we skip zone-specific handling
             delegate?.detectionManager(self, executeRepeatedGesture: gesture)
         }
     }
@@ -459,9 +470,6 @@ class DetectionPluginLogger: PluginLogger {
     func log(_ message: String, file: String = #file, function: String = #function, line: Int = #line) {
         MouseGestures.log.log("[DetectionPlugin:\(pluginId)] \(message)")
     }
-    
-    // Note: LogLevel overload is not available in the current Logger implementation
-    // Plugin should use the basic log method
     
     var isDebugEnabled: Bool {
         return MouseGestures.log.isDebugEnabled

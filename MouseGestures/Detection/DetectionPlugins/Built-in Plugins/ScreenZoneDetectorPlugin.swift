@@ -3,7 +3,8 @@ import Cocoa
 // MARK: - Screen Zone Detector Plugin
 
 /// Plugin that detects mouse movement in screen zones
-class ScreenZoneDetectorPlugin: BaseDetectionPlugin {
+/// Implements ActivationProvider for efficiency-based gating
+class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     
     // MARK: - Constants
     
@@ -112,7 +113,6 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin {
     private var mouseMonitor: Any?
     private var dragMonitor: Any?
     private var dragEndMonitor: Any?
-    private var modifierMonitor: Any?
     
     // State tracking
     private var isMouseTrackingActive = false
@@ -146,6 +146,72 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin {
     private var zoneEnterCount = 0
     private var gestureTriggeredCount = 0
     
+    // MARK: - ActivationProvider Protocol
+    
+    var providedActivationTypes: [ActivationType] {
+        return [.screenZone, .mouseDrag]
+    }
+    
+    func getActivationState(for type: ActivationType) -> ActivationState? {
+        switch type {
+        case .screenZone:
+            return ActivationState(
+                type: .screenZone,
+                isEngaged: lastTriggeredZone != nil,
+                metadata: [
+                    "zone": lastTriggeredZone?.rawValue ?? "none",
+                    "tracking": isMouseTrackingActive
+                ]
+            )
+        case .mouseDrag:
+            return ActivationState(
+                type: .mouseDrag,
+                isEngaged: dragState != .none,
+                metadata: ["dragState": dragState.rawValue]
+            )
+        default:
+            return nil
+        }
+    }
+    
+    func enableDetection(for type: ActivationType) {
+        switch type {
+        case .screenZone:
+            enableMouseTracking()
+        case .mouseDrag:
+            // Drag detection is always active via event monitors
+            break
+        default:
+            break
+        }
+    }
+    
+    func disableDetection(for type: ActivationType) {
+        switch type {
+        case .screenZone:
+            // Only disable if not dragging (drag keeps tracking enabled)
+            if dragState == .none {
+                disableMouseTracking()
+            }
+        case .mouseDrag:
+            // Drag detection is always active - can't disable
+            break
+        default:
+            break
+        }
+    }
+    
+    func isDetectionActive(for type: ActivationType) -> Bool {
+        switch type {
+        case .screenZone:
+            return isMouseTrackingActive
+        case .mouseDrag:
+            return state == .running
+        default:
+            return false
+        }
+    }
+    
     // MARK: - Plugin Lifecycle
     
     override func initialize(context: DetectionContext) throws {
@@ -153,6 +219,9 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin {
         
         // Initialize gesture lookup
         gestureLookup = GestureLookup()
+        
+        // Register with ActivationCoordinator
+        ActivationCoordinator.shared.registerProvider(self, for: providedActivationTypes)
         
         // Listen for screen configuration changes
         NotificationCenter.default.addObserver(
@@ -179,23 +248,20 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin {
             self?.handleMouseUp(event)
         }
         
-        // Monitor modifier key changes to re-check zone when modifiers change
-        modifierMonitor = NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
-            self?.handleModifierChange(event)
-        }
-        
-        // Reset mouse tracking state
+        // Reset mouse tracking state - let coordinator decide when to enable
         mouseMonitor = nil
         isMouseTrackingActive = false
         
+        // Build dependencies and check if we should start tracking immediately
+        ActivationCoordinator.shared.rebuildDependencies()
+        
         // Check if modifiers are already pressed at startup
-        // This handles the case where user holds modifiers before detection starts
         let currentSystemModifiers = ModifierKeyDetectorPlugin.currentSystemModifiers()
         if !currentSystemModifiers.isEmpty {
-            context?.logger.log("Modifiers already pressed at startup, enabling mouse tracking", file: #file, function: #function, line: #line)
-            enableMouseTracking()
+            context?.logger.log("Modifiers already pressed at startup, coordinator should enable tracking", file: #file, function: #function, line: #line)
+            // Coordinator will call enableDetection if needed
         } else {
-            context?.logger.log("Screen zone detection started (mouse tracking will activate on demand)", file: #file, function: #function, line: #line)
+            context?.logger.log("Screen zone detection started (tracking will activate via coordinator)", file: #file, function: #function, line: #line)
         }
     }
     
@@ -212,11 +278,6 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin {
             dragEndMonitor = nil
         }
         
-        if let monitor = modifierMonitor {
-            NSEvent.removeMonitor(monitor)
-            modifierMonitor = nil
-        }
-        
         stopRepeatTimer()
         dragState = .none
         lastTriggeredZone = nil
@@ -229,6 +290,7 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin {
     
     override func cleanup() {
         NotificationCenter.default.removeObserver(self)
+        ActivationCoordinator.shared.unregisterProvider(self)
         gestureLookup?.clear()
         gestureLookup = nil
         super.cleanup()
@@ -236,7 +298,7 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin {
     
     // MARK: - Mouse Tracking Control
     
-    /// Enable mouse tracking when modifiers are pressed
+    /// Enable mouse tracking (called by ActivationCoordinator or internally during drag)
     func enableMouseTracking() {
         guard !isMouseTrackingActive else { return }
         
@@ -248,13 +310,10 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin {
         isMouseTrackingActive = true
         
         if context?.logger.isDebugEnabled ?? false {
-            if context?.logger.isDebugEnabled == true {
-                context?.logger.log("Zone mouse tracking ENABLED", file: #file, function: #function, line: #line)
-            }
+            context?.logger.log("Zone mouse tracking ENABLED", file: #file, function: #function, line: #line)
         }
         
         // Immediately check current mouse position
-        // This handles the case where mouse is already in a zone when modifiers are pressed
         checkCurrentMousePosition()
     }
     
@@ -271,7 +330,7 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin {
         }
     }
     
-    /// Disable mouse tracking when modifiers are released
+    /// Disable mouse tracking (called by ActivationCoordinator)
     func disableMouseTracking() {
         guard isMouseTrackingActive else { return }
         
@@ -285,16 +344,14 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin {
         lastTriggeredZone = nil
         
         if context?.logger.isDebugEnabled ?? false {
-            if context?.logger.isDebugEnabled == true {
-                context?.logger.log("Zone mouse tracking DISABLED", file: #file, function: #function, line: #line)
-            }
+            context?.logger.log("Zone mouse tracking DISABLED", file: #file, function: #function, line: #line)
         }
     }
     
     // MARK: - Event Handlers
     
     private func handleMouseMove(_ event: NSEvent) {
-        // Performance: Throttle mouse movement processing to 60 FPS
+        // Performance: Throttle mouse movement processing
         let now = Date()
         guard now.timeIntervalSince(lastProcessedMouseTime) >= mouseProcessingInterval else {
             return
@@ -305,7 +362,7 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin {
         guard shouldContinueTracking() else {
             lastTriggeredZone = nil
             stopRepeatTimer()
-            disableMouseTracking()
+            // Let coordinator handle disabling
             return
         }
         
@@ -323,6 +380,8 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin {
     
     private func handleMouseDrag(_ event: NSEvent) {
         // Determine which button is being dragged
+        let previousDragState = dragState
+        
         switch event.type {
         case .leftMouseDragged:
             dragState = .leftDrag
@@ -334,7 +393,14 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin {
             break
         }
         
-        // Enable mouse tracking during drag (if not already enabled)
+        // Notify coordinator if drag state changed
+        if previousDragState == .none && dragState != .none {
+            ActivationCoordinator.shared.activationEngaged(.mouseDrag, metadata: [
+                "dragState": dragState.rawValue
+            ])
+        }
+        
+        // Enable mouse tracking during drag if not already enabled
         if !isMouseTrackingActive {
             enableMouseTracking()
         }
@@ -372,34 +438,10 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin {
             lastDragModifier = .none
             stopRepeatTimer()
             
-            // Notify that drag ended
-            if !hasModifiers() {
-                disableMouseTracking()
-            }
-        }
-    }
-    
-    private func handleModifierChange(_ event: NSEvent) {
-        let currentModifiers = ModifierKeyDetectorPlugin.currentSystemModifiers()
-        
-        if currentModifiers.isEmpty {
-            // All modifiers released
-            if dragState == .none {
-                // Only disable tracking if not dragging
-                lastTriggeredZone = nil
-                lastTriggeredModifiers = []
-                stopRepeatTimer()
-                disableMouseTracking()
-            }
-        } else {
-            // Modifiers are held - ensure tracking is enabled
-            if !isMouseTrackingActive {
-                enableMouseTracking()
-            } else {
-                // Tracking already active, but modifiers changed
-                // Re-check current mouse position to potentially trigger a different gesture
-                checkCurrentMousePosition()
-            }
+            // Notify coordinator that drag ended
+            ActivationCoordinator.shared.activationDisengaged(.mouseDrag)
+            
+            // Coordinator will decide whether to disable mouse tracking
         }
     }
     
@@ -424,15 +466,12 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin {
             zoneEnterCount += 1
             
             if context?.logger.isDebugEnabled ?? false {
-                if context?.logger.isDebugEnabled == true {
-                    context?.logger.log("Detected zone: \(zone.rawValue) with drag: \(dragState.rawValue)", file: #file, function: #function, line: #line)
-                }
+                context?.logger.log("Detected zone: \(zone.rawValue) with drag: \(dragState.rawValue)", file: #file, function: #function, line: #line)
             }
             
             // Check for matching gestures
             detectGesture(zone: zone, dragState: dragState)
         }
-        // If we're still in the same zone with same modifiers, don't retrigger but keep any active repeat timer running
     }
     
     private func processZoneExit() {
@@ -442,16 +481,13 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin {
             stopRepeatTimer()
             
             if context?.logger.isDebugEnabled ?? false {
-                if context?.logger.isDebugEnabled == true {
-                    context?.logger.log("Left all zones", file: #file, function: #function, line: #line)
-                }
+                context?.logger.log("Left all zones", file: #file, function: #function, line: #line)
             }
         }
     }
     
     private func detectGesture(zone: ScreenZone, dragState: DragModifier) {
-        // Get current modifiers using real-time system state (not cached plugin state)
-        // This ensures we don't miss gestures due to timing lag in event processing
+        // Get current modifiers using real-time system state
         let modifiers = ModifierKeyDetectorPlugin.currentSystemModifiers()
         
         // Check if in cooldown period
@@ -589,12 +625,6 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin {
         return hasRequiredModifiers
     }
     
-    private func hasModifiers() -> Bool {
-        // Use real-time system modifier check instead of potentially stale plugin state
-        let currentSystemModifiers = ModifierKeyDetectorPlugin.currentSystemModifiers()
-        return !currentSystemModifiers.isEmpty
-    }
-    
     private func getCurrentModifiers() -> NSEvent.ModifierFlags {
         return context?.pluginManager?.getCurrentModifiers() ?? []
     }
@@ -649,7 +679,7 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin {
         lastScreenFrame = screenFrame
         zoneBoundsCache.removeAll()
         
-        // Use plugin settings (not Configuration)
+        // Use plugin settings
         let threshold = edgeThreshold
         let cornerSize = self.cornerSize
         let cornerBuffer = self.cornerBuffer
@@ -667,9 +697,7 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin {
         }
         
         if context?.logger.isDebugEnabled ?? false {
-            if context?.logger.isDebugEnabled == true {
-                context?.logger.log("Rebuilt zone bounds cache with \(zoneBoundsCache.count) zones", file: #file, function: #function, line: #line)
-            }
+            context?.logger.log("Rebuilt zone bounds cache with \(zoneBoundsCache.count) zones", file: #file, function: #function, line: #line)
         }
     }
     
@@ -724,6 +752,9 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin {
         super.configurationChanged()
         rebuildZoneBoundsCache()
         gestureLookup?.rebuild()
+        
+        // Notify coordinator to rebuild dependencies
+        ActivationCoordinator.shared.rebuildDependencies()
     }
     
     override func settingChanged(_ key: String, value: Any, oldValue: Any?) {

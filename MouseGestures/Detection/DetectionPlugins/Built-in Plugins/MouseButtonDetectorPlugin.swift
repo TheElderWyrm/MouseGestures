@@ -3,7 +3,8 @@ import Cocoa
 // MARK: - Mouse Button Detector Plugin
 
 /// Plugin that detects mouse button clicks with modifiers
-class MouseButtonDetectorPlugin: BaseDetectionPlugin {
+/// Implements ActivationProvider for the coordinator system
+class MouseButtonDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     
     // MARK: - Constants
     
@@ -80,11 +81,48 @@ class MouseButtonDetectorPlugin: BaseDetectionPlugin {
     private var rightMouseMonitor: Any?
     private var otherMouseMonitor: Any?
     
+    // State tracking
+    private var lastTriggeredButton: MouseButtonTrigger.MouseButton?
+    
     // Statistics
     private var buttonsTriggered = 0
     private var lastTriggerTime: Date?
     
+    // MARK: - ActivationProvider Protocol
+    
+    var providedActivationTypes: [ActivationType] {
+        return [.mouseButton]
+    }
+    
+    func getActivationState(for type: ActivationType) -> ActivationState? {
+        guard type == .mouseButton else { return nil }
+        return ActivationState(
+            type: .mouseButton,
+            isEngaged: lastTriggeredButton != nil && lastTriggerTime != nil,
+            metadata: ["lastButton": lastTriggeredButton?.rawValue ?? "none"]
+        )
+    }
+    
+    func enableDetection(for type: ActivationType) {
+        // Mouse button detection is always active - nothing to enable
+    }
+    
+    func disableDetection(for type: ActivationType) {
+        // Mouse button detection is always active - nothing to disable
+    }
+    
+    func isDetectionActive(for type: ActivationType) -> Bool {
+        return state == .running
+    }
+    
     // MARK: - Plugin Lifecycle
+    
+    override func initialize(context: DetectionContext) throws {
+        try super.initialize(context: context)
+        
+        // Register with ActivationCoordinator
+        ActivationCoordinator.shared.registerProvider(self, for: providedActivationTypes)
+    }
     
     override func start() throws {
         try super.start()
@@ -104,7 +142,6 @@ class MouseButtonDetectorPlugin: BaseDetectionPlugin {
             self?.handleMouseButtonClick(event, button: button)
         }
         
-        // Log active mouse button triggers
         logActiveButtonTriggers()
     }
     
@@ -125,7 +162,14 @@ class MouseButtonDetectorPlugin: BaseDetectionPlugin {
             otherMouseMonitor = nil
         }
         
+        lastTriggeredButton = nil
+        
         super.stop()
+    }
+    
+    override func cleanup() {
+        ActivationCoordinator.shared.unregisterProvider(self)
+        super.cleanup()
     }
     
     // MARK: - Event Handlers
@@ -165,8 +209,16 @@ class MouseButtonDetectorPlugin: BaseDetectionPlugin {
                 
                 buttonsTriggered += 1
                 lastTriggerTime = Date()
+                lastTriggeredButton = button
                 
                 context?.logger.log("✓ Mouse button trigger activated: \(trigger.displayString) -> \(gesture.actionIdentifier)", file: #file, function: #function, line: #line)
+                
+                // Notify coordinator
+                ActivationCoordinator.shared.activationEngaged(.mouseButton, metadata: [
+                    "button": button.rawValue,
+                    "modifiers": modifiers.rawValue,
+                    "action": gesture.actionIdentifier
+                ])
                 
                 // Create gesture context
                 let gestureContext = GestureContext(
@@ -175,8 +227,12 @@ class MouseButtonDetectorPlugin: BaseDetectionPlugin {
                     timestamp: Date()
                 )
                 
-                // Trigger the gesture
                 triggerGesture(gesture, context: gestureContext)
+                
+                // Brief disengage to allow re-triggering
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    ActivationCoordinator.shared.activationDisengaged(.mouseButton)
+                }
                 
                 break // Only trigger the first matching gesture
             }
@@ -229,7 +285,8 @@ class MouseButtonDetectorPlugin: BaseDetectionPlugin {
             cpuUsage: 0.1,
             memoryUsage: 0,
             customStats: [
-                "buttonsTriggered": buttonsTriggered
+                "buttonsTriggered": buttonsTriggered,
+                "lastButton": lastTriggeredButton?.rawValue ?? "none"
             ]
         )
     }

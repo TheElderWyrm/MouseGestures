@@ -4,7 +4,8 @@ import Carbon
 // MARK: - Keyboard Shortcut Detector Plugin
 
 /// Plugin that detects keyboard shortcuts
-class KeyboardShortcutDetectorPlugin: BaseDetectionPlugin {
+/// Implements ActivationProvider for the coordinator system
+class KeyboardShortcutDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     
     // MARK: - Constants
     
@@ -69,12 +70,47 @@ class KeyboardShortcutDetectorPlugin: BaseDetectionPlugin {
     // State tracking
     private var currentModifiers: NSEvent.ModifierFlags = []
     private var lastKeyPressTime: Date?
+    private var lastTriggeredShortcut: String?
     
     // Statistics
     private var shortcutsTriggered = 0
     private var profileSwitches = 0
     
+    // MARK: - ActivationProvider Protocol
+    
+    var providedActivationTypes: [ActivationType] {
+        return [.keyboardShortcut]
+    }
+    
+    func getActivationState(for type: ActivationType) -> ActivationState? {
+        guard type == .keyboardShortcut else { return nil }
+        return ActivationState(
+            type: .keyboardShortcut,
+            isEngaged: lastTriggeredShortcut != nil && lastKeyPressTime != nil,
+            metadata: ["lastShortcut": lastTriggeredShortcut ?? "none"]
+        )
+    }
+    
+    func enableDetection(for type: ActivationType) {
+        // Keyboard shortcut detection is always active - nothing to enable
+    }
+    
+    func disableDetection(for type: ActivationType) {
+        // Keyboard shortcut detection is always active - nothing to disable
+    }
+    
+    func isDetectionActive(for type: ActivationType) -> Bool {
+        return state == .running
+    }
+    
     // MARK: - Plugin Lifecycle
+    
+    override func initialize(context: DetectionContext) throws {
+        try super.initialize(context: context)
+        
+        // Register with ActivationCoordinator
+        ActivationCoordinator.shared.registerProvider(self, for: providedActivationTypes)
+    }
     
     override func start() throws {
         try super.start()
@@ -97,13 +133,11 @@ class KeyboardShortcutDetectorPlugin: BaseDetectionPlugin {
         // Local monitor for when app has focus
         localKeyboardMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             if let handled = self?.handleKeyPress(event), handled {
-                // If we handled this shortcut, consume the event
                 return nil
             }
-            return event // Pass the event through if not handled
+            return event
         }
         
-        // Log active shortcuts
         logActiveShortcuts()
     }
     
@@ -132,8 +166,14 @@ class KeyboardShortcutDetectorPlugin: BaseDetectionPlugin {
         // Reset state
         currentModifiers = []
         lastKeyPressTime = nil
+        lastTriggeredShortcut = nil
         
         super.stop()
+    }
+    
+    override func cleanup() {
+        ActivationCoordinator.shared.unregisterProvider(self)
+        super.cleanup()
     }
     
     // MARK: - Event Handlers
@@ -167,12 +207,24 @@ class KeyboardShortcutDetectorPlugin: BaseDetectionPlugin {
                normalizeModifiers(trigger.modifiers) == modifiers {
                 
                 lastKeyPressTime = Date()
+                lastTriggeredShortcut = trigger.displayString
                 profileSwitches += 1
                 
                 context?.logger.log("✓ Profile shortcut triggered: \(trigger.displayString) -> Profile '\(profile.name)'", file: #file, function: #function, line: #line)
                 
-                // Trigger profile switch
+                // Notify coordinator
+                ActivationCoordinator.shared.activationEngaged(.keyboardShortcut, metadata: [
+                    "shortcut": trigger.displayString,
+                    "profileSwitch": true
+                ])
+                
                 triggerProfileSwitch(profile)
+                
+                // Brief disengage to allow re-triggering
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    ActivationCoordinator.shared.activationDisengaged(.keyboardShortcut)
+                }
+                
                 return true
             }
         }
@@ -198,9 +250,16 @@ class KeyboardShortcutDetectorPlugin: BaseDetectionPlugin {
                normalizeModifiers(trigger.modifiers) == modifiers {
                 
                 lastKeyPressTime = Date()
+                lastTriggeredShortcut = trigger.displayString
                 shortcutsTriggered += 1
                 
                 context?.logger.log("✓ Keyboard shortcut triggered: \(trigger.displayString) -> \(gesture.actionIdentifier)", file: #file, function: #function, line: #line)
+                
+                // Notify coordinator
+                ActivationCoordinator.shared.activationEngaged(.keyboardShortcut, metadata: [
+                    "shortcut": trigger.displayString,
+                    "action": gesture.actionIdentifier
+                ])
                 
                 // Create gesture context
                 let gestureContext = GestureContext(
@@ -209,8 +268,13 @@ class KeyboardShortcutDetectorPlugin: BaseDetectionPlugin {
                     timestamp: Date()
                 )
                 
-                // Trigger the gesture
                 triggerGesture(gesture, context: gestureContext)
+                
+                // Brief disengage to allow re-triggering
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    ActivationCoordinator.shared.activationDisengaged(.keyboardShortcut)
+                }
+                
                 return true
             }
         }

@@ -3,7 +3,8 @@ import Cocoa
 // MARK: - App Configuration Detector Plugin
 
 /// Plugin that detects app switches and manages app-specific configurations
-class AppConfigurationDetectorPlugin: BaseDetectionPlugin {
+/// Implements ActivationProvider for the coordinator system
+class AppConfigurationDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     
     // MARK: - Constants
     
@@ -85,6 +86,37 @@ class AppConfigurationDetectorPlugin: BaseDetectionPlugin {
     private var appSwitchCount = 0
     private var profileAutoSwitchCount = 0
     
+    // MARK: - ActivationProvider Protocol
+    
+    var providedActivationTypes: [ActivationType] {
+        return [.appChange]
+    }
+    
+    func getActivationState(for type: ActivationType) -> ActivationState? {
+        guard type == .appChange else { return nil }
+        return ActivationState(
+            type: .appChange,
+            isEngaged: currentAppBundleId != nil,
+            metadata: [
+                "bundleId": currentAppBundleId ?? "none",
+                "appName": currentAppName ?? "none",
+                "isDisabled": isCurrentAppDisabled()
+            ]
+        )
+    }
+    
+    func enableDetection(for type: ActivationType) {
+        // App change detection is always active - nothing to enable
+    }
+    
+    func disableDetection(for type: ActivationType) {
+        // App change detection is always active - nothing to disable
+    }
+    
+    func isDetectionActive(for type: ActivationType) -> Bool {
+        return state == .running
+    }
+    
     // MARK: - Public Interface
     
     /// Check if the current app has gestures disabled
@@ -107,6 +139,13 @@ class AppConfigurationDetectorPlugin: BaseDetectionPlugin {
     
     // MARK: - Plugin Lifecycle
     
+    override func initialize(context: DetectionContext) throws {
+        try super.initialize(context: context)
+        
+        // Register with ActivationCoordinator
+        ActivationCoordinator.shared.registerProvider(self, for: providedActivationTypes)
+    }
+    
     override func start() throws {
         try super.start()
         
@@ -122,6 +161,14 @@ class AppConfigurationDetectorPlugin: BaseDetectionPlugin {
             self?.handleAppSwitch(notification)
         }
         
+        // Notify coordinator of initial app
+        if let bundleId = currentAppBundleId {
+            ActivationCoordinator.shared.activationEngaged(.appChange, metadata: [
+                "bundleId": bundleId,
+                "appName": currentAppName ?? "Unknown"
+            ])
+        }
+        
         context?.logger.log("App configuration detection started - Current app: \(currentAppName ?? "Unknown")", file: #file, function: #function, line: #line)
     }
     
@@ -132,11 +179,19 @@ class AppConfigurationDetectorPlugin: BaseDetectionPlugin {
             appObserver = nil
         }
         
+        // Notify coordinator
+        ActivationCoordinator.shared.activationDisengaged(.appChange)
+        
         // Reset state
         currentAppBundleId = nil
         currentAppName = nil
         
         super.stop()
+    }
+    
+    override func cleanup() {
+        ActivationCoordinator.shared.unregisterProvider(self)
+        super.cleanup()
     }
     
     // MARK: - App Detection
@@ -175,6 +230,13 @@ class AppConfigurationDetectorPlugin: BaseDetectionPlugin {
             addToAppHistory(bundleId: bundleId, name: newAppName)
             
             context?.logger.log("App switched: \(previousApp) → \(newAppName)", file: #file, function: #function, line: #line)
+            
+            // Notify coordinator of app change
+            ActivationCoordinator.shared.activationEngaged(.appChange, metadata: [
+                "bundleId": bundleId,
+                "appName": newAppName,
+                "previousApp": previousApp
+            ])
             
             // Check for app-specific profile
             checkForAppProfile(bundleId: bundleId, appName: newAppName)
@@ -230,9 +292,6 @@ class AppConfigurationDetectorPlugin: BaseDetectionPlugin {
         DispatchQueue.main.async {
             // Haptic feedback
             NSHapticFeedbackManager.defaultPerformer.perform(.generic, performanceTime: .now)
-            
-            // Visual notification could be added here
-            // For now, just rely on logging
         }
     }
     
@@ -271,8 +330,6 @@ class AppConfigurationDetectorPlugin: BaseDetectionPlugin {
     // MARK: - Configuration View
     
     override func configurationView() -> NSView? {
-        // Could provide UI for managing app configurations
-        // For now, this is handled in the main preferences window
         return nil
     }
 }
