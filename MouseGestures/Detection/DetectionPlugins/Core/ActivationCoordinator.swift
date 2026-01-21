@@ -138,8 +138,8 @@ class ActivationCoordinator {
     /// Activation types that are currently enabled
     private var enabledTypes: Set<ActivationType> = []
     
-    /// Lock for thread safety
-    private let lock = NSLock()
+    /// Lock for thread safety (recursive to allow nested calls)
+    private let lock = NSRecursiveLock()
     
     // MARK: - Initialization
     
