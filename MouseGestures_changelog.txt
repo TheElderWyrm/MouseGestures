@@ -1,5 +1,11 @@
 ## 2026-01-20
 
+### Bug Fixes
+- Fixed EXC_BAD_ACCESS crash when toggling zone highlights setting
+  - Root cause: isReleasedWhenClosed = true caused window to self-deallocate while manager still held reference
+  - Autorelease pool drain would then try to release already-deallocated object
+  - Changed to isReleasedWhenClosed = false with explicit lifecycle management
+
 ### Memory Optimizations
 - Reduced idle memory usage from ~125 MB toward 45-65 MB target
 - AppDelegate: Removed hidden SettingsActionHandler NSWindow that was keeping SwiftUI layers alive
@@ -8,7 +14,7 @@
   - Only renders tabs when first selected instead of all 8+ at startup
   - Prevents CoreAnimation layer explosion from pre-rendering all views
 - ZoneHighlightWindow: Fixed lifecycle for proper memory release
-  - Changed isReleasedWhenClosed to true, added explicit contentView cleanup
+  - Uses isReleasedWhenClosed = false with explicit lifecycle management by ZoneHighlightManager
   - Made highlightView optional with weak references in closures
 - ZoneHighlightManager: Improved observer cleanup
   - Store screen change observer reference for proper cleanup
