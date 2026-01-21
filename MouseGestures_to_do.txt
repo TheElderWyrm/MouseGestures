@@ -17,6 +17,7 @@ Bugs
 Improve UI
 - Unify UI Styles throughout the app
 - Better Zone Configuration- Replace with more visual menu.
+- Places with side menus make the entire menu clickable instead of just the text.
 - Split settings into general/Advanced
 - More configuration options
 - Split action menu into section tabs

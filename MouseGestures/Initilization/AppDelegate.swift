@@ -96,17 +96,46 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func showPreferences() {
         NSApp.activate(ignoringOtherApps: true)
         
-        // Use the system's built-in settings window action
-        // This works for SwiftUI Settings scenes without requiring a hidden window
-        if #available(macOS 14.0, *) {
-            NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
-        } else if #available(macOS 13.0, *) {
-            NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
-        } else {
-            // Fallback for macOS 12 and earlier
-            NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
+        // Find and trigger the Settings/Preferences menu item
+        // This works reliably for SwiftUI Settings scenes without extra memory overhead
+        if let mainMenu = NSApp.mainMenu {
+            // The app menu is typically the first item (index 0)
+            if let appMenu = mainMenu.items.first?.submenu {
+                // Look for Settings or Preferences menu item
+                for item in appMenu.items {
+                    let title = item.title.lowercased()
+                    if title.contains("settings") || title.contains("preferences") {
+                        // Trigger the menu item's action
+                        if let action = item.action, let target = item.target {
+                            NSApp.sendAction(action, to: target, from: nil)
+                        } else if let action = item.action {
+                            NSApp.sendAction(action, to: nil, from: nil)
+                        }
+                        log.log("Opened preferences via menu item")
+                        return
+                    }
+                }
+            }
         }
-        log.log("Opened preferences window via sendAction")
+        
+        // Fallback: simulate Cmd+, keyboard shortcut
+        log.log("Menu item not found, simulating Cmd+, shortcut")
+        simulatePreferencesShortcut()
+    }
+    
+    private func simulatePreferencesShortcut() {
+        // Simulate pressing Cmd+, to open preferences
+        guard let source = CGEventSource(stateID: .combinedSessionState) else { return }
+        
+        // Key code 43 is the comma key
+        let keyDown = CGEvent(keyboardEventSource: source, virtualKey: 43, keyDown: true)
+        let keyUp = CGEvent(keyboardEventSource: source, virtualKey: 43, keyDown: false)
+        
+        keyDown?.flags = .maskCommand
+        keyUp?.flags = .maskCommand
+        
+        keyDown?.post(tap: .cghidEventTap)
+        keyUp?.post(tap: .cghidEventTap)
     }
     
     // MARK: - Private Methods

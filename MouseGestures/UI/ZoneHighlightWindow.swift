@@ -360,15 +360,9 @@ class ZoneHighlightManager {
     func startHighlighting() {
         guard Configuration.shared.showZoneHighlights else { return }
         
-        // Create highlight window if needed
-        if highlightWindow == nil {
-            if let screen = NSScreen.main {
-                highlightWindow = ZoneHighlightWindow(contentRect: screen.frame,
-                                                     styleMask: .borderless,
-                                                     backing: .buffered,
-                                                     defer: false)
-            }
-        }
+        // Memory optimization: Don't pre-create the window
+        // It will be created on-demand when modifiers are pressed and there are matching gestures
+        // This saves ~30 MB of memory when the app is idle
         
         // Start monitoring modifier keys
         startModifierMonitoring()
@@ -386,17 +380,10 @@ class ZoneHighlightManager {
     }
     
     private func screenDidChange() {
-        // Close old window first to release memory
+        // Close old window to release memory - it will be recreated on-demand
         highlightWindow?.close()
         highlightWindow = nil
-        
-        // Recreate highlight window with new screen dimensions
-        if let screen = NSScreen.main {
-            highlightWindow = ZoneHighlightWindow(contentRect: screen.frame,
-                                                 styleMask: .borderless,
-                                                 backing: .buffered,
-                                                 defer: false)
-        }
+        // Don't recreate immediately - let handleModifierChange create it when needed
     }
     
     func stopHighlighting() {
@@ -452,12 +439,14 @@ class ZoneHighlightManager {
             if shouldShow {
                 // Ensure window is on correct screen and properly sized
                 if let screen = NSScreen.main {
-                    // Recreate window if screen changed significantly
+                    // Create window on-demand or recreate if screen changed
+                    // Using defer: true delays backing store creation until window is shown
                     if highlightWindow == nil || !highlightWindow!.frame.equalTo(screen.frame) {
+                        highlightWindow?.close()
                         highlightWindow = ZoneHighlightWindow(contentRect: screen.frame,
                                                              styleMask: .borderless,
                                                              backing: .buffered,
-                                                             defer: false)
+                                                             defer: true)
                     }
                 }
                 
