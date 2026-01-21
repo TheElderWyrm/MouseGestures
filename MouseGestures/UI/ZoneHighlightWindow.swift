@@ -20,8 +20,10 @@ class ZoneHighlightWindow: NSWindow {
         ignoresMouseEvents = true
         hasShadow = false
         
-        // Memory optimization: Allow window to be released when closed
-        isReleasedWhenClosed = true
+        // Note: Do NOT use isReleasedWhenClosed = true
+        // Window lifecycle is managed by ZoneHighlightManager setting its reference to nil
+        // Using isReleasedWhenClosed causes EXC_BAD_ACCESS during autorelease pool drain
+        isReleasedWhenClosed = false
     }
     
     private func setupHighlightView() {
@@ -29,10 +31,10 @@ class ZoneHighlightWindow: NSWindow {
         contentView = highlightView
     }
     
-    // Memory optimization: Ensure view hierarchy is released
     override func close() {
+        // Clear our strong reference to the view
+        // contentView is managed by NSWindow and will be released properly
         highlightView = nil
-        contentView = nil
         super.close()
     }
     

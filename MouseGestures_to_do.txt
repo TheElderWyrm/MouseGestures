@@ -15,6 +15,9 @@ Bugs
 - Window Actions targeting multiple windows doesn't work
 
 Improve UI
+- Go Back to pre-rendering to increase performance
+- Selecting the zone configuration in settings doesn't autofill with selected value and the slider not properly select size (Jumps up when released).
+	- Duplicated in zone config and detection settings
 - Unify UI Styles throughout the app
 - Better Zone Configuration- Replace with more visual menu.
 - Places with side menus make the entire menu clickable instead of just the text.
