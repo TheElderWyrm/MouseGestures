@@ -1,4 +1,10 @@
 ## 2026-02-06
+- Fixed detection plugins bypassing ActivationCoordinator for activation/deactivation
+  - ActivationCoordinator.disableActivationType() no longer blocks on engaged types (was preventing gated types from being disabled when gates became unsatisfied)
+  - Added ActivationCoordinator.pluginStopping() for proper plugin lifecycle cleanup
+  - Removed ScreenZoneDetectorPlugin's direct modifierStateChanged handler (coordinator now handles cascade)
+  - All plugin stop() methods now notify coordinator via pluginStopping() instead of direct state manipulation
+  - Removed dead variables in evaluateGatedActivations()
 ### Bug Fix: Drag detection activating despite not being used - Efficiency System Refactor
 - Root cause: ScreenZoneDetectorPlugin was managing its own activation/deactivation instead of being fully controlled by the ActivationCoordinator
 - Drag event monitors were set up unconditionally in start() and only removed in stop()

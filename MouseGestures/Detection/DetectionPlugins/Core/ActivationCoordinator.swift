@@ -188,6 +188,23 @@ class ActivationCoordinator {
         }
     }
     
+    /// Called when a plugin is stopping - cleans up all activation types it provides
+    func pluginStopping(_ provider: ActivationProvider) {
+        lock.lock()
+        defer { lock.unlock() }
+        
+        for type in provider.providedActivationTypes {
+            // Disengage any engaged states
+            if activationStates[type]?.isEngaged == true {
+                activationStates[type] = ActivationState(type: type, isEngaged: false, metadata: [:])
+            }
+            // Remove from enabled types
+            enabledTypes.remove(type)
+        }
+        
+        log.log("ActivationCoordinator: Plugin stopping - cleaned up \(provider.providedActivationTypes.map { $0.displayName })")
+    }
+    
     // MARK: - Activation State Management
     
     /// Called by plugins when an activation type becomes engaged
@@ -318,8 +335,6 @@ class ActivationCoordinator {
     
     /// Evaluate which gated activation types should be enabled/disabled
     private func evaluateGatedActivations() {
-        let modEngaged = activationStates[.modifierKey]?.isEngaged ?? false
-        let dragEngaged = activationStates[.mouseDrag]?.isEngaged ?? false
         // Group dependencies by dependent type
         var dependentGates: [ActivationType: Set<ActivationType>] = [:]
         for dep in dependencies {
@@ -378,12 +393,15 @@ class ActivationCoordinator {
     private func disableActivationType(_ type: ActivationType) {
         guard enabledTypes.contains(type) else { return }
         
-        // Don't disable if type is currently engaged (safety check)
-        if isEngaged(type) {
-            return
-        }
-        
         enabledTypes.remove(type)
+        
+        // If the type was engaged, disengage it since its gates are no longer satisfied
+        if activationStates[type]?.isEngaged == true {
+            activationStates[type] = ActivationState(type: type, isEngaged: false, metadata: [:])
+            if log.isDebugEnabled {
+                log.log("ActivationCoordinator: Force-disengaged \(type.displayName) (gates no longer satisfied)")
+            }
+        }
         
         if let weakProvider = providers[type], let provider = weakProvider.value as? ActivationProvider {
             if provider.isDetectionActive(for: type) {

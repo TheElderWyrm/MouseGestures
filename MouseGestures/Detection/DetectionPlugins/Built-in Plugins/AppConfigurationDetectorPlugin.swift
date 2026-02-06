@@ -173,14 +173,14 @@ class AppConfigurationDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     }
     
     override func stop() {
+        // Notify coordinator that this plugin is stopping
+        ActivationCoordinator.shared.pluginStopping(self)
+        
         // Remove observer
         if let observer = appObserver {
             NSWorkspace.shared.notificationCenter.removeObserver(observer)
             appObserver = nil
         }
-        
-        // Notify coordinator
-        ActivationCoordinator.shared.activationDisengaged(.appChange)
         
         // Reset state
         currentAppBundleId = nil

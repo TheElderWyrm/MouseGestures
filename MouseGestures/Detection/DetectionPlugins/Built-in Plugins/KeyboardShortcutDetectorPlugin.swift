@@ -142,6 +142,9 @@ class KeyboardShortcutDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     }
     
     override func stop() {
+        // Notify coordinator that this plugin is stopping
+        ActivationCoordinator.shared.pluginStopping(self)
+        
         // Remove all monitors
         if let monitor = globalKeyboardMonitor {
             NSEvent.removeMonitor(monitor)

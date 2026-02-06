@@ -153,6 +153,9 @@ class ModifierKeyDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     }
     
     override func stop() {
+        // Notify coordinator that this plugin is stopping
+        ActivationCoordinator.shared.pluginStopping(self)
+        
         // Remove event monitors
         if let monitor = globalModifierMonitor {
             NSEvent.removeMonitor(monitor)
@@ -162,11 +165,6 @@ class ModifierKeyDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         if let monitor = localModifierMonitor {
             NSEvent.removeMonitor(monitor)
             localModifierMonitor = nil
-        }
-        
-        // Notify coordinator that modifiers are disengaged
-        if hasModifiers {
-            ActivationCoordinator.shared.activationDisengaged(.modifierKey)
         }
         
         // Reset state

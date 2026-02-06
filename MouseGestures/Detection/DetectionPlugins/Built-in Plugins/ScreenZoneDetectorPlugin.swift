@@ -232,14 +232,6 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         // Register with ActivationCoordinator
         ActivationCoordinator.shared.registerProvider(self, for: providedActivationTypes)
         
-        // Listen for modifier changes to clear state immediately
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(modifierStateChanged),
-            name: NSNotification.Name("ModifierStateChanged"),
-            object: nil
-        )
-        
         // Listen for screen configuration changes
         NotificationCenter.default.addObserver(
             self,
@@ -265,8 +257,13 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     }
         
     override func stop() {
-        disableDetection(for: .screenZone)
-        disableDetection(for: .mouseDrag)
+        // Notify coordinator that this plugin is stopping
+        // The coordinator will clean up enabled types and engaged states
+        ActivationCoordinator.shared.pluginStopping(self)
+        
+        // Clean up monitors directly (plugin is fully stopping)
+        disableMouseTracking()
+        disableDragDetection()
         stopRepeatTimer()
         dragState = .none
         lastTriggeredZone = nil
@@ -741,27 +738,6 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         rebuildZoneBoundsCache()
     }
     
-    @objc private func modifierStateChanged(_ notification: Notification) {
-        _ = ModifierKeyDetectorPlugin.currentSystemModifiers()
-        // When modifiers change, check if they are all released
-        let currentModifiers = ModifierKeyDetectorPlugin.currentSystemModifiers()
-        
-        // If no modifiers are held and we have a triggered zone, clear it
-        // This allows the coordinator to properly disable tracking
-        if currentModifiers.isEmpty && lastTriggeredZone != nil {
-            if context?.logger.isDebugEnabled ?? false {
-                context?.logger.log("Modifiers released - clearing zone state", file: #file, function: #function, line: #line)
-            }
-            
-            lastTriggeredZone = nil
-            lastDragModifier = .none
-            lastTriggeredModifiers = []
-            stopRepeatTimer()
-            
-            // Notify coordinator that screen zone is no longer engaged
-            ActivationCoordinator.shared.activationDisengaged(.screenZone)
-        }
-    }
     
     private func rebuildZoneBoundsCache() {
         guard let screen = NSScreen.main else { return }
