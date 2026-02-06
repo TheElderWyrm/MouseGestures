@@ -1,12 +1,11 @@
 import SwiftUI
 
 // MARK: - Plugin Settings View
-
 /// A SwiftUI view that dynamically renders all detection plugin settings
 struct PluginSettingsView: View {
     @State private var showAdvanced = false
     @State private var selectedCategory: PluginSettingDefinition.SettingCategory = .detection
-    @State private var refreshTrigger = UUID()
+    @State private var visibilityTrigger = UUID()
     
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -23,40 +22,61 @@ struct PluginSettingsView: View {
                     .controlSize(.small)
             }
             
-            // Category Picker
-            Picker("Category", selection: $selectedCategory) {
-                ForEach(PluginSettingDefinition.SettingCategory.allCases, id: \.self) { category in
-                    Label(category.displayName, systemImage: category.icon)
-                        .tag(category)
+            // Category Picker - only show categories that have visible settings
+            let visibleCategories = getVisibleCategories()
+            if visibleCategories.count > 1 {
+                Picker("Category", selection: $selectedCategory) {
+                    ForEach(visibleCategories, id: \.self) { category in
+                        Label(category.displayName, systemImage: category.icon)
+                            .tag(category)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .onChange(of: showAdvanced) { _ in
+                    // If current selection becomes empty, switch to first visible
+                    let visible = getVisibleCategories()
+                    if !visible.contains(selectedCategory), let first = visible.first {
+                        selectedCategory = first
+                    }
                 }
             }
-            .pickerStyle(.segmented)
             
             // Settings for selected category
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    ForEach(getSettingsForCategory(selectedCategory), id: \.definition.key) { item in
-                        if shouldShowSetting(item.definition) {
+            let items = getSettingsForCategory(selectedCategory)
+            let visibleItems = items.filter { shouldShowSetting($0.definition) }
+            
+            if visibleItems.isEmpty {
+                Text("No settings available for this category")
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 40)
+                    .padding()
+                    .background(RoundedRectangle(cornerRadius: 8).fill(Color(NSColor.controlBackgroundColor)))
+            } else {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        ForEach(visibleItems, id: \.definition.key) { item in
                             PluginSettingRow(
                                 plugin: item.plugin,
                                 definition: item.definition,
-                                refreshTrigger: $refreshTrigger
+                                visibilityTrigger: $visibilityTrigger
                             )
                         }
                     }
-                    
-                    if getSettingsForCategory(selectedCategory).isEmpty {
-                        Text("No settings available for this category")
-                            .foregroundColor(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .center)
-                            .padding(.vertical, 40)
-                    }
+                    .padding()
+                    .background(RoundedRectangle(cornerRadius: 8).fill(Color(NSColor.controlBackgroundColor)))
+                    .id(visibilityTrigger) // Only this content rebuilds on dependency changes
                 }
-                .padding()
-                .background(RoundedRectangle(cornerRadius: 8).fill(Color(NSColor.controlBackgroundColor)))
             }
         }
-        .id(refreshTrigger)
+    }
+    
+    private func getVisibleCategories() -> [PluginSettingDefinition.SettingCategory] {
+        let allSettings = DetectionPluginManager.shared.getAllSettingsDefinitions()
+        return PluginSettingDefinition.SettingCategory.allCases.filter { category in
+            guard let items = allSettings[category] else { return false }
+            return items.contains { shouldShowSetting($0.definition) }
+        }
     }
     
     private func getSettingsForCategory(_ category: PluginSettingDefinition.SettingCategory) -> [(plugin: DetectionPlugin, definition: PluginSettingDefinition)] {
@@ -73,11 +93,10 @@ struct PluginSettingsView: View {
 }
 
 // MARK: - Plugin Setting Row
-
 struct PluginSettingRow: View {
     let plugin: DetectionPlugin
     let definition: PluginSettingDefinition
-    @Binding var refreshTrigger: UUID
+    @Binding var visibilityTrigger: UUID
     
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -99,31 +118,31 @@ struct PluginSettingRow: View {
         switch definition.type {
         case .toggle(let label):
             toggleControl(label: label)
-            
+        
         case .slider(let min, let max, let step, let unit):
             sliderControl(min: min, max: max, step: step, unit: unit)
-            
+        
         case .stepper(let min, let max, let step):
             stepperControl(min: min, max: max, step: step)
-            
+        
         case .picker(let options):
             pickerControl(options: options)
-            
+        
         case .segmentedPicker(let options):
             segmentedPickerControl(options: options)
-            
+        
         case .color:
             colorControl()
-            
+        
         case .text(let placeholder, let maxLength):
             textControl(placeholder: placeholder, maxLength: maxLength)
-            
+        
         case .button(let title, let style, let action):
             buttonControl(title: title, style: style, action: action)
-            
+        
         case .info(let text):
             infoControl(text: text)
-            
+        
         default:
             Text("Unsupported setting type")
                 .foregroundColor(.secondary)
@@ -136,7 +155,7 @@ struct PluginSettingRow: View {
         Toggle(isOn: Binding(
             get: { plugin.settings.getBool(definition.key, default: definition.defaultValue as? Bool ?? false) },
             set: { newValue in
-                updateSetting(value: newValue)
+                updateSetting(value: newValue, affectsDependents: true)
             }
         )) {
             settingLabel
@@ -146,26 +165,14 @@ struct PluginSettingRow: View {
     // MARK: - Slider Control
     
     private func sliderControl(min: Double, max: Double, step: Double, unit: String?) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                settingLabel
-                Spacer()
-                Text(formatValue(plugin.settings.getDouble(definition.key, default: definition.defaultValue as? Double ?? min), unit: unit))
-                    .font(.system(size: 12, design: .monospaced))
-                    .foregroundColor(.secondary)
-            }
-            
-            Slider(
-                value: Binding(
-                    get: { plugin.settings.getDouble(definition.key, default: definition.defaultValue as? Double ?? min) },
-                    set: { newValue in
-                        updateSetting(value: newValue)
-                    }
-                ),
-                in: min...max,
-                step: step
-            )
-        }
+        SliderSettingControl(
+            plugin: plugin,
+            definition: definition,
+            min: min,
+            max: max,
+            step: step,
+            unit: unit
+        )
     }
     
     // MARK: - Stepper Control
@@ -178,7 +185,7 @@ struct PluginSettingRow: View {
                 value: Binding(
                     get: { plugin.settings.getInt(definition.key, default: definition.defaultValue as? Int ?? min) },
                     set: { newValue in
-                        updateSetting(value: newValue)
+                        updateSetting(value: newValue, affectsDependents: false)
                     }
                 ),
                 in: min...max,
@@ -199,7 +206,7 @@ struct PluginSettingRow: View {
             Picker("", selection: Binding(
                 get: { plugin.settings.getString(definition.key, default: definition.defaultValue as? String ?? "") },
                 set: { newValue in
-                    updateSetting(value: newValue)
+                    updateSetting(value: newValue, affectsDependents: true)
                 }
             )) {
                 ForEach(options, id: \.value) { option in
@@ -218,7 +225,7 @@ struct PluginSettingRow: View {
             Picker("", selection: Binding(
                 get: { plugin.settings.getString(definition.key, default: definition.defaultValue as? String ?? "") },
                 set: { newValue in
-                    updateSetting(value: newValue)
+                    updateSetting(value: newValue, affectsDependents: true)
                 }
             )) {
                 ForEach(options, id: \.value) { option in
@@ -241,7 +248,7 @@ struct PluginSettingRow: View {
                     return Color(nsColor)
                 },
                 set: { newValue in
-                    updateSetting(value: NSColor(newValue))
+                    updateSetting(value: NSColor(newValue), affectsDependents: false)
                 }
             ))
             .labelsHidden()
@@ -262,7 +269,7 @@ struct PluginSettingRow: View {
                         if let max = maxLength, value.count > max {
                             value = String(value.prefix(max))
                         }
-                        updateSetting(value: value)
+                        updateSetting(value: value, affectsDependents: false)
                     }
                 )
             )
@@ -356,6 +363,87 @@ struct PluginSettingRow: View {
     
     // MARK: - Helpers
     
+    private func updateSetting(value: Any, affectsDependents: Bool) {
+        DetectionPluginManager.shared.updatePluginSetting(plugin.identifier, key: definition.key, value: value)
+        
+        // Only trigger full view rebuild when dependency visibility might change
+        if affectsDependents {
+            DispatchQueue.main.async {
+                visibilityTrigger = UUID()
+            }
+        }
+    }
+}
+
+// MARK: - Slider Setting Control
+/// Separate view for sliders that manages its own local state to prevent jump-on-rebuild issues.
+/// The local @State value stays in sync with the plugin setting but isn't destroyed by parent refreshes.
+private struct SliderSettingControl: View {
+    let plugin: DetectionPlugin
+    let definition: PluginSettingDefinition
+    let min: Double
+    let max: Double
+    let step: Double
+    let unit: String?
+    
+    @State private var localValue: Double = 0
+    @State private var isInitialized = false
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 4) {
+                        Text(definition.displayName)
+                            .font(.system(size: 13, weight: .medium))
+                        
+                        if definition.isAdvanced {
+                            Text("Advanced")
+                                .font(.system(size: 9))
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 2)
+                                .background(Color.orange.opacity(0.2))
+                                .foregroundColor(.orange)
+                                .cornerRadius(3)
+                        }
+                    }
+                    
+                    if let description = definition.description {
+                        Text(description)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Text("Plugin: \(plugin.name)")
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary.opacity(0.7))
+                }
+                Spacer()
+                Text(formatValue(localValue, unit: unit))
+                    .font(.system(size: 12, design: .monospaced))
+                    .foregroundColor(.secondary)
+            }
+            
+            Slider(value: $localValue, in: min...max, step: step)
+                .onChange(of: localValue) { newValue in
+                    guard isInitialized else { return }
+                    DetectionPluginManager.shared.updatePluginSetting(
+                        plugin.identifier, key: definition.key, value: newValue
+                    )
+                }
+        }
+        .onAppear {
+            let defaultVal = (definition.defaultValue as? Double)
+                ?? (definition.defaultValue as? CGFloat).map { Double($0) }
+                ?? min
+            localValue = plugin.settings.getDouble(definition.key, default: defaultVal)
+            // Delay setting initialized to avoid triggering onChange from onAppear
+            DispatchQueue.main.async {
+                isInitialized = true
+            }
+        }
+    }
+    
     private func formatValue(_ value: Double, unit: String?) -> String {
         let formatted: String
         if value == floor(value) {
@@ -369,24 +457,14 @@ struct PluginSettingRow: View {
         }
         return formatted
     }
-    
-    private func updateSetting(value: Any) {
-        DetectionPluginManager.shared.updatePluginSetting(plugin.identifier, key: definition.key, value: value)
-        
-        // Trigger refresh to update dependent settings visibility
-        DispatchQueue.main.async {
-            refreshTrigger = UUID()
-        }
-    }
 }
 
 // MARK: - Compact Plugin Settings Section
-
 /// A more compact view for embedding in existing settings views
 struct CompactPluginSettingsSection: View {
     let category: PluginSettingDefinition.SettingCategory
     let showAdvanced: Bool
-    @State private var refreshTrigger = UUID()
+    @State private var visibilityTrigger = UUID()
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -395,7 +473,7 @@ struct CompactPluginSettingsSection: View {
                     PluginSettingRow(
                         plugin: item.plugin,
                         definition: item.definition,
-                        refreshTrigger: $refreshTrigger
+                        visibilityTrigger: $visibilityTrigger
                     )
                     
                     if item.definition.key != getSettingsForCategory().last?.definition.key {
@@ -404,7 +482,7 @@ struct CompactPluginSettingsSection: View {
                 }
             }
         }
-        .id(refreshTrigger)
+        .id(visibilityTrigger)
     }
     
     private func getSettingsForCategory() -> [(plugin: DetectionPlugin, definition: PluginSettingDefinition)] {
@@ -421,7 +499,6 @@ struct CompactPluginSettingsSection: View {
 }
 
 // MARK: - Preview
-
 #if DEBUG
 struct PluginSettingsView_Previews: PreviewProvider {
     static var previews: some View {

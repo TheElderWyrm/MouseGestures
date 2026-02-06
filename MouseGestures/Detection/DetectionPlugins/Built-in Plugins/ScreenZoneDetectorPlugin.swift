@@ -39,30 +39,30 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
                 displayName: "Edge Threshold",
                 description: "How close to screen edge to trigger detection (in pixels)",
                 category: .detection,
-                type: .slider(min: 1, max: 50, step: 1, unit: "px"),
-                defaultValue: CGFloat(5),
+                type: .slider(min: 5, max: 100, step: 5, unit: "px"),
+                defaultValue: Double(30),
                 isAdvanced: false,
-                validation: .init(rule: .range(min: 1, max: 50), errorMessage: "Edge threshold must be between 1 and 50 pixels")
+                validation: .init(rule: .range(min: 5, max: 100), errorMessage: "Edge threshold must be between 5 and 100 pixels")
             ),
             PluginSettingDefinition(
                 key: SettingKeys.cornerSize,
                 displayName: "Corner Size",
                 description: "Size of corner detection zones (in pixels)",
                 category: .detection,
-                type: .slider(min: 10, max: 150, step: 5, unit: "px"),
-                defaultValue: CGFloat(30),
+                type: .slider(min: 20, max: 200, step: 10, unit: "px"),
+                defaultValue: Double(100),
                 isAdvanced: false,
-                validation: .init(rule: .range(min: 10, max: 150), errorMessage: "Corner size must be between 10 and 150 pixels")
+                validation: .init(rule: .range(min: 20, max: 200), errorMessage: "Corner size must be between 20 and 200 pixels")
             ),
             PluginSettingDefinition(
                 key: SettingKeys.cornerBuffer,
                 displayName: "Corner Buffer",
                 description: "Gap between corner and edge zones (in pixels)",
                 category: .detection,
-                type: .slider(min: 0, max: 50, step: 1, unit: "px"),
-                defaultValue: CGFloat(5),
+                type: .slider(min: 0, max: 100, step: 5, unit: "px"),
+                defaultValue: Double(50),
                 isAdvanced: true,
-                validation: .init(rule: .range(min: 0, max: 50), errorMessage: "Corner buffer must be between 0 and 50 pixels")
+                validation: .init(rule: .range(min: 0, max: 100), errorMessage: "Corner buffer must be between 0 and 100 pixels")
             ),
             PluginSettingDefinition(
                 key: SettingKeys.showZoneHighlights,
@@ -109,15 +109,15 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     // MARK: - Computed Settings Properties
     
     var edgeThreshold: CGFloat {
-        settings.getCGFloat(SettingKeys.edgeThreshold, default: 5)
+        settings.getCGFloat(SettingKeys.edgeThreshold, default: 30)
     }
     
     var cornerSize: CGFloat {
-        settings.getCGFloat(SettingKeys.cornerSize, default: 30)
+        settings.getCGFloat(SettingKeys.cornerSize, default: 100)
     }
     
     var cornerBuffer: CGFloat {
-        settings.getCGFloat(SettingKeys.cornerBuffer, default: 5)
+        settings.getCGFloat(SettingKeys.cornerBuffer, default: 50)
     }
     
     // Event monitors
@@ -231,9 +231,6 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         // Initialize gesture lookup
         gestureLookup = GestureLookup()
         
-        // Sync plugin settings to Configuration so ZoneHighlightManager uses correct values
-        syncSettingsToConfiguration()
-        
         // Register with ActivationCoordinator
         ActivationCoordinator.shared.registerProvider(self, for: providedActivationTypes)
         
@@ -251,6 +248,9 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     
     override func start() throws {
         try super.start()
+        
+        // Sync plugin settings to Configuration (must happen after settings are loaded)
+        syncSettingsToConfiguration()
         
         // Monitor drag events (left, right, and other buttons)
         dragMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDragged, .rightMouseDragged, .otherMouseDragged]) { [weak self] event in
@@ -665,9 +665,18 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         Configuration.shared.edgeThreshold = edgeThreshold
         Configuration.shared.cornerSize = cornerSize
         Configuration.shared.cornerBuffer = cornerBuffer
-        Configuration.shared.showZoneHighlights = settings.getBool(SettingKeys.showZoneHighlights, default: false)
+        
+        let highlightsEnabled = settings.getBool(SettingKeys.showZoneHighlights, default: false)
+        Configuration.shared.showZoneHighlights = highlightsEnabled
         Configuration.shared.showZoneLabels = settings.getBool(SettingKeys.showZoneLabels, default: false)
         Configuration.shared.save()
+        
+        // Activate/deactivate zone highlights based on current setting
+        if highlightsEnabled {
+            ZoneHighlightManager.shared.startHighlighting()
+        } else {
+            ZoneHighlightManager.shared.stopHighlighting()
+        }
     }
     
     // MARK: - Zone Detection

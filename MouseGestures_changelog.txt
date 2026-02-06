@@ -133,3 +133,24 @@
 - Updated detection description text to mention zone dimensions and visual feedback
 - Dead code identified: UIServices zone dimension getters/setters and ZoneVisualizationService 
   zone dimension methods are no longer called from the UI (kept for API compatibility)
+
+### Bug Fixes - Settings (continued)
+- **Fixed zone setting defaults to 30/100/50** - ScreenZoneDetectorPlugin defaults were 5/30/5 
+  which didn't match the original zone configuration values. Updated to match: edge threshold 30px, 
+  corner size 100px, corner buffer 50px. Default values now use Double type for consistency.
+- **Fixed slider jump bug in plugin settings** - Sliders would jump to unexpected values when 
+  adjusted. Root cause: `.id(refreshTrigger)` on the entire PluginSettingsView forced SwiftUI to 
+  destroy and recreate all views (including active sliders) on every setting change. Fix: 
+  extracted sliders into a separate `SliderSettingControl` view with local `@State` that persists 
+  across parent rebuilds. Visibility refreshes now only trigger on toggle/picker changes (which 
+  affect dependent setting visibility), not slider drags.
+- **Fixed zone highlights not activating on app startup** - `syncSettingsToConfiguration()` was 
+  called during `initialize()` before plugin settings were loaded from persistence, so it wrote 
+  wrong default values. Moved to `start()` which runs after settings loading. The sync now also 
+  calls `ZoneHighlightManager.shared.startHighlighting()` if highlights are enabled, ensuring 
+  they activate on app launch.
+- **Updated slider ranges** - Edge threshold: 5-100px (was 1-50), corner size: 20-200px 
+  (was 10-150), corner buffer: 0-100px (was 0-50). Ranges now accommodate the full useful range.
+- **Hide empty setting categories** - Category picker in Detection settings now only shows 
+  categories that have visible settings. Empty categories (e.g. Advanced when Show Advanced is 
+  off and all settings in that category are advanced-only) are hidden.
