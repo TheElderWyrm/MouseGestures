@@ -1,5 +1,18 @@
 ## 2026-02-06
 
+### Bundle Editor UX Refinements
+
+- Adding an action now auto-deselects, returning the right panel to add
+  mode so the next action can be added immediately.
+- Added Remove button (red trash icon) next to Update Action in the right
+  panel footer when editing an existing action.
+- Moved up/down/duplicate/remove controls from the bottom toolbar onto
+  each action row, revealed on hover with a smooth fade transition.
+  Row shows delay when idle, control buttons when hovered.
+  Context menu retained as fallback.
+- "New" button relocated from bottom toolbar to list header bar.
+- Removed the bottom listToolbar entirely.
+
 ### Bundle Editor Upgrade — Full SwiftUI Rewrite
 
 **Replaced AppKit bundle editor with SwiftUI BundleEditorView**
