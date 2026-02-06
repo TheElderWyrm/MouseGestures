@@ -130,7 +130,6 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     
     // State tracking
     private var isMouseTrackingActive = false
-    private var mouseTrackingEnabledByDrag = false
     private(set) var dragState: DragModifier = .none
     private var lastTriggeredZone: ScreenZone?
     private var lastDragModifier: DragModifier = .none
@@ -204,10 +203,7 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     func disableDetection(for type: ActivationType) {
         switch type {
         case .screenZone:
-            // Only disable if not dragging (drag keeps tracking enabled)
-            if dragState == .none {
-                disableMouseTracking()
-            }
+            disableMouseTracking()
         case .mouseDrag:
             // Drag detection is always active - can't disable
             break
@@ -381,7 +377,6 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     /// Disable mouse tracking (called by ActivationCoordinator)
     func disableMouseTracking() {
         guard isMouseTrackingActive else { return }
-        mouseTrackingEnabledByDrag = false
         
         // Remove mouse movement monitors
         if let monitor = mouseMonitor {
@@ -453,15 +448,6 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
             ])
         }
         
-        // Enable mouse tracking during drag if not already enabled
-        // Only enable if there are drag-based gestures configured
-        if !isMouseTrackingActive {
-            if hasDragGestures() {
-                enableMouseTracking()
-                mouseTrackingEnabledByDrag = true
-            }
-        }
-        
         // Handle the mouse movement during drag
         handleMouseMove(event)
     }
@@ -498,14 +484,6 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
             // Notify coordinator that drag ended
             ActivationCoordinator.shared.activationDisengaged(.mouseDrag)
             
-            // If we enabled tracking for drag, clean up directly since
-            // the coordinator does not track drag-initiated mouse tracking
-            if mouseTrackingEnabledByDrag {
-                mouseTrackingEnabledByDrag = false
-                if !ActivationCoordinator.shared.shouldTrackMouse {
-                    disableMouseTracking()
-                }
-            }
         }
     }
     
@@ -927,13 +905,7 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         }
     }
     
-    // MARK: - Drag Gesture Check
-    
-    /// Check if any enabled gesture uses a drag modifier
-    private func hasDragGestures() -> Bool {
-        let gestures = Configuration.shared.gestures.filter { $0.isEnabled }
-        return gestures.contains { $0.activation.hasGesture && $0.dragModifier != .none }
-    }
+
     
     // MARK: - Statistics
     
