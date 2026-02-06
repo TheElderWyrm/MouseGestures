@@ -12,6 +12,7 @@ Actions:
 - Not all actions work.
 
 Bugs
+- Efficiency system could be more exact (Example, not all modifier combinations result in gestures that need zone detection activation.)
 - Saved actions does not allow for actions that require advanced configuration/opening a sheet (Example: Bundle actions)
 - Window Actions targeting multiple windows does not work
 - Drag Detection seems unreliable

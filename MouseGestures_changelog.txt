@@ -1,5 +1,15 @@
 ## 2026-02-06
 
+### Bug Fix: Unused detectors (drag/mouse button) not deactivated by efficiency system
+- **ActivationCoordinator**: `alwaysActive` types (efficiency >= 70) were enabled unconditionally,
+  skipping the gesture-usage check. Now ALL non-infrastructure types check `usedTypes` first.
+  Only true infrastructure types (appChange) bypass usage checks.
+- **MouseButtonDetectorPlugin**: Monitors were created in `start()` with no-op enable/disable.
+  Refactored to manage monitors via `enableDetection`/`disableDetection` like ScreenZoneDetectorPlugin.
+  Coordinator now controls when mouse button monitors are active.
+- Added `isInfrastructure` property to `ActivationType` for types that must always run.
+- Fixed pre-existing typo in ScreenZone.swift (`CmouseGFloat` → `CGFloat`)
+
 ### Bug Fix: Corrected efficiency system activation logic
 - Fixed critical bug in ActivationCoordinator.evaluateGatedActivations() where activation types
   were being incorrectly disabled even when used in enabled gestures
