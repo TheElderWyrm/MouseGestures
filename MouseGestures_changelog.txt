@@ -1,4 +1,24 @@
 ## 2026-02-06
+
+### Bundle Editor Upgrade — Full SwiftUI Rewrite
+
+**Replaced AppKit bundle editor with SwiftUI BundleEditorView**
+- Removed old AppKit classes: BundleActionsEditor (NSWindowController + NSTableView),
+  BundleActionEditDialog, BundleConditionEditor stub, and ActionSelectionBridge.
+- New BundleEditorView uses a split-panel layout: action list on the left,
+  add-action panel (embedding ActionSelectionView) on the right.
+- Each action row shows order number, SF Symbol icon, parameter summary,
+  condition indicator, and click-to-edit delay value.
+- Full list management: drag-to-reorder (.onMove), context menus with
+  edit/duplicate/move up/move down/remove, and a bottom toolbar with
+  icon buttons for the same operations.
+- Edit action opens as a SwiftUI .sheet with ActionSelectionView and
+  delay configuration, replacing the old AppKit BundleActionEditDialog.
+- BundleEditorWindowHost bridges SwiftUI into the NSWindow sheet system
+  via NSHostingController, called from presentAdvancedConfiguration.
+- Plugin version bumped to 3.0.0.
+- Empty state placeholder guides users to add actions.
+
 ### UI Improvement: Unified Action Selection in Bundle Actions Editor
 - Replaced NSPopUpButton-based action picker in BundleActionsEditor with SwiftUI ActionSelectionView
   embedded via NSHostingView and an ActionSelectionBridge ObservableObject

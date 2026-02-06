@@ -18,7 +18,7 @@ Bugs
 - Prevent multiple gestures of the same modifiers to be created
 
 Improve UI
-- Bundle action UI needs to be improved. <-- Switch to siftUI
+- Bundle action UI needs to be improved. <-- Switch to siftUI [DONE - SwiftUI BundleEditorView]
 - Improve appearance of Show Zone Highlights
 - Add search to settings
 - Pre-render UI to increase performance
