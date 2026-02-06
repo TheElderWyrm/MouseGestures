@@ -87,6 +87,7 @@
 		9A0541D991874ACBCE14A93A /* HapticFeedbackService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5C34D62856565C38CBDF0BD /* HapticFeedbackService.swift */; };
 		A1234567890123456789012A /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890123456789012B /* AppDelegate.swift */; };
 		A12345678901234567890AAA /* Logger.swift in Sources */ = {isa = PBXBuildFile; fileRef = A12345678901234567890BBB /* Logger.swift */; };
+		A4484BA09DA88157E6AA6EA6 /* ActionSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200F4468A725CCC9F935124D /* ActionSelectionView.swift */; };
 		A7184A9FBA658320B477B2DE /* UIServices.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC1143ECA21D991B05E1E167 /* UIServices.swift */; };
 		A95E441BBF2000EDC808ED37 /* ApplicationDiscoveryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC7548DA84AFAD5E97ACCD73 /* ApplicationDiscoveryService.swift */; };
 		AEF041F99279BC95F17C4E75 /* SystemInformationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D5C419C8DE02A83EAFE0F15 /* SystemInformationService.swift */; };
@@ -108,6 +109,7 @@
 		0FFC4FFEA31B6BBC4C4E95A6 /* GestureSearchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GestureSearchService.swift; path = MouseGestures/Services/GestureSearchService.swift; sourceTree = SOURCE_ROOT; };
 		1CF07C161A504F75B8A0A765 /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
 		1D5C419C8DE02A83EAFE0F15 /* SystemInformationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SystemInformationService.swift; path = MouseGestures/Services/SystemInformationService.swift; sourceTree = SOURCE_ROOT; };
+		200F4468A725CCC9F935124D /* ActionSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActionSelectionView.swift; path = MouseGestures/UI/ActionSelectionView.swift; sourceTree = SOURCE_ROOT; };
 		20954817AF5D280D472F66A0 /* SavedActionsSortService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SavedActionsSortService.swift; path = MouseGestures/Services/SavedActionsSortService.swift; sourceTree = SOURCE_ROOT; };
 		21FDE685CBA04DCCAB58D26C /* SavedActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedActions.swift; sourceTree = "<group>"; };
 		22CC45C7BE16E2CDADAC3796 /* PluginManagementService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PluginManagementService.swift; path = MouseGestures/Services/PluginManagementService.swift; sourceTree = SOURCE_ROOT; };
@@ -330,6 +332,7 @@
 				7757E0E42E63BD9100630BE5 /* KeyboardShortcutField.swift */,
 				7757E0ED2E63BD9100630BE5 /* ZoneHighlightWindow.swift */,
 				0B04479CA1BDB08A127B0C23 /* PluginSettingsView.swift */,
+				200F4468A725CCC9F935124D /* ActionSelectionView.swift */,
 			);
 			path = UI;
 			sourceTree = "<group>";
@@ -642,6 +645,7 @@
 				30EC453FA0EE9126694C82C7 /* PluginSettings.swift in Sources */,
 				E428403AB531AD17009BBC21 /* PluginSettingsView.swift in Sources */,
 				48434A8CB7E58785D8D9C991 /* ActivationCoordinator.swift in Sources */,
+				A4484BA09DA88157E6AA6EA6 /* ActionSelectionView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

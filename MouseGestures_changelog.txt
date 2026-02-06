@@ -1,289 +1,36 @@
-## 2026-02-05
-### Bug Fix: Raw JSON editor showing for bundle actions and similar
-- Removed raw JSON text editor from parameter configuration UI entirely
-- .json type parameters are now always filtered out of simple params list (previously only hidden when hasAdvancedConfig was true, causing race condition)
-- Actions with .json parameters now exclusively use the advanced configuration sheet (Configure... button)
-- Affected both GestureConfigurationSheet and SavedActionConfigurationSheet
-
-## 2026-02-05
-### Feature: Advanced Configuration for Saved Actions
-- Added support for actions that require custom editors (e.g., Bundle Actions) in both Saved Actions and Gesture configuration sheets
-- Extended GestureActionPlugin protocol with hasAdvancedConfiguration() and presentAdvancedConfiguration() methods with default implementations
-- Updated BundleActionsPlugin to implement advanced configuration, presenting its BundleActionsEditor as a sheet with full parameter round-tripping
-- Fixed BundleActionsEditor done/cancel to properly handle sheet presentation (endSheet instead of close)
-- Configuration sheets now show 'Configure...' button for actions with advanced editors, hide raw JSON fields, and display item count
-- Increased SavedActionConfigurationSheet height to 500 to accommodate new UI
-
-## 2026-01-20
-
-### Bug Fixes
-- Fixed EXC_BAD_ACCESS crash when toggling zone highlights setting
-  - Root cause: isReleasedWhenClosed = true caused window to self-deallocate while manager still held reference
-  - Autorelease pool drain would then try to release already-deallocated object
-  - Changed to isReleasedWhenClosed = false with explicit lifecycle management
-
-### Memory Optimizations
-- Reduced idle memory usage from ~125 MB toward 45-65 MB target
-- **Zone Highlights: Replaced full-screen window with individual zone windows**
-  - Full-screen backing store was ~60 MB on Retina (5120x3200 × 4 bytes)
-  - Now uses 8 small windows, one per zone (~1-2 MB total)
-  - New ZoneWindow/ZoneView classes for lightweight per-zone rendering
-- AppDelegate: Removed hidden SettingsActionHandler NSWindow that was keeping SwiftUI layers alive
-  - Now finds and triggers Settings menu item directly, with Cmd+, fallback
-- TabManager: Implemented lazy tab loading with LazyTabPlaceholder
-  - Only renders tabs when first selected instead of all 8+ at startup
-  - Prevents CoreAnimation layer explosion from pre-rendering all views
-- ZoneHighlightWindow: Fixed lifecycle for proper memory release
-  - Uses isReleasedWhenClosed = false with explicit lifecycle management by ZoneHighlightManager
-  - Made highlightView optional with weak references in closures
-- ZoneHighlightManager: Improved observer cleanup
-  - Store screen change observer reference for proper cleanup
-  - Added comprehensive cleanup() method in deinit
-  - Close old window before creating new one on screen change
-
-### New Features
-- Implemented ActivationCoordinator for efficiency-based detector gating
-  - New `ActivationType` enum with efficiency scores (0-100) for each detection type
-  - `ActivationCoordinator` singleton manages activation states across all plugins
-  - `ActivationProvider` protocol for plugins to declare their activation capabilities
-  - Dependency graph auto-built by analyzing gesture configurations
-  - Low-efficiency detectors (screenZone: 20) gated behind high-efficiency ones (modifierKey: 100)
-  - Fully generalizable: any new plugin can participate in the efficiency system
-  - Removes hardcoded coupling between ModifierKeyDetector and ScreenZoneDetector
-  
-- All detection plugins now implement ActivationProvider:
-  - ModifierKeyDetectorPlugin: provides `.modifierKey` activation
-  - ScreenZoneDetectorPlugin: provides `.screenZone` and `.mouseDrag` activations
-  - KeyboardShortcutDetectorPlugin: provides `.keyboardShortcut` activation
-  - MouseButtonDetectorPlugin: provides `.mouseButton` activation  
-  - AppConfigurationDetectorPlugin: provides `.appChange` activation
-
-- Implemented plugin-based settings system for detection plugins
-  - New `PluginSettingDefinition` struct for declaratively defining plugin settings
-  - Settings types: toggle, slider, stepper, picker, segmented picker, color, text, button, info
-  - Support for setting dependencies (show setting B only when setting A is enabled)
-  - Support for setting validation with error messages
-  - Settings are persisted in Configuration and loaded on app launch
-  
-- Updated all built-in detection plugins with configurable settings:
-  - ScreenZoneDetectorPlugin: edge threshold, corner size, corner buffer, zone highlights, tracking rate
-  - ModifierKeyDetectorPlugin: cooldown enable/disable, cooldown duration
-  - KeyboardShortcutDetectorPlugin: double-tap prevention, prevention interval
-  - MouseButtonDetectorPlugin: require modifiers, allowed buttons filter
-  - AppConfigurationDetectorPlugin: auto-switch profiles, haptic feedback, app history size
-  
-- Added new "Detection" section in Settings UI
-  - PluginSettingsView renders all plugin settings dynamically
-  - Settings grouped by category (Detection, Appearance, Performance, etc.)
-  - Show/hide advanced settings toggle
-  - Real-time updates with dependent settings visibility
-  
-- DetectionPluginManager now handles settings persistence:
-  - `getAllSettingsDefinitions()` - get all settings from all plugins
-  - `updatePluginSetting()` - update and persist a single setting
-  - `resetPluginSettings()` - reset all settings for a plugin
-
-### Bug Fixes
-- Fixed unreliable gesture detection when modifiers are already pressed at startup
-  - Issue: If user held modifier keys before detection started, gestures wouldn't trigger
-    until modifiers were released and re-pressed
-  - Root cause: `flagsChanged` events only fire on modifier state *changes*, not when
-    modifiers are already held
-  - Fix: Both ModifierKeyDetectorPlugin and ScreenZoneDetectorPlugin now check current
-    system modifier state on startup via `NSEvent.modifierFlags`
-  - ModifierKeyDetectorPlugin initializes its internal state if modifiers are already held
-  - ScreenZoneDetectorPlugin enables mouse tracking immediately if modifiers are pressed
-
-- Fixed gesture detection using stale cached modifier state
-  - Changed `detectGesture()` to use real-time system modifiers via 
-    `ModifierKeyDetectorPlugin.currentSystemModifiers()` instead of cached plugin state
-  - Prevents missed gestures due to timing lag between system events and plugin state
-
-- Fixed gestures not triggering when mouse is stationary in zone and modifiers are pressed
-  - Added `checkCurrentMousePosition()` that runs when mouse tracking is enabled
-  - If mouse is already in a zone when modifiers are pressed, gesture now triggers immediately
-
-- Fixed gestures not re-triggering when modifiers change while mouse is in zone
-  - ScreenZoneDetectorPlugin now monitors modifier changes directly
-  - When modifiers change and mouse is in a zone, re-checks for matching gesture
-  - Added `lastTriggeredModifiers` tracking to detect modifier-only changes
-  - Allows different gestures for same zone with different modifier combinations
-
-## 2026-01-18
-
-### Bug Fixes
-- Fixed "Repeat on Hold" continuing after modifier released
-  - Now uses real-time system modifier checking via `NSEvent.modifierFlags`
-  - Validates gesture-specific modifier and drag requirements before repeating
-  - Properly stops repeat timer when triggering conditions are no longer met
-
-### Code Quality
-- Fixed compilation warnings:
-  - ServicePluginInfo: Resolved Codable warning for `id` property with initial value
-    by implementing custom CodingKeys and `init(from:)` decoder
-  - Extensions: Added `@retroactive` attribute to NSEvent.ModifierFlags and
-    CGEventFlags Codable conformances to acknowledge intentional retroactive conformances
-
-## 2026-02-05
-
-### Bug Fixes - Settings
-- **Fixed duplicate zone configuration settings** - Removed standalone "Zone Configuration" section 
-  from Settings sidebar. Zone dimensions (edge threshold, corner size, corner buffer) and visual 
-  feedback (highlights, labels) were duplicated between the Settings > Zone Configuration section 
-  and Settings > Detection plugin settings, each using different storage backends with different 
-  default values. The plugin settings system is now the single source of truth.
-- **Fixed zone settings not autofilling / slider jump on release** - The old Zone Configuration 
-  section read from Configuration.shared (defaults: 30/100/50) while the actual detection used 
-  plugin settings (defaults: 5/30/5). Removing the duplicate section eliminates this mismatch.
-- **Fixed zone highlights not matching detection zones** - ZoneHighlightManager read zone dimensions 
-  from Configuration.shared, but the ScreenZoneDetectorPlugin used its own settings. Added settings 
-  sync: plugin now writes zone dimensions and visibility flags to Configuration.shared whenever 
-  they change, plus an initial sync on startup, so highlights always match actual detection zones.
-- **Added Show Zone Labels setting to ScreenZoneDetectorPlugin** - Previously only available as a 
-  Configuration.shared property with no UI after the duplicate section was removed. Now properly 
-  accessible through Detection > Appearance settings, with dependency on Show Zone Highlights.
-
-### Code Quality
-- Removed unused @State variables from SettingsView (zone-related state)
-- Removed Zone Configuration enum case from SettingsSection
-- Updated detection description text to mention zone dimensions and visual feedback
-- Dead code identified: UIServices zone dimension getters/setters and ZoneVisualizationService 
-  zone dimension methods are no longer called from the UI (kept for API compatibility)
-
-### Bug Fixes - Settings (continued)
-- **Fixed zone setting defaults to 30/100/50** - ScreenZoneDetectorPlugin defaults were 5/30/5 
-  which didn't match the original zone configuration values. Updated to match: edge threshold 30px, 
-  corner size 100px, corner buffer 50px. Default values now use Double type for consistency.
-- **Fixed slider jump bug in plugin settings** - Sliders would jump to unexpected values when 
-  adjusted. Root cause: `.id(refreshTrigger)` on the entire PluginSettingsView forced SwiftUI to 
-  destroy and recreate all views (including active sliders) on every setting change. Fix: 
-  extracted sliders into a separate `SliderSettingControl` view with local `@State` that persists 
-  across parent rebuilds. Visibility refreshes now only trigger on toggle/picker changes (which 
-  affect dependent setting visibility), not slider drags.
-- **Fixed zone highlights not activating on app startup** - `syncSettingsToConfiguration()` was 
-  called during `initialize()` before plugin settings were loaded from persistence, so it wrote 
-  wrong default values. Moved to `start()` which runs after settings loading. The sync now also 
-  calls `ZoneHighlightManager.shared.startHighlighting()` if highlights are enabled, ensuring 
-  they activate on app launch.
-- **Updated slider ranges** - Edge threshold: 5-100px (was 1-50), corner size: 20-200px 
-  (was 10-150), corner buffer: 0-100px (was 0-50). Ranges now accommodate the full useful range.
-- **Hide empty setting categories** - Category picker in Detection settings now only shows 
-  categories that have visible settings. Empty categories (e.g. Advanced when Show Advanced is 
-  off and all settings in that category are advanced-only) are hidden.
-
-## 2026-02-05
-
-### Bug Fixes - Efficiency Mapping
-- **Fixed efficiency mapping not working - CPU rises when mouse moved regardless of modifiers**
-  - Root cause: Race condition in ActivationCoordinator's disabling logic. When modifiers were 
-    released, the screen zone detection reported as "engaged" if `lastTriggeredZone != nil`, 
-    preventing the coordinator from disabling mouse tracking. The mouse event monitor stayed 
-    active and processed events even with early returns, causing unnecessary CPU usage.
-  - Fix: ScreenZoneDetectorPlugin now listens for modifier state changes via NotificationCenter.
-    When all modifiers are released, it immediately clears `lastTriggeredZone` and notifies the
-    coordinator that screen zone detection is disengaged. This allows the coordinator to properly
-    disable mouse tracking, stopping event processing.
-  - ModifierKeyDetectorPlugin now posts `ModifierStateChanged` notification after each modifier
-    change, allowing other plugins to react immediately to modifier state transitions.
-  - Impact: Mouse tracking now properly disables when modifiers are released, eliminating 
-    unnecessary CPU usage during normal mouse movement without modifiers held.
-
-### Bug Fixes - Zone Highlights
-- **Fixed zone highlights getting stuck when modifiers released during certain actions**
-  - Issue: Zone highlights could remain visible after modifiers were released if an action like
-    entering fullscreen interrupted the normal event flow. The ZoneHighlightManager relied solely
-    on flagsChanged events, which could be missed during window state transitions.
-  - Fix: Added multiple safeguards to ensure highlights are properly hidden:
-    - ZoneHighlightManager now listens for ModifierStateChanged notifications from 
-      ModifierKeyDetectorPlugin, providing a secondary path for detecting modifier releases
-    - Added observers for NSApplication.didResignActiveNotification to hide zones when app 
-      loses focus
-    - Added observers for NSWindow.willEnterFullScreenNotification to hide zones before 
-      fullscreen transitions
-  - Impact: Zone highlights now properly disappear in all scenarios, preventing them from 
-    getting stuck on screen during fullscreen transitions or other window state changes.
-
-## 2026-02-06
-### Bug Fixes - Efficiency Mapping (actual fix)
-- **Fixed mouse tracking staying permanently active after any drag event**
-  - Root cause: handleMouseDrag() called enableMouseTracking() directly, bypassing the
-    ActivationCoordinator. When drag ended, handleMouseUp() relied on the coordinator to
-    disable tracking, but since the coordinator never added .screenZone to its enabledTypes,
-    disableActivationType() exited early at the guard. Mouse tracking stayed active forever.
-  - The previous fix (2026-02-05) addressed the coordinator-side issue of screenZone reporting
-    as engaged, but did not address the direct enableMouseTracking() call in handleMouseDrag().
-  - Fix: Added mouseTrackingEnabledByDrag flag to track when drag directly enables tracking.
-    handleMouseDrag() now only enables tracking if drag-based gestures actually exist
-    (via new hasDragGestures() helper). handleMouseUp() explicitly disables tracking when
-    the coordinator would not keep it active, closing the lifecycle gap.
-  - Impact: Mouse tracking now correctly stays disabled during normal mouse movement.
-    CPU usage drops to 0% when no modifiers are held and no drag gestures are active.
-
-### Code Quality
-- Removed all diagnostic [DIAG] print statements from ActivationCoordinator and
-  ScreenZoneDetectorPlugin that were added to debug the efficiency mapping issue.
-
-## 2026-02-06
-### Bug Fixes: Zone Highlight Settings
-
-**Zone highlights not rendering correct size**
-- ScreenZoneDetectorPlugin.settingChanged() now syncs edgeThreshold, cornerSize, and
-  cornerBuffer back to Configuration.shared when changed via the settings UI.
-- ZoneHighlightManager now listens for "zoneDimensionsChanged" notifications and
-  rebuilds zone windows with the updated dimensions.
-
-**Highlight Color setting not working**
-- ZoneView.draw() now reads its inactive/active colors from Configuration.shared.zoneHighlightColor
-  instead of using hardcoded NSColor.systemBlue values.
-- Added zoneHighlightColor transient property to Configuration (not persisted, synced from
-  plugin settings at runtime).
-- ScreenZoneDetectorPlugin syncs the color to Configuration on startup and on setting change.
-
-**Zone Highlights getting stuck when modifiers released during actions**
-- Added periodic modifier check timer (0.5s interval) as a fallback that reads the actual
-  system modifier state via NSEvent.modifierFlags and hides zones if modifiers were released
-  without the event being captured.
-- Added NSWorkspace.activeSpaceDidChangeNotification observer to hide zones on space changes.
-- Fixed duplicate code in startHighlighting() (guard and startModifierMonitoring were called twice).
-- Fixed observer buildup: app event observers (resign active, fullscreen, space change) are
-  now tracked and cleaned up before re-registration.
-
-**Zone highlights flashing briefly with rapid modifier key presses**
-- Unified all hide paths through scheduleHide() which debounces (0.15s) and
-  re-checks actual system modifier state (NSEvent.modifierFlags) before hiding.
-  This prevents hiding when an intermediate empty-modifier state occurs during
-  rapid key transitions.
-- showZones() now cancels any in-progress hide animation by clearing the
-  window's animations dictionary and resetting isHiding flag, preventing the
-  fade-out animator from overriding the new alpha value.
-- Added isHiding guard so hideZones() completion handler won't orderOut windows
-  that were re-shown while the fade animation was running.
-- Added local flagsChanged monitor alongside the global one so modifier changes
-  are tracked even when the app's own settings window is focused.
-
+## 2026-02-05### Bug Fix: Raw JSON editor showing for bundle actions and similar- Removed raw JSON text editor from parameter configuration UI entirely- .json type parameters are now always filtered out of simple params list (previously only hidden when hasAdvancedConfig was true, causing race condition)- Actions with .json parameters now exclusively use the advanced configuration sheet (Configure... button)- Affected both GestureConfigurationSheet and SavedActionConfigurationSheet## 2026-02-05### Feature: Advanced Configuration for Saved Actions- Added support for actions that require custom editors (e.g., Bundle Actions) in both Saved Actions and Gesture configuration sheets- Extended GestureActionPlugin protocol with hasAdvancedConfiguration() and presentAdvancedConfiguration() methods with default implementations- Updated BundleActionsPlugin to implement advanced configuration, presenting its BundleActionsEditor as a sheet with full parameter round-tripping- Fixed BundleActionsEditor done/cancel to properly handle sheet presentation (endSheet instead of close)- Configuration sheets now show 'Configure...' button for actions with advanced editors, hide raw JSON fields, and display item count- Increased SavedActionConfigurationSheet height to 500 to accommodate new UI## 2026-01-20### Bug Fixes- Fixed EXC_BAD_ACCESS crash when toggling zone highlights setting  - Root cause: isReleasedWhenClosed = true caused window to self-deallocate while manager still held reference  - Autorelease pool drain would then try to release already-deallocated object  - Changed to isReleasedWhenClosed = false with explicit lifecycle management### Memory Optimizations- Reduced idle memory usage from ~125 MB toward 45-65 MB target- **Zone Highlights: Replaced full-screen window with individual zone windows**  - Full-screen backing store was ~60 MB on Retina (5120x3200 * 4 bytes)  - Now uses 8 small windows, one per zone (~1-2 MB total)  - New ZoneWindow/ZoneView classes for lightweight per-zone rendering- AppDelegate: Removed hidden SettingsActionHandler NSWindow that was keeping SwiftUI layers alive  - Now finds and triggers Settings menu item directly, with Cmd+, fallback- TabManager: Implemented lazy tab loading with LazyTabPlaceholder  - Only renders tabs when first selected instead of all 8+ at startup  - Prevents CoreAnimation layer explosion from pre-rendering all views- ZoneHighlightWindow: Fixed lifecycle for proper memory release  - Uses isReleasedWhenClosed = false with explicit lifecycle management by ZoneHighlightManager  - Made highlightView optional with weak references in closures- ZoneHighlightManager: Improved observer cleanup  - Store screen change observer reference for proper cleanup  - Added comprehensive cleanup() method in deinit  - Close old window before creating new one on screen change### New Features- Implemented ActivationCoordinator for efficiency-based detector gating  - New `ActivationType` enum with efficiency scores (0-100) for each detection type  - `ActivationCoordinator` singleton manages activation states across all plugins  - `ActivationProvider` protocol for plugins to declare their activation capabilities  - Dependency graph auto-built by analyzing gesture configurations  - Low-efficiency detectors (screenZone: 20) gated behind high-efficiency ones (modifierKey: 100)  - Fully generalizable: any new plugin can participate in the efficiency system  - Removes hardcoded coupling between ModifierKeyDetector and ScreenZoneDetector  - All detection plugins now implement ActivationProvider:  - ModifierKeyDetectorPlugin: provides `.modifierKey` activation  - ScreenZoneDetectorPlugin: provides `.screenZone` and `.mouseDrag` activations  - KeyboardShortcutDetectorPlugin: provides `.keyboardShortcut` activation  - MouseButtonDetectorPlugin: provides `.mouseButton` activation    - AppConfigurationDetectorPlugin: provides `.appChange` activation- Implemented plugin-based settings system for detection plugins  - New `PluginSettingDefinition` struct for declaratively defining plugin settings  - Settings types: toggle, slider, stepper, picker, segmented picker, color, text, button, info  - Support for setting dependencies (show setting B only when setting A is enabled)  - Support for setting validation with error messages  - Settings are persisted in Configuration and loaded on app launch  - Updated all built-in detection plugins with configurable settings:  - ScreenZoneDetectorPlugin: edge threshold, corner size, corner buffer, zone highlights, tracking rate  - ModifierKeyDetectorPlugin: cooldown enable/disable, cooldown duration  - KeyboardShortcutDetectorPlugin: double-tap prevention, prevention interval  - MouseButtonDetectorPlugin: require modifiers, allowed buttons filter  - AppConfigurationDetectorPlugin: auto-switch profiles, haptic feedback, app history size  - Added new "Detection" section in Settings UI  - PluginSettingsView renders all plugin settings dynamically  - Settings grouped by category (Detection, Appearance, Performance, etc.)  - Show/hide advanced settings toggle  - Real-time updates with dependent settings visibility  - DetectionPluginManager now handles settings persistence:  - `getAllSettingsDefinitions()` - get all settings from all plugins  - `updatePluginSetting()` - update and persist a single setting  - `resetPluginSettings()` - reset all settings for a plugin### Bug Fixes- Fixed unreliable gesture detection when modifiers are already pressed at startup  - Issue: If user held modifier keys before detection started, gestures wouldn't trigger    until modifiers were released and re-pressed  - Root cause: `flagsChanged` events only fire on modifier state *changes*, not when    modifiers are already held  - Fix: Both ModifierKeyDetectorPlugin and ScreenZoneDetectorPlugin now check current    system modifier state on startup via `NSEvent.modifierFlags`  - ModifierKeyDetectorPlugin initializes its internal state if modifiers are already held  - ScreenZoneDetectorPlugin enables mouse tracking immediately if modifiers are pressed- Fixed gesture detection using stale cached modifier state  - Changed `detectGesture()` to use real-time system modifiers via     `ModifierKeyDetectorPlugin.currentSystemModifiers()` instead of cached plugin state  - Prevents missed gestures due to timing lag between system events and plugin state- Fixed gestures not triggering when mouse is stationary in zone and modifiers are pressed  - Added `checkCurrentMousePosition()` that runs when mouse tracking is enabled  - If mouse is already in a zone when modifiers are pressed, gesture now triggers immediately- Fixed gestures not re-triggering when modifiers change while mouse is in zone  - ScreenZoneDetectorPlugin now monitors modifier changes directly  - When modifiers change and mouse is in a zone, re-checks for matching gesture  - Added `lastTriggeredModifiers` tracking to detect modifier-only changes  - Allows different gestures for same zone with different modifier combinations## 2026-01-18### Bug Fixes- Fixed "Repeat on Hold" continuing after modifier released  - Now uses real-time system modifier checking via `NSEvent.modifierFlags`  - Validates gesture-specific modifier and drag requirements before repeating  - Properly stops repeat timer when triggering conditions are no longer met### Code Quality- Fixed compilation warnings:  - ServicePluginInfo: Resolved Codable warning for `id` property with initial value    by implementing custom CodingKeys and `init(from:)` decoder  - Extensions: Added `@retroactive` attribute to NSEvent.ModifierFlags and    CGEventFlags Codable conformances to acknowledge intentional retroactive conformances## 2026-02-05### Bug Fixes - Settings- **Fixed duplicate zone configuration settings** - Removed standalone "Zone Configuration" section   from Settings sidebar. Zone dimensions (edge threshold, corner size, corner buffer) and visual   feedback (highlights, labels) were duplicated between the Settings > Zone Configuration section   and Settings > Detection plugin settings, each using different storage backends with different   default values. The plugin settings system is now the single source of truth.- **Fixed zone settings not autofilling / slider jump on release** - The old Zone Configuration   section read from Configuration.shared (defaults: 30/100/50) while the actual detection used   plugin settings (defaults: 5/30/5). Removing the duplicate section eliminates this mismatch.- **Fixed zone highlights not matching detection zones** - ZoneHighlightManager read zone dimensions   from Configuration.shared, but the ScreenZoneDetectorPlugin used its own settings. Added settings   sync: plugin now writes zone dimensions and visibility flags to Configuration.shared whenever   they change, plus an initial sync on startup, so highlights always match actual detection zones.- **Added Show Zone Labels setting to ScreenZoneDetectorPlugin** - Previously only available as a   Configuration.shared property with no UI after the duplicate section was removed. Now properly   accessible through Detection > Appearance settings, with dependency on Show Zone Highlights.### Code Quality- Removed unused @State variables from SettingsView (zone-related state)- Removed Zone Configuration enum case from SettingsSection- Updated detection description text to mention zone dimensions and visual feedback- Dead code identified: UIServices zone dimension getters/setters and ZoneVisualizationService   zone dimension methods are no longer called from the UI (kept for API compatibility)### Bug Fixes - Settings (continued)- **Fixed zone setting defaults to 30/100/50** - ScreenZoneDetectorPlugin defaults were 5/30/5   which didn't match the original zone configuration values. Updated to match: edge threshold 30px,   corner size 100px, corner buffer 50px. Default values now use Double type for consistency.- **Fixed slider jump bug in plugin settings** - Sliders would jump to unexpected values when   adjusted. Root cause: `.id(refreshTrigger)` on the entire PluginSettingsView forced SwiftUI to   destroy and recreate all views (including active sliders) on every setting change. Fix:   extracted sliders into a separate `SliderSettingControl` view with local `@State` that persists   across parent rebuilds. Visibility refreshes now only trigger on toggle/picker changes (which   affect dependent setting visibility), not slider drags.- **Fixed zone highlights not activating on app startup** - `syncSettingsToConfiguration()` was   called during `initialize()` before plugin settings were loaded from persistence, so it wrote   wrong default values. Moved to `start()` which runs after settings loading. The sync now also   calls `ZoneHighlightManager.shared.startHighlighting()` if highlights are enabled, ensuring   they activate on app launch.- **Updated slider ranges** - Edge threshold: 5-100px (was 1-50), corner size: 20-200px   (was 10-150), corner buffer: 0-100px (was 0-50). Ranges now accommodate the full useful range.- **Hide empty setting categories** - Category picker in Detection settings now only shows   categories that have visible settings. Empty categories (e.g. Advanced when Show Advanced is   off and all settings in that category are advanced-only) are hidden.## 2026-02-05### Bug Fixes - Efficiency Mapping- **Fixed efficiency mapping not working - CPU rises when mouse moved regardless of modifiers**  - Root cause: Race condition in ActivationCoordinator's disabling logic. When modifiers were     released, the screen zone detection reported as "engaged" if `lastTriggeredZone != nil`,     preventing the coordinator from disabling mouse tracking. The mouse event monitor stayed     active and processed events even with early returns, causing unnecessary CPU usage.  - Fix: ScreenZoneDetectorPlugin now listens for modifier state changes via NotificationCenter.    When all modifiers are released, it immediately clears `lastTriggeredZone` and notifies the    coordinator that screen zone detection is disengaged. This allows the coordinator to properly    disable mouse tracking, stopping event processing.  - ModifierKeyDetectorPlugin now posts `ModifierStateChanged` notification after each modifier    change, allowing other plugins to react immediately to modifier state transitions.  - Impact: Mouse tracking now properly disables when modifiers are released, eliminating     unnecessary CPU usage during normal mouse movement without modifiers held.### Bug Fixes - Zone Highlights- **Fixed zone highlights getting stuck when modifiers released during certain actions**  - Issue: Zone highlights could remain visible after modifiers were released if an action like    entering fullscreen interrupted the normal event flow. The ZoneHighlightManager relied solely    on flagsChanged events, which could be missed during window state transitions.  - Fix: Added multiple safeguards to ensure highlights are properly hidden:    - ZoneHighlightManager now listens for ModifierStateChanged notifications from       ModifierKeyDetectorPlugin, providing a secondary path for detecting modifier releases    - Added observers for NSApplication.didResignActiveNotification to hide zones when app       loses focus    - Added observers for NSWindow.willEnterFullScreenNotification to hide zones before       fullscreen transitions  - Impact: Zone highlights now properly disappear in all scenarios, preventing them from     getting stuck on screen during fullscreen transitions or other window state changes.## 2026-02-06### Bug Fixes - Efficiency Mapping (actual fix)- **Fixed mouse tracking staying permanently active after any drag event**  - Root cause: handleMouseDrag() called enableMouseTracking() directly, bypassing the    ActivationCoordinator. When drag ended, handleMouseUp() relied on the coordinator to    disable tracking, but since the coordinator never added .screenZone to its enabledTypes,    disableActivationType() exited early at the guard. Mouse tracking stayed active forever.  - The previous fix (2026-02-05) addressed the coordinator-side issue of screenZone reporting    as engaged, but did not address the direct enableMouseTracking() call in handleMouseDrag().  - Fix: Added mouseTrackingEnabledByDrag flag to track when drag directly enables tracking.    handleMouseDrag() now only enables tracking if drag-based gestures actually exist    (via new hasDragGestures() helper). handleMouseUp() explicitly disables tracking when    the coordinator would not keep it active, closing the lifecycle gap.  - Impact: Mouse tracking now correctly stays disabled during normal mouse movement.    CPU usage drops to 0% when no modifiers are held and no drag gestures are active.### Code Quality- Removed all diagnostic [DIAG] print statements from ActivationCoordinator and  ScreenZoneDetectorPlugin that were added to debug the efficiency mapping issue.## 2026-02-06### Bug Fixes: Zone Highlight Settings**Zone highlights not rendering correct size**- ScreenZoneDetectorPlugin.settingChanged() now syncs edgeThreshold, cornerSize, and  cornerBuffer back to Configuration.shared when changed via the settings UI.- ZoneHighlightManager now listens for "zoneDimensionsChanged" notifications and  rebuilds zone windows with the updated dimensions.**Highlight Color setting not working**- ZoneView.draw() now reads its inactive/active colors from Configuration.shared.zoneHighlightColor  instead of using hardcoded NSColor.systemBlue values.- Added zoneHighlightColor transient property to Configuration (not persisted, synced from  plugin settings at runtime).- ScreenZoneDetectorPlugin syncs the color to Configuration on startup and on setting change.**Zone Highlights getting stuck when modifiers released during actions**- Added periodic modifier check timer (0.5s interval) as a fallback that reads the actual  system modifier state via NSEvent.modifierFlags and hides zones if modifiers were released  without the event being captured.- Added NSWorkspace.activeSpaceDidChangeNotification observer to hide zones on space changes.- Fixed duplicate code in startHighlighting() (guard and startModifierMonitoring were called twice).- Fixed observer buildup: app event observers (resign active, fullscreen, space change) are  now tracked and cleaned up before re-registration.**Zone highlights flashing briefly with rapid modifier key presses**- Unified all hide paths through scheduleHide() which debounces (0.15s) and  re-checks actual system modifier state (NSEvent.modifierFlags) before hiding.  This prevents hiding when an intermediate empty-modifier state occurs during  rapid key transitions.- showZones() now cancels any in-progress hide animation by clearing the  window's animations dictionary and resetting isHiding flag, preventing the  fade-out animator from overriding the new alpha value.- Added isHiding guard so hideZones() completion handler won't orderOut windows  that were re-shown while the fade animation was running.- Added local flagsChanged monitor alongside the global one so modifier changes  are tracked even when the app's own settings window is focused.## 2026-02-06### UI Improvements**Moved "Show Advanced" toggle from Detection Settings to Settings sidebar**- The advanced settings toggle is now a persistent switch at the bottom of the Settings sidebar,  making it accessible from all settings sections rather than only the Detection tab.- PluginSettingsView now receives showAdvanced as a Binding instead of managing its own state,  allowing the parent SettingsView to control it globally.- Removed the toggle from the Detection Plugin Settings header for a cleaner layout.**Fixed sidebar/menu click targets across all views**- Added .contentShape(Rectangle()) to clickable rows in ServicesView, ProfilesView,  GesturesView, and SavedActionsView so the entire row rectangle is clickable,  not just the text/icon area.### Bug Fixes**Corner Buffer setting no longer hidden behind Advanced toggle**- Changed the Corner Buffer zone configuration setting from isAdvanced: true to  isAdvanced: false in ScreenZoneDetectorPlugin, so it is visible by default alongside  Edge Threshold and Corner Size.### Housekeeping- Removed completed items from to-do: Cmd+Ctrl fullscreen default (already implemented),  sidebar clickability, corner buffer advanced flag, advanced toggle relocation.
 ## 2026-02-06
 
-### UI Improvements
+### UI Improvements - Gesture Configuration Sheet Rework
 
-**Moved "Show Advanced" toggle from Detection Settings to Settings sidebar**
-- The advanced settings toggle is now a persistent switch at the bottom of the Settings sidebar,
-  making it accessible from all settings sections rather than only the Detection tab.
-- PluginSettingsView now receives showAdvanced as a Binding instead of managing its own state,
-  allowing the parent SettingsView to control it globally.
-- Removed the toggle from the Detection Plugin Settings header for a cleaner layout.
+**Reworked Add/Edit Gesture UI to respond to activation type**
+- Activation Method is now the first section in the Gesture Configuration Sheet,
+  controlling which trigger fields are visible below it.
+- Selecting "Gesture Only" hides keyboard shortcut and mouse button fields.
+  Selecting "Keyboard Only" hides zone/modifier/drag fields. Combined modes
+  show the relevant subsections with labeled dividers.
+- Trigger fields animate in/out smoothly when activation type changes.
+- Each trigger subsection has a descriptive label with SF Symbol icon
+  (hand.draw for gesture, keyboard for shortcut, computermouse for mouse button).
 
-**Fixed sidebar/menu click targets across all views**
-- Added .contentShape(Rectangle()) to clickable rows in ServicesView, ProfilesView,
-  GesturesView, and SavedActionsView so the entire row rectangle is clickable,
-  not just the text/icon area.
+**Fixed action category filter to use real ActionCategory enum**
+- Category picker in both Gesture and Saved Action sheets now dynamically
+  populates from ActionCategory enum values that have registered actions,
+  instead of hardcoded strings that didn't match plugin categories.
+- Filtering now works correctly against the plugin's actual category.
 
-### Bug Fixes
+### Code Quality - Deduplicated Action Selection UI
 
-**Corner Buffer setting no longer hidden behind Advanced toggle**
-- Changed the Corner Buffer zone configuration setting from isAdvanced: true to
-  isAdvanced: false in ScreenZoneDetectorPlugin, so it is visible by default alongside
-  Edge Threshold and Corner Size.
+**Extracted shared ActionSelectionView component**
+- Created ActionSelectionView.swift containing the reusable action picker,
+  category filter, parameter fields, and advanced configuration UI.
+- GestureConfigurationSheet now delegates to ActionSelectionView instead of
+  duplicating ~200 lines of action selection and parameter configuration code.
+- SavedActionConfigurationSheet also uses ActionSelectionView, removing its
+  own duplicate copy of the same logic.
+- Both sheets reduced significantly in size while maintaining full functionality.
+- Removed duplicate parameter binding helpers (strBinding, numBinding, boolBinding,
+  paramField, advancedConfigBox, etc.) that existed in both sheets.
 
 ### Housekeeping
-- Removed completed items from to-do: Cmd+Ctrl fullscreen default (already implemented),
-  sidebar clickability, corner buffer advanced flag, advanced toggle relocation.
+- Removed completed to-do items: Rework Add Gesture UI, Remove Duplicate code/unify architectures.

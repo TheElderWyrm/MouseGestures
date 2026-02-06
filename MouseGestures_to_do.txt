@@ -1,9 +1,9 @@
-General:
-- Remove Duplicate code, unify architectures
 - Work to reduce CPU/Memory Usage
-- Rework Add Gesture UI to respond to activation type (So, for example, if "Keyboard Only" is selected then it hides the options related to other activation types) (Must be compatible with custom plugin system)
+
+General:
 - Add an advanced seeing setting to enable developer mode.
 - Issue with nested developer mode, advanced settings menu. <-- With advanced toggle "advanced menu" might be unnecessary (See above)
+-Possible: Delete/remake the show zone highlights window instead of hiding to save memory.
 
 Actions:
 - More System Control Actions

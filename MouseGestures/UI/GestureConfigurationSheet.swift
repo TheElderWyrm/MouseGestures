@@ -30,27 +30,11 @@ struct GestureConfigurationSheet: View {
     // UI State
     @State private var showingConflictAlert = false
     @State private var conflictMessage = ""
-    @State private var selectedCategory = "General"
-    @State private var hasAdvancedConfig = false
-    @State private var advancedConfigCount = 0
     
     enum Mode {
-        case add
-        case edit
-        
-        var title: String {
-            switch self {
-            case .add: return "Add Gesture"
-            case .edit: return "Edit Gesture"
-            }
-        }
-        
-        var buttonTitle: String {
-            switch self {
-            case .add: return "Add"
-            case .edit: return "Save"
-            }
-        }
+        case add, edit
+        var title: String { self == .add ? "Add Gesture" : "Edit Gesture" }
+        var buttonTitle: String { self == .add ? "Add" : "Save" }
     }
     
     init(mode: Mode, existingGesture: Gesture? = nil, onSave: @escaping (Gesture) -> Void) {
@@ -58,22 +42,21 @@ struct GestureConfigurationSheet: View {
         self.existingGesture = existingGesture
         self.onSave = onSave
         
-        // Initialize state from existing gesture or defaults
-        if let gesture = existingGesture {
-            _selectedZone = State(initialValue: gesture.zone)
-            _selectedModifiers = State(initialValue: gesture.modifiers)
-            _selectedDragModifier = State(initialValue: gesture.dragModifier)
-            _selectedActionId = State(initialValue: gesture.actionIdentifier)
-            _activationType = State(initialValue: gesture.activation.activationType)
-            _keyboardShortcut = State(initialValue: gesture.activation.keyboardTrigger)
-            _mouseButton = State(initialValue: gesture.activation.mouseButtonTrigger)
-            _isEnabled = State(initialValue: gesture.activation.isEnabled)
-            _repeatOnHold = State(initialValue: gesture.timing.repeatOnHold)
-            _repeatInitialDelay = State(initialValue: gesture.timing.repeatInitialDelay)
-            _repeatInterval = State(initialValue: gesture.timing.repeatInterval)
-            _longPressEnabled = State(initialValue: gesture.timing.longPressEnabled)
-            _longPressThreshold = State(initialValue: gesture.timing.longPressThreshold)
-            _actionParameters = State(initialValue: gesture.parameters)
+        if let g = existingGesture {
+            _selectedZone = State(initialValue: g.zone)
+            _selectedModifiers = State(initialValue: g.modifiers)
+            _selectedDragModifier = State(initialValue: g.dragModifier)
+            _selectedActionId = State(initialValue: g.actionIdentifier)
+            _activationType = State(initialValue: g.activation.activationType)
+            _keyboardShortcut = State(initialValue: g.activation.keyboardTrigger)
+            _mouseButton = State(initialValue: g.activation.mouseButtonTrigger)
+            _isEnabled = State(initialValue: g.activation.isEnabled)
+            _repeatOnHold = State(initialValue: g.timing.repeatOnHold)
+            _repeatInitialDelay = State(initialValue: g.timing.repeatInitialDelay)
+            _repeatInterval = State(initialValue: g.timing.repeatInterval)
+            _longPressEnabled = State(initialValue: g.timing.longPressEnabled)
+            _longPressThreshold = State(initialValue: g.timing.longPressThreshold)
+            _actionParameters = State(initialValue: g.parameters)
         } else {
             _selectedZone = State(initialValue: .topRight)
             _selectedModifiers = State(initialValue: [.command, .control])
@@ -92,34 +75,36 @@ struct GestureConfigurationSheet: View {
         }
     }
     
+    // Computed helpers for activation type
+    private var hasGesture: Bool {
+        ActivationSettings(activationType: activationType).hasGesture
+    }
+    private var hasKeyboard: Bool {
+        ActivationSettings(activationType: activationType).hasKeyboard
+    }
+    private var hasMouseButton: Bool {
+        ActivationSettings(activationType: activationType).hasMouseButton
+    }
+    
     var body: some View {
         VStack(spacing: 0) {
-            // Header
             configurationHeader
-            
             Divider()
             
-            // Configuration Form
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
+                    activationTypeSection
                     triggerConfigurationSection
-                    actionSelectionSection
-                    gestureParameterSection
-                    activationSettingsSection
+                    actionSection
                     timingSettingsSection
                 }
                 .padding()
             }
             
             Divider()
-            
-            // Footer
             configurationFooter
         }
         .frame(width: 700, height: 650)
-        .onAppear {
-            updateAdvancedConfigState()
-        }
         .alert("Gesture Conflict", isPresented: $showingConflictAlert) {
             Button("OK") {}
         } message: {
@@ -127,484 +112,196 @@ struct GestureConfigurationSheet: View {
         }
     }
     
-    // MARK: - View Components
+    // MARK: - Header / Footer
     
     private var configurationHeader: some View {
         HStack {
-            Text(mode.title)
-                .font(.title2)
-                .bold()
-            
+            Text(mode.title).font(.title2).bold()
             Spacer()
-            
-            Button("Cancel") {
-                dismiss()
-            }
+            Button("Cancel") { dismiss() }
         }
         .padding()
     }
     
-    private var triggerConfigurationSection: some View {
-        GroupBox("Trigger") {
+    private var configurationFooter: some View {
+        HStack {
+            VStack(alignment: .leading) {
+                Text("Preview:").font(.caption).foregroundColor(.secondary)
+                Text(gesturePreviewText).font(.system(.body, design: .monospaced))
+            }
+            Spacer()
+            Button(mode.buttonTitle) { saveGesture() }
+                .keyboardShortcut(.return)
+                .disabled(!isValid)
+        }
+        .padding()
+    }
+    
+    // MARK: - Activation Type (top-level choice)
+    
+    private var activationTypeSection: some View {
+        GroupBox("Activation Method") {
             VStack(alignment: .leading, spacing: 12) {
-                // Zone Selection
-                LabeledContent("Zone:") {
-                    Picker("", selection: $selectedZone) {
-                        ForEach(ScreenZone.allCases, id: \.self) { zone in
-                            Text(zone.displayName).tag(zone)
-                        }
-                    }
-                    .pickerStyle(.menu)
-                    .frame(width: 150)
-                }
-                
-                // Modifier Keys
-                LabeledContent("Modifiers:") {
-                    HStack(spacing: 12) {
-                        ModifierToggle(label: "⌘", flag: .command, modifiers: $selectedModifiers)
-                        ModifierToggle(label: "⌃", flag: .control, modifiers: $selectedModifiers)
-                        ModifierToggle(label: "⌥", flag: .option, modifiers: $selectedModifiers)
-                        ModifierToggle(label: "⇧", flag: .shift, modifiers: $selectedModifiers)
-                    }
-                }
-                
-                // Drag Modifier
-                LabeledContent("Drag Modifier:") {
-                    Picker("", selection: $selectedDragModifier) {
-                        ForEach(DragModifier.allCases, id: \.self) { drag in
-                            Text(drag.displayName).tag(drag)
-                        }
-                    }
-                    .pickerStyle(.menu)
-                    .frame(width: 150)
-                }
-            }
-            .padding(.vertical, 8)
-        }
-    }
-    
-    private var actionSelectionSection: some View {
-        GroupBox("Action") {
-            VStack(alignment: .leading, spacing: 12) {
-                // Category Filter
-                LabeledContent("Category:") {
-                    Picker("", selection: $selectedCategory) {
-                        Text("All").tag("All")
-                        Text("Core Actions").tag("Core")
-                        Text("Window Management").tag("Window")
-                        Text("Media Control").tag("Media")
-                        Text("System Control").tag("System")
-                        Text("Automation").tag("Automation")
-                    }
-                    .pickerStyle(.menu)
-                    .frame(width: 200)
-                }
-                
-                // Action Selection
-                LabeledContent("Action:") {
-                    Picker("", selection: $selectedActionId) {
-                        if selectedActionId.isEmpty {
-                            Text("Select an action...").tag("")
-                        }
-                        ForEach(filteredActions, id: \.0) { actionId, action in
-                            Text(action.name)
-                                .tag(actionId)
-                        }
-                    }
-                    .pickerStyle(.menu)
-                    .frame(minWidth: 300)
-                }
-                
-                // Action Description
-                if let action = getSelectedAction() {
-                    Text(action.description)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .padding(.top, 4)
-                }
-            }
-            .padding(.vertical, 8)
-        }
-    }
-    
-    private var gestureParameterSection: some View {
-        Group {
-            if let action = getSelectedAction() {
-                // Advanced configuration button
-                if hasAdvancedConfig {
-                    GroupBox("Advanced Configuration") {
-                        VStack(alignment: .leading, spacing: 12) {
-                            HStack {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("This action requires advanced configuration.")
-                                        .font(.system(size: 13))
-                                    if advancedConfigCount > 0 {
-                                        Text("\(advancedConfigCount) item(s) configured")
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-                                    } else {
-                                        Text("Not yet configured")
-                                            .font(.caption)
-                                            .foregroundColor(.orange)
-                                    }
-                                }
-                                Spacer()
-                                Button("Configure...") {
-                                    openAdvancedConfiguration(for: action)
-                                }
-                            }
-                        }
-                        .padding(.vertical, 8)
-                    }
-                }
-                
-                // Simple parameter fields (skip json params when advanced config handles them)
-                let simpleParams = action.supportedParameters.filter { param in
-                    if param.type == .json { return false }
-                    return true
-                }
-                if !simpleParams.isEmpty {
-                    GroupBox("Parameters") {
-                        VStack(alignment: .leading, spacing: 12) {
-                            ForEach(simpleParams, id: \.key) { paramDef in
-                                gestureParamField(for: paramDef)
-                            }
-                        }
-                        .padding(.vertical, 8)
-                    }
-                }
-            }
-        }
-        .onChange(of: selectedActionId) { _ in
-            initGestureParamDefaults()
-            updateAdvancedConfigState()
-        }
-    }
-    
-    @ViewBuilder
-    private func gestureParamField(for paramDef: ParameterDefinition) -> some View {
-        switch paramDef.type {
-        case .string, .path, .url:
-            LabeledContent("\(paramDef.name):") {
-                TextField(paramDef.description, text: gParamString(for: paramDef.key, default: paramDef.defaultValue?.value as? String ?? ""))
-                    .textFieldStyle(.roundedBorder)
-                    .frame(minWidth: 200)
-            }
-        case .number:
-            LabeledContent("\(paramDef.name):") {
-                TextField(paramDef.description, text: gParamNumber(for: paramDef.key, default: paramDef.defaultValue?.value as? Double ?? 0))
-                    .textFieldStyle(.roundedBorder)
-                    .frame(width: 100)
-            }
-        case .boolean:
-            Toggle(paramDef.name, isOn: gParamBool(for: paramDef.key, default: paramDef.defaultValue?.value as? Bool ?? false))
-        case .selection:
-            if let allowedValues = paramDef.validation?.allowedValues {
-                LabeledContent("\(paramDef.name):") {
-                    Picker("", selection: gParamString(for: paramDef.key, default: paramDef.defaultValue?.value as? String ?? "")) {
-                        ForEach(allowedValues.compactMap { $0.value as? String }, id: \.self) { val in
-                            Text(val.replacingOccurrences(of: "_", with: " ").capitalized).tag(val)
-                        }
-                    }
-                    .pickerStyle(.menu)
-                    .frame(minWidth: 200)
-                }
-            }
-        case .application:
-            LabeledContent("\(paramDef.name):") {
-                Picker("", selection: gParamString(for: paramDef.key, default: "")) {
-                    Text("Select...").tag("")
-                    ForEach(WindowTargeting.getAllRunningApplications(), id: \.bundleId) { app in
-                        Text(app.name).tag(app.bundleId)
+                Picker("How this gesture is triggered:", selection: $activationType) {
+                    ForEach(ActivationSettings.ActivationType.allCases, id: \.self) { type in
+                        Text(type.rawValue).tag(type)
                     }
                 }
                 .pickerStyle(.menu)
-                .frame(minWidth: 200)
-            }
-        case .json:
-            EmptyView()
-        case .script:
-            VStack(alignment: .leading, spacing: 4) {
-                Text(paramDef.name)
-                    .font(.system(size: 13, weight: .medium))
-                Text(paramDef.description)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                TextEditor(text: gParamString(for: paramDef.key, default: paramDef.defaultValue?.value as? String ?? ""))
-                    .font(.system(.body, design: .monospaced))
-                    .frame(minHeight: 80, maxHeight: 150)
-                    .border(Color(NSColor.separatorColor), width: 1)
-                    .cornerRadius(4)
-            }
-        case .keyboardShortcut:
-            LabeledContent("\(paramDef.name):") {
-                Text("Configure via Activation settings above")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-        default:
-            LabeledContent("\(paramDef.name):") {
-                TextField(paramDef.description, text: gParamString(for: paramDef.key, default: paramDef.defaultValue?.value as? String ?? ""))
-                    .textFieldStyle(.roundedBorder)
-                    .frame(minWidth: 200)
-            }
-        }
-    }
-    
-    private func gParamJson(for key: String) -> Binding<String> {
-        Binding(
-            get: {
-                if let val = actionParameters[key] {
-                    if let dict = val.value as? [String: Any],
-                       let data = try? JSONSerialization.data(withJSONObject: dict, options: .prettyPrinted),
-                       let str = String(data: data, encoding: .utf8) {
-                        return str
-                    }
-                    if let arr = val.value as? [Any],
-                       let data = try? JSONSerialization.data(withJSONObject: arr, options: .prettyPrinted),
-                       let str = String(data: data, encoding: .utf8) {
-                        return str
-                    }
-                    if let str = val.value as? String {
-                        return str
-                    }
-                }
-                return "{}"
-            },
-            set: { newValue in
-                if let data = newValue.data(using: .utf8),
-                   let json = try? JSONSerialization.jsonObject(with: data) {
-                    if let dict = json as? [String: Any] {
-                        actionParameters[key] = AnyCodable(dict)
-                    } else if let arr = json as? [Any] {
-                        actionParameters[key] = AnyCodable(arr)
-                    } else {
-                        actionParameters[key] = AnyCodable(newValue)
-                    }
-                } else {
-                    actionParameters[key] = AnyCodable(newValue)
-                }
-            }
-        )
-    }
-    
-    private func initGestureParamDefaults() {
-        actionParameters.removeAll()
-        guard let action = getSelectedAction() else { return }
-        for paramDef in action.supportedParameters {
-            if let defaultVal = paramDef.defaultValue {
-                actionParameters[paramDef.key] = defaultVal
-            }
-        }
-    }
-    
-    private func gParamString(for key: String, default d: String) -> Binding<String> {
-        Binding(get: { actionParameters[key]?.value as? String ?? d }, set: { actionParameters[key] = AnyCodable($0) })
-    }
-    
-    private func gParamNumber(for key: String, default d: Double) -> Binding<String> {
-        Binding(
-            get: {
-                if let v = actionParameters[key]?.value as? Double { return String(v) }
-                if let v = actionParameters[key]?.value as? Int { return String(v) }
-                return String(d)
-            },
-            set: { if let v = Double($0) { actionParameters[key] = AnyCodable(v) } }
-        )
-    }
-    
-    private func gParamBool(for key: String, default d: Bool) -> Binding<Bool> {
-        Binding(get: { actionParameters[key]?.value as? Bool ?? d }, set: { actionParameters[key] = AnyCodable($0) })
-    }
-    
-    private var activationSettingsSection: some View {
-        GroupBox("Activation") {
-            VStack(alignment: .leading, spacing: 12) {
+                .frame(maxWidth: 250)
+                
                 Toggle("Enabled", isOn: $isEnabled)
-                
-                LabeledContent("Activation Type:") {
-                    Picker("", selection: $activationType) {
-                        ForEach(ActivationSettings.ActivationType.allCases, id: \.self) { type in
-                            Text(type.rawValue).tag(type)
-                        }
-                    }
-                    .pickerStyle(.menu)
-                    .frame(width: 200)
-                }
-                
-                // Keyboard Shortcut (if applicable)
-                if shouldShowKeyboardShortcut {
-                    LabeledContent("Keyboard Shortcut:") {
-                        KeyboardShortcutFieldView(shortcut: $keyboardShortcut)
-                            .frame(width: 200, height: 24)
-                    }
-                }
-                
-                // Mouse Button (if applicable)
-                if shouldShowMouseButton {
-                    LabeledContent("Mouse Button:") {
-                        mouseButtonPicker
-                    }
-                }
             }
             .padding(.vertical, 8)
         }
     }
+    
+    // MARK: - Trigger Configuration (dynamic)
+    
+    private var triggerConfigurationSection: some View {
+        GroupBox("Trigger") {
+            VStack(alignment: .leading, spacing: 16) {
+                // Gesture trigger fields
+                if hasGesture {
+                    gestureTriggerFields
+                }
+                
+                // Keyboard shortcut field
+                if hasKeyboard {
+                    if hasGesture { Divider() }
+                    keyboardTriggerField
+                }
+                
+                // Mouse button field
+                if hasMouseButton {
+                    if hasGesture || hasKeyboard { Divider() }
+                    mouseButtonField
+                }
+            }
+            .padding(.vertical, 8)
+            .animation(.easeInOut(duration: 0.2), value: activationType)
+        }
+    }
+    
+    private var gestureTriggerFields: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label("Screen Zone Gesture", systemImage: "hand.draw")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(.secondary)
+            
+            LabeledContent("Zone:") {
+                Picker("", selection: $selectedZone) {
+                    ForEach(ScreenZone.allCases, id: \.self) { zone in
+                        Text(zone.displayName).tag(zone)
+                    }
+                }
+                .pickerStyle(.menu)
+                .frame(width: 150)
+            }
+            
+            LabeledContent("Modifiers:") {
+                HStack(spacing: 12) {
+                    ModifierToggle(label: "⌘", flag: .command, modifiers: $selectedModifiers)
+                    ModifierToggle(label: "⌃", flag: .control, modifiers: $selectedModifiers)
+                    ModifierToggle(label: "⌥", flag: .option, modifiers: $selectedModifiers)
+                    ModifierToggle(label: "⇧", flag: .shift, modifiers: $selectedModifiers)
+                }
+            }
+            
+            LabeledContent("Drag Modifier:") {
+                Picker("", selection: $selectedDragModifier) {
+                    ForEach(DragModifier.allCases, id: \.self) { drag in
+                        Text(drag.displayName).tag(drag)
+                    }
+                }
+                .pickerStyle(.menu)
+                .frame(width: 150)
+            }
+        }
+    }
+    
+    private var keyboardTriggerField: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label("Keyboard Shortcut", systemImage: "keyboard")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(.secondary)
+            
+            LabeledContent("Shortcut:") {
+                KeyboardShortcutFieldView(shortcut: $keyboardShortcut)
+                    .frame(width: 200, height: 24)
+            }
+        }
+    }
+    
+    private var mouseButtonField: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label("Mouse Button", systemImage: "computermouse")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(.secondary)
+            
+            LabeledContent("Button:") {
+                Picker("", selection: Binding<MouseButtonTrigger.MouseButton>(
+                    get: { mouseButton?.button ?? .left },
+                    set: { btn in
+                        if mouseButton != nil { mouseButton?.button = btn }
+                        else { mouseButton = MouseButtonTrigger(button: btn, modifiers: []) }
+                    }
+                )) {
+                    Text("Left").tag(MouseButtonTrigger.MouseButton.left)
+                    Text("Right").tag(MouseButtonTrigger.MouseButton.right)
+                    Text("Middle").tag(MouseButtonTrigger.MouseButton.middle)
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 200)
+            }
+        }
+    }
+    
+    // MARK: - Action (shared component)
+    
+    private var actionSection: some View {
+        ActionSelectionView(
+            selectedActionId: $selectedActionId,
+            actionParameters: $actionParameters
+        )
+    }
+    
+    // MARK: - Timing
     
     private var timingSettingsSection: some View {
         GroupBox("Timing (Optional)") {
             VStack(alignment: .leading, spacing: 12) {
                 Toggle("Repeat on Hold", isOn: $repeatOnHold)
-                
                 if repeatOnHold {
-                    repeatDelayControls
+                    LabeledContent("Initial Delay:") {
+                        HStack {
+                            Slider(value: $repeatInitialDelay, in: 0.1...2.0, step: 0.1).frame(width: 150)
+                            Text(String(format: "%.1f s", repeatInitialDelay)).frame(width: 50, alignment: .trailing)
+                        }
+                    }
+                    LabeledContent("Repeat Interval:") {
+                        HStack {
+                            Slider(value: $repeatInterval, in: 0.1...2.0, step: 0.1).frame(width: 150)
+                            Text(String(format: "%.1f s", repeatInterval)).frame(width: 50, alignment: .trailing)
+                        }
+                    }
                 }
                 
                 Toggle("Long Press Action", isOn: $longPressEnabled)
-                
                 if longPressEnabled {
-                    longPressControls
+                    LabeledContent("Long Press Threshold:") {
+                        HStack {
+                            Slider(value: $longPressThreshold, in: 0.3...2.0, step: 0.1).frame(width: 150)
+                            Text(String(format: "%.1f s", longPressThreshold)).frame(width: 50, alignment: .trailing)
+                        }
+                    }
                 }
             }
             .padding(.vertical, 8)
         }
     }
     
-    private var repeatDelayControls: some View {
-        Group {
-            LabeledContent("Initial Delay:") {
-                HStack {
-                    Slider(value: $repeatInitialDelay, in: 0.1...2.0, step: 0.1)
-                        .frame(width: 150)
-                    Text(String(format: "%.1f s", repeatInitialDelay))
-                        .frame(width: 50, alignment: .trailing)
-                }
-            }
-            
-            LabeledContent("Repeat Interval:") {
-                HStack {
-                    Slider(value: $repeatInterval, in: 0.1...2.0, step: 0.1)
-                        .frame(width: 150)
-                    Text(String(format: "%.1f s", repeatInterval))
-                        .frame(width: 50, alignment: .trailing)
-                }
-            }
-        }
-    }
-    
-    private var longPressControls: some View {
-        LabeledContent("Long Press Threshold:") {
-            HStack {
-                Slider(value: $longPressThreshold, in: 0.3...2.0, step: 0.1)
-                    .frame(width: 150)
-                Text(String(format: "%.1f s", longPressThreshold))
-                    .frame(width: 50, alignment: .trailing)
-            }
-        }
-    }
-    
-    private var mouseButtonPicker: some View {
-        Picker("", selection: Binding<MouseButtonTrigger.MouseButton>(
-            get: { mouseButton?.button ?? .left },
-            set: { newButton in
-                if mouseButton != nil {
-                    mouseButton?.button = newButton
-                } else {
-                    mouseButton = MouseButtonTrigger(button: newButton, modifiers: [])
-                }
-            }
-        )) {
-            Text("Left").tag(MouseButtonTrigger.MouseButton.left)
-            Text("Right").tag(MouseButtonTrigger.MouseButton.right)
-            Text("Middle").tag(MouseButtonTrigger.MouseButton.middle)
-        }
-        .pickerStyle(.segmented)
-        .frame(width: 200)
-    }
-    
-    private func updateAdvancedConfigState() {
-        guard let (plugin, action) = PluginManager.shared.getAction(identifier: selectedActionId) else {
-            hasAdvancedConfig = false
-            advancedConfigCount = 0
-            return
-        }
-        hasAdvancedConfig = plugin.hasAdvancedConfiguration(for: action)
-        updateAdvancedConfigCount()
-    }
-    
-    private func updateAdvancedConfigCount() {
-        if let bundleData = actionParameters["bundle_actions"] {
-            if let array = bundleData.value as? [[String: Any]] {
-                advancedConfigCount = array.count
-            } else if let jsonStr = bundleData.value as? String,
-                      let data = jsonStr.data(using: .utf8),
-                      let arr = try? JSONSerialization.jsonObject(with: data) as? [Any] {
-                advancedConfigCount = arr.count
-            } else {
-                advancedConfigCount = 0
-            }
-        } else {
-            advancedConfigCount = 0
-        }
-    }
-    
-    private func openAdvancedConfiguration(for action: PluginAction) {
-        guard let (plugin, _) = PluginManager.shared.getAction(identifier: selectedActionId),
-              let window = NSApp.keyWindow else { return }
-        
-        plugin.presentAdvancedConfiguration(
-            for: action,
-            currentParameters: actionParameters,
-            parentWindow: window
-        ) { updatedParams in
-            if let updatedParams = updatedParams {
-                DispatchQueue.main.async {
-                    self.actionParameters = updatedParams
-                    self.updateAdvancedConfigCount()
-                }
-            }
-        }
-    }
-    
-    private var configurationFooter: some View {
-        HStack {
-            // Preview
-            VStack(alignment: .leading) {
-                Text("Preview:")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                Text(gesturePreviewText)
-                    .font(.system(.body, design: .monospaced))
-            }
-            
-            Spacer()
-            
-            Button(mode.buttonTitle) {
-                saveGesture()
-            }
-            .keyboardShortcut(.return)
-            .disabled(!isValid)
-        }
-        .padding()
-    }
-    
-    // MARK: - Computed Properties for Conditional Display
-    
-    private var shouldShowKeyboardShortcut: Bool {
-        activationType == .keyboard || 
-        activationType == .both || 
-        activationType == .keyboardMouseButton || 
-        activationType == .all
-    }
-    
-    private var shouldShowMouseButton: Bool {
-        activationType == .mouseButton || 
-        activationType == .gestureMouseButton || 
-        activationType == .keyboardMouseButton || 
-        activationType == .all
-    }
-    
-    // MARK: - Helper Views
+    // MARK: - Helpers
     
     struct ModifierToggle: View {
         let label: String
@@ -614,91 +311,53 @@ struct GestureConfigurationSheet: View {
         var body: some View {
             Toggle(isOn: Binding(
                 get: { modifiers.contains(flag) },
-                set: { enabled in
-                    if enabled {
-                        modifiers.insert(flag)
-                    } else {
-                        modifiers.remove(flag)
-                    }
-                }
-            )) {
-                Text(label)
-            }
+                set: { if $0 { modifiers.insert(flag) } else { modifiers.remove(flag) } }
+            )) { Text(label) }
             .toggleStyle(.button)
         }
     }
     
-    // MARK: - Helper Methods
-    
-    private var filteredActions: [(String, PluginAction)] {
-        let allActions = PluginManager.shared.getAllActions()
-        
-        if selectedCategory == "All" {
-            return allActions.map { ($0.pluginId + "." + $0.action.id, $0.action) }
-        }
-        
-        // Filter by category (plugin prefix)
-        let prefix = selectedCategory.lowercased()
-        return allActions
-            .filter { $0.pluginId.lowercased().contains(prefix) }
-            .map { ($0.pluginId + "." + $0.action.id, $0.action) }
-    }
-    
-    private func getSelectedAction() -> PluginAction? {
-        return PluginManager.shared.getAction(identifier: selectedActionId)?.action
-    }
-    
     private var gesturePreviewText: String {
         var parts: [String] = []
-        
-        // Zone
-        parts.append(selectedZone.displayName)
-        
-        // Modifiers
-        var modParts: [String] = []
-        if selectedModifiers.contains(.command) { modParts.append("⌘") }
-        if selectedModifiers.contains(.control) { modParts.append("⌃") }
-        if selectedModifiers.contains(.option) { modParts.append("⌥") }
-        if selectedModifiers.contains(.shift) { modParts.append("⇧") }
-        if !modParts.isEmpty {
-            parts.append("+")
-            parts.append(modParts.joined())
+        if hasGesture {
+            parts.append(selectedZone.displayName)
+            var mods: [String] = []
+            if selectedModifiers.contains(.command) { mods.append("⌘") }
+            if selectedModifiers.contains(.control) { mods.append("⌃") }
+            if selectedModifiers.contains(.option) { mods.append("⌥") }
+            if selectedModifiers.contains(.shift) { mods.append("⇧") }
+            if !mods.isEmpty { parts.append("+"); parts.append(mods.joined()) }
+            if selectedDragModifier != .none { parts.append("+"); parts.append(selectedDragModifier.displayName) }
         }
-        
-        // Drag
-        if selectedDragModifier != .none {
-            parts.append("+")
-            parts.append(selectedDragModifier.displayName)
+        if hasKeyboard, let kbd = keyboardShortcut {
+            if !parts.isEmpty { parts.append("|") }
+            parts.append(kbd.displayString)
         }
-        
-        // Action
-        if let action = getSelectedAction() {
-            parts.append("→")
-            parts.append(action.name)
+        if hasMouseButton, let mb = mouseButton {
+            if !parts.isEmpty { parts.append("|") }
+            parts.append(mb.displayString)
         }
-        
+        if let action = PluginManager.shared.getAction(identifier: selectedActionId)?.action {
+            parts.append("→"); parts.append(action.name)
+        }
         return parts.joined(separator: " ")
     }
     
     private var isValid: Bool {
-        // Must have an action selected
         guard !selectedActionId.isEmpty else { return false }
-        
-        // Must have at least gesture, keyboard, or mouse button enabled
         switch activationType {
         case .keyboard, .keyboardMouseButton:
-            guard keyboardShortcut != nil else { return false }
+            if keyboardShortcut == nil { return false }
         case .mouseButton, .gestureMouseButton:
-            guard mouseButton != nil else { return false }
-        default:
-            break
+            if mouseButton == nil { return false }
+        case .all:
+            if keyboardShortcut == nil || mouseButton == nil { return false }
+        default: break
         }
-        
         return true
     }
     
     private func saveGesture() {
-        // Create the new/updated gesture
         let gesture = Gesture(
             zone: selectedZone,
             modifiers: selectedModifiers,
@@ -716,7 +375,6 @@ struct GestureConfigurationSheet: View {
             longPressThreshold: longPressThreshold
         )
         
-        // Check for conflicts (except when editing the same gesture)
         if mode == .add || existingGesture?.id != gesture.id {
             if uiServices.isGestureConflicting(gesture) {
                 conflictMessage = "A gesture with this combination of zone, modifiers, and drag already exists."
@@ -725,69 +383,38 @@ struct GestureConfigurationSheet: View {
             }
         }
         
-        // Save the gesture
         onSave(gesture)
         dismiss()
     }
 }
 
-// MARK: - KeyboardShortcutFieldView (SwiftUI Wrapper)
+// MARK: - KeyboardShortcutFieldView
 
 struct KeyboardShortcutFieldView: NSViewRepresentable {
     @Binding var shortcut: KeyboardTrigger?
     
     func makeNSView(context: Context) -> KeyboardShortcutField {
         let field = KeyboardShortcutField()
-        field.onShortcutCapture = { capturedShortcut in
-            // Convert KeyboardShortcut to KeyboardTrigger
-            // Convert CGEventFlags to NSEvent.ModifierFlags
-            var modifierFlags = NSEvent.ModifierFlags()
-            if capturedShortcut.modifiers.contains(.maskCommand) {
-                modifierFlags.insert(.command)
-            }
-            if capturedShortcut.modifiers.contains(.maskControl) {
-                modifierFlags.insert(.control)
-            }
-            if capturedShortcut.modifiers.contains(.maskAlternate) {
-                modifierFlags.insert(.option)
-            }
-            if capturedShortcut.modifiers.contains(.maskShift) {
-                modifierFlags.insert(.shift)
-            }
-            
-            shortcut = KeyboardTrigger(
-                keyCode: capturedShortcut.keyCode,
-                modifiers: modifierFlags,
-                displayString: capturedShortcut.displayString
-            )
+        field.onShortcutCapture = { cap in
+            var mods = NSEvent.ModifierFlags()
+            if cap.modifiers.contains(.maskCommand) { mods.insert(.command) }
+            if cap.modifiers.contains(.maskControl) { mods.insert(.control) }
+            if cap.modifiers.contains(.maskAlternate) { mods.insert(.option) }
+            if cap.modifiers.contains(.maskShift) { mods.insert(.shift) }
+            shortcut = KeyboardTrigger(keyCode: cap.keyCode, modifiers: mods, displayString: cap.displayString)
         }
         return field
     }
     
     func updateNSView(_ nsView: KeyboardShortcutField, context: Context) {
-        // Update the field's display if the shortcut changes externally
-        if let trigger = shortcut {
-            // Convert NSEvent.ModifierFlags to CGEventFlags
+        if let t = shortcut {
             var cgFlags = CGEventFlags(rawValue: 0)
-            if trigger.modifiers.contains(.command) {
-                cgFlags.insert(.maskCommand)
-            }
-            if trigger.modifiers.contains(.control) {
-                cgFlags.insert(.maskControl)
-            }
-            if trigger.modifiers.contains(.option) {
-                cgFlags.insert(.maskAlternate)
-            }
-            if trigger.modifiers.contains(.shift) {
-                cgFlags.insert(.maskShift)
-            }
-            
-            nsView.capturedShortcut = KeyboardShortcut(
-                keyCode: trigger.keyCode,
-                modifiers: cgFlags,
-                displayString: trigger.displayString
-            )
-            nsView.stringValue = trigger.displayString
+            if t.modifiers.contains(.command) { cgFlags.insert(.maskCommand) }
+            if t.modifiers.contains(.control) { cgFlags.insert(.maskControl) }
+            if t.modifiers.contains(.option) { cgFlags.insert(.maskAlternate) }
+            if t.modifiers.contains(.shift) { cgFlags.insert(.maskShift) }
+            nsView.capturedShortcut = KeyboardShortcut(keyCode: t.keyCode, modifiers: cgFlags, displayString: t.displayString)
+            nsView.stringValue = t.displayString
         } else {
             nsView.capturedShortcut = nil
             nsView.stringValue = ""
@@ -802,12 +429,9 @@ struct AddGestureSheet: View {
     @StateObject private var uiServices = UIServices.shared
     
     var body: some View {
-        GestureConfigurationSheet(
-            mode: .add,
-            onSave: { gesture in
-                _ = uiServices.addGesture(gesture)
-            }
-        )
+        GestureConfigurationSheet(mode: .add) { gesture in
+            _ = uiServices.addGesture(gesture)
+        }
     }
 }
 
@@ -817,12 +441,8 @@ struct EditGestureSheet: View {
     @StateObject private var uiServices = UIServices.shared
     
     var body: some View {
-        GestureConfigurationSheet(
-            mode: .edit,
-            existingGesture: gesture,
-            onSave: { updatedGesture in
-                _ = uiServices.updateGesture(oldGesture: gesture, newGesture: updatedGesture)
-            }
-        )
+        GestureConfigurationSheet(mode: .edit, existingGesture: gesture) { updated in
+            _ = uiServices.updateGesture(oldGesture: gesture, newGesture: updated)
+        }
     }
 }
