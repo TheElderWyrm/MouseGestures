@@ -111,6 +111,22 @@ class ZoneHighlightManager {
         ) { [weak self] _ in
             self?.refreshZoneStates()
         }
+        
+        // Listen for modifier state changes from ModifierKeyDetectorPlugin
+        // This ensures zones are hidden even if flagsChanged events are missed
+        NotificationCenter.default.addObserver(
+            forName: NSNotification.Name("ModifierStateChanged"),
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            if let modifiers = notification.userInfo?["modifiers"] as? UInt {
+                let flags = NSEvent.ModifierFlags(rawValue: modifiers)
+                let normalized = self?.normalizeModifiers(flags) ?? []
+                if normalized.isEmpty {
+                    self?.hideZones()
+                }
+            }
+        }
     }
     
     deinit {
@@ -147,6 +163,26 @@ class ZoneHighlightManager {
     // MARK: - Public Interface
     
     func startHighlighting() {
+        guard Configuration.shared.showZoneHighlights else { return }
+        
+        startModifierMonitoring()
+        
+        // Hide zones when app becomes inactive or enters fullscreen
+        NotificationCenter.default.addObserver(
+            forName: NSApplication.didResignActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.hideZones()
+        }
+        
+        NotificationCenter.default.addObserver(
+            forName: NSWindow.willEnterFullScreenNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.hideZones()
+        }
         guard Configuration.shared.showZoneHighlights else { return }
         
         startModifierMonitoring()

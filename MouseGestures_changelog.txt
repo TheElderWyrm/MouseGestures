@@ -171,3 +171,18 @@
     change, allowing other plugins to react immediately to modifier state transitions.
   - Impact: Mouse tracking now properly disables when modifiers are released, eliminating 
     unnecessary CPU usage during normal mouse movement without modifiers held.
+
+### Bug Fixes - Zone Highlights
+- **Fixed zone highlights getting stuck when modifiers released during certain actions**
+  - Issue: Zone highlights could remain visible after modifiers were released if an action like
+    entering fullscreen interrupted the normal event flow. The ZoneHighlightManager relied solely
+    on flagsChanged events, which could be missed during window state transitions.
+  - Fix: Added multiple safeguards to ensure highlights are properly hidden:
+    - ZoneHighlightManager now listens for ModifierStateChanged notifications from 
+      ModifierKeyDetectorPlugin, providing a secondary path for detecting modifier releases
+    - Added observers for NSApplication.didResignActiveNotification to hide zones when app 
+      loses focus
+    - Added observers for NSWindow.willEnterFullScreenNotification to hide zones before 
+      fullscreen transitions
+  - Impact: Zone highlights now properly disappear in all scenarios, preventing them from 
+    getting stuck on screen during fullscreen transitions or other window state changes.

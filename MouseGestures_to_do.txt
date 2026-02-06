@@ -18,6 +18,7 @@ Bugs
 - Drag Detection seems unreliable
 
 Improve UI
+- Better Zone Highlights
 - Add search to settings
 - Go Back to pre-rendering to increase performance
 - Unify UI Styles throughout the app
