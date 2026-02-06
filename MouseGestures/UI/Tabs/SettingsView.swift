@@ -229,6 +229,37 @@ struct SettingsView: View {
                 .onChange(of: hapticFeedback) { newValue in
                     uiServices.setHapticFeedbackEnabled(newValue)
                 }
+                
+                Divider()
+                
+                // Debug Logging
+                Toggle(isOn: $debugModeEnabled) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Enable Logging")
+                            .font(.system(size: 13, weight: .medium))
+                        Text("Record detailed debug information to log files for troubleshooting")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .onChange(of: debugModeEnabled) { newValue in
+                    uiServices.setDebugModeEnabled(newValue)
+                }
+                
+                if debugModeEnabled {
+                    HStack(spacing: 10) {
+                        Button(action: openLogsFolder) {
+                            Label("Open Logs Folder", systemImage: "folder")
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundColor(.accentColor)
+                        
+                        Text("~/Library/Logs/MouseGestures")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.leading, 20)
+                }
             }
             .padding()
             .background(RoundedRectangle(cornerRadius: 8).fill(Color(NSColor.controlBackgroundColor)))
@@ -408,28 +439,7 @@ struct SettingsView: View {
                     uiServices.setDeveloperModeEnabled(newValue)
                 }
                 
-                Toggle(isOn: $debugModeEnabled) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Debug Logging")
-                            .font(.system(size: 13, weight: .medium))
-                        Text("Enable detailed logging for troubleshooting (logs saved to ~/Library/Logs/MouseGestures)")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
-                .onChange(of: debugModeEnabled) { newValue in
-                    uiServices.setDebugModeEnabled(newValue)
-                }
-                
-                if debugModeEnabled {
-                    Button(action: openLogsFolder) {
-                        Label("Open Logs Folder", systemImage: "folder")
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundColor(.accentColor)
-                }
-                
-                Divider()
+Divider()
                 
                 // Performance
                 VStack(alignment: .leading, spacing: 10) {
