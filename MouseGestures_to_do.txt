@@ -13,11 +13,8 @@ Actions:
 - Not all actions work.
 
 Bugs
-- ShowZoneHilights not actually rendering correct size (Increasing edge size does not result in it increasing the size.
-- Highlight Color settubg doesn't work.
 - Corner buffer zone configuration setting should not be under advanced.
 - Saved actions doesn't allow for actions that require advanced configuration/opening a sheet (Example: Bundle actions)
-- Zone Highlights can get stuck if modifiers are released during certain actions (Example, entering full screen)
 - Window Actions targeting multiple windows doesn't work
 - Bug: Won't display (first?) sheet when opening service sheet. Opening a different sheet then returning to the original sheet you were trying to open works.
 - Drag Detection seems unreliable

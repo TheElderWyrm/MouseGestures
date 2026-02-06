@@ -47,8 +47,12 @@ class ZoneView: NSView {
     var isActive: Bool = false
     var label: String?
     
-    private let inactiveColor = NSColor.systemBlue.withAlphaComponent(0.1)
-    private let activeColor = NSColor.systemGreen.withAlphaComponent(0.3)
+    private var inactiveColor: NSColor {
+        Configuration.shared.zoneHighlightColor.withAlphaComponent(0.1)
+    }
+    private var activeColor: NSColor {
+        Configuration.shared.zoneHighlightColor.withAlphaComponent(0.3)
+    }
     private let borderColor = NSColor.white.withAlphaComponent(0.5)
     
     init(frame: NSRect, zone: ScreenZone) {
@@ -101,7 +105,10 @@ class ZoneHighlightManager {
     private var hideTimer: Timer?
     private var configChangeObserver: Any?
     private var screenChangeObserver: Any?
+    private var dimensionChangeObserver: Any?
     private var currentModifiers: NSEvent.ModifierFlags = []
+    private var modifierCheckTimer: Timer?
+    private var appEventObservers: [Any] = []
     
     private init() {
         configChangeObserver = NotificationCenter.default.addObserver(
@@ -127,6 +134,15 @@ class ZoneHighlightManager {
                 }
             }
         }
+        
+        // Listen for zone dimension changes to rebuild windows
+        dimensionChangeObserver = NotificationCenter.default.addObserver(
+            forName: NSNotification.Name("zoneDimensionsChanged"),
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.rebuildZoneWindows()
+        }
     }
     
     deinit {
@@ -136,6 +152,8 @@ class ZoneHighlightManager {
     private func cleanup() {
         hideTimer?.invalidate()
         hideTimer = nil
+        modifierCheckTimer?.invalidate()
+        modifierCheckTimer = nil
         
         if let observer = configChangeObserver {
             NotificationCenter.default.removeObserver(observer)
@@ -145,6 +163,14 @@ class ZoneHighlightManager {
             NotificationCenter.default.removeObserver(observer)
             screenChangeObserver = nil
         }
+        if let observer = dimensionChangeObserver {
+            NotificationCenter.default.removeObserver(observer)
+            dimensionChangeObserver = nil
+        }
+        for observer in appEventObservers {
+            NotificationCenter.default.removeObserver(observer)
+        }
+        appEventObservers.removeAll()
         if let monitor = modifierMonitor {
             NSEvent.removeMonitor(monitor)
             modifierMonitor = nil
@@ -167,25 +193,37 @@ class ZoneHighlightManager {
         
         startModifierMonitoring()
         
+        // Clean up any previous app event observers to prevent buildup
+        for observer in appEventObservers {
+            NotificationCenter.default.removeObserver(observer)
+        }
+        appEventObservers.removeAll()
+        
         // Hide zones when app becomes inactive or enters fullscreen
-        NotificationCenter.default.addObserver(
+        appEventObservers.append(NotificationCenter.default.addObserver(
             forName: NSApplication.didResignActiveNotification,
             object: nil,
             queue: .main
         ) { [weak self] _ in
             self?.hideZones()
-        }
+        })
         
-        NotificationCenter.default.addObserver(
+        appEventObservers.append(NotificationCenter.default.addObserver(
             forName: NSWindow.willEnterFullScreenNotification,
             object: nil,
             queue: .main
         ) { [weak self] _ in
             self?.hideZones()
-        }
-        guard Configuration.shared.showZoneHighlights else { return }
+        })
         
-        startModifierMonitoring()
+        // Also hide on space change which can miss modifier releases
+        appEventObservers.append(NotificationCenter.default.addObserver(
+            forName: NSWorkspace.activeSpaceDidChangeNotification,
+            object: NSWorkspace.shared,
+            queue: .main
+        ) { [weak self] _ in
+            self?.hideZones()
+        })
         
         if screenChangeObserver == nil {
             screenChangeObserver = NotificationCenter.default.addObserver(
@@ -196,11 +234,21 @@ class ZoneHighlightManager {
                 self?.screenDidChange()
             }
         }
+        
+        // Start periodic modifier check as a fallback for stuck highlights
+        startModifierCheckTimer()
     }
     
     func stopHighlighting() {
         stopModifierMonitoring()
+        modifierCheckTimer?.invalidate()
+        modifierCheckTimer = nil
         closeAllWindows()
+        
+        for observer in appEventObservers {
+            NotificationCenter.default.removeObserver(observer)
+        }
+        appEventObservers.removeAll()
         
         if let observer = screenChangeObserver {
             NotificationCenter.default.removeObserver(observer)
@@ -329,6 +377,34 @@ class ZoneHighlightManager {
     
     private func screenDidChange() {
         closeAllWindows()
+    }
+    
+    // MARK: - Zone Rebuilding
+    
+    /// Rebuild all zone windows when dimensions change
+    private func rebuildZoneWindows() {
+        let wasShowing = !zoneWindows.isEmpty && zoneWindows.values.contains(where: { $0.isVisible })
+        closeAllWindows()
+        // If zones were visible, re-show them with updated dimensions
+        if wasShowing && !currentModifiers.isEmpty {
+            showZones(modifiers: currentModifiers)
+        }
+    }
+    
+    // MARK: - Stuck Highlight Protection
+    
+    /// Periodically checks if modifiers are still held; hides zones if they were released
+    /// without the event being captured (e.g., during fullscreen transitions)
+    private func startModifierCheckTimer() {
+        modifierCheckTimer?.invalidate()
+        modifierCheckTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
+            guard let self = self else { return }
+            let realModifiers = self.normalizeModifiers(NSEvent.modifierFlags)
+            if realModifiers.isEmpty && !self.currentModifiers.isEmpty {
+                self.currentModifiers = []
+                self.hideZones()
+            }
+        }
     }
     
     // MARK: - Modifier Monitoring

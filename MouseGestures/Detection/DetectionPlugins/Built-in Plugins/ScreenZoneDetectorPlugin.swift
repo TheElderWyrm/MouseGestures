@@ -719,6 +719,7 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         let highlightsEnabled = settings.getBool(SettingKeys.showZoneHighlights, default: false)
         Configuration.shared.showZoneHighlights = highlightsEnabled
         Configuration.shared.showZoneLabels = settings.getBool(SettingKeys.showZoneLabels, default: false)
+        Configuration.shared.zoneHighlightColor = settings.getColor(SettingKeys.zoneHighlightColor, default: NSColor.systemBlue.withAlphaComponent(0.3))
         Configuration.shared.save()
         
         // Activate/deactivate zone highlights based on current setting
@@ -868,20 +869,57 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     override func settingChanged(_ key: String, value: Any, oldValue: Any?) {
         super.settingChanged(key, value: value, oldValue: oldValue)
         
-        // Rebuild zone cache when zone-related settings change
+        // Sync all relevant settings to Configuration so ZoneHighlightManager stays current
         switch key {
-        case SettingKeys.edgeThreshold, SettingKeys.cornerSize, SettingKeys.cornerBuffer:
+        case SettingKeys.edgeThreshold:
             lastScreenFrame = .zero  // Force rebuild
             rebuildZoneBoundsCache()
+            if let v = value as? Double { Configuration.shared.edgeThreshold = CGFloat(v) }
+            else if let v = value as? CGFloat { Configuration.shared.edgeThreshold = v }
+            Configuration.shared.save()
+            NotificationCenter.default.post(name: Notification.Name("zoneDimensionsChanged"), object: nil)
+            context?.logger.log("Zone bounds rebuilt due to setting change: \(key)", file: #file, function: #function, line: #line)
+            
+        case SettingKeys.cornerSize:
+            lastScreenFrame = .zero
+            rebuildZoneBoundsCache()
+            if let v = value as? Double { Configuration.shared.cornerSize = CGFloat(v) }
+            else if let v = value as? CGFloat { Configuration.shared.cornerSize = v }
+            Configuration.shared.save()
+            NotificationCenter.default.post(name: Notification.Name("zoneDimensionsChanged"), object: nil)
+            context?.logger.log("Zone bounds rebuilt due to setting change: \(key)", file: #file, function: #function, line: #line)
+            
+        case SettingKeys.cornerBuffer:
+            lastScreenFrame = .zero
+            rebuildZoneBoundsCache()
+            if let v = value as? Double { Configuration.shared.cornerBuffer = CGFloat(v) }
+            else if let v = value as? CGFloat { Configuration.shared.cornerBuffer = v }
+            Configuration.shared.save()
+            NotificationCenter.default.post(name: Notification.Name("zoneDimensionsChanged"), object: nil)
             context?.logger.log("Zone bounds rebuilt due to setting change: \(key)", file: #file, function: #function, line: #line)
             
         case SettingKeys.showZoneHighlights:
             if let show = value as? Bool {
+                Configuration.shared.showZoneHighlights = show
+                Configuration.shared.save()
                 if show {
                     ZoneHighlightManager.shared.startHighlighting()
                 } else {
                     ZoneHighlightManager.shared.stopHighlighting()
                 }
+            }
+            
+        case SettingKeys.showZoneLabels:
+            if let show = value as? Bool {
+                Configuration.shared.showZoneLabels = show
+                Configuration.shared.save()
+            }
+            
+        case SettingKeys.zoneHighlightColor:
+            if let color = value as? NSColor {
+                Configuration.shared.zoneHighlightColor = color
+                // Force redraw of visible zone windows
+                NotificationCenter.default.post(name: Notification.Name("zoneDimensionsChanged"), object: nil)
             }
             
         default:

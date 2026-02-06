@@ -222,3 +222,28 @@
 ### Code Quality
 - Removed all diagnostic [DIAG] print statements from ActivationCoordinator and
   ScreenZoneDetectorPlugin that were added to debug the efficiency mapping issue.
+
+## 2026-02-06
+### Bug Fixes: Zone Highlight Settings
+
+**Zone highlights not rendering correct size**
+- ScreenZoneDetectorPlugin.settingChanged() now syncs edgeThreshold, cornerSize, and
+  cornerBuffer back to Configuration.shared when changed via the settings UI.
+- ZoneHighlightManager now listens for "zoneDimensionsChanged" notifications and
+  rebuilds zone windows with the updated dimensions.
+
+**Highlight Color setting not working**
+- ZoneView.draw() now reads its inactive/active colors from Configuration.shared.zoneHighlightColor
+  instead of using hardcoded NSColor.systemBlue values.
+- Added zoneHighlightColor transient property to Configuration (not persisted, synced from
+  plugin settings at runtime).
+- ScreenZoneDetectorPlugin syncs the color to Configuration on startup and on setting change.
+
+**Zone Highlights getting stuck when modifiers released during actions**
+- Added periodic modifier check timer (0.5s interval) as a fallback that reads the actual
+  system modifier state via NSEvent.modifierFlags and hides zones if modifiers were released
+  without the event being captured.
+- Added NSWorkspace.activeSpaceDidChangeNotification observer to hide zones on space changes.
+- Fixed duplicate code in startHighlighting() (guard and startModifierMonitoring were called twice).
+- Fixed observer buildup: app event observers (resign active, fullscreen, space change) are
+  now tracked and cleaned up before re-registration.

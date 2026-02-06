@@ -13,6 +13,8 @@ public class Configuration: Codable {
     var disabledApps: [DisabledApp] = []  // Apps where gestures are disabled
     var showZoneHighlights: Bool = false
     var showZoneLabels: Bool = false
+    // Transient: not persisted, synced from plugin settings at runtime
+    var zoneHighlightColor: NSColor = NSColor.systemBlue.withAlphaComponent(0.3)
     var hideFromMenuBar: Bool = false  // When true, app hides menu bar icon
     var debugModeEnabled: Bool = false  // When true, enables logging
     var developerModeEnabled: Bool = false  // When true, shows developer tab
