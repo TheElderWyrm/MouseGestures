@@ -1,4 +1,17 @@
 ## 2026-02-06
+
+### Bug Fix: Corrected efficiency system activation logic
+- Fixed critical bug in ActivationCoordinator.evaluateGatedActivations() where activation types
+  were being incorrectly disabled even when used in enabled gestures
+- **Previous logic**: Checked if type appeared as dependent in dependency graph
+- **Problem**: Types with no dependencies (no gates) never appear as dependents,
+  so they were always disabled even if used in gestures
+- **Solution**: Added getUsedActivationTypes() method that directly scans enabled gestures
+  to determine which activation types are actually in use
+- Now properly enables ungated types (like .mouseDrag with no modifier requirements)
+  when they are used in gestures, preventing false deactivation
+
+## 2026-02-06 (Earlier)
 - Fixed detection plugins bypassing ActivationCoordinator for activation/deactivation
   - ActivationCoordinator.disableActivationType() no longer blocks on engaged types (was preventing gated types from being disabled when gates became unsatisfied)
   - Added ActivationCoordinator.pluginStopping() for proper plugin lifecycle cleanup
