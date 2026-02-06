@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		68F348D48A0770370E34F9A1 /* BundleEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0A54EA3994C8F52FA92A084 /* BundleEditorView.swift */; };
 		77A1C3AF2F36793D00D1FE6A /* ProfileImportExportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3AA2F36793D00D1FE6A /* ProfileImportExportService.swift */; };
 		77A1C3B02F36793D00D1FE6A /* UIPluginProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3A02F36793D00D1FE6A /* UIPluginProtocol.swift */; };
 		77A1C3B12F36793D00D1FE6A /* DeveloperModeToggleService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3722F36793D00D1FE6A /* DeveloperModeToggleService.swift */; };
@@ -211,6 +212,7 @@
 		77A1C3AB2F36793D00D1FE6A /* ProfileManagementService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileManagementService.swift; sourceTree = "<group>"; };
 		77A1C3AC2F36793D00D1FE6A /* ProfileManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileManager.swift; sourceTree = "<group>"; };
 		77A1C3AD2F36793D00D1FE6A /* ProfileStructures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileStructures.swift; sourceTree = "<group>"; };
+		B0A54EA3994C8F52FA92A084 /* BundleEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BundleEditorView.swift; path = MouseGesturesCodeBase/UI/BundleEditorView.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -451,6 +453,7 @@
 				77A1C3922F36793D00D1FE6A /* TabManager.swift */,
 				77A1C3932F36793D00D1FE6A /* UIServices.swift */,
 				77A1C3942F36793D00D1FE6A /* ZoneHighlightWindow.swift */,
+				B0A54EA3994C8F52FA92A084 /* BundleEditorView.swift */,
 			);
 			path = UI;
 			sourceTree = "<group>";
@@ -699,6 +702,7 @@
 				77A1C4092F36793D00D1FE6A /* SettingsView.swift in Sources */,
 				77A1C40A2F36793D00D1FE6A /* TabManager.swift in Sources */,
 				77A1C40B2F36793D00D1FE6A /* ActivationCoordinator.swift in Sources */,
+				68F348D48A0770370E34F9A1 /* BundleEditorView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
