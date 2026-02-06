@@ -107,8 +107,10 @@ class ZoneHighlightManager {
     private var screenChangeObserver: Any?
     private var dimensionChangeObserver: Any?
     private var currentModifiers: NSEvent.ModifierFlags = []
+    private var localModifierMonitor: Any?
     private var modifierCheckTimer: Timer?
     private var appEventObservers: [Any] = []
+    private var isHiding = false
     
     private init() {
         configChangeObserver = NotificationCenter.default.addObserver(
@@ -130,7 +132,9 @@ class ZoneHighlightManager {
                 let flags = NSEvent.ModifierFlags(rawValue: modifiers)
                 let normalized = self?.normalizeModifiers(flags) ?? []
                 if normalized.isEmpty {
-                    self?.hideZones()
+                    // Debounce: schedule hide instead of immediate, lets rapid key
+                    // transitions settle before deciding to hide
+                    self?.scheduleHide()
                 }
             }
         }
@@ -174,6 +178,10 @@ class ZoneHighlightManager {
         if let monitor = modifierMonitor {
             NSEvent.removeMonitor(monitor)
             modifierMonitor = nil
+        }
+        if let monitor = localModifierMonitor {
+            NSEvent.removeMonitor(monitor)
+            localModifierMonitor = nil
         }
         
         closeAllWindows()
@@ -309,6 +317,11 @@ class ZoneHighlightManager {
         guard let screen = NSScreen.main else { return }
         let config = Configuration.shared
         
+        // Cancel any pending hide
+        hideTimer?.invalidate()
+        hideTimer = nil
+        isHiding = false
+        
         for zone in ScreenZone.allCases {
             let frame = frameForZone(zone, screen: screen)
             
@@ -336,20 +349,48 @@ class ZoneHighlightManager {
             let label = getLabel(for: gesture)
             
             window.updateState(isActive: isActive, label: label)
-            window.orderFront(nil)
+            // Cancel any running fade-out animation before making visible
+            window.animations = [:]
             window.alphaValue = 1.0
+            window.orderFront(nil)
+        }
+    }
+    
+    /// Schedule a debounced hide that verifies real modifier state before hiding.
+    /// This prevents flashing when modifiers are pressed in rapid succession.
+    private func scheduleHide() {
+        hideTimer?.invalidate()
+        hideTimer = Timer.scheduledTimer(withTimeInterval: 0.15, repeats: false) { [weak self] _ in
+            guard let self = self else { return }
+            // Re-check actual system modifier state before hiding - rapid key
+            // transitions may have restored modifiers since the hide was scheduled
+            let realMods = self.normalizeModifiers(NSEvent.modifierFlags)
+            guard realMods.isEmpty else {
+                // Modifiers are held again; update state and keep zones visible
+                self.currentModifiers = realMods
+                return
+            }
+            self.currentModifiers = []
+            self.hideZones()
         }
     }
     
     private func hideZones() {
+        guard !isHiding else { return }
+        isHiding = true
         NSAnimationContext.runAnimationGroup { context in
             context.duration = 0.15
             for (_, window) in zoneWindows {
                 window.animator().alphaValue = 0.0
             }
         } completionHandler: { [weak self] in
-            for (_, window) in self?.zoneWindows ?? [:] {
-                window.orderOut(nil)
+            guard let self = self else { return }
+            // Only order out if we weren't interrupted by a new show
+            if self.isHiding {
+                for (_, window) in self.zoneWindows {
+                    window.orderOut(nil)
+                }
+                self.isHiding = false
             }
         }
     }
@@ -402,7 +443,7 @@ class ZoneHighlightManager {
             let realModifiers = self.normalizeModifiers(NSEvent.modifierFlags)
             if realModifiers.isEmpty && !self.currentModifiers.isEmpty {
                 self.currentModifiers = []
-                self.hideZones()
+                self.scheduleHide()
             }
         }
     }
@@ -413,12 +454,21 @@ class ZoneHighlightManager {
         modifierMonitor = NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
             self?.handleModifierChange(event)
         }
+        // Also monitor locally so modifier changes are tracked when app window is focused
+        localModifierMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
+            self?.handleModifierChange(event)
+            return event
+        }
     }
     
     private func stopModifierMonitoring() {
         if let monitor = modifierMonitor {
             NSEvent.removeMonitor(monitor)
             modifierMonitor = nil
+        }
+        if let monitor = localModifierMonitor {
+            NSEvent.removeMonitor(monitor)
+            localModifierMonitor = nil
         }
         hideTimer?.invalidate()
         hideTimer = nil
@@ -430,10 +480,11 @@ class ZoneHighlightManager {
         let modifiers = normalizeModifiers(event.modifierFlags)
         currentModifiers = modifiers
         
-        hideTimer?.invalidate()
-        hideTimer = nil
-        
         if !modifiers.isEmpty {
+            // Cancel any pending hide since modifiers are held
+            hideTimer?.invalidate()
+            hideTimer = nil
+            
             let hasMatchingGestures = Configuration.shared.gestures.contains { g in
                 g.modifiers == modifiers &&
                 g.isEnabled &&
@@ -444,9 +495,7 @@ class ZoneHighlightManager {
                 showZones(modifiers: modifiers)
             }
         } else {
-            hideTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: false) { [weak self] _ in
-                self?.hideZones()
-            }
+            scheduleHide()
         }
     }
     

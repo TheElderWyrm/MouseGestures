@@ -247,3 +247,16 @@
 - Fixed duplicate code in startHighlighting() (guard and startModifierMonitoring were called twice).
 - Fixed observer buildup: app event observers (resign active, fullscreen, space change) are
   now tracked and cleaned up before re-registration.
+
+**Zone highlights flashing briefly with rapid modifier key presses**
+- Unified all hide paths through scheduleHide() which debounces (0.15s) and
+  re-checks actual system modifier state (NSEvent.modifierFlags) before hiding.
+  This prevents hiding when an intermediate empty-modifier state occurs during
+  rapid key transitions.
+- showZones() now cancels any in-progress hide animation by clearing the
+  window's animations dictionary and resetting isHiding flag, preventing the
+  fade-out animator from overriding the new alpha value.
+- Added isHiding guard so hideZones() completion handler won't orderOut windows
+  that were re-shown while the fade animation was running.
+- Added local flagsChanged monitor alongside the global one so modifier changes
+  are tracked even when the app's own settings window is focused.
