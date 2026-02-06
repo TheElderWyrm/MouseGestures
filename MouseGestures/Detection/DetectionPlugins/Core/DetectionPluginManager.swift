@@ -365,7 +365,7 @@ class DetectionPluginManager: NSObject {
     
     // MARK: - Plugin Coordination
     
-    /// Get modifier key state from ModifierKeyDetectorPlugin
+    /// Get current modifier flags from ModifierKeyDetectorPlugin
     func getCurrentModifiers() -> NSEvent.ModifierFlags {
         guard let modifierPlugin = plugins[ModifierKeyDetectorPlugin.pluginIdentifier] as? ModifierKeyDetectorPlugin else {
             return []
@@ -381,25 +381,7 @@ class DetectionPluginManager: NSObject {
         return appPlugin.isCurrentAppDisabled()
     }
     
-    // MARK: - Deprecated Methods (Kept for compatibility, but now no-ops)
-    
-    /// Enable mouse tracking in ScreenZoneDetectorPlugin
-    /// @deprecated Use ActivationCoordinator instead
-    func enableMouseTracking() {
-        // This is now handled by ActivationCoordinator
-        // Kept for backward compatibility but does nothing
-        log.log("⚠️ enableMouseTracking() called directly - use ActivationCoordinator instead")
-    }
-    
-    /// Disable mouse tracking in ScreenZoneDetectorPlugin
-    /// @deprecated Use ActivationCoordinator instead
-    func disableMouseTracking() {
-        // This is now handled by ActivationCoordinator
-        // Kept for backward compatibility but does nothing
-        log.log("⚠️ disableMouseTracking() called directly - use ActivationCoordinator instead")
-    }
-    
-    // MARK: - Helpers
+// MARK: - Helpers
     
     private func updatePluginOrder() {
         pluginOrder = plugins.keys.sorted { id1, id2 in
