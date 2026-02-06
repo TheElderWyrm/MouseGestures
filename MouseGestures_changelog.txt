@@ -1,4 +1,27 @@
 ## 2026-02-06
+### Bug Fix: Drag detection activating despite not being used - Efficiency System Refactor
+- Root cause: ScreenZoneDetectorPlugin was managing its own activation/deactivation instead of being fully controlled by the ActivationCoordinator
+- Drag event monitors were set up unconditionally in start() and only removed in stop()
+- Mouse tracking was managed separately via enableMouseTracking/disableMouseTracking but drag monitors bypassed the efficiency system
+- This defeated the purpose of the dependency-based gating system
+
+**Complete Refactor:**
+- Removed ALL monitor setup from start() method
+- start() now only syncs settings and tells coordinator to rebuild dependencies
+- Created enableDragDetection() and disableDragDetection() methods to manage drag monitors
+- Updated enableDetection() to call enableDragDetection() for .mouseDrag activation type
+- Updated disableDetection() to call disableDragDetection() for .mouseDrag activation type
+- Updated isDetectionActive() to check dragMonitor != nil instead of plugin state
+- stop() now simply calls disableDetection for both activation types
+- All event monitor lifecycle is now controlled exclusively by ActivationCoordinator via enable/disable methods
+
+**Result:**
+- Drag detection is now properly gated by the efficiency system
+- Monitors are only active when needed based on gesture configuration and activation states
+- No more unconditional background detection
+- System works as originally designed: high-efficiency detectors gate low-efficiency ones
+
+## 2026-02-06
 ### Bug Fix: Drag detection activating despite not being used
 - Root cause: handleMouseDrag() was unconditionally processing mouse zones even when mouse tracking was disabled
 - When dragging occurred, the method would update drag state (correct) but also call handleMouseMove() regardless of isMouseTrackingActive flag

@@ -193,8 +193,7 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         case .screenZone:
             enableMouseTracking()
         case .mouseDrag:
-            // Drag detection is always active via event monitors
-            break
+            enableDragDetection()
         default:
             break
         }
@@ -205,8 +204,7 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         case .screenZone:
             disableMouseTracking()
         case .mouseDrag:
-            // Drag detection is always active - can't disable
-            break
+            disableDragDetection()
         default:
             break
         }
@@ -217,7 +215,7 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         case .screenZone:
             return isMouseTrackingActive
         case .mouseDrag:
-            return state == .running
+            return dragMonitor != nil
         default:
             return false
         }
@@ -257,77 +255,27 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     override func start() throws {
         try super.start()
         
-        // Sync plugin settings to Configuration (must happen after settings are loaded)
+        // Sync plugin settings to Configuration
         syncSettingsToConfiguration()
         
-        // Monitor drag events (left, right, and other buttons) - both global and local
-        dragMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDragged, .rightMouseDragged, .otherMouseDragged]) { [weak self] event in
-            self?.handleMouseDrag(event)
-        }
-        localDragMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDragged, .rightMouseDragged, .otherMouseDragged]) { [weak self] event in
-            self?.handleMouseDrag(event)
-            return event
-        }
-        
-        // Monitor mouse button release to reset drag state - both global and local
-        dragEndMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseUp, .rightMouseUp, .otherMouseUp]) { [weak self] event in
-            self?.handleMouseUp(event)
-        }
-        localDragEndMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseUp, .rightMouseUp, .otherMouseUp]) { [weak self] event in
-            self?.handleMouseUp(event)
-            return event
-        }
-        
-        // Reset mouse tracking state - let coordinator decide when to enable
-        mouseMonitor = nil
-        isMouseTrackingActive = false
-        
-        // Build dependencies and check if we should start tracking immediately
+        // All monitors managed by enableDetection/disableDetection via ActivationCoordinator
         ActivationCoordinator.shared.rebuildDependencies()
         
-        // Check if modifiers are already pressed at startup
-        let currentSystemModifiers = ModifierKeyDetectorPlugin.currentSystemModifiers()
-        if !currentSystemModifiers.isEmpty {
-            context?.logger.log("Modifiers already pressed at startup, coordinator should enable tracking", file: #file, function: #function, line: #line)
-            // Coordinator will call enableDetection if needed
-        } else {
-            context?.logger.log("Screen zone detection started (tracking will activate via coordinator)", file: #file, function: #function, line: #line)
-        }
+        context?.logger.log("Screen zone detector started (monitors activate via efficiency system)", file: #file, function: #function, line: #line)
     }
-    
+        
     override func stop() {
-        disableMouseTracking()
-        
-        if let monitor = dragMonitor {
-            NSEvent.removeMonitor(monitor)
-            dragMonitor = nil
-        }
-        
-        if let monitor = dragEndMonitor {
-            NSEvent.removeMonitor(monitor)
-            dragEndMonitor = nil
-        }
-        
-        if let monitor = localDragMonitor {
-            NSEvent.removeMonitor(monitor)
-            localDragMonitor = nil
-        }
-        
-        if let monitor = localDragEndMonitor {
-            NSEvent.removeMonitor(monitor)
-            localDragEndMonitor = nil
-        }
-        
+        disableDetection(for: .screenZone)
+        disableDetection(for: .mouseDrag)
         stopRepeatTimer()
         dragState = .none
         lastTriggeredZone = nil
         lastDragModifier = .none
         lastTriggeredModifiers = []
         zoneBoundsCache.removeAll()
-        
         super.stop()
     }
-    
+        
     override func cleanup() {
         NotificationCenter.default.removeObserver(self)
         ActivationCoordinator.shared.unregisterProvider(self)
@@ -393,6 +341,62 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         
         if context?.logger.isDebugEnabled ?? false {
             context?.logger.log("Zone mouse tracking DISABLED", file: #file, function: #function, line: #line)
+        }
+    }
+    
+    /// Enable drag detection (called by ActivationCoordinator)
+    func enableDragDetection() {
+        guard dragMonitor == nil else { return }
+        
+        dragMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDragged, .rightMouseDragged, .otherMouseDragged]) { [weak self] event in
+            self?.handleMouseDrag(event)
+        }
+        localDragMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDragged, .rightMouseDragged, .otherMouseDragged]) { [weak self] event in
+            self?.handleMouseDrag(event)
+            return event
+        }
+        
+        dragEndMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseUp, .rightMouseUp, .otherMouseUp]) { [weak self] event in
+            self?.handleMouseUp(event)
+        }
+        localDragEndMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseUp, .rightMouseUp, .otherMouseUp]) { [weak self] event in
+            self?.handleMouseUp(event)
+            return event
+        }
+        
+        if context?.logger.isDebugEnabled ?? false {
+            context?.logger.log("Drag detection ENABLED", file: #file, function: #function, line: #line)
+        }
+    }
+    
+    /// Disable drag detection (called by ActivationCoordinator)
+    func disableDragDetection() {
+        guard dragMonitor != nil else { return }
+        
+        if let monitor = dragMonitor {
+            NSEvent.removeMonitor(monitor)
+            dragMonitor = nil
+        }
+        if let monitor = localDragMonitor {
+            NSEvent.removeMonitor(monitor)
+            localDragMonitor = nil
+        }
+        if let monitor = dragEndMonitor {
+            NSEvent.removeMonitor(monitor)
+            dragEndMonitor = nil
+        }
+        if let monitor = localDragEndMonitor {
+            NSEvent.removeMonitor(monitor)
+            localDragEndMonitor = nil
+        }
+        
+        if dragState != .none {
+            dragState = .none
+            ActivationCoordinator.shared.activationDisengaged(.mouseDrag)
+        }
+        
+        if context?.logger.isDebugEnabled ?? false {
+            context?.logger.log("Drag detection DISABLED", file: #file, function: #function, line: #line)
         }
     }
     
@@ -738,7 +742,7 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     }
     
     @objc private func modifierStateChanged(_ notification: Notification) {
-        let mods = ModifierKeyDetectorPlugin.currentSystemModifiers()
+        _ = ModifierKeyDetectorPlugin.currentSystemModifiers()
         // When modifiers change, check if they are all released
         let currentModifiers = ModifierKeyDetectorPlugin.currentSystemModifiers()
         
