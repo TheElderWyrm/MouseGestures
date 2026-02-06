@@ -42,6 +42,36 @@ public protocol GestureActionPlugin: AnyObject {
     
     /// Get the configuration UI for a specific action (optional)
     func configurationView(for action: PluginAction) -> NSView?
+    
+    /// Whether the action has advanced configuration that requires a custom editor
+    func hasAdvancedConfiguration(for action: PluginAction) -> Bool
+    
+    /// Present the advanced configuration editor as a sheet
+    /// - Parameters:
+    ///   - action: The action to configure
+    ///   - currentParameters: Current parameter values
+    ///   - parentWindow: Window to present the sheet on
+    ///   - completion: Called with updated parameters, or nil if cancelled
+    func presentAdvancedConfiguration(
+        for action: PluginAction,
+        currentParameters: [String: AnyCodable],
+        parentWindow: NSWindow,
+        completion: @escaping ([String: AnyCodable]?) -> Void
+    )
+}
+
+// MARK: - Default Implementations
+extension GestureActionPlugin {
+    func configurationView(for action: PluginAction) -> NSView? { nil }
+    func hasAdvancedConfiguration(for action: PluginAction) -> Bool { false }
+    func presentAdvancedConfiguration(
+        for action: PluginAction,
+        currentParameters: [String: AnyCodable],
+        parentWindow: NSWindow,
+        completion: @escaping ([String: AnyCodable]?) -> Void
+    ) {
+        completion(nil)
+    }
 }
 
 // MARK: - Supporting Types
@@ -336,6 +366,9 @@ public protocol PluginContext {
     
     /// Get target window based on targeting parameters
     func getTargetWindow(_ params: [String: Any]) -> (AXUIElement, pid_t)?
+    
+    /// Get target windows (supports multi-window targets like allWindowsOfApp/allWindows)
+    func getTargetWindows(_ params: [String: Any]) -> [(AXUIElement, pid_t)]
     
     /// Get all visible windows
     func getAllVisibleWindows() -> [(window: AXUIElement, pid: pid_t)]

@@ -7,9 +7,20 @@ struct ServicesView: View {
     @State private var servicePlugins: [ServicePluginInfo] = []
     @State private var selectedCategory: ServiceCategory?
     @State private var searchText = ""
-    @State private var showingConfigSheet = false
-    @State private var selectedPlugin: ServicePluginInfo?
-    @State private var showingInstallSheet = false
+    
+    // Sheet presentation - using single enum to avoid multiple .sheet modifier bug
+    enum ActiveSheet: Identifiable {
+        case configure(ServicePluginInfo)
+        case install
+        
+        var id: String {
+            switch self {
+            case .configure(let plugin): return "configure-\(plugin.id)"
+            case .install: return "install"
+            }
+        }
+    }
+    @State private var activeSheet: ActiveSheet?
     
     private let pluginManager = ServicePluginManager.shared
     
@@ -26,14 +37,14 @@ struct ServicesView: View {
         .onAppear {
             loadServicePlugins()
         }
-        .sheet(isPresented: $showingConfigSheet) {
-            if let plugin = selectedPlugin {
+        .sheet(item: $activeSheet) { sheet in
+            switch sheet {
+            case .configure(let plugin):
                 ServiceConfigurationSheet(plugin: plugin)
-            }
-        }
-        .sheet(isPresented: $showingInstallSheet) {
-            ServiceInstallSheet { url in
-                installPlugin(from: url)
+            case .install:
+                ServiceInstallSheet { url in
+                    installPlugin(from: url)
+                }
             }
         }
     }
@@ -125,7 +136,7 @@ struct ServicesView: View {
                 .cornerRadius(6)
                 .frame(width: 200)
                 
-                Button(action: { showingInstallSheet = true }) {
+                Button(action: { activeSheet = .install }) {
                     Label("Install Plugin", systemImage: "plus.circle")
                 }
                 
@@ -142,8 +153,7 @@ struct ServicesView: View {
                 LazyVStack(alignment: .leading, spacing: 8) {
                     ForEach(filteredPlugins) { plugin in
                         ServiceRow(plugin: plugin) {
-                            selectedPlugin = plugin
-                            showingConfigSheet = true
+                            activeSheet = .configure(plugin)
                         } onToggle: {
                             togglePlugin(plugin)
                         }

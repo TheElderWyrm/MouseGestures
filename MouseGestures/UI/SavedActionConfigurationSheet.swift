@@ -19,6 +19,8 @@ struct SavedActionConfigurationSheet: View {
     // UI State
     @State private var selectedCategory = "All"
     @State private var showingDuplicateNameAlert = false
+    @State private var hasAdvancedConfig = false
+    @State private var advancedConfigCount = 0
     
     enum Mode {
         case add
@@ -68,7 +70,7 @@ struct SavedActionConfigurationSheet: View {
                 VStack(alignment: .leading, spacing: 20) {
                     nameSection
                     actionSelectionSection
-                    // TODO: Add parameter configuration section when needed
+                    parameterConfigurationSection
                 }
                 .padding()
             }
@@ -78,7 +80,10 @@ struct SavedActionConfigurationSheet: View {
             // Footer
             footerView
         }
-        .frame(width: 600, height: 400)
+        .frame(width: 600, height: 500)
+        .onAppear {
+            updateAdvancedConfigState()
+        }
         .alert("Duplicate Name", isPresented: $showingDuplicateNameAlert) {
             Button("OK") {}
         } message: {
@@ -152,6 +157,262 @@ struct SavedActionConfigurationSheet: View {
                 }
             }
             .padding(.vertical, 8)
+        }
+    }
+    
+    private var parameterConfigurationSection: some View {
+        Group {
+            if let action = getSelectedAction() {
+                // Advanced configuration button
+                if hasAdvancedConfig {
+                    GroupBox("Advanced Configuration") {
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("This action requires advanced configuration.")
+                                        .font(.system(size: 13))
+                                    if advancedConfigCount > 0 {
+                                        Text("\(advancedConfigCount) item(s) configured")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    } else {
+                                        Text("Not yet configured")
+                                            .font(.caption)
+                                            .foregroundColor(.orange)
+                                    }
+                                }
+                                Spacer()
+                                Button("Configure...") {
+                                    openAdvancedConfiguration(for: action)
+                                }
+                            }
+                        }
+                        .padding(.vertical, 8)
+                    }
+                }
+                
+                // Simple parameter fields (skip json params when advanced config handles them)
+                let simpleParams = action.supportedParameters.filter { param in
+                    if hasAdvancedConfig && param.type == .json { return false }
+                    return true
+                }
+                if !simpleParams.isEmpty {
+                    GroupBox("Parameters") {
+                        VStack(alignment: .leading, spacing: 12) {
+                            ForEach(simpleParams, id: \.key) { paramDef in
+                                parameterField(for: paramDef)
+                            }
+                        }
+                        .padding(.vertical, 8)
+                    }
+                }
+            }
+        }
+        .onChange(of: selectedActionId) { _ in
+            initializeParameterDefaults()
+            updateAdvancedConfigState()
+        }
+    }
+    
+    @ViewBuilder
+    private func parameterField(for paramDef: ParameterDefinition) -> some View {
+        switch paramDef.type {
+        case .string, .path, .url:
+            LabeledContent("\(paramDef.name):") {
+                TextField(paramDef.description, text: paramStringBinding(for: paramDef.key, default: paramDef.defaultValue?.value as? String ?? ""))
+                    .textFieldStyle(.roundedBorder)
+                    .frame(minWidth: 200)
+            }
+        case .number:
+            LabeledContent("\(paramDef.name):") {
+                TextField(paramDef.description, text: paramNumberStringBinding(for: paramDef.key, default: paramDef.defaultValue?.value as? Double ?? 0))
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 100)
+            }
+        case .boolean:
+            Toggle(paramDef.name, isOn: paramBoolBinding(for: paramDef.key, default: paramDef.defaultValue?.value as? Bool ?? false))
+        case .selection:
+            if let allowedValues = paramDef.validation?.allowedValues {
+                LabeledContent("\(paramDef.name):") {
+                    Picker("", selection: paramStringBinding(for: paramDef.key, default: paramDef.defaultValue?.value as? String ?? "")) {
+                        ForEach(allowedValues.compactMap { $0.value as? String }, id: \.self) { val in
+                            Text(val.replacingOccurrences(of: "_", with: " ").capitalized).tag(val)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .frame(minWidth: 200)
+                }
+            }
+        case .application:
+            LabeledContent("\(paramDef.name):") {
+                Picker("", selection: paramStringBinding(for: paramDef.key, default: "")) {
+                    Text("Select...").tag("")
+                    ForEach(WindowTargeting.getAllRunningApplications(), id: \.bundleId) { app in
+                        Text(app.name).tag(app.bundleId)
+                    }
+                }
+                .pickerStyle(.menu)
+                .frame(minWidth: 200)
+            }
+        case .json:
+            VStack(alignment: .leading, spacing: 4) {
+                Text(paramDef.name)
+                    .font(.system(size: 13, weight: .medium))
+                Text(paramDef.description)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                TextEditor(text: paramJsonBinding(for: paramDef.key))
+                    .font(.system(.body, design: .monospaced))
+                    .frame(minHeight: 80, maxHeight: 150)
+                    .border(Color(NSColor.separatorColor), width: 1)
+                    .cornerRadius(4)
+            }
+        case .script:
+            VStack(alignment: .leading, spacing: 4) {
+                Text(paramDef.name)
+                    .font(.system(size: 13, weight: .medium))
+                Text(paramDef.description)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                TextEditor(text: paramStringBinding(for: paramDef.key, default: paramDef.defaultValue?.value as? String ?? ""))
+                    .font(.system(.body, design: .monospaced))
+                    .frame(minHeight: 80, maxHeight: 150)
+                    .border(Color(NSColor.separatorColor), width: 1)
+                    .cornerRadius(4)
+            }
+        case .keyboardShortcut:
+            LabeledContent("\(paramDef.name):") {
+                Text("Configure via Gesture settings")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        case .window, .coordinate, .size, .color:
+            LabeledContent("\(paramDef.name):") {
+                TextField(paramDef.description, text: paramStringBinding(for: paramDef.key, default: paramDef.defaultValue?.value as? String ?? ""))
+                    .textFieldStyle(.roundedBorder)
+                    .frame(minWidth: 200)
+            }
+        }
+    }
+    
+    private func initializeParameterDefaults() {
+        parameters.removeAll()
+        guard let action = getSelectedAction() else { return }
+        for paramDef in action.supportedParameters {
+            if let defaultVal = paramDef.defaultValue {
+                parameters[paramDef.key] = defaultVal
+            }
+        }
+    }
+    
+    private func paramStringBinding(for key: String, default defaultVal: String) -> Binding<String> {
+        Binding(
+            get: { parameters[key]?.value as? String ?? defaultVal },
+            set: { parameters[key] = AnyCodable($0) }
+        )
+    }
+    
+    private func paramNumberStringBinding(for key: String, default defaultVal: Double) -> Binding<String> {
+        Binding(
+            get: {
+                if let v = parameters[key]?.value as? Double { return String(v) }
+                if let v = parameters[key]?.value as? Int { return String(v) }
+                return String(defaultVal)
+            },
+            set: {
+                if let d = Double($0) { parameters[key] = AnyCodable(d) }
+            }
+        )
+    }
+    
+    private func paramBoolBinding(for key: String, default defaultVal: Bool) -> Binding<Bool> {
+        Binding(
+            get: { parameters[key]?.value as? Bool ?? defaultVal },
+            set: { parameters[key] = AnyCodable($0) }
+        )
+    }
+    
+    private func paramJsonBinding(for key: String) -> Binding<String> {
+        Binding(
+            get: {
+                if let val = parameters[key] {
+                    // Try to pretty-print if it's a dictionary or array
+                    if let dict = val.value as? [String: Any],
+                       let data = try? JSONSerialization.data(withJSONObject: dict, options: .prettyPrinted),
+                       let str = String(data: data, encoding: .utf8) {
+                        return str
+                    }
+                    if let arr = val.value as? [Any],
+                       let data = try? JSONSerialization.data(withJSONObject: arr, options: .prettyPrinted),
+                       let str = String(data: data, encoding: .utf8) {
+                        return str
+                    }
+                    if let str = val.value as? String {
+                        return str
+                    }
+                }
+                return "{}"
+            },
+            set: { newValue in
+                // Try to parse as JSON, store as string if invalid
+                if let data = newValue.data(using: .utf8),
+                   let json = try? JSONSerialization.jsonObject(with: data) {
+                    if let dict = json as? [String: Any] {
+                        parameters[key] = AnyCodable(dict)
+                    } else if let arr = json as? [Any] {
+                        parameters[key] = AnyCodable(arr)
+                    } else {
+                        parameters[key] = AnyCodable(newValue)
+                    }
+                } else {
+                    parameters[key] = AnyCodable(newValue)
+                }
+            }
+        )
+    }
+    
+    private func updateAdvancedConfigState() {
+        guard let (plugin, action) = PluginManager.shared.getAction(identifier: selectedActionId) else {
+            hasAdvancedConfig = false
+            advancedConfigCount = 0
+            return
+        }
+        hasAdvancedConfig = plugin.hasAdvancedConfiguration(for: action)
+        updateAdvancedConfigCount()
+    }
+    
+    private func updateAdvancedConfigCount() {
+        // Count items in bundle_actions if present
+        if let bundleData = parameters["bundle_actions"] {
+            if let array = bundleData.value as? [[String: Any]] {
+                advancedConfigCount = array.count
+            } else if let jsonStr = bundleData.value as? String,
+                      let data = jsonStr.data(using: .utf8),
+                      let arr = try? JSONSerialization.jsonObject(with: data) as? [Any] {
+                advancedConfigCount = arr.count
+            } else {
+                advancedConfigCount = 0
+            }
+        } else {
+            advancedConfigCount = 0
+        }
+    }
+    
+    private func openAdvancedConfiguration(for action: PluginAction) {
+        guard let (plugin, _) = PluginManager.shared.getAction(identifier: selectedActionId),
+              let window = NSApp.keyWindow else { return }
+        
+        plugin.presentAdvancedConfiguration(
+            for: action,
+            currentParameters: parameters,
+            parentWindow: window
+        ) { updatedParams in
+            if let updatedParams = updatedParams {
+                DispatchQueue.main.async {
+                    self.parameters = updatedParams
+                    self.updateAdvancedConfigCount()
+                }
+            }
         }
     }
     

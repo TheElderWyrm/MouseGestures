@@ -1,3 +1,12 @@
+## 2026-02-05
+### Feature: Advanced Configuration for Saved Actions
+- Added support for actions that require custom editors (e.g., Bundle Actions) in both Saved Actions and Gesture configuration sheets
+- Extended GestureActionPlugin protocol with hasAdvancedConfiguration() and presentAdvancedConfiguration() methods with default implementations
+- Updated BundleActionsPlugin to implement advanced configuration, presenting its BundleActionsEditor as a sheet with full parameter round-tripping
+- Fixed BundleActionsEditor done/cancel to properly handle sheet presentation (endSheet instead of close)
+- Configuration sheets now show 'Configure...' button for actions with advanced editors, hide raw JSON fields, and display item count
+- Increased SavedActionConfigurationSheet height to 500 to accommodate new UI
+
 ## 2026-01-20
 
 ### Bug Fixes

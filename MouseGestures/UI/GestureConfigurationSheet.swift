@@ -25,11 +25,14 @@ struct GestureConfigurationSheet: View {
     @State private var repeatInterval: TimeInterval
     @State private var longPressEnabled: Bool
     @State private var longPressThreshold: TimeInterval
+    @State private var actionParameters: [String: AnyCodable]
     
     // UI State
     @State private var showingConflictAlert = false
     @State private var conflictMessage = ""
     @State private var selectedCategory = "General"
+    @State private var hasAdvancedConfig = false
+    @State private var advancedConfigCount = 0
     
     enum Mode {
         case add
@@ -70,6 +73,7 @@ struct GestureConfigurationSheet: View {
             _repeatInterval = State(initialValue: gesture.timing.repeatInterval)
             _longPressEnabled = State(initialValue: gesture.timing.longPressEnabled)
             _longPressThreshold = State(initialValue: gesture.timing.longPressThreshold)
+            _actionParameters = State(initialValue: gesture.parameters)
         } else {
             _selectedZone = State(initialValue: .topRight)
             _selectedModifiers = State(initialValue: [.command, .control])
@@ -84,6 +88,7 @@ struct GestureConfigurationSheet: View {
             _repeatInterval = State(initialValue: 0.5)
             _longPressEnabled = State(initialValue: false)
             _longPressThreshold = State(initialValue: 0.8)
+            _actionParameters = State(initialValue: [:])
         }
     }
     
@@ -99,6 +104,7 @@ struct GestureConfigurationSheet: View {
                 VStack(alignment: .leading, spacing: 20) {
                     triggerConfigurationSection
                     actionSelectionSection
+                    gestureParameterSection
                     activationSettingsSection
                     timingSettingsSection
                 }
@@ -111,6 +117,9 @@ struct GestureConfigurationSheet: View {
             configurationFooter
         }
         .frame(width: 700, height: 650)
+        .onAppear {
+            updateAdvancedConfigState()
+        }
         .alert("Gesture Conflict", isPresented: $showingConflictAlert) {
             Button("OK") {}
         } message: {
@@ -218,6 +227,207 @@ struct GestureConfigurationSheet: View {
         }
     }
     
+    private var gestureParameterSection: some View {
+        Group {
+            if let action = getSelectedAction() {
+                // Advanced configuration button
+                if hasAdvancedConfig {
+                    GroupBox("Advanced Configuration") {
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("This action requires advanced configuration.")
+                                        .font(.system(size: 13))
+                                    if advancedConfigCount > 0 {
+                                        Text("\(advancedConfigCount) item(s) configured")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    } else {
+                                        Text("Not yet configured")
+                                            .font(.caption)
+                                            .foregroundColor(.orange)
+                                    }
+                                }
+                                Spacer()
+                                Button("Configure...") {
+                                    openAdvancedConfiguration(for: action)
+                                }
+                            }
+                        }
+                        .padding(.vertical, 8)
+                    }
+                }
+                
+                // Simple parameter fields (skip json params when advanced config handles them)
+                let simpleParams = action.supportedParameters.filter { param in
+                    if hasAdvancedConfig && param.type == .json { return false }
+                    return true
+                }
+                if !simpleParams.isEmpty {
+                    GroupBox("Parameters") {
+                        VStack(alignment: .leading, spacing: 12) {
+                            ForEach(simpleParams, id: \.key) { paramDef in
+                                gestureParamField(for: paramDef)
+                            }
+                        }
+                        .padding(.vertical, 8)
+                    }
+                }
+            }
+        }
+        .onChange(of: selectedActionId) { _ in
+            initGestureParamDefaults()
+            updateAdvancedConfigState()
+        }
+    }
+    
+    @ViewBuilder
+    private func gestureParamField(for paramDef: ParameterDefinition) -> some View {
+        switch paramDef.type {
+        case .string, .path, .url:
+            LabeledContent("\(paramDef.name):") {
+                TextField(paramDef.description, text: gParamString(for: paramDef.key, default: paramDef.defaultValue?.value as? String ?? ""))
+                    .textFieldStyle(.roundedBorder)
+                    .frame(minWidth: 200)
+            }
+        case .number:
+            LabeledContent("\(paramDef.name):") {
+                TextField(paramDef.description, text: gParamNumber(for: paramDef.key, default: paramDef.defaultValue?.value as? Double ?? 0))
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 100)
+            }
+        case .boolean:
+            Toggle(paramDef.name, isOn: gParamBool(for: paramDef.key, default: paramDef.defaultValue?.value as? Bool ?? false))
+        case .selection:
+            if let allowedValues = paramDef.validation?.allowedValues {
+                LabeledContent("\(paramDef.name):") {
+                    Picker("", selection: gParamString(for: paramDef.key, default: paramDef.defaultValue?.value as? String ?? "")) {
+                        ForEach(allowedValues.compactMap { $0.value as? String }, id: \.self) { val in
+                            Text(val.replacingOccurrences(of: "_", with: " ").capitalized).tag(val)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .frame(minWidth: 200)
+                }
+            }
+        case .application:
+            LabeledContent("\(paramDef.name):") {
+                Picker("", selection: gParamString(for: paramDef.key, default: "")) {
+                    Text("Select...").tag("")
+                    ForEach(WindowTargeting.getAllRunningApplications(), id: \.bundleId) { app in
+                        Text(app.name).tag(app.bundleId)
+                    }
+                }
+                .pickerStyle(.menu)
+                .frame(minWidth: 200)
+            }
+        case .json:
+            VStack(alignment: .leading, spacing: 4) {
+                Text(paramDef.name)
+                    .font(.system(size: 13, weight: .medium))
+                Text(paramDef.description)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                TextEditor(text: gParamJson(for: paramDef.key))
+                    .font(.system(.body, design: .monospaced))
+                    .frame(minHeight: 80, maxHeight: 150)
+                    .border(Color(NSColor.separatorColor), width: 1)
+                    .cornerRadius(4)
+            }
+        case .script:
+            VStack(alignment: .leading, spacing: 4) {
+                Text(paramDef.name)
+                    .font(.system(size: 13, weight: .medium))
+                Text(paramDef.description)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                TextEditor(text: gParamString(for: paramDef.key, default: paramDef.defaultValue?.value as? String ?? ""))
+                    .font(.system(.body, design: .monospaced))
+                    .frame(minHeight: 80, maxHeight: 150)
+                    .border(Color(NSColor.separatorColor), width: 1)
+                    .cornerRadius(4)
+            }
+        case .keyboardShortcut:
+            LabeledContent("\(paramDef.name):") {
+                Text("Configure via Activation settings above")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        default:
+            LabeledContent("\(paramDef.name):") {
+                TextField(paramDef.description, text: gParamString(for: paramDef.key, default: paramDef.defaultValue?.value as? String ?? ""))
+                    .textFieldStyle(.roundedBorder)
+                    .frame(minWidth: 200)
+            }
+        }
+    }
+    
+    private func gParamJson(for key: String) -> Binding<String> {
+        Binding(
+            get: {
+                if let val = actionParameters[key] {
+                    if let dict = val.value as? [String: Any],
+                       let data = try? JSONSerialization.data(withJSONObject: dict, options: .prettyPrinted),
+                       let str = String(data: data, encoding: .utf8) {
+                        return str
+                    }
+                    if let arr = val.value as? [Any],
+                       let data = try? JSONSerialization.data(withJSONObject: arr, options: .prettyPrinted),
+                       let str = String(data: data, encoding: .utf8) {
+                        return str
+                    }
+                    if let str = val.value as? String {
+                        return str
+                    }
+                }
+                return "{}"
+            },
+            set: { newValue in
+                if let data = newValue.data(using: .utf8),
+                   let json = try? JSONSerialization.jsonObject(with: data) {
+                    if let dict = json as? [String: Any] {
+                        actionParameters[key] = AnyCodable(dict)
+                    } else if let arr = json as? [Any] {
+                        actionParameters[key] = AnyCodable(arr)
+                    } else {
+                        actionParameters[key] = AnyCodable(newValue)
+                    }
+                } else {
+                    actionParameters[key] = AnyCodable(newValue)
+                }
+            }
+        )
+    }
+    
+    private func initGestureParamDefaults() {
+        actionParameters.removeAll()
+        guard let action = getSelectedAction() else { return }
+        for paramDef in action.supportedParameters {
+            if let defaultVal = paramDef.defaultValue {
+                actionParameters[paramDef.key] = defaultVal
+            }
+        }
+    }
+    
+    private func gParamString(for key: String, default d: String) -> Binding<String> {
+        Binding(get: { actionParameters[key]?.value as? String ?? d }, set: { actionParameters[key] = AnyCodable($0) })
+    }
+    
+    private func gParamNumber(for key: String, default d: Double) -> Binding<String> {
+        Binding(
+            get: {
+                if let v = actionParameters[key]?.value as? Double { return String(v) }
+                if let v = actionParameters[key]?.value as? Int { return String(v) }
+                return String(d)
+            },
+            set: { if let v = Double($0) { actionParameters[key] = AnyCodable(v) } }
+        )
+    }
+    
+    private func gParamBool(for key: String, default d: Bool) -> Binding<Bool> {
+        Binding(get: { actionParameters[key]?.value as? Bool ?? d }, set: { actionParameters[key] = AnyCodable($0) })
+    }
+    
     private var activationSettingsSection: some View {
         GroupBox("Activation") {
             VStack(alignment: .leading, spacing: 12) {
@@ -321,6 +531,50 @@ struct GestureConfigurationSheet: View {
         }
         .pickerStyle(.segmented)
         .frame(width: 200)
+    }
+    
+    private func updateAdvancedConfigState() {
+        guard let (plugin, action) = PluginManager.shared.getAction(identifier: selectedActionId) else {
+            hasAdvancedConfig = false
+            advancedConfigCount = 0
+            return
+        }
+        hasAdvancedConfig = plugin.hasAdvancedConfiguration(for: action)
+        updateAdvancedConfigCount()
+    }
+    
+    private func updateAdvancedConfigCount() {
+        if let bundleData = actionParameters["bundle_actions"] {
+            if let array = bundleData.value as? [[String: Any]] {
+                advancedConfigCount = array.count
+            } else if let jsonStr = bundleData.value as? String,
+                      let data = jsonStr.data(using: .utf8),
+                      let arr = try? JSONSerialization.jsonObject(with: data) as? [Any] {
+                advancedConfigCount = arr.count
+            } else {
+                advancedConfigCount = 0
+            }
+        } else {
+            advancedConfigCount = 0
+        }
+    }
+    
+    private func openAdvancedConfiguration(for action: PluginAction) {
+        guard let (plugin, _) = PluginManager.shared.getAction(identifier: selectedActionId),
+              let window = NSApp.keyWindow else { return }
+        
+        plugin.presentAdvancedConfiguration(
+            for: action,
+            currentParameters: actionParameters,
+            parentWindow: window
+        ) { updatedParams in
+            if let updatedParams = updatedParams {
+                DispatchQueue.main.async {
+                    self.actionParameters = updatedParams
+                    self.updateAdvancedConfigCount()
+                }
+            }
+        }
     }
     
     private var configurationFooter: some View {
@@ -461,7 +715,7 @@ struct GestureConfigurationSheet: View {
             modifiers: selectedModifiers,
             dragModifier: selectedDragModifier,
             actionIdentifier: selectedActionId,
-            parameters: [:], // TODO: Add parameter configuration
+            parameters: actionParameters,
             keyboardTrigger: keyboardShortcut,
             mouseButtonTrigger: mouseButton,
             activationType: activationType,

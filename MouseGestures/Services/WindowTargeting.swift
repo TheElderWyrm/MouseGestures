@@ -253,7 +253,26 @@ class WindowTargeting {
         let result = AXUIElementCopyAttributeValue(appElement, kAXWindowsAttribute as CFString, &windowsValue)
         
         if result == .success, let windows = windowsValue as? [AXUIElement] {
-            return windows.map { ($0, pid) }
+            // Filter out minimized and non-standard windows
+            var visibleWindows: [(AXUIElement, pid_t)] = []
+            for window in windows {
+                // Skip minimized windows
+                var minimized: CFTypeRef?
+                AXUIElementCopyAttributeValue(window, kAXMinimizedAttribute as CFString, &minimized)
+                if let isMinimized = minimized as? Bool, isMinimized {
+                    continue
+                }
+                
+                // Skip non-window roles (sheets, popovers, etc.)
+                var roleValue: CFTypeRef?
+                AXUIElementCopyAttributeValue(window, kAXRoleAttribute as CFString, &roleValue)
+                if let role = roleValue as? String, role != kAXWindowRole as String {
+                    continue
+                }
+                
+                visibleWindows.append((window, pid))
+            }
+            return visibleWindows
         }
         
         return []

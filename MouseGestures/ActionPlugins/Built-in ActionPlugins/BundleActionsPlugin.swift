@@ -212,13 +212,78 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
     }
     
     func configurationView(for action: PluginAction) -> NSView? {
-        switch action.id {
-        case "execute_bundle":
-            // Return the bundle editor
-            let editor = BundleActionsEditor()
-            return editor.window?.contentView
-        default:
-            return nil
+        return nil
+    }
+    
+    func hasAdvancedConfiguration(for action: PluginAction) -> Bool {
+        return action.id == "execute_bundle"
+    }
+    
+    func presentAdvancedConfiguration(
+        for action: PluginAction,
+        currentParameters: [String: AnyCodable],
+        parentWindow: NSWindow,
+        completion: @escaping ([String: AnyCodable]?) -> Void
+    ) {
+        guard action.id == "execute_bundle" else {
+            completion(nil)
+            return
+        }
+        
+        let editor = BundleActionsEditor()
+        
+        // Load existing bundled actions from parameters
+        if let bundleData = currentParameters["bundle_actions"] {
+            if let array = bundleData.value as? [[String: Any]] {
+                editor.bundledActions = array.compactMap { dict in
+                    guard let id = dict["actionIdentifier"] as? String else { return nil }
+                    let params = (dict["parameters"] as? [String: Any])?.mapValues { AnyCodable($0) } ?? [:]
+                    let delay = dict["delayAfter"] as? TimeInterval
+                    let condData = dict["conditionData"] as? Data
+                    return BundledAction(actionIdentifier: id, parameters: params, delayAfter: delay, conditionData: condData)
+                }
+            } else if let jsonStr = bundleData.value as? String,
+                      let data = jsonStr.data(using: .utf8),
+                      let decoded = try? JSONDecoder().decode([BundledAction].self, from: data) {
+                editor.bundledActions = decoded
+            }
+        }
+        
+        // Set up completion to merge parameters back
+        editor.completionHandler = { resultActions in
+            if let actions = resultActions {
+                var updatedParams = currentParameters
+                // Encode bundled actions as array of dictionaries
+                let actionDicts: [[String: Any]] = actions.map { ba in
+                    var dict: [String: Any] = ["actionIdentifier": ba.actionIdentifier]
+                    if !ba.parameters.isEmpty {
+                        dict["parameters"] = ba.parameters.mapValues { $0.value }
+                    }
+                    if let delay = ba.delayAfter {
+                        dict["delayAfter"] = delay
+                    }
+                    if let condData = ba.conditionData {
+                        dict["conditionData"] = condData
+                    }
+                    return dict
+                }
+                updatedParams["bundle_actions"] = AnyCodable(actionDicts)
+                completion(updatedParams)
+            } else {
+                completion(nil)
+            }
+        }
+        
+        guard let editorWindow = editor.window else {
+            completion(nil)
+            return
+        }
+        
+        // Retain the editor for the duration of the sheet
+        objc_setAssociatedObject(parentWindow, "bundleEditor", editor, .OBJC_ASSOCIATION_RETAIN)
+        
+        parentWindow.beginSheet(editorWindow) { _ in
+            objc_setAssociatedObject(parentWindow, "bundleEditor", nil, .OBJC_ASSOCIATION_RETAIN)
         }
     }
     
@@ -722,12 +787,20 @@ public class BundleActionsEditor: NSWindowController, NSTableViewDelegate, NSTab
     
     @objc func done() {
         completionHandler?(bundledActions)
-        window?.close()
+        if let w = window, let parent = w.sheetParent {
+            parent.endSheet(w)
+        } else {
+            window?.close()
+        }
     }
     
     @objc func cancel() {
         completionHandler?(nil)
-        window?.close()
+        if let w = window, let parent = w.sheetParent {
+            parent.endSheet(w)
+        } else {
+            window?.close()
+        }
     }
     
     // MARK: - UI Updates

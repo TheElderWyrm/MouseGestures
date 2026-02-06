@@ -409,6 +409,32 @@ class SandboxedPluginContext: PluginContext {
         return WindowTargeting.getTargetWindow(target)
     }
     
+    func getTargetWindows(_ params: [String: Any]) -> [(AXUIElement, pid_t)] {
+        guard permissions.canAccessWindowManager else {
+            log.log("⚠️ Plugin '\(pluginId)' attempted to get target windows without permission")
+            return []
+        }
+        
+        var target = WindowTargeting.WindowTarget()
+        if let targetType = params["targetType"] as? String {
+            target.targetType = WindowTargeting.TargetType(rawValue: targetType) ?? .frontmost
+        }
+        if let bundleId = params["bundleId"] as? String {
+            target.applicationBundleId = bundleId
+        }
+        if let title = params["windowTitle"] as? String {
+            target.windowTitle = title
+        }
+        if let titleContains = params["windowTitleContains"] as? String {
+            target.windowTitleContains = titleContains
+        }
+        if let age = params["windowAge"] as? Int {
+            target.windowAge = age
+        }
+        
+        return WindowTargeting.getTargetWindows(target)
+    }
+    
     func getAllVisibleWindows() -> [(window: AXUIElement, pid: pid_t)] {
         guard permissions.canAccessWindowManager else {
             log.log("⚠️ Plugin '\(pluginId)' attempted to get all windows without permission")
