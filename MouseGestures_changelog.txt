@@ -6,18 +6,28 @@
 - Removed old AppKit classes: BundleActionsEditor (NSWindowController + NSTableView),
   BundleActionEditDialog, BundleConditionEditor stub, and ActionSelectionBridge.
 - New BundleEditorView uses a split-panel layout: action list on the left,
-  add-action panel (embedding ActionSelectionView) on the right.
+  add/edit panel (embedding ActionSelectionView) on the right.
 - Each action row shows order number, SF Symbol icon, parameter summary,
   condition indicator, and click-to-edit delay value.
 - Full list management: drag-to-reorder (.onMove), context menus with
   edit/duplicate/move up/move down/remove, and a bottom toolbar with
   icon buttons for the same operations.
-- Edit action opens as a SwiftUI .sheet with ActionSelectionView and
-  delay configuration, replacing the old AppKit BundleActionEditDialog.
+- Right panel is dual-purpose: shows "Add Action" when nothing selected,
+  switches to "Editing Action #N" when an item is selected in the list.
+  No separate edit sheet/subwindow needed.
+- Stop on Failure and Parallel Execution toggles moved into the bundle
+  editor's left panel as bundle-level settings, removing them from the
+  main parameter screen.
 - BundleEditorWindowHost bridges SwiftUI into the NSWindow sheet system
   via NSHostingController, called from presentAdvancedConfiguration.
 - Plugin version bumped to 3.0.0.
 - Empty state placeholder guides users to add actions.
+
+**Left-aligned parameter fields in ActionSelectionView**
+- Replaced LabeledContent (which right-aligns values) with VStack(alignment:
+  .leading) layout: label above field, both left-aligned.
+- Applied to string, number, selection, application, keyboardShortcut, and
+  default parameter types. Script and boolean fields were already left-aligned.
 
 ### UI Improvement: Unified Action Selection in Bundle Actions Editor
 - Replaced NSPopUpButton-based action picker in BundleActionsEditor with SwiftUI ActionSelectionView
