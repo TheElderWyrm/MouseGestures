@@ -11,6 +11,7 @@ Actions:
 - Not all actions work.
 
 Bugs
+- Loggin not working <-- Might be an issue with build settings/sandboxing.
 - [DONE] Saved actions doesn't allow for actions that require advanced configuration/opening a sheet (Example: Bundle actions)
 - Zone Highlights can get stuck if modifiers are released during certain actions (Example, entering full screen)
 - Window Actions targeting multiple windows doesn't work

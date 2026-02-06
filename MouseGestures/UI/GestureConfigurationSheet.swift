@@ -260,7 +260,7 @@ struct GestureConfigurationSheet: View {
                 
                 // Simple parameter fields (skip json params when advanced config handles them)
                 let simpleParams = action.supportedParameters.filter { param in
-                    if hasAdvancedConfig && param.type == .json { return false }
+                    if param.type == .json { return false }
                     return true
                 }
                 if !simpleParams.isEmpty {
@@ -322,18 +322,7 @@ struct GestureConfigurationSheet: View {
                 .frame(minWidth: 200)
             }
         case .json:
-            VStack(alignment: .leading, spacing: 4) {
-                Text(paramDef.name)
-                    .font(.system(size: 13, weight: .medium))
-                Text(paramDef.description)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                TextEditor(text: gParamJson(for: paramDef.key))
-                    .font(.system(.body, design: .monospaced))
-                    .frame(minHeight: 80, maxHeight: 150)
-                    .border(Color(NSColor.separatorColor), width: 1)
-                    .cornerRadius(4)
-            }
+            EmptyView()
         case .script:
             VStack(alignment: .leading, spacing: 4) {
                 Text(paramDef.name)

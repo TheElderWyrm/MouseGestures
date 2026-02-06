@@ -193,7 +193,7 @@ struct SavedActionConfigurationSheet: View {
                 
                 // Simple parameter fields (skip json params when advanced config handles them)
                 let simpleParams = action.supportedParameters.filter { param in
-                    if hasAdvancedConfig && param.type == .json { return false }
+                    if param.type == .json { return false }
                     return true
                 }
                 if !simpleParams.isEmpty {
@@ -255,18 +255,7 @@ struct SavedActionConfigurationSheet: View {
                 .frame(minWidth: 200)
             }
         case .json:
-            VStack(alignment: .leading, spacing: 4) {
-                Text(paramDef.name)
-                    .font(.system(size: 13, weight: .medium))
-                Text(paramDef.description)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                TextEditor(text: paramJsonBinding(for: paramDef.key))
-                    .font(.system(.body, design: .monospaced))
-                    .frame(minHeight: 80, maxHeight: 150)
-                    .border(Color(NSColor.separatorColor), width: 1)
-                    .cornerRadius(4)
-            }
+            EmptyView()
         case .script:
             VStack(alignment: .leading, spacing: 4) {
                 Text(paramDef.name)
@@ -375,9 +364,12 @@ struct SavedActionConfigurationSheet: View {
         guard let (plugin, action) = PluginManager.shared.getAction(identifier: selectedActionId) else {
             hasAdvancedConfig = false
             advancedConfigCount = 0
+            NSLog("[MG-DEBUG] updateAdvancedConfigState: no action found for id: '%@'", selectedActionId)
             return
         }
-        hasAdvancedConfig = plugin.hasAdvancedConfiguration(for: action)
+        let result = plugin.hasAdvancedConfiguration(for: action)
+        hasAdvancedConfig = result
+        NSLog("[MG-DEBUG] updateAdvancedConfigState: plugin=%@, action=%@, hasAdvanced=%d", String(describing: type(of: plugin)), action.id, result ? 1 : 0)
         updateAdvancedConfigCount()
     }
     
