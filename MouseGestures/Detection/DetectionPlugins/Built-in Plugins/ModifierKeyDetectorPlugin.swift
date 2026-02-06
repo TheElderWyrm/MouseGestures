@@ -216,6 +216,13 @@ class ModifierKeyDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         }
         
         lastModifiers = newModifiers
+        
+        // Post notification for other plugins to react to modifier changes
+        NotificationCenter.default.post(
+            name: NSNotification.Name("ModifierStateChanged"),
+            object: self,
+            userInfo: ["modifiers": newModifiers.rawValue]
+        )
     }
     
     // MARK: - State Transitions

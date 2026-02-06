@@ -154,3 +154,20 @@
 - **Hide empty setting categories** - Category picker in Detection settings now only shows 
   categories that have visible settings. Empty categories (e.g. Advanced when Show Advanced is 
   off and all settings in that category are advanced-only) are hidden.
+
+## 2026-02-05
+
+### Bug Fixes - Efficiency Mapping
+- **Fixed efficiency mapping not working - CPU rises when mouse moved regardless of modifiers**
+  - Root cause: Race condition in ActivationCoordinator's disabling logic. When modifiers were 
+    released, the screen zone detection reported as "engaged" if `lastTriggeredZone != nil`, 
+    preventing the coordinator from disabling mouse tracking. The mouse event monitor stayed 
+    active and processed events even with early returns, causing unnecessary CPU usage.
+  - Fix: ScreenZoneDetectorPlugin now listens for modifier state changes via NotificationCenter.
+    When all modifiers are released, it immediately clears `lastTriggeredZone` and notifies the
+    coordinator that screen zone detection is disengaged. This allows the coordinator to properly
+    disable mouse tracking, stopping event processing.
+  - ModifierKeyDetectorPlugin now posts `ModifierStateChanged` notification after each modifier
+    change, allowing other plugins to react immediately to modifier state transitions.
+  - Impact: Mouse tracking now properly disables when modifiers are released, eliminating 
+    unnecessary CPU usage during normal mouse movement without modifiers held.

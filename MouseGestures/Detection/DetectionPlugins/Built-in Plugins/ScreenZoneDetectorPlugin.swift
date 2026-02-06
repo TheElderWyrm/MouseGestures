@@ -234,6 +234,14 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         // Register with ActivationCoordinator
         ActivationCoordinator.shared.registerProvider(self, for: providedActivationTypes)
         
+        // Listen for modifier changes to clear state immediately
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(modifierStateChanged),
+            name: NSNotification.Name("ModifierStateChanged"),
+            object: nil
+        )
+        
         // Listen for screen configuration changes
         NotificationCenter.default.addObserver(
             self,
@@ -700,6 +708,27 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     @objc private func screenConfigurationChanged() {
         context?.logger.log("Screen configuration changed - rebuilding zone cache", file: #file, function: #function, line: #line)
         rebuildZoneBoundsCache()
+    }
+    
+    @objc private func modifierStateChanged(_ notification: Notification) {
+        // When modifiers change, check if they are all released
+        let currentModifiers = ModifierKeyDetectorPlugin.currentSystemModifiers()
+        
+        // If no modifiers are held and we have a triggered zone, clear it
+        // This allows the coordinator to properly disable tracking
+        if currentModifiers.isEmpty && lastTriggeredZone != nil {
+            if context?.logger.isDebugEnabled ?? false {
+                context?.logger.log("Modifiers released - clearing zone state", file: #file, function: #function, line: #line)
+            }
+            
+            lastTriggeredZone = nil
+            lastDragModifier = .none
+            lastTriggeredModifiers = []
+            stopRepeatTimer()
+            
+            // Notify coordinator that screen zone is no longer engaged
+            ActivationCoordinator.shared.activationDisengaged(.screenZone)
+        }
     }
     
     private func rebuildZoneBoundsCache() {
