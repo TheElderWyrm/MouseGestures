@@ -17,6 +17,7 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         static let cornerSize = "cornerSize"
         static let cornerBuffer = "cornerBuffer"
         static let showZoneHighlights = "showZoneHighlights"
+        static let showZoneLabels = "showZoneLabels"
         static let zoneHighlightColor = "zoneHighlightColor"
         static let mouseTrackingThrottle = "mouseTrackingThrottle"
     }
@@ -71,6 +72,16 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
                 type: .toggle(label: "Enabled"),
                 defaultValue: false,
                 isAdvanced: false
+            ),
+            PluginSettingDefinition(
+                key: SettingKeys.showZoneLabels,
+                displayName: "Show Zone Labels",
+                description: "Display zone names when highlights are shown",
+                category: .appearance,
+                type: .toggle(label: "Enabled"),
+                defaultValue: false,
+                isAdvanced: false,
+                dependsOn: .init(key: SettingKeys.showZoneHighlights, condition: .isTrue)
             ),
             PluginSettingDefinition(
                 key: SettingKeys.zoneHighlightColor,
@@ -219,6 +230,9 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         
         // Initialize gesture lookup
         gestureLookup = GestureLookup()
+        
+        // Sync plugin settings to Configuration so ZoneHighlightManager uses correct values
+        syncSettingsToConfiguration()
         
         // Register with ActivationCoordinator
         ActivationCoordinator.shared.registerProvider(self, for: providedActivationTypes)
@@ -641,6 +655,19 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
             return
         }
         modifierPlugin.markActionExecuted()
+    }
+    
+    // MARK: - Settings Sync
+    
+    /// Sync plugin settings to Configuration.shared so ZoneHighlightManager and other
+    /// consumers that read from Configuration stay in sync with the actual detection values.
+    private func syncSettingsToConfiguration() {
+        Configuration.shared.edgeThreshold = edgeThreshold
+        Configuration.shared.cornerSize = cornerSize
+        Configuration.shared.cornerBuffer = cornerBuffer
+        Configuration.shared.showZoneHighlights = settings.getBool(SettingKeys.showZoneHighlights, default: false)
+        Configuration.shared.showZoneLabels = settings.getBool(SettingKeys.showZoneLabels, default: false)
+        Configuration.shared.save()
     }
     
     // MARK: - Zone Detection

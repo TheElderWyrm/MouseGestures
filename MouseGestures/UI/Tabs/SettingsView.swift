@@ -2,6 +2,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 // MARK: - Settings Tab
+
 struct SettingsView: View {
     @StateObject private var uiServices = UIServices.shared
     
@@ -10,15 +11,8 @@ struct SettingsView: View {
     @State private var launchAtLogin: Bool = false
     @State private var hapticFeedback: Bool = true
     @State private var hideMenuBarIcon: Bool = false
-    @State private var showZoneHighlights: Bool = false
-    @State private var showZoneLabels: Bool = false
     @State private var developerModeEnabled: Bool = false
     @State private var debugModeEnabled: Bool = false
-    
-    // Zone configuration
-    @State private var edgeThreshold: Double = 30
-    @State private var cornerSize: Double = 100
-    @State private var cornerBuffer: Double = 50
     
     // UI State
     @State private var showingImportDialog = false
@@ -38,7 +32,6 @@ struct SettingsView: View {
     enum SettingsSection: String, CaseIterable {
         case general = "General"
         case detection = "Detection"
-        case zones = "Zone Configuration"
         case menuBar = "Menu Bar"
         case dataManagement = "Data Management"
         case advanced = "Advanced"
@@ -48,7 +41,6 @@ struct SettingsView: View {
             switch self {
             case .general: return "gear"
             case .detection: return "hand.tap"
-            case .zones: return "rectangle.split.3x3"
             case .menuBar: return "menubar.rectangle"
             case .dataManagement: return "externaldrive"
             case .advanced: return "wrench.and.screwdriver"
@@ -71,8 +63,6 @@ struct SettingsView: View {
                         generalSettingsSection
                     case .detection:
                         detectionPluginSettingsSection
-                    case .zones:
-                        zoneConfigurationSection
                     case .menuBar:
                         menuBarSection
                     case .dataManagement:
@@ -251,132 +241,11 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 20) {
             sectionHeader("Detection Settings")
             
-            Text("Configure how gestures are detected. These settings are provided by detection plugins.")
+            Text("Configure how gestures are detected, including zone dimensions, visual feedback, and performance tuning.")
                 .font(.caption)
                 .foregroundColor(.secondary)
             
             PluginSettingsView()
-        }
-    }
-    
-    // MARK: - Zone Configuration Section
-    
-    private var zoneConfigurationSection: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            sectionHeader("Zone Configuration")
-            
-            VStack(alignment: .leading, spacing: 20) {
-                // Visual Feedback
-                VStack(alignment: .leading, spacing: 15) {
-                    Text("Visual Feedback")
-                        .font(.system(size: 14, weight: .semibold))
-                    
-                    Toggle(isOn: $showZoneHighlights) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Show Zone Highlights")
-                                .font(.system(size: 13, weight: .medium))
-                            Text("Display visual highlights when entering screen zones")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                    .onChange(of: showZoneHighlights) { newValue in
-                        uiServices.setShowZoneHighlights(newValue)
-                    }
-                    
-                    Toggle(isOn: $showZoneLabels) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Show Zone Labels")
-                                .font(.system(size: 13, weight: .medium))
-                            Text("Display zone names when highlights are shown")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                    .disabled(!showZoneHighlights)
-                    .onChange(of: showZoneLabels) { newValue in
-                        uiServices.setShowZoneLabels(newValue)
-                    }
-                }
-                
-                Divider()
-                
-                // Zone Sizes
-                VStack(alignment: .leading, spacing: 15) {
-                    Text("Zone Dimensions")
-                        .font(.system(size: 14, weight: .semibold))
-                    
-                    // Edge Threshold
-                    VStack(alignment: .leading, spacing: 5) {
-                        HStack {
-                            Text("Edge Threshold")
-                                .font(.system(size: 13, weight: .medium))
-                            Spacer()
-                            Text("\(Int(edgeThreshold)) pixels")
-                                .font(.system(size: 12))
-                                .foregroundColor(.secondary)
-                        }
-                        Slider(value: $edgeThreshold, in: 10...100, step: 5)
-                            .onChange(of: edgeThreshold) { newValue in
-                                uiServices.setEdgeThreshold(CGFloat(newValue))
-                            }
-                        Text("Distance from screen edge to detect edge zones")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    // Corner Size
-                    VStack(alignment: .leading, spacing: 5) {
-                        HStack {
-                            Text("Corner Size")
-                                .font(.system(size: 13, weight: .medium))
-                            Spacer()
-                            Text("\(Int(cornerSize)) pixels")
-                                .font(.system(size: 12))
-                                .foregroundColor(.secondary)
-                        }
-                        Slider(value: $cornerSize, in: 50...200, step: 10)
-                            .onChange(of: cornerSize) { newValue in
-                                uiServices.setCornerSize(CGFloat(newValue))
-                            }
-                        Text("Size of corner detection zones")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    // Corner Buffer
-                    VStack(alignment: .leading, spacing: 5) {
-                        HStack {
-                            Text("Corner Buffer")
-                                .font(.system(size: 13, weight: .medium))
-                            Spacer()
-                            Text("\(Int(cornerBuffer)) pixels")
-                                .font(.system(size: 12))
-                                .foregroundColor(.secondary)
-                        }
-                        Slider(value: $cornerBuffer, in: 0...100, step: 5)
-                            .onChange(of: cornerBuffer) { newValue in
-                                uiServices.setCornerBuffer(CGFloat(newValue))
-                            }
-                        Text("Additional area around corners for easier targeting")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    Button("Reset to Defaults") {
-                        edgeThreshold = 30
-                        cornerSize = 100
-                        cornerBuffer = 50
-                        uiServices.setEdgeThreshold(30)
-                        uiServices.setCornerSize(100)
-                        uiServices.setCornerBuffer(50)
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundColor(.accentColor)
-                }
-            }
-            .padding()
-            .background(RoundedRectangle(cornerRadius: 8).fill(Color(NSColor.controlBackgroundColor)))
         }
     }
     
@@ -410,16 +279,16 @@ struct SettingsView: View {
                         Text("Menu Bar Options")
                             .font(.system(size: 13, weight: .medium))
                         
-                        Text("• Quick enable/disable gestures")
+                        Text("\u{2022} Quick enable/disable gestures")
                             .font(.caption)
                             .foregroundColor(.secondary)
-                        Text("• Switch between profiles")
+                        Text("\u{2022} Switch between profiles")
                             .font(.caption)
                             .foregroundColor(.secondary)
-                        Text("• Open preferences window")
+                        Text("\u{2022} Open preferences window")
                             .font(.caption)
                             .foregroundColor(.secondary)
-                        Text("• View current profile")
+                        Text("\u{2022} View current profile")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -678,11 +547,6 @@ struct SettingsView: View {
         launchAtLogin = uiServices.isLaunchAtLoginEnabled()
         hapticFeedback = uiServices.isHapticFeedbackEnabled()
         hideMenuBarIcon = uiServices.isMenuBarIconHidden()
-        showZoneHighlights = uiServices.isShowZoneHighlights()
-        showZoneLabels = uiServices.isShowZoneLabels()
-        edgeThreshold = Double(uiServices.getEdgeThreshold())
-        cornerSize = Double(uiServices.getCornerSize())
-        cornerBuffer = Double(uiServices.getCornerBuffer())
         developerModeEnabled = uiServices.isDeveloperModeEnabled()
         debugModeEnabled = uiServices.isDebugModeEnabled()
     }
@@ -773,7 +637,7 @@ struct SettingsView: View {
     }
     
     private func checkAccessibilityStatus() -> String {
-        return hasAccessibilityPermissions() ? "Granted ✓" : "Not Granted"
+        return hasAccessibilityPermissions() ? "Granted \u{2713}" : "Not Granted"
     }
     
     private func openAccessibilityPreferences() {

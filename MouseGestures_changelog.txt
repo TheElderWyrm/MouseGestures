@@ -107,3 +107,29 @@
     by implementing custom CodingKeys and `init(from:)` decoder
   - Extensions: Added `@retroactive` attribute to NSEvent.ModifierFlags and
     CGEventFlags Codable conformances to acknowledge intentional retroactive conformances
+
+## 2026-02-05
+
+### Bug Fixes - Settings
+- **Fixed duplicate zone configuration settings** - Removed standalone "Zone Configuration" section 
+  from Settings sidebar. Zone dimensions (edge threshold, corner size, corner buffer) and visual 
+  feedback (highlights, labels) were duplicated between the Settings > Zone Configuration section 
+  and Settings > Detection plugin settings, each using different storage backends with different 
+  default values. The plugin settings system is now the single source of truth.
+- **Fixed zone settings not autofilling / slider jump on release** - The old Zone Configuration 
+  section read from Configuration.shared (defaults: 30/100/50) while the actual detection used 
+  plugin settings (defaults: 5/30/5). Removing the duplicate section eliminates this mismatch.
+- **Fixed zone highlights not matching detection zones** - ZoneHighlightManager read zone dimensions 
+  from Configuration.shared, but the ScreenZoneDetectorPlugin used its own settings. Added settings 
+  sync: plugin now writes zone dimensions and visibility flags to Configuration.shared whenever 
+  they change, plus an initial sync on startup, so highlights always match actual detection zones.
+- **Added Show Zone Labels setting to ScreenZoneDetectorPlugin** - Previously only available as a 
+  Configuration.shared property with no UI after the duplicate section was removed. Now properly 
+  accessible through Detection > Appearance settings, with dependency on Show Zone Highlights.
+
+### Code Quality
+- Removed unused @State variables from SettingsView (zone-related state)
+- Removed Zone Configuration enum case from SettingsSection
+- Updated detection description text to mention zone dimensions and visual feedback
+- Dead code identified: UIServices zone dimension getters/setters and ZoneVisualizationService 
+  zone dimension methods are no longer called from the UI (kept for API compatibility)

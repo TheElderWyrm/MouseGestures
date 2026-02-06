@@ -1,31 +1,27 @@
 General:
 - Remove Duplicate code, unify architectures
 - Work to reduce CPU/Memory Usage
-
 - Rework Add Gesture UI to respond to activation type (So, for example, if 'Keyboard Only' is selected then it hides the options related to other activation types) (Must be compatible with custom plugin system)
 - Efficiency mapping doesn't seem to be working (CPU rises when mouse is moved regardless of modifiers)
 -Switch to using Fn+f for full screen.
 
-
 Actions:
-- More System Control Actions- (Ex. Change settings, etc.)
+- More System Control Actions
+- (Ex. Change settings, etc.)
 - Not all actions work.
 
 Bugs
 - Zone Highlights can get stuck if modifiers are released during certain actions (Example, entering full screen)
 - Window Actions targeting multiple windows doesn't work
 - Bug: Won't display (first?) sheet when opening service sheet. Opening a different sheet then returning to the original sheet you were trying to open works.
-- Duplicate settings, somewhat buggy.
-- Selecting the zone configuration in settings doesn't autofill with selected value and the slider not properly select size (Jumps up when released).
-- Drag Detection seems unreliable 
+- Drag Detection seems unreliable
 
 Improve UI
 - Add search to settings
 - Go Back to pre-rendering to increase performance
-	- Duplicated in zone config and detection settings
 - Unify UI Styles throughout the app
-- Better Zone Configuration- Replace with more visual menu.
-- Places with side menus make the entire menu clickable instead of just the text.
+- Better Zone Configuration
+- Replace with more visual menu.
 - Split settings into general/Advanced
 - More configuration options
 - Split action menu into section tabs
