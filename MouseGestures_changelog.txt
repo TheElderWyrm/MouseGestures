@@ -1,4 +1,11 @@
 ## 2026-02-05
+### Bug Fix: Raw JSON editor showing for bundle actions and similar
+- Removed raw JSON text editor from parameter configuration UI entirely
+- .json type parameters are now always filtered out of simple params list (previously only hidden when hasAdvancedConfig was true, causing race condition)
+- Actions with .json parameters now exclusively use the advanced configuration sheet (Configure... button)
+- Affected both GestureConfigurationSheet and SavedActionConfigurationSheet
+
+## 2026-02-05
 ### Feature: Advanced Configuration for Saved Actions
 - Added support for actions that require custom editors (e.g., Bundle Actions) in both Saved Actions and Gesture configuration sheets
 - Extended GestureActionPlugin protocol with hasAdvancedConfiguration() and presentAdvancedConfiguration() methods with default implementations
