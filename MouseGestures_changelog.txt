@@ -202,3 +202,23 @@
       fullscreen transitions
   - Impact: Zone highlights now properly disappear in all scenarios, preventing them from 
     getting stuck on screen during fullscreen transitions or other window state changes.
+
+## 2026-02-06
+### Bug Fixes - Efficiency Mapping (actual fix)
+- **Fixed mouse tracking staying permanently active after any drag event**
+  - Root cause: handleMouseDrag() called enableMouseTracking() directly, bypassing the
+    ActivationCoordinator. When drag ended, handleMouseUp() relied on the coordinator to
+    disable tracking, but since the coordinator never added .screenZone to its enabledTypes,
+    disableActivationType() exited early at the guard. Mouse tracking stayed active forever.
+  - The previous fix (2026-02-05) addressed the coordinator-side issue of screenZone reporting
+    as engaged, but did not address the direct enableMouseTracking() call in handleMouseDrag().
+  - Fix: Added mouseTrackingEnabledByDrag flag to track when drag directly enables tracking.
+    handleMouseDrag() now only enables tracking if drag-based gestures actually exist
+    (via new hasDragGestures() helper). handleMouseUp() explicitly disables tracking when
+    the coordinator would not keep it active, closing the lifecycle gap.
+  - Impact: Mouse tracking now correctly stays disabled during normal mouse movement.
+    CPU usage drops to 0% when no modifiers are held and no drag gestures are active.
+
+### Code Quality
+- Removed all diagnostic [DIAG] print statements from ActivationCoordinator and
+  ScreenZoneDetectorPlugin that were added to debug the efficiency mapping issue.

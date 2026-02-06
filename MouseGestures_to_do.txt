@@ -2,8 +2,10 @@ General:
 - Remove Duplicate code, unify architectures
 - Work to reduce CPU/Memory Usage
 - Rework Add Gesture UI to respond to activation type (So, for example, if 'Keyboard Only' is selected then it hides the options related to other activation types) (Must be compatible with custom plugin system)
-- Efficiency mapping doesn't seem to be working (CPU rises when mouse is moved regardless of modifiers)
 -Switch to using Cmnd+Cntrl as default for full screen.
+- Move show advanced toggle from detection setting menu to sidebar (allow for advanced settings in all menus).
+- Add a setting to enable developer mode.
+- Issue with nested developer mode, advanced settings menu. <-- With advanced toggle 'advanced menu' might be unnecessary (See above)
 
 Actions:
 - More System Control Actions
@@ -11,21 +13,23 @@ Actions:
 - Not all actions work.
 
 Bugs
-- Loggin not working <-- Might be an issue with build settings/sandboxing.
-- [DONE] Saved actions doesn't allow for actions that require advanced configuration/opening a sheet (Example: Bundle actions)
+- ShowZoneHilights not actually rendering correct size (Increasing edge size does not result in it increasing the size.
+- Highlight Color settubg doesn't work.
+- Corner buffer zone configuration setting should not be under advanced.
+- Saved actions doesn't allow for actions that require advanced configuration/opening a sheet (Example: Bundle actions)
 - Zone Highlights can get stuck if modifiers are released during certain actions (Example, entering full screen)
 - Window Actions targeting multiple windows doesn't work
 - Bug: Won't display (first?) sheet when opening service sheet. Opening a different sheet then returning to the original sheet you were trying to open works.
 - Drag Detection seems unreliable
 
 Improve UI
-- Better Zone Highlights
+- Make all sidebars/menus clickable in the entire rectangle, not just over the text.
+- Improve appearance of Show Zone Highlights
 - Add search to settings
 - Go Back to pre-rendering to increase performance
 - Unify UI Styles throughout the app
 - Better Zone Configuration
 - Replace with more visual menu.
-- Split settings into general/Advanced
 - More configuration options
 - Split action menu into section tabs
 - Split actions into cascading menus (Media, System Control, Window Control, etc)

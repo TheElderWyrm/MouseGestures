@@ -130,6 +130,7 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     
     // State tracking
     private var isMouseTrackingActive = false
+    private var mouseTrackingEnabledByDrag = false
     private(set) var dragState: DragModifier = .none
     private var lastTriggeredZone: ScreenZone?
     private var lastDragModifier: DragModifier = .none
@@ -380,6 +381,7 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     /// Disable mouse tracking (called by ActivationCoordinator)
     func disableMouseTracking() {
         guard isMouseTrackingActive else { return }
+        mouseTrackingEnabledByDrag = false
         
         // Remove mouse movement monitors
         if let monitor = mouseMonitor {
@@ -452,8 +454,12 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         }
         
         // Enable mouse tracking during drag if not already enabled
+        // Only enable if there are drag-based gestures configured
         if !isMouseTrackingActive {
-            enableMouseTracking()
+            if hasDragGestures() {
+                enableMouseTracking()
+                mouseTrackingEnabledByDrag = true
+            }
         }
         
         // Handle the mouse movement during drag
@@ -492,7 +498,14 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
             // Notify coordinator that drag ended
             ActivationCoordinator.shared.activationDisengaged(.mouseDrag)
             
-            // Coordinator will decide whether to disable mouse tracking
+            // If we enabled tracking for drag, clean up directly since
+            // the coordinator does not track drag-initiated mouse tracking
+            if mouseTrackingEnabledByDrag {
+                mouseTrackingEnabledByDrag = false
+                if !ActivationCoordinator.shared.shouldTrackMouse {
+                    disableMouseTracking()
+                }
+            }
         }
     }
     
@@ -740,6 +753,7 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     }
     
     @objc private func modifierStateChanged(_ notification: Notification) {
+        let mods = ModifierKeyDetectorPlugin.currentSystemModifiers()
         // When modifiers change, check if they are all released
         let currentModifiers = ModifierKeyDetectorPlugin.currentSystemModifiers()
         
@@ -873,6 +887,14 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         default:
             break
         }
+    }
+    
+    // MARK: - Drag Gesture Check
+    
+    /// Check if any enabled gesture uses a drag modifier
+    private func hasDragGestures() -> Bool {
+        let gestures = Configuration.shared.gestures.filter { $0.isEnabled }
+        return gestures.contains { $0.activation.hasGesture && $0.dragModifier != .none }
     }
     
     // MARK: - Statistics

@@ -318,6 +318,8 @@ class ActivationCoordinator {
     
     /// Evaluate which gated activation types should be enabled/disabled
     private func evaluateGatedActivations() {
+        let modEngaged = activationStates[.modifierKey]?.isEngaged ?? false
+        let dragEngaged = activationStates[.mouseDrag]?.isEngaged ?? false
         // Group dependencies by dependent type
         var dependentGates: [ActivationType: Set<ActivationType>] = [:]
         for dep in dependencies {
