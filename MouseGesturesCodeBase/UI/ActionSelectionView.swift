@@ -316,13 +316,16 @@ struct ActionSelectionView: View {
     private func paramField(for p: ParameterDefinition) -> some View {
         switch p.type {
         case .string, .path, .url:
-            LabeledContent("\(p.name):") {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(p.name)
+                    .font(.system(size: 12, weight: .medium))
                 TextField(p.description, text: strBinding(p.key, def: p.defaultValue?.value as? String ?? ""))
                     .textFieldStyle(.roundedBorder)
-                    .frame(minWidth: 200)
             }
         case .number:
-            LabeledContent("\(p.name):") {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(p.name)
+                    .font(.system(size: 12, weight: .medium))
                 TextField(p.description, text: numBinding(p.key, def: p.defaultValue?.value as? Double ?? 0))
                     .textFieldStyle(.roundedBorder)
                     .frame(width: 100)
@@ -331,18 +334,22 @@ struct ActionSelectionView: View {
             Toggle(p.name, isOn: boolBinding(p.key, def: p.defaultValue?.value as? Bool ?? false))
         case .selection:
             if let vals = p.validation?.allowedValues {
-                LabeledContent("\(p.name):") {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(p.name)
+                        .font(.system(size: 12, weight: .medium))
                     Picker("", selection: strBinding(p.key, def: p.defaultValue?.value as? String ?? "")) {
                         ForEach(vals.compactMap { $0.value as? String }, id: \.self) { v in
                             Text(v.replacingOccurrences(of: "_", with: " ").capitalized).tag(v)
                         }
                     }
                     .pickerStyle(.menu)
-                    .frame(minWidth: 200)
+                    .labelsHidden()
                 }
             }
         case .application:
-            LabeledContent("\(p.name):") {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(p.name)
+                    .font(.system(size: 12, weight: .medium))
                 Picker("", selection: strBinding(p.key, def: "")) {
                     Text("Select...").tag("")
                     ForEach(WindowTargeting.getAllRunningApplications(), id: \.bundleId) { app in
@@ -350,11 +357,11 @@ struct ActionSelectionView: View {
                     }
                 }
                 .pickerStyle(.menu)
-                .frame(minWidth: 200)
+                .labelsHidden()
             }
         case .script:
             VStack(alignment: .leading, spacing: 4) {
-                Text(p.name).font(.system(size: 13, weight: .medium))
+                Text(p.name).font(.system(size: 12, weight: .medium))
                 Text(p.description).font(.caption).foregroundColor(.secondary)
                 TextEditor(text: strBinding(p.key, def: p.defaultValue?.value as? String ?? ""))
                     .font(.system(.body, design: .monospaced))
@@ -363,17 +370,20 @@ struct ActionSelectionView: View {
                     .cornerRadius(4)
             }
         case .keyboardShortcut:
-            LabeledContent("\(p.name):") {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(p.name)
+                    .font(.system(size: 12, weight: .medium))
                 Text("Configure via Activation settings")
                     .font(.caption).foregroundColor(.secondary)
             }
         case .json:
             EmptyView()
         default:
-            LabeledContent("\(p.name):") {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(p.name)
+                    .font(.system(size: 12, weight: .medium))
                 TextField(p.description, text: strBinding(p.key, def: p.defaultValue?.value as? String ?? ""))
                     .textFieldStyle(.roundedBorder)
-                    .frame(minWidth: 200)
             }
         }
     }

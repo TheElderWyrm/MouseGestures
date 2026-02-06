@@ -248,10 +248,18 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
             }
         }
         
+        // Read bundle-level settings from current parameters
+        let stopOnFailure = (currentParameters["stop_on_failure"]?.value as? Bool) ?? false
+        let parallelExecution = (currentParameters["parallel_execution"]?.value as? Bool) ?? false
+        
         // Present the SwiftUI bundle editor
         let host = BundleEditorWindowHost()
-        host.present(bundledActions: existingActions, parentWindow: parentWindow) { resultActions in
-            if let actions = resultActions {
+        host.present(
+            bundledActions: existingActions,
+            stopOnFailure: stopOnFailure,
+            parallelExecution: parallelExecution,
+            parentWindow: parentWindow,
+            completion: { actions, stop, parallel in
                 var updatedParams = currentParameters
                 let actionDicts: [[String: Any]] = actions.map { ba in
                     var dict: [String: Any] = ["actionIdentifier": ba.actionIdentifier]
@@ -267,11 +275,14 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
                     return dict
                 }
                 updatedParams["bundle_actions"] = AnyCodable(actionDicts)
+                updatedParams["stop_on_failure"] = AnyCodable(stop)
+                updatedParams["parallel_execution"] = AnyCodable(parallel)
                 completion(updatedParams)
-            } else {
+            },
+            onCancel: {
                 completion(nil)
             }
-        }
+        )
     }
     
     // MARK: - Private Implementation

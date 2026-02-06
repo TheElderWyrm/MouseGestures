@@ -3,54 +3,50 @@ import AppKit
 
 // MARK: - Bundle Editor View (SwiftUI)
 
-/// Main SwiftUI view for editing bundle actions, replacing the old AppKit BundleActionsEditor.
-/// Presented as a sheet window via NSHostingController from BundleActionsPlugin.
+/// Main SwiftUI view for editing bundle actions.
+/// Right panel serves dual purpose: add new actions, or edit the selected action.
 struct BundleEditorView: View {
     @State var bundledActions: [BundledAction]
-    let onDone: ([BundledAction]) -> Void
+    @State var stopOnFailure: Bool
+    @State var parallelExecution: Bool
+    let onDone: ([BundledAction], Bool, Bool) -> Void
     let onCancel: () -> Void
     
     @State private var selection: UUID?
-    @State private var editingAction: BundledAction?
-    @State private var isAddingSectionExpanded = true
     
-    // Add-action state
-    @State private var newActionId: String = ""
-    @State private var newActionParams: [String: AnyCodable] = [:]
+    // Right-panel editor state (shared for add & edit modes)
+    @State private var editorActionId: String = ""
+    @State private var editorParams: [String: AnyCodable] = [:]
+    @State private var editorDelay: String = "0.2"
+    
+    /// Tracks whether we're actively loading a selection to avoid feedback loops
+    @State private var isLoadingSelection = false
+    
+    private var isEditing: Bool { selection != nil }
+    
+    private var editingIndex: Int? {
+        guard let sel = selection else { return nil }
+        return bundledActions.firstIndex(where: { $0.id == sel })
+    }
     
     var body: some View {
         VStack(spacing: 0) {
-            // Header
             headerBar
-            
             Divider()
             
-            // Content
             HSplitView {
                 actionListPanel
                     .frame(minWidth: 280, idealWidth: 320)
-                
-                addActionPanel
-                    .frame(minWidth: 300, idealWidth: 340)
+                rightPanel
+                    .frame(minWidth: 300, idealWidth: 420)
             }
             
             Divider()
-            
-            // Footer
             footerBar
         }
-        .frame(width: 740, height: 620)
-        .sheet(item: $editingAction) { action in
-            BundleActionEditView(
-                bundledAction: action,
-                onSave: { edited in
-                    if let idx = bundledActions.firstIndex(where: { $0.id == edited.id }) {
-                        bundledActions[idx] = edited
-                    }
-                    editingAction = nil
-                },
-                onCancel: { editingAction = nil }
-            )
+        .frame(width: 780, height: 640)
+        .onChange(of: selection) { newSel in
+            loadSelectionIntoEditor(newSel)
         }
     }
     
@@ -77,11 +73,10 @@ struct BundleEditorView: View {
         .background(Color(NSColor.windowBackgroundColor))
     }
     
-    // MARK: - Action List Panel
+    // MARK: - Action List Panel (Left)
     
     private var actionListPanel: some View {
         VStack(spacing: 0) {
-            // List header
             HStack {
                 Text("Actions")
                     .font(.system(size: 12, weight: .semibold))
@@ -103,7 +98,11 @@ struct BundleEditorView: View {
             
             Divider()
             
-            // List toolbar
+            // Bundle settings
+            bundleSettingsBar
+            
+            Divider()
+            
             listToolbar
         }
         .background(Color(NSColor.controlBackgroundColor).opacity(0.3))
@@ -144,7 +143,6 @@ struct BundleEditorView: View {
                 )
                 .tag(action.id)
                 .contextMenu {
-                    Button("Edit...") { editingAction = action }
                     Button("Duplicate") { duplicateAction(action) }
                     Divider()
                     if index > 0 {
@@ -162,9 +160,38 @@ struct BundleEditorView: View {
         .listStyle(.bordered(alternatesRowBackgrounds: true))
     }
     
+    private var bundleSettingsBar: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Toggle(isOn: $stopOnFailure) {
+                HStack(spacing: 4) {
+                    Image(systemName: "exclamationmark.octagon")
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                    Text("Stop on failure")
+                        .font(.system(size: 12))
+                }
+            }
+            .toggleStyle(.checkbox)
+            
+            Toggle(isOn: $parallelExecution) {
+                HStack(spacing: 4) {
+                    Image(systemName: "arrow.triangle.branch")
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                    Text("Parallel execution")
+                        .font(.system(size: 12))
+                }
+            }
+            .toggleStyle(.checkbox)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
+    }
+    
     private var listToolbar: some View {
         HStack(spacing: 4) {
-            // Move buttons
             Button(action: { moveSelectedAction(direction: -1) }) {
                 Image(systemName: "chevron.up")
                     .font(.system(size: 11))
@@ -185,14 +212,6 @@ struct BundleEditorView: View {
                 .frame(height: 16)
                 .padding(.horizontal, 4)
             
-            Button(action: { editSelectedAction() }) {
-                Image(systemName: "pencil")
-                    .font(.system(size: 11))
-            }
-            .buttonStyle(.borderless)
-            .disabled(selection == nil)
-            .help("Edit Action")
-            
             Button(action: { duplicateSelectedAction() }) {
                 Image(systemName: "doc.on.doc")
                     .font(.system(size: 11))
@@ -210,22 +229,49 @@ struct BundleEditorView: View {
             .help("Remove Action")
             
             Spacer()
+            
+            // Deselect / new action button
+            if isEditing {
+                Button(action: { selection = nil }) {
+                    HStack(spacing: 3) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 10))
+                        Text("New")
+                            .font(.system(size: 11))
+                    }
+                }
+                .buttonStyle(.borderless)
+                .help("Deselect and add a new action")
+            }
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
         .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
     }
     
-    // MARK: - Add Action Panel
+    // MARK: - Right Panel (Add / Edit)
     
-    private var addActionPanel: some View {
+    private var rightPanel: some View {
         VStack(spacing: 0) {
-            // Panel header
-            HStack {
-                Text("Add Action")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(.secondary)
-                    .textCase(.uppercase)
+            // Panel header — changes based on mode
+            HStack(spacing: 6) {
+                if isEditing, let idx = editingIndex {
+                    Image(systemName: "pencil")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.accentColor)
+                    Text("Editing Action #\(idx + 1)")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(.secondary)
+                        .textCase(.uppercase)
+                } else {
+                    Image(systemName: "plus.circle")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.accentColor)
+                    Text("Add Action")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(.secondary)
+                        .textCase(.uppercase)
+                }
                 Spacer()
             }
             .padding(.horizontal, 12)
@@ -234,32 +280,59 @@ struct BundleEditorView: View {
             
             Divider()
             
-            // Action selection
+            // Action selection + params
             ScrollView {
-                VStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 12) {
                     ActionSelectionView(
-                        selectedActionId: $newActionId,
-                        actionParameters: $newActionParams
+                        selectedActionId: $editorActionId,
+                        actionParameters: $editorParams
                     )
+                    
+                    // Delay field
+                    GroupBox("Delay After") {
+                        HStack(spacing: 8) {
+                            TextField("0.2", text: $editorDelay)
+                                .textFieldStyle(.roundedBorder)
+                                .frame(width: 70)
+                            Text("seconds")
+                                .font(.system(size: 12))
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.vertical, 4)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
                 }
                 .padding(12)
             }
             
             Divider()
             
-            // Add button
+            // Action button
             HStack {
                 Spacer()
-                Button(action: addActionToBundle) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.system(size: 12))
-                        Text("Add to Bundle")
-                            .font(.system(size: 13, weight: .medium))
+                if isEditing {
+                    Button(action: applyEdits) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 12))
+                            Text("Update Action")
+                                .font(.system(size: 13, weight: .medium))
+                        }
                     }
+                    .controlSize(.large)
+                    .disabled(editorActionId.isEmpty)
+                } else {
+                    Button(action: addActionToBundle) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.system(size: 12))
+                            Text("Add to Bundle")
+                                .font(.system(size: 13, weight: .medium))
+                        }
+                    }
+                    .controlSize(.large)
+                    .disabled(editorActionId.isEmpty)
                 }
-                .controlSize(.large)
-                .disabled(newActionId.isEmpty)
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
@@ -273,10 +346,8 @@ struct BundleEditorView: View {
         HStack {
             Button("Cancel") { onCancel() }
                 .keyboardShortcut(.escape, modifiers: [])
-            
             Spacer()
-            
-            Button("Done") { onDone(bundledActions) }
+            Button("Done") { onDone(bundledActions, stopOnFailure, parallelExecution) }
                 .keyboardShortcut(.return, modifiers: [])
                 .buttonStyle(.borderedProminent)
         }
@@ -285,38 +356,62 @@ struct BundleEditorView: View {
         .background(Color(NSColor.windowBackgroundColor))
     }
     
-    // MARK: - Actions
+    // MARK: - Selection ↔ Editor Sync
+    
+    private func loadSelectionIntoEditor(_ newSel: UUID?) {
+        if let sel = newSel, let action = bundledActions.first(where: { $0.id == sel }) {
+            isLoadingSelection = true
+            editorActionId = action.actionIdentifier
+            // Params will be reset by ActionSelectionView's onChange(selectedActionId) → initDefaults(),
+            // so we re-apply after a tick to overwrite defaults with the actual saved params.
+            let savedParams = action.parameters
+            let savedDelay = action.delayAfter ?? 0.2
+            DispatchQueue.main.async {
+                editorParams = savedParams
+                editorDelay = String(format: "%.1f", savedDelay)
+                isLoadingSelection = false
+            }
+        } else {
+            // Switching to add mode — clear editor
+            editorActionId = ""
+            editorParams.removeAll()
+            editorDelay = "0.2"
+        }
+    }
+    
+    // MARK: - Add / Edit Actions
     
     private func addActionToBundle() {
-        guard !newActionId.isEmpty else { return }
+        guard !editorActionId.isEmpty else { return }
         let action = BundledAction(
-            actionIdentifier: newActionId,
-            parameters: newActionParams,
-            delayAfter: 0.2
+            actionIdentifier: editorActionId,
+            parameters: editorParams,
+            delayAfter: Double(editorDelay) ?? 0.2
         )
         bundledActions.append(action)
         selection = action.id
-        
-        // Reset for next action
-        newActionId = ""
-        newActionParams.removeAll()
     }
     
+    private func applyEdits() {
+        guard let sel = selection,
+              let idx = bundledActions.firstIndex(where: { $0.id == sel }),
+              !editorActionId.isEmpty else { return }
+        bundledActions[idx].actionIdentifier = editorActionId
+        bundledActions[idx].parameters = editorParams
+        bundledActions[idx].delayAfter = Double(editorDelay) ?? 0.2
+    }
+    
+    // MARK: - List Manipulation
+    
     private func removeAction(_ action: BundledAction) {
-        bundledActions.removeAll { $0.id == action.id }
         if selection == action.id { selection = nil }
+        bundledActions.removeAll { $0.id == action.id }
     }
     
     private func removeSelectedAction() {
         guard let sel = selection,
               let action = bundledActions.first(where: { $0.id == sel }) else { return }
         removeAction(action)
-    }
-    
-    private func editSelectedAction() {
-        guard let sel = selection,
-              let action = bundledActions.first(where: { $0.id == sel }) else { return }
-        editingAction = action
     }
     
     private func duplicateAction(_ action: BundledAction) {
@@ -412,7 +507,6 @@ struct BundleActionRow: View {
                         .lineLimit(1)
                 }
                 
-                // Parameter summary
                 if !action.parameters.isEmpty {
                     Text(parameterSummary)
                         .font(.system(size: 10))
@@ -474,100 +568,13 @@ struct BundleActionRow: View {
     }
 }
 
-// MARK: - Bundle Action Edit View (Sheet)
-
-struct BundleActionEditView: View {
-    @State var bundledAction: BundledAction
-    let onSave: (BundledAction) -> Void
-    let onCancel: () -> Void
-    
-    @State private var selectedActionId: String
-    @State private var actionParameters: [String: AnyCodable]
-    @State private var delayText: String
-    
-    init(bundledAction: BundledAction, onSave: @escaping (BundledAction) -> Void, onCancel: @escaping () -> Void) {
-        self._bundledAction = State(initialValue: bundledAction)
-        self.onSave = onSave
-        self.onCancel = onCancel
-        self._selectedActionId = State(initialValue: bundledAction.actionIdentifier)
-        self._actionParameters = State(initialValue: bundledAction.parameters)
-        self._delayText = State(initialValue: String(format: "%.1f", bundledAction.delayAfter ?? 0.2))
-    }
-    
-    var body: some View {
-        VStack(spacing: 0) {
-            // Header
-            HStack {
-                Image(systemName: "pencil.circle.fill")
-                    .font(.system(size: 16))
-                    .foregroundColor(.accentColor)
-                Text("Edit Action")
-                    .font(.system(size: 15, weight: .semibold))
-                Spacer()
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            
-            Divider()
-            
-            // Content
-            ScrollView {
-                VStack(spacing: 16) {
-                    ActionSelectionView(
-                        selectedActionId: $selectedActionId,
-                        actionParameters: $actionParameters
-                    )
-                    
-                    GroupBox("Delay After") {
-                        HStack {
-                            TextField("Delay (seconds)", text: $delayText)
-                                .textFieldStyle(.roundedBorder)
-                                .frame(width: 80)
-                            Text("seconds")
-                                .font(.system(size: 12))
-                                .foregroundColor(.secondary)
-                            Spacer()
-                        }
-                        .padding(.vertical, 4)
-                    }
-                }
-                .padding(16)
-            }
-            
-            Divider()
-            
-            // Footer
-            HStack {
-                Button("Cancel") { onCancel() }
-                    .keyboardShortcut(.escape, modifiers: [])
-                Spacer()
-                Button("Save") { saveAction() }
-                    .keyboardShortcut(.return, modifiers: [])
-                    .buttonStyle(.borderedProminent)
-                    .disabled(selectedActionId.isEmpty)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-        }
-        .frame(width: 600, height: 540)
-    }
-    
-    private func saveAction() {
-        bundledAction.actionIdentifier = selectedActionId
-        bundledAction.parameters = actionParameters
-        bundledAction.delayAfter = Double(delayText) ?? 0.2
-        onSave(bundledAction)
-    }
-}
-
-// MARK: - Make BundledAction Identifiable for sheet presentation
+// MARK: - Make BundledAction Identifiable
 
 extension BundledAction: Identifiable {}
 
 // MARK: - SwiftUI Window Host for Bundle Editor
 
 /// Manages presenting the BundleEditorView as an NSWindow sheet.
-/// Called from BundleActionsPlugin.presentAdvancedConfiguration.
 class BundleEditorWindowHost {
     
     private var hostingController: NSHostingController<BundleEditorView>?
@@ -575,18 +582,23 @@ class BundleEditorWindowHost {
     
     func present(
         bundledActions: [BundledAction],
+        stopOnFailure: Bool,
+        parallelExecution: Bool,
         parentWindow: NSWindow,
-        completion: @escaping ([BundledAction]?) -> Void
+        completion: @escaping ([BundledAction], Bool, Bool) -> Void,
+        onCancel: @escaping () -> Void
     ) {
         let editorView = BundleEditorView(
             bundledActions: bundledActions,
-            onDone: { [weak self] result in
+            stopOnFailure: stopOnFailure,
+            parallelExecution: parallelExecution,
+            onDone: { [weak self] actions, stop, parallel in
                 self?.dismiss(parentWindow: parentWindow)
-                completion(result)
+                completion(actions, stop, parallel)
             },
             onCancel: { [weak self] in
                 self?.dismiss(parentWindow: parentWindow)
-                completion(nil)
+                onCancel()
             }
         )
         
@@ -597,11 +609,10 @@ class BundleEditorWindowHost {
         window.title = "Edit Bundle Actions"
         window.styleMask = [.titled, .closable, .resizable]
         window.isReleasedWhenClosed = false
-        window.setContentSize(NSSize(width: 740, height: 620))
-        window.minSize = NSSize(width: 600, height: 500)
+        window.setContentSize(NSSize(width: 780, height: 640))
+        window.minSize = NSSize(width: 640, height: 500)
         self.editorWindow = window
         
-        // Retain self for the duration of the sheet
         objc_setAssociatedObject(parentWindow, "bundleEditorHost", self, .OBJC_ASSOCIATION_RETAIN)
         
         parentWindow.beginSheet(window) { _ in
