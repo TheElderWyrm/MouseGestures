@@ -634,6 +634,7 @@ struct ProfileListRow: View {
         .onHover { hovering in
             isHovered = hovering
         }
+        .contentShape(Rectangle())
         .onTapGesture {
             onSelect()
         }
@@ -1029,6 +1030,7 @@ struct TemplateProfileCard: View {
                         .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
                 )
         )
+        .contentShape(Rectangle())
         .onTapGesture {
             onSelect()
         }

@@ -107,6 +107,7 @@ struct ServicesView: View {
         .background(selectedCategory == category && (category != nil || selectedCategory == nil) ? 
                    Color.accentColor.opacity(0.2) : Color.clear)
         .cornerRadius(6)
+        .contentShape(Rectangle())
         .onTapGesture {
             selectedCategory = category
         }

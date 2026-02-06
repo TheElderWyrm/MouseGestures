@@ -275,6 +275,7 @@ struct SavedActionRow: View {
             Image(systemName: isSelected ? "checkmark.square.fill" : "square")
                 .foregroundColor(isSelected ? .accentColor : .secondary)
                 .imageScale(.large)
+                .contentShape(Rectangle())
                 .onTapGesture {
                     onToggleSelection()
                 }
@@ -344,6 +345,7 @@ struct SavedActionRow: View {
         .onHover { hovering in
             isHovered = hovering
         }
+        .contentShape(Rectangle())
         .onTapGesture(count: 2) {
             onDoubleClick()
         }

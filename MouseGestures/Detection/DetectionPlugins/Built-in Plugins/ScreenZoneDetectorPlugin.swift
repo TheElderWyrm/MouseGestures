@@ -61,7 +61,7 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
                 category: .detection,
                 type: .slider(min: 0, max: 100, step: 5, unit: "px"),
                 defaultValue: Double(50),
-                isAdvanced: true,
+                isAdvanced: false,
                 validation: .init(rule: .range(min: 0, max: 100), errorMessage: "Corner buffer must be between 0 and 100 pixels")
             ),
             PluginSettingDefinition(

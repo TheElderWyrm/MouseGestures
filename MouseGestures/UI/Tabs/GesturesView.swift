@@ -487,6 +487,7 @@ struct GestureRowView: View {
         .onHover { hovering in
             isHovered = hovering
         }
+        .contentShape(Rectangle())
         .onTapGesture {
             onSelect()
         }
@@ -608,6 +609,7 @@ struct ProfileRow: View {
             RoundedRectangle(cornerRadius: 6)
                 .fill(isSelected ? Color.accentColor.opacity(0.2) : Color(NSColor.controlBackgroundColor))
         )
+        .contentShape(Rectangle())
         .onTapGesture {
             onSelect()
         }

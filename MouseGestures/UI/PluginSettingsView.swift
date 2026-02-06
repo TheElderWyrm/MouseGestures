@@ -3,24 +3,16 @@ import SwiftUI
 // MARK: - Plugin Settings View
 /// A SwiftUI view that dynamically renders all detection plugin settings
 struct PluginSettingsView: View {
-    @State private var showAdvanced = false
+    @Binding var showAdvanced: Bool
     @State private var selectedCategory: PluginSettingDefinition.SettingCategory = .detection
     @State private var visibilityTrigger = UUID()
     
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             // Header
-            HStack {
-                Text("Detection Plugin Settings")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                
-                Spacer()
-                
-                Toggle("Show Advanced", isOn: $showAdvanced)
-                    .toggleStyle(.switch)
-                    .controlSize(.small)
-            }
+            Text("Detection Plugin Settings")
+                .font(.title2)
+                .fontWeight(.semibold)
             
             // Category Picker - only show categories that have visible settings
             let visibleCategories = getVisibleCategories()
@@ -502,7 +494,7 @@ struct CompactPluginSettingsSection: View {
 #if DEBUG
 struct PluginSettingsView_Previews: PreviewProvider {
     static var previews: some View {
-        PluginSettingsView()
+        PluginSettingsView(showAdvanced: .constant(false))
             .frame(width: 600, height: 500)
     }
 }

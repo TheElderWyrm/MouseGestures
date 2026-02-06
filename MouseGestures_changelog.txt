@@ -260,3 +260,30 @@
   that were re-shown while the fade animation was running.
 - Added local flagsChanged monitor alongside the global one so modifier changes
   are tracked even when the app's own settings window is focused.
+
+## 2026-02-06
+
+### UI Improvements
+
+**Moved "Show Advanced" toggle from Detection Settings to Settings sidebar**
+- The advanced settings toggle is now a persistent switch at the bottom of the Settings sidebar,
+  making it accessible from all settings sections rather than only the Detection tab.
+- PluginSettingsView now receives showAdvanced as a Binding instead of managing its own state,
+  allowing the parent SettingsView to control it globally.
+- Removed the toggle from the Detection Plugin Settings header for a cleaner layout.
+
+**Fixed sidebar/menu click targets across all views**
+- Added .contentShape(Rectangle()) to clickable rows in ServicesView, ProfilesView,
+  GesturesView, and SavedActionsView so the entire row rectangle is clickable,
+  not just the text/icon area.
+
+### Bug Fixes
+
+**Corner Buffer setting no longer hidden behind Advanced toggle**
+- Changed the Corner Buffer zone configuration setting from isAdvanced: true to
+  isAdvanced: false in ScreenZoneDetectorPlugin, so it is visible by default alongside
+  Edge Threshold and Corner Size.
+
+### Housekeeping
+- Removed completed items from to-do: Cmd+Ctrl fullscreen default (already implemented),
+  sidebar clickability, corner buffer advanced flag, advanced toggle relocation.

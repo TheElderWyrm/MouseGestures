@@ -24,6 +24,7 @@ struct SettingsView: View {
     @State private var exportSuccessMessage: String?
     @State private var errorMessage: String?
     @State private var selectedSection: SettingsSection = .general
+    @State private var showAdvanced: Bool = false
     
     // Update checking
     @State private var isCheckingForUpdates = false
@@ -147,6 +148,26 @@ struct SettingsView: View {
             .padding(.horizontal, 10)
             
             Spacer()
+            
+            Divider()
+                .padding(.horizontal, 20)
+                .padding(.vertical, 6)
+            
+            HStack {
+                Toggle(isOn: $showAdvanced) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "wrench.and.screwdriver")
+                            .frame(width: 20)
+                            .foregroundColor(.secondary)
+                        Text("Advanced")
+                            .font(.system(size: 12))
+                    }
+                }
+                .toggleStyle(.switch)
+                .controlSize(.small)
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 14)
         }
         .background(Color(NSColor.controlBackgroundColor))
     }
@@ -276,7 +297,7 @@ struct SettingsView: View {
                 .font(.caption)
                 .foregroundColor(.secondary)
             
-            PluginSettingsView()
+            PluginSettingsView(showAdvanced: $showAdvanced)
         }
     }
     
