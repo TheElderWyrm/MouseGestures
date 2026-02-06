@@ -1,4 +1,21 @@
 ## 2026-02-06
+### UI Improvement: Redesigned Action Selection View
+- Replaced plain category/action dropdown pickers with a rich, searchable action browser
+- **Search**: Added search field that filters actions by name, description, and category in real-time
+  - Clear button to reset search
+  - Shows category label under each result during search for context
+- **Category chips**: Horizontal scrollable category filter buttons with icons and action counts
+  - Shortened category labels for compact display (e.g., "Window Management" → "Window")
+  - Visual highlight on active category
+- **Action list**: Scrollable List view with SF Symbol icons for each action
+  - Actions grouped by category with section headers when viewing "All"
+  - Auto-scrolls to selected action
+  - Saved actions shown in dedicated "Saved" category with bookmark icon
+- **Selected action description**: Shows icon + description below the list for the selected action
+- Parameters and Advanced Configuration sections remain unchanged
+- Maintains full backward compatibility with existing Binding<String> interface
+
+## 2026-02-06
 
 ### Bug Fix: Unused detectors (drag/mouse button) not deactivated by efficiency system
 - **ActivationCoordinator**: `alwaysActive` types (efficiency >= 70) were enabled unconditionally,

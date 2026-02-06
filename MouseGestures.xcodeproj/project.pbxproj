@@ -514,11 +514,11 @@
 				77A1C3A62F36793D00D1FE6A /* BundleConditions.swift */,
 				77A1C3A72F36793D00D1FE6A /* DataStructures.swift */,
 				77A1C3A82F36793D00D1FE6A /* Gesture.swift */,
-				77A1C3A92F36793D00D1FE6A /* Info.plist */,
 				77A1C3AA2F36793D00D1FE6A /* ProfileImportExportService.swift */,
 				77A1C3AB2F36793D00D1FE6A /* ProfileManagementService.swift */,
 				77A1C3AC2F36793D00D1FE6A /* ProfileManager.swift */,
 				77A1C3AD2F36793D00D1FE6A /* ProfileStructures.swift */,
+				77A1C3A92F36793D00D1FE6A /* Info.plist */,
 			);
 			path = MouseGesturesCodeBase;
 			sourceTree = "<group>";
