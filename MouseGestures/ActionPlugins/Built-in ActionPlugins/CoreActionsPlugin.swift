@@ -343,19 +343,8 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
     }
     
     private func toggleFullscreen(context: PluginContext) {
-        guard let frontApp = context.getFrontmostApplication() else { return }
-        
-        let appElement = AXUIElementCreateApplication(frontApp.processIdentifier)
-        
-        if let windowValue = context.getAccessibilityAttribute(appElement, attribute: kAXFocusedWindowAttribute as String),
-           let window = windowValue as! AXUIElement? {
-            if let buttonValue = context.getAccessibilityAttribute(window, attribute: kAXFullScreenButtonAttribute as String),
-               let button = buttonValue as! AXUIElement? {
-                _ = context.performAccessibilityAction(button, action: kAXPressAction as String)
-            } else {
-                context.sendKeyboardShortcut(keyCode: 3, modifiers: [.maskControl, .maskCommand]) // Ctrl+Cmd+F
-            }
-        }
+        // Ctrl+Cmd+F is the standard macOS fullscreen toggle - use it as primary method
+        context.sendKeyboardShortcut(keyCode: 3, modifiers: [.maskControl, .maskCommand])
     }
     
     private func hideApplication(context: PluginContext) {
