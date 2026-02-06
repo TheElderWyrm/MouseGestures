@@ -2,7 +2,7 @@ General:
 - Remove Duplicate code, unify architectures
 - Work to reduce CPU/Memory Usage
 - Rework Add Gesture UI to respond to activation type (So, for example, if 'Keyboard Only' is selected then it hides the options related to other activation types) (Must be compatible with custom plugin system)
-- Efficiency mapping doesn't seem to be working (CPU rises when mouse is moved regardless of modifiers)
+- [DONE 2026-02-05] Efficiency mapping doesn't seem to be working (CPU rises when mouse is moved regardless of modifiers)
 -Switch to using Fn+f for full screen.
 
 Actions:
