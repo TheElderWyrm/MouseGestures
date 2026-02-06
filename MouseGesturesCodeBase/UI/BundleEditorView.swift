@@ -83,6 +83,19 @@ struct BundleEditorView: View {
                     .foregroundColor(.secondary)
                     .textCase(.uppercase)
                 Spacer()
+                // New action button when editing
+                if isEditing {
+                    Button(action: { selection = nil }) {
+                        HStack(spacing: 3) {
+                            Image(systemName: "plus")
+                                .font(.system(size: 10))
+                            Text("New")
+                                .font(.system(size: 11))
+                        }
+                    }
+                    .buttonStyle(.borderless)
+                    .help("Deselect and add a new action")
+                }
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
@@ -100,10 +113,6 @@ struct BundleEditorView: View {
             
             // Bundle settings
             bundleSettingsBar
-            
-            Divider()
-            
-            listToolbar
         }
         .background(Color(NSColor.controlBackgroundColor).opacity(0.3))
     }
@@ -132,6 +141,8 @@ struct BundleEditorView: View {
                 BundleActionRow(
                     action: action,
                     index: index,
+                    isFirst: index == 0,
+                    isLast: index == bundledActions.count - 1,
                     delay: Binding(
                         get: { action.delayAfter ?? 0.2 },
                         set: { newVal in
@@ -139,21 +150,13 @@ struct BundleEditorView: View {
                                 bundledActions[idx].delayAfter = newVal
                             }
                         }
-                    )
+                    ),
+                    onMoveUp: { moveAction(action, direction: -1) },
+                    onMoveDown: { moveAction(action, direction: 1) },
+                    onDuplicate: { duplicateAction(action) },
+                    onRemove: { removeAction(action) }
                 )
                 .tag(action.id)
-                .contextMenu {
-                    Button("Duplicate") { duplicateAction(action) }
-                    Divider()
-                    if index > 0 {
-                        Button("Move Up") { moveAction(action, direction: -1) }
-                    }
-                    if index < bundledActions.count - 1 {
-                        Button("Move Down") { moveAction(action, direction: 1) }
-                    }
-                    Divider()
-                    Button("Remove", role: .destructive) { removeAction(action) }
-                }
             }
             .onMove(perform: reorderActions)
         }
@@ -187,65 +190,6 @@ struct BundleEditorView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
-    }
-    
-    private var listToolbar: some View {
-        HStack(spacing: 4) {
-            Button(action: { moveSelectedAction(direction: -1) }) {
-                Image(systemName: "chevron.up")
-                    .font(.system(size: 11))
-            }
-            .buttonStyle(.borderless)
-            .disabled(!canMoveUp)
-            .help("Move Up")
-            
-            Button(action: { moveSelectedAction(direction: 1) }) {
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 11))
-            }
-            .buttonStyle(.borderless)
-            .disabled(!canMoveDown)
-            .help("Move Down")
-            
-            Divider()
-                .frame(height: 16)
-                .padding(.horizontal, 4)
-            
-            Button(action: { duplicateSelectedAction() }) {
-                Image(systemName: "doc.on.doc")
-                    .font(.system(size: 11))
-            }
-            .buttonStyle(.borderless)
-            .disabled(selection == nil)
-            .help("Duplicate Action")
-            
-            Button(action: { removeSelectedAction() }) {
-                Image(systemName: "minus")
-                    .font(.system(size: 11))
-            }
-            .buttonStyle(.borderless)
-            .disabled(selection == nil)
-            .help("Remove Action")
-            
-            Spacer()
-            
-            // Deselect / new action button
-            if isEditing {
-                Button(action: { selection = nil }) {
-                    HStack(spacing: 3) {
-                        Image(systemName: "plus")
-                            .font(.system(size: 10))
-                        Text("New")
-                            .font(.system(size: 11))
-                    }
-                }
-                .buttonStyle(.borderless)
-                .help("Deselect and add a new action")
-            }
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 6)
         .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
     }
     
@@ -307,9 +251,23 @@ struct BundleEditorView: View {
             
             Divider()
             
-            // Action button
+            // Action buttons
             HStack {
+                if isEditing {
+                    Button(action: { removeSelectedAction() }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "trash")
+                                .font(.system(size: 12))
+                            Text("Remove")
+                                .font(.system(size: 13, weight: .medium))
+                        }
+                        .foregroundColor(.red)
+                    }
+                    .controlSize(.large)
+                }
+                
                 Spacer()
+                
                 if isEditing {
                     Button(action: applyEdits) {
                         HStack(spacing: 4) {
@@ -362,8 +320,6 @@ struct BundleEditorView: View {
         if let sel = newSel, let action = bundledActions.first(where: { $0.id == sel }) {
             isLoadingSelection = true
             editorActionId = action.actionIdentifier
-            // Params will be reset by ActionSelectionView's onChange(selectedActionId) → initDefaults(),
-            // so we re-apply after a tick to overwrite defaults with the actual saved params.
             let savedParams = action.parameters
             let savedDelay = action.delayAfter ?? 0.2
             DispatchQueue.main.async {
@@ -389,7 +345,9 @@ struct BundleEditorView: View {
             delayAfter: Double(editorDelay) ?? 0.2
         )
         bundledActions.append(action)
-        selection = action.id
+        
+        // Deselect so the editor resets for adding the next action
+        selection = nil
     }
     
     private func applyEdits() {
@@ -423,23 +381,11 @@ struct BundleEditorView: View {
         }
     }
     
-    private func duplicateSelectedAction() {
-        guard let sel = selection,
-              let action = bundledActions.first(where: { $0.id == sel }) else { return }
-        duplicateAction(action)
-    }
-    
     private func moveAction(_ action: BundledAction, direction: Int) {
         guard let idx = bundledActions.firstIndex(where: { $0.id == action.id }) else { return }
         let newIdx = idx + direction
         guard newIdx >= 0, newIdx < bundledActions.count else { return }
         bundledActions.swapAt(idx, newIdx)
-    }
-    
-    private func moveSelectedAction(direction: Int) {
-        guard let sel = selection,
-              let action = bundledActions.first(where: { $0.id == sel }) else { return }
-        moveAction(action, direction: direction)
     }
     
     private func reorderActions(from source: IndexSet, to destination: Int) {
@@ -469,8 +415,17 @@ struct BundleEditorView: View {
 struct BundleActionRow: View {
     let action: BundledAction
     let index: Int
+    let isFirst: Bool
+    let isLast: Bool
     @Binding var delay: TimeInterval
     
+    // Action closures from parent
+    let onMoveUp: () -> Void
+    let onMoveDown: () -> Void
+    let onDuplicate: () -> Void
+    let onRemove: () -> Void
+    
+    @State private var isHovered = false
     @State private var isEditingDelay = false
     @State private var delayText: String = ""
     
@@ -517,27 +472,69 @@ struct BundleActionRow: View {
             
             Spacer()
             
-            // Delay
-            HStack(spacing: 2) {
-                Image(systemName: "clock")
-                    .font(.system(size: 9))
-                    .foregroundColor(.secondary)
-                
-                if isEditingDelay {
-                    TextField("", text: $delayText, onCommit: commitDelay)
-                        .textFieldStyle(.roundedBorder)
-                        .frame(width: 42)
-                        .font(.system(size: 11, design: .monospaced))
-                        .onAppear { delayText = String(format: "%.1f", delay) }
-                } else {
-                    Text(String(format: "%.1fs", delay))
-                        .font(.system(size: 11, design: .monospaced))
+            // Inline control buttons (visible on hover)
+            if isHovered {
+                HStack(spacing: 2) {
+                    rowButton(icon: "chevron.up", help: "Move Up", disabled: isFirst, action: onMoveUp)
+                    rowButton(icon: "chevron.down", help: "Move Down", disabled: isLast, action: onMoveDown)
+                    rowButton(icon: "doc.on.doc", help: "Duplicate", action: onDuplicate)
+                    rowButton(icon: "trash", help: "Remove", isDestructive: true, action: onRemove)
+                }
+                .transition(.opacity)
+            } else {
+                // Delay (shown when not hovered)
+                HStack(spacing: 2) {
+                    Image(systemName: "clock")
+                        .font(.system(size: 9))
                         .foregroundColor(.secondary)
-                        .onTapGesture { isEditingDelay = true }
+                    
+                    if isEditingDelay {
+                        TextField("", text: $delayText, onCommit: commitDelay)
+                            .textFieldStyle(.roundedBorder)
+                            .frame(width: 42)
+                            .font(.system(size: 11, design: .monospaced))
+                            .onAppear { delayText = String(format: "%.1f", delay) }
+                    } else {
+                        Text(String(format: "%.1fs", delay))
+                            .font(.system(size: 11, design: .monospaced))
+                            .foregroundColor(.secondary)
+                            .onTapGesture { isEditingDelay = true }
+                    }
                 }
             }
         }
         .padding(.vertical, 3)
+        .contentShape(Rectangle())
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.15)) {
+                isHovered = hovering
+            }
+        }
+        .contextMenu {
+            Button("Duplicate") { onDuplicate() }
+            Divider()
+            if !isFirst {
+                Button("Move Up") { onMoveUp() }
+            }
+            if !isLast {
+                Button("Move Down") { onMoveDown() }
+            }
+            Divider()
+            Button("Remove", role: .destructive) { onRemove() }
+        }
+    }
+    
+    @ViewBuilder
+    private func rowButton(icon: String, help: String, disabled: Bool = false, isDestructive: Bool = false, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 10))
+                .foregroundColor(disabled ? .secondary.opacity(0.3) : (isDestructive ? .red : .secondary))
+                .frame(width: 18, height: 18)
+        }
+        .buttonStyle(.borderless)
+        .disabled(disabled)
+        .help(help)
     }
     
     private var actionDisplayName: String {
