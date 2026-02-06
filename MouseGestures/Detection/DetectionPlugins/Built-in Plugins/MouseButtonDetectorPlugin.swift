@@ -81,6 +81,9 @@ class MouseButtonDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     private var rightMouseMonitor: Any?
     private var otherMouseMonitor: Any?
     
+    // Detection state
+    private var isMouseButtonDetectionActive = false
+    
     // State tracking
     private var lastTriggeredButton: MouseButtonTrigger.MouseButton?
     
@@ -104,15 +107,18 @@ class MouseButtonDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     }
     
     func enableDetection(for type: ActivationType) {
-        // Mouse button detection is always active - nothing to enable
+        guard type == .mouseButton else { return }
+        enableMouseButtonMonitors()
     }
     
     func disableDetection(for type: ActivationType) {
-        // Mouse button detection is always active - nothing to disable
+        guard type == .mouseButton else { return }
+        disableMouseButtonMonitors()
     }
     
     func isDetectionActive(for type: ActivationType) -> Bool {
-        return state == .running
+        guard type == .mouseButton else { return false }
+        return isMouseButtonDetectionActive
     }
     
     // MARK: - Plugin Lifecycle
@@ -127,7 +133,31 @@ class MouseButtonDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     override func start() throws {
         try super.start()
         
-        // Monitor mouse button clicks for modifier + button triggers
+        // Monitors are managed by ActivationCoordinator via enableDetection/disableDetection
+        // Trigger a dependency rebuild so the coordinator enables monitors if needed
+        ActivationCoordinator.shared.rebuildDependencies()
+        
+        logActiveButtonTriggers()
+    }
+    
+    override func stop() {
+        // Notify coordinator that this plugin is stopping
+        ActivationCoordinator.shared.pluginStopping(self)
+        
+        // Remove all monitors
+        disableMouseButtonMonitors()
+        
+        lastTriggeredButton = nil
+        
+        super.stop()
+    }
+    
+    // MARK: - Monitor Management
+    
+    /// Enable mouse button monitors (called by ActivationCoordinator)
+    private func enableMouseButtonMonitors() {
+        guard !isMouseButtonDetectionActive else { return }
+        
         leftMouseMonitor = NSEvent.addGlobalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
             self?.handleMouseButtonClick(event, button: .left)
         }
@@ -142,14 +172,17 @@ class MouseButtonDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
             self?.handleMouseButtonClick(event, button: button)
         }
         
-        logActiveButtonTriggers()
+        isMouseButtonDetectionActive = true
+        
+        if context?.logger.isDebugEnabled ?? false {
+            context?.logger.log("Mouse button monitoring ENABLED", file: #file, function: #function, line: #line)
+        }
     }
     
-    override func stop() {
-        // Notify coordinator that this plugin is stopping
-        ActivationCoordinator.shared.pluginStopping(self)
+    /// Disable mouse button monitors (called by ActivationCoordinator)
+    private func disableMouseButtonMonitors() {
+        guard isMouseButtonDetectionActive else { return }
         
-        // Remove all monitors
         if let monitor = leftMouseMonitor {
             NSEvent.removeMonitor(monitor)
             leftMouseMonitor = nil
@@ -165,9 +198,11 @@ class MouseButtonDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
             otherMouseMonitor = nil
         }
         
-        lastTriggeredButton = nil
+        isMouseButtonDetectionActive = false
         
-        super.stop()
+        if context?.logger.isDebugEnabled ?? false {
+            context?.logger.log("Mouse button monitoring DISABLED", file: #file, function: #function, line: #line)
+        }
     }
     
     override func cleanup() {

@@ -51,9 +51,21 @@ enum ActivationType: String, CaseIterable, Hashable {
         }
     }
     
-    /// Whether this activation type should always run (not gated)
+    /// Whether this activation type should always run (not gated by other types)
+    /// Note: even alwaysActive types are still disabled if no gesture uses them,
+    /// unless they are infrastructure types.
     var alwaysActive: Bool {
         return efficiencyScore >= 70
+    }
+    
+    /// Infrastructure types run unconditionally because they provide
+    /// system-level functionality (app disabling, profile switching)
+    /// rather than gesture-specific detection.
+    var isInfrastructure: Bool {
+        switch self {
+        case .appChange: return true
+        default: return false
+        }
     }
 }
 
@@ -346,16 +358,23 @@ class ActivationCoordinator {
         
         // For each potentially gated type
         for type in ActivationType.allCases {
-            // Always-active types are always enabled
-            if type.alwaysActive {
+            // Infrastructure types always run (e.g., app change detection)
+            if type.isInfrastructure {
                 enableActivationType(type)
                 continue
             }
             
             // Check if this type is used in any enabled gesture
+            // This applies to ALL types, including alwaysActive ones
             if !usedTypes.contains(type) {
                 // Not used in any gesture, disable it
                 disableActivationType(type)
+                continue
+            }
+            
+            // Always-active types that ARE used don't need gating
+            if type.alwaysActive {
+                enableActivationType(type)
                 continue
             }
             
