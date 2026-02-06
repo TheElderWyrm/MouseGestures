@@ -1,4 +1,12 @@
 ## 2026-02-06
+### Bug Fix: Drag detection activating despite not being used
+- Root cause: handleMouseDrag() was unconditionally processing mouse zones even when mouse tracking was disabled
+- When dragging occurred, the method would update drag state (correct) but also call handleMouseMove() regardless of isMouseTrackingActive flag
+- This caused zone detection and gesture triggering even when the efficiency system had disabled screen zone tracking
+- Fix: Added guard check in handleMouseDrag() to only process zones if isMouseTrackingActive is true
+- Drag state is still tracked and reported to ActivationCoordinator as intended, but zone processing only occurs when tracking is explicitly enabled
+
+## 2026-02-06
 ### Bug Fix: Sheets not displaying on first open
 - Root cause: SwiftUI known bug where multiple .sheet(isPresented:) modifiers on the
   same view hierarchy interfere with each other, causing the first sheet to not display

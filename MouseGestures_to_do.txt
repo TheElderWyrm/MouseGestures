@@ -12,7 +12,6 @@ Actions:
 - Not all actions work.
 
 Bugs
-- Drag detection activating despite not being used. All unused detectors should be properly deactivated.
 - Saved actions does not allow for actions that require advanced configuration/opening a sheet (Example: Bundle actions)
 - Window Actions targeting multiple windows does not work
 - Drag Detection seems unreliable

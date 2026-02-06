@@ -448,6 +448,12 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
             ])
         }
         
+        // Only process zones if mouse tracking is active
+        // This prevents drag detection from activating when unused
+        guard isMouseTrackingActive else {
+            return
+        }
+        
         // Handle the mouse movement during drag
         handleMouseMove(event)
     }
