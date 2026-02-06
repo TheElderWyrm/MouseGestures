@@ -22,10 +22,21 @@ struct AppProfilesView: View {
     @State private var appMappings: [AppProfileMapping] = []
     @State private var disabledApps: [DisabledApp] = []
     @State private var selectedApp: String = ""
-    @State private var showingAddSheet = false
-    @State private var showingEditSheet = false
-    @State private var editingMapping: AppProfileMapping?
-    @State private var editingDisabledApp: DisabledApp?
+    // Sheet presentation - using single enum to avoid multiple .sheet modifier bug
+    enum ActiveSheet: Identifiable {
+        case addRule
+        case editMapping(AppProfileMapping)
+        case editDisabledApp(DisabledApp)
+        
+        var id: String {
+            switch self {
+            case .addRule: return "add"
+            case .editMapping(let m): return "editMap-\(m.id)"
+            case .editDisabledApp(let d): return "editDis-\(d.id)"
+            }
+        }
+    }
+    @State private var activeSheet: ActiveSheet?
     @State private var searchText = ""
     @State private var showDeleteConfirmation = false
     @State private var itemToDelete: String?
@@ -69,30 +80,30 @@ struct AppProfilesView: View {
         .onAppear {
             loadData()
         }
-        .sheet(isPresented: $showingAddSheet) {
-            AddAppRuleSheet(
-                onAdd: { bundleId, appName, ruleType, profileId in
-                    addAppRule(bundleId: bundleId, appName: appName, ruleType: ruleType, profileId: profileId)
-                    showingAddSheet = false
-                },
-                onCancel: {
-                    showingAddSheet = false
-                }
-            )
-        }
-        .sheet(isPresented: $showingEditSheet) {
-            if let mapping = editingMapping {
+        .sheet(item: $activeSheet) { sheet in
+            switch sheet {
+            case .addRule:
+                AddAppRuleSheet(
+                    onAdd: { bundleId, appName, ruleType, profileId in
+                        addAppRule(bundleId: bundleId, appName: appName, ruleType: ruleType, profileId: profileId)
+                        activeSheet = nil
+                    },
+                    onCancel: {
+                        activeSheet = nil
+                    }
+                )
+            case .editMapping(let mapping):
                 EditAppRuleSheet(
                     mapping: mapping,
                     onSave: { profileId in
                         updateMapping(mapping: mapping, newProfileId: profileId)
-                        showingEditSheet = false
+                        activeSheet = nil
                     },
                     onCancel: {
-                        showingEditSheet = false
+                        activeSheet = nil
                     }
                 )
-            } else if let disabledApp = editingDisabledApp {
+            case .editDisabledApp(let disabledApp):
                 EditDisabledAppSheet(
                     disabledApp: disabledApp,
                     onSave: {
@@ -106,10 +117,10 @@ struct AppProfilesView: View {
                             )
                             loadData()
                         }
-                        showingEditSheet = false
+                        activeSheet = nil
                     },
                     onCancel: {
-                        showingEditSheet = false
+                        activeSheet = nil
                     }
                 )
             }
@@ -142,7 +153,7 @@ struct AppProfilesView: View {
             
             Spacer()
             
-            Button(action: { showingAddSheet = true }) {
+            Button(action: { activeSheet = .addRule }) {
                 Label("Add Rule", systemImage: "plus.circle.fill")
                     .font(.system(size: 14, weight: .medium))
             }
@@ -188,7 +199,7 @@ struct AppProfilesView: View {
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 400)
             
-            Button(action: { showingAddSheet = true }) {
+            Button(action: { activeSheet = .addRule }) {
                 Label("Add First Rule", systemImage: "plus.circle")
                     .font(.system(size: 14, weight: .medium))
             }
@@ -222,9 +233,7 @@ struct AppProfilesView: View {
                         mapping: mapping,
                         profileName: uiServices.profiles.first(where: { $0.id == mapping.profileId })?.name ?? "Unknown",
                         onEdit: {
-                            editingMapping = mapping
-                            editingDisabledApp = nil
-                            showingEditSheet = true
+                            activeSheet = .editMapping(mapping)
                         },
                         onDelete: {
                             itemToDelete = mapping.appBundleIdentifier
@@ -262,9 +271,7 @@ struct AppProfilesView: View {
                     DisabledAppRow(
                         disabledApp: disabledApp,
                         onEdit: {
-                            editingDisabledApp = disabledApp
-                            editingMapping = nil
-                            showingEditSheet = true
+                            activeSheet = .editDisabledApp(disabledApp)
                         },
                         onDelete: {
                             itemToDelete = disabledApp.appBundleIdentifier

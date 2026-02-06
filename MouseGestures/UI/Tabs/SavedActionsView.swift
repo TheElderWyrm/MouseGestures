@@ -7,9 +7,19 @@ struct SavedActionsView: View {
     @StateObject private var uiServices = UIServices.shared
     @State private var selectedActions = Set<UUID>()
     @State private var searchText = ""
-    @State private var showingAddSheet = false
-    @State private var showingEditSheet = false
-    @State private var actionToEdit: SavedAction?
+    // Sheet presentation - using single enum to avoid multiple .sheet modifier bug
+    enum ActiveSheet: Identifiable {
+        case addAction
+        case editAction(SavedAction)
+        
+        var id: String {
+            switch self {
+            case .addAction: return "add"
+            case .editAction(let a): return "edit-\(a.id)"
+            }
+        }
+    }
+    @State private var activeSheet: ActiveSheet?
     @State private var showingDeleteConfirmation = false
     @State private var actionsToDelete: [SavedAction] = []
     @State private var showingExportPanel = false
@@ -31,11 +41,11 @@ struct SavedActionsView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .sheet(isPresented: $showingAddSheet) {
-            AddSavedActionSheet()
-        }
-        .sheet(isPresented: $showingEditSheet) {
-            if let action = actionToEdit {
+        .sheet(item: $activeSheet) { sheet in
+            switch sheet {
+            case .addAction:
+                AddSavedActionSheet()
+            case .editAction(let action):
                 EditSavedActionSheet(action: action)
             }
         }
@@ -124,7 +134,7 @@ struct SavedActionsView: View {
                 
                 // Action Buttons
                 HStack(spacing: 8) {
-                    Button(action: { showingAddSheet = true }) {
+                    Button(action: { activeSheet = .addAction }) {
                         Label("Add", systemImage: "plus")
                     }
                     
@@ -170,7 +180,7 @@ struct SavedActionsView: View {
                 .foregroundColor(.secondary)
                 .frame(maxWidth: 400)
             
-            Button(action: { showingAddSheet = true }) {
+            Button(action: { activeSheet = .addAction }) {
                 Label("Add Your First Saved Action", systemImage: "plus.circle.fill")
             }
             .buttonStyle(.borderedProminent)
@@ -220,8 +230,7 @@ struct SavedActionsView: View {
     }
     
     private func editAction(_ action: SavedAction) {
-        actionToEdit = action
-        showingEditSheet = true
+        activeSheet = .editAction(action)
     }
     
     private func confirmDeleteAction(_ action: SavedAction) {

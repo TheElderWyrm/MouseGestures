@@ -5,9 +5,21 @@ import AppKit
 struct GesturesView: View {
     @StateObject private var uiServices = UIServices.shared
     @State private var selectedGesture: Gesture?
-    @State private var showingAddGesture = false
-    @State private var showingEditGesture = false
-    @State private var showingProfilePicker = false
+    // Sheet presentation - using single enum to avoid multiple .sheet modifier bug
+    enum ActiveSheet: Identifiable {
+        case addGesture
+        case editGesture(Gesture)
+        case profilePicker
+        
+        var id: String {
+            switch self {
+            case .addGesture: return "add"
+            case .editGesture(let g): return "edit-\(g.id)"
+            case .profilePicker: return "profile"
+            }
+        }
+    }
+    @State private var activeSheet: ActiveSheet?
     @State private var showingResetConfirmation = false
     @State private var searchText = ""
     
@@ -44,16 +56,15 @@ struct GesturesView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .sheet(isPresented: $showingAddGesture) {
-            AddGestureSheet()
-        }
-        .sheet(isPresented: $showingEditGesture) {
-            if let gesture = selectedGesture {
+        .sheet(item: $activeSheet) { sheet in
+            switch sheet {
+            case .addGesture:
+                AddGestureSheet()
+            case .editGesture(let gesture):
                 EditGestureSheet(gesture: gesture)
+            case .profilePicker:
+                ProfilePickerSheet()
             }
-        }
-        .sheet(isPresented: $showingProfilePicker) {
-            ProfilePickerSheet()
         }
         .alert("Reset Gestures", isPresented: $showingResetConfirmation) {
             Button("Cancel", role: .cancel) {}
@@ -84,7 +95,7 @@ struct GesturesView: View {
                         Text(profile.name)
                             .fontWeight(.medium)
                         
-                        Button(action: { showingProfilePicker = true }) {
+                        Button(action: { activeSheet = .profilePicker }) {
                             Image(systemName: "chevron.down.circle")
                                 .foregroundColor(.accentColor)
                         }
@@ -114,12 +125,12 @@ struct GesturesView: View {
                     .frame(height: 20)
                 
                 // Add Gesture
-                Button(action: { showingAddGesture = true }) {
+                Button(action: { activeSheet = .addGesture }) {
                     Label("Add Gesture", systemImage: "plus")
                 }
                 
                 // Change Profile
-                Button(action: { showingProfilePicker = true }) {
+                Button(action: { activeSheet = .profilePicker }) {
                     Label("Change Profile", systemImage: "person.2")
                 }
                 
@@ -167,7 +178,7 @@ struct GesturesView: View {
                             onDelete: { deleteGesture(gesture) },
                             onEdit: { 
                                 selectedGesture = gesture
-                                showingEditGesture = true
+                                activeSheet = .editGesture(gesture)
                             },
                             onToggleEnabled: { isEnabled in
                                 toggleGestureEnabled(gesture, enabled: isEnabled)
@@ -186,7 +197,7 @@ struct GesturesView: View {
                                 .foregroundColor(.secondary)
                             
                             if searchText.isEmpty {
-                                Button(action: { showingAddGesture = true }) {
+                                Button(action: { activeSheet = .addGesture }) {
                                     Label("Add Your First Gesture", systemImage: "plus.circle")
                                 }
                             }
@@ -340,7 +351,7 @@ struct GesturesView: View {
                 HStack {
                     Button(action: { 
                         selectedGesture = gesture
-                        showingEditGesture = true
+                        activeSheet = .editGesture(gesture)
                     }) {
                         Label("Edit", systemImage: "pencil")
                     }

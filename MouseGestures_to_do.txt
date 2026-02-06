@@ -1,4 +1,5 @@
 - Work to reduce CPU/Memory Usage
+- Unify Code whenever possible
 
 General:
 - Add an advanced seeing setting to enable developer mode.
@@ -19,10 +20,10 @@ Bugs
 Improve UI
 - Improve appearance of Show Zone Highlights
 - Add search to settings
-- Go Back to pre-rendering to increase performance
+- Pre-render UI to increase performance
 - Unify UI Styles throughout the app
 - Better Zone Configuration
-- Replace with more visual menu.
+	- More visual menu
 - More configuration options
 - Split action menu into section tabs
 - Split actions into cascading menus (Media, System Control, Window Control, etc)

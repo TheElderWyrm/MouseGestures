@@ -5,10 +5,22 @@ import UniformTypeIdentifiers
 struct ProfilesView: View {
     @StateObject private var uiServices = UIServices.shared
     @State private var selectedProfileId: UUID?
-    @State private var showingAddProfile = false
-    @State private var showingEditProfile = false
+    // Sheet presentation - using single enum to avoid multiple .sheet modifier bug
+    enum ActiveSheet: Identifiable {
+        case addProfile
+        case editProfile(ConfigurationProfile)
+        case importTemplates
+        
+        var id: String {
+            switch self {
+            case .addProfile: return "add"
+            case .editProfile(let p): return "edit-\(p.id)"
+            case .importTemplates: return "import"
+            }
+        }
+    }
+    @State private var activeSheet: ActiveSheet?
     @State private var showingDeleteConfirmation = false
-    @State private var showingImportTemplates = false
     @State private var searchText = ""
     @State private var importError: String?
     @State private var showingImportError = false
@@ -53,20 +65,19 @@ struct ProfilesView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .sheet(isPresented: $showingAddProfile) {
-            AddEditProfileSheet(mode: .add) { newProfile in
-                selectedProfileId = newProfile.id
-            }
-        }
-        .sheet(isPresented: $showingEditProfile) {
-            if let profile = selectedProfile {
+        .sheet(item: $activeSheet) { sheet in
+            switch sheet {
+            case .addProfile:
+                AddEditProfileSheet(mode: .add) { newProfile in
+                    selectedProfileId = newProfile.id
+                }
+            case .editProfile(let profile):
                 AddEditProfileSheet(mode: .edit(profile)) { _ in
                     uiServices.loadData()
                 }
+            case .importTemplates:
+                ImportTemplatesSheet()
             }
-        }
-        .sheet(isPresented: $showingImportTemplates) {
-            ImportTemplatesSheet()
         }
         .alert("Delete Profile", isPresented: $showingDeleteConfirmation) {
             Button("Cancel", role: .cancel) {}
@@ -127,12 +138,12 @@ struct ProfilesView: View {
                     .frame(height: 20)
                 
                 // Import Templates
-                Button(action: { showingImportTemplates = true }) {
+                Button(action: { activeSheet = .importTemplates }) {
                     Label("Templates", systemImage: "square.grid.2x2")
                 }
                 
                 // Add Profile
-                Button(action: { showingAddProfile = true }) {
+                Button(action: { activeSheet = .addProfile }) {
                     Label("Add Profile", systemImage: "plus")
                 }
                 
@@ -191,7 +202,7 @@ struct ProfilesView: View {
                             onSetActive: { setActiveProfile(profile.id) },
                             onEdit: { 
                                 selectedProfileId = profile.id
-                                showingEditProfile = true
+                                activeSheet = .editProfile(profile)
                             },
                             onDuplicate: { duplicateProfile(profile.id) },
                             onDelete: {
@@ -212,7 +223,7 @@ struct ProfilesView: View {
                                 .foregroundColor(.secondary)
                             
                             if searchText.isEmpty {
-                                Button(action: { showingAddProfile = true }) {
+                                Button(action: { activeSheet = .addProfile }) {
                                     Label("Create Your First Profile", systemImage: "plus.circle")
                                 }
                             }
@@ -356,7 +367,7 @@ struct ProfilesView: View {
                     
                     Button(action: { 
                         selectedProfileId = profile.id
-                        showingEditProfile = true
+                        activeSheet = .editProfile(profile)
                     }) {
                         Label("Edit", systemImage: "pencil")
                     }
