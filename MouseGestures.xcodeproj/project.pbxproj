@@ -7,212 +7,200 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		68F348D48A0770370E34F9A1 /* BundleEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0A54EA3994C8F52FA92A084 /* BundleEditorView.swift */; };
-		77A1C3AF2F36793D00D1FE6A /* ProfileImportExportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3AA2F36793D00D1FE6A /* ProfileImportExportService.swift */; };
-		77A1C3B02F36793D00D1FE6A /* UIPluginProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3A02F36793D00D1FE6A /* UIPluginProtocol.swift */; };
-		77A1C3B12F36793D00D1FE6A /* DeveloperModeToggleService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3722F36793D00D1FE6A /* DeveloperModeToggleService.swift */; };
-		77A1C3B22F36793D00D1FE6A /* ServicePluginManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3672F36793D00D1FE6A /* ServicePluginManager.swift */; };
-		77A1C3B32F36793D00D1FE6A /* DetectionPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3552F36793D00D1FE6A /* DetectionPlugin.swift */; };
-		77A1C3B42F36793D00D1FE6A /* ActionListHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C36D2F36793D00D1FE6A /* ActionListHelper.swift */; };
-		77A1C3B52F36793D00D1FE6A /* SettingsImportExportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C37D2F36793D00D1FE6A /* SettingsImportExportService.swift */; };
-		77A1C3B62F36793D00D1FE6A /* AppConfigurationDetectorPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C34E2F36793D00D1FE6A /* AppConfigurationDetectorPlugin.swift */; };
-		77A1C3B72F36793D00D1FE6A /* ActionSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C38C2F36793D00D1FE6A /* ActionSelectionView.swift */; };
-		77A1C3B82F36793D00D1FE6A /* GestureLookup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C35B2F36793D00D1FE6A /* GestureLookup.swift */; };
-		77A1C3B92F36793D00D1FE6A /* AnyCodable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3A32F36793D00D1FE6A /* AnyCodable.swift */; };
-		77A1C3BA2F36793D00D1FE6A /* LaunchAtLoginService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3762F36793D00D1FE6A /* LaunchAtLoginService.swift */; };
-		77A1C3BB2F36793D00D1FE6A /* AccessibilityPermissionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C36B2F36793D00D1FE6A /* AccessibilityPermissionManager.swift */; };
-		77A1C3BC2F36793D00D1FE6A /* PluginSandbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3402F36793D00D1FE6A /* PluginSandbox.swift */; };
-		77A1C3BD2F36793D00D1FE6A /* SystemServicePlugins.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3642F36793D00D1FE6A /* SystemServicePlugins.swift */; };
-		77A1C3BE2F36793D00D1FE6A /* MediaControlPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3452F36793D00D1FE6A /* MediaControlPlugin.swift */; };
-		77A1C3BF2F36793D00D1FE6A /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3A42F36793D00D1FE6A /* Extensions.swift */; };
-		77A1C3C02F36793D00D1FE6A /* WindowManagementPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3472F36793D00D1FE6A /* WindowManagementPlugin.swift */; };
-		77A1C3C12F36793D00D1FE6A /* SavedActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C34C2F36793D00D1FE6A /* SavedActions.swift */; };
-		77A1C3C22F36793D00D1FE6A /* AccessibilityPermissionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C36C2F36793D00D1FE6A /* AccessibilityPermissionService.swift */; };
-		77A1C3C32F36793D00D1FE6A /* GesturesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3852F36793D00D1FE6A /* GesturesView.swift */; };
-		77A1C3C42F36793D00D1FE6A /* Configuration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C34A2F36793D00D1FE6A /* Configuration.swift */; };
-		77A1C3C52F36793D00D1FE6A /* Gesture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3A82F36793D00D1FE6A /* Gesture.swift */; };
-		77A1C3C62F36793D00D1FE6A /* GesturesUIPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3982F36793D00D1FE6A /* GesturesUIPlugin.swift */; };
-		77A1C3C72F36793D00D1FE6A /* ProfileManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3AC2F36793D00D1FE6A /* ProfileManager.swift */; };
-		77A1C3C82F36793D00D1FE6A /* MouseGesturesApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3602F36793D00D1FE6A /* MouseGesturesApp.swift */; };
-		77A1C3C92F36793D00D1FE6A /* ZoneVisualizationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3812F36793D00D1FE6A /* ZoneVisualizationService.swift */; };
-		77A1C3CA2F36793D00D1FE6A /* GestureSearchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3742F36793D00D1FE6A /* GestureSearchService.swift */; };
-		77A1C3CB2F36793D00D1FE6A /* UIPluginManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C39F2F36793D00D1FE6A /* UIPluginManager.swift */; };
-		77A1C3CC2F36793D00D1FE6A /* MouseButtonDetectorPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3512F36793D00D1FE6A /* MouseButtonDetectorPlugin.swift */; };
-		77A1C3CD2F36793D00D1FE6A /* ModifierKeyDetectorPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3502F36793D00D1FE6A /* ModifierKeyDetectorPlugin.swift */; };
-		77A1C3CE2F36793D00D1FE6A /* UpdateCheckService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C37F2F36793D00D1FE6A /* UpdateCheckService.swift */; };
-		77A1C3CF2F36793D00D1FE6A /* ProfileTemplateService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3872F36793D00D1FE6A /* ProfileTemplateService.swift */; };
-		77A1C3D02F36793D00D1FE6A /* DeveloperView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3842F36793D00D1FE6A /* DeveloperView.swift */; };
-		77A1C3D12F36793D00D1FE6A /* ScreenZone.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C35C2F36793D00D1FE6A /* ScreenZone.swift */; };
-		77A1C3D22F36793D00D1FE6A /* ServicesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3892F36793D00D1FE6A /* ServicesView.swift */; };
-		77A1C3D32F36793D00D1FE6A /* ProfilesUIPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3992F36793D00D1FE6A /* ProfilesUIPlugin.swift */; };
-		77A1C3D42F36793D00D1FE6A /* PerformanceMonitorService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C37A2F36793D00D1FE6A /* PerformanceMonitorService.swift */; };
-		77A1C3D52F36793D00D1FE6A /* ServicePluginAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3662F36793D00D1FE6A /* ServicePluginAdapter.swift */; };
-		77A1C3D62F36793D00D1FE6A /* DefaultProfiles.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C34B2F36793D00D1FE6A /* DefaultProfiles.swift */; };
-		77A1C3D72F36793D00D1FE6A /* DebugLoggingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3702F36793D00D1FE6A /* DebugLoggingService.swift */; };
-		77A1C3D82F36793D00D1FE6A /* KeyboardShortcutDetectorPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C34F2F36793D00D1FE6A /* KeyboardShortcutDetectorPlugin.swift */; };
-		77A1C3D92F36793D00D1FE6A /* ProfileStructures.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3AD2F36793D00D1FE6A /* ProfileStructures.swift */; };
-		77A1C3DA2F36793D00D1FE6A /* AutomationPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3422F36793D00D1FE6A /* AutomationPlugin.swift */; };
-		77A1C3DB2F36793D00D1FE6A /* DataStructures.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3A72F36793D00D1FE6A /* DataStructures.swift */; };
-		77A1C3DC2F36793D00D1FE6A /* WindowTargeting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3802F36793D00D1FE6A /* WindowTargeting.swift */; };
-		77A1C3DD2F36793D00D1FE6A /* GestureConfigurationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3732F36793D00D1FE6A /* GestureConfigurationService.swift */; };
-		77A1C3DE2F36793D00D1FE6A /* SavedActionConfigurationSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3912F36793D00D1FE6A /* SavedActionConfigurationSheet.swift */; };
-		77A1C3DF2F36793D00D1FE6A /* ServicesUIPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C39B2F36793D00D1FE6A /* ServicesUIPlugin.swift */; };
-		77A1C3E02F36793D00D1FE6A /* SystemControlPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3462F36793D00D1FE6A /* SystemControlPlugin.swift */; };
-		77A1C3E12F36793D00D1FE6A /* DeveloperUIPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3972F36793D00D1FE6A /* DeveloperUIPlugin.swift */; };
-		77A1C3E22F36793D00D1FE6A /* DetectionPluginManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3562F36793D00D1FE6A /* DetectionPluginManager.swift */; };
-		77A1C3E32F36793D00D1FE6A /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C35E2F36793D00D1FE6A /* AppDelegate.swift */; };
-		77A1C3E42F36793D00D1FE6A /* PluginSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3572F36793D00D1FE6A /* PluginSettings.swift */; };
-		77A1C3E52F36793D00D1FE6A /* SavedActionsUIPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C39A2F36793D00D1FE6A /* SavedActionsUIPlugin.swift */; };
-		77A1C3E62F36793D00D1FE6A /* SettingsUIPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C39C2F36793D00D1FE6A /* SettingsUIPlugin.swift */; };
-		77A1C3E72F36793D00D1FE6A /* BaseUIPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C39E2F36793D00D1FE6A /* BaseUIPlugin.swift */; };
-		77A1C3E82F36793D00D1FE6A /* ScreenZoneDetectorPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3522F36793D00D1FE6A /* ScreenZoneDetectorPlugin.swift */; };
-		77A1C3E92F36793D00D1FE6A /* PluginManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C33E2F36793D00D1FE6A /* PluginManager.swift */; };
-		77A1C3EA2F36793D00D1FE6A /* ZoneHighlightWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3942F36793D00D1FE6A /* ZoneHighlightWindow.swift */; };
-		77A1C3EB2F36793D00D1FE6A /* ProfileManagementService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3AB2F36793D00D1FE6A /* ProfileManagementService.swift */; };
-		77A1C3EC2F36793D00D1FE6A /* AppProfilesUIPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3962F36793D00D1FE6A /* AppProfilesUIPlugin.swift */; };
-		77A1C3ED2F36793D00D1FE6A /* DragModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C35A2F36793D00D1FE6A /* DragModifier.swift */; };
-		77A1C3EE2F36793D00D1FE6A /* BundleActionsPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3432F36793D00D1FE6A /* BundleActionsPlugin.swift */; };
-		77A1C3EF2F36793D00D1FE6A /* ApplicationDiscoveryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C36E2F36793D00D1FE6A /* ApplicationDiscoveryService.swift */; };
-		77A1C3F02F36793D00D1FE6A /* BundleConditions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3A62F36793D00D1FE6A /* BundleConditions.swift */; };
-		77A1C3F12F36793D00D1FE6A /* KeyboardShortcutField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C38F2F36793D00D1FE6A /* KeyboardShortcutField.swift */; };
-		77A1C3F22F36793D00D1FE6A /* SystemInformationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C37E2F36793D00D1FE6A /* SystemInformationService.swift */; };
-		77A1C3F32F36793D00D1FE6A /* ProfilesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3862F36793D00D1FE6A /* ProfilesView.swift */; };
-		77A1C3F42F36793D00D1FE6A /* DebugReportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3712F36793D00D1FE6A /* DebugReportService.swift */; };
-		77A1C3F52F36793D00D1FE6A /* UIServices.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3932F36793D00D1FE6A /* UIServices.swift */; };
-		77A1C3F62F36793D00D1FE6A /* HapticFeedbackService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3752F36793D00D1FE6A /* HapticFeedbackService.swift */; };
-		77A1C3F72F36793D00D1FE6A /* PluginProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C33F2F36793D00D1FE6A /* PluginProtocol.swift */; };
-		77A1C3F82F36793D00D1FE6A /* PluginSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3902F36793D00D1FE6A /* PluginSettingsView.swift */; };
-		77A1C3F92F36793D00D1FE6A /* ActionExecutionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C33C2F36793D00D1FE6A /* ActionExecutionManager.swift */; };
-		77A1C3FA2F36793D00D1FE6A /* SavedActionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3882F36793D00D1FE6A /* SavedActionsView.swift */; };
-		77A1C3FB2F36793D00D1FE6A /* MenuIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C35F2F36793D00D1FE6A /* MenuIcon.swift */; };
-		77A1C3FC2F36793D00D1FE6A /* GestureServicePlugins.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3632F36793D00D1FE6A /* GestureServicePlugins.swift */; };
-		77A1C3FD2F36793D00D1FE6A /* ApplicationResetService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C36F2F36793D00D1FE6A /* ApplicationResetService.swift */; };
-		77A1C3FE2F36793D00D1FE6A /* SavedActionsSortService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C37C2F36793D00D1FE6A /* SavedActionsSortService.swift */; };
-		77A1C3FF2F36793D00D1FE6A /* DeveloperServicePlugins.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3622F36793D00D1FE6A /* DeveloperServicePlugins.swift */; };
-		77A1C4002F36793D00D1FE6A /* PluginManagementService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C37B2F36793D00D1FE6A /* PluginManagementService.swift */; };
-		77A1C4012F36793D00D1FE6A /* GestureConfigurationSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C38D2F36793D00D1FE6A /* GestureConfigurationSheet.swift */; };
-		77A1C4022F36793D00D1FE6A /* AppProfilesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3832F36793D00D1FE6A /* AppProfilesView.swift */; };
-		77A1C4032F36793D00D1FE6A /* Logger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3782F36793D00D1FE6A /* Logger.swift */; };
-		77A1C4042F36793D00D1FE6A /* MenuBarVisibilityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3792F36793D00D1FE6A /* MenuBarVisibilityService.swift */; };
-		77A1C4052F36793D00D1FE6A /* LogFileService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3772F36793D00D1FE6A /* LogFileService.swift */; };
-		77A1C4062F36793D00D1FE6A /* ImportDefaultProfiles.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C38E2F36793D00D1FE6A /* ImportDefaultProfiles.swift */; };
-		77A1C4072F36793D00D1FE6A /* ServicePluginProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3682F36793D00D1FE6A /* ServicePluginProtocol.swift */; };
-		77A1C4082F36793D00D1FE6A /* CoreActionsPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3442F36793D00D1FE6A /* CoreActionsPlugin.swift */; };
-		77A1C4092F36793D00D1FE6A /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C38A2F36793D00D1FE6A /* SettingsView.swift */; };
-		77A1C40A2F36793D00D1FE6A /* TabManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3922F36793D00D1FE6A /* TabManager.swift */; };
-		77A1C40B2F36793D00D1FE6A /* ActivationCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C3542F36793D00D1FE6A /* ActivationCoordinator.swift */; };
-		77A1C40C2F36793D00D1FE6A /* document_symbols_cache_v23-06-25.pkl in Resources */ = {isa = PBXBuildFile; fileRef = 77A1C3322F36793D00D1FE6A /* document_symbols_cache_v23-06-25.pkl */; };
-		77A1C40D2F36793D00D1FE6A /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 77A1C3A92F36793D00D1FE6A /* Info.plist */; };
-		77A1C40E2F36793D00D1FE6A /* project_overview.md in Resources */ = {isa = PBXBuildFile; fileRef = 77A1C3362F36793D00D1FE6A /* project_overview.md */; };
-		77A1C40F2F36793D00D1FE6A /* coding_conventions.md in Resources */ = {isa = PBXBuildFile; fileRef = 77A1C3352F36793D00D1FE6A /* coding_conventions.md */; };
-		77A1C4102F36793D00D1FE6A /* .gitignore in Resources */ = {isa = PBXBuildFile; fileRef = 77A1C3392F36793D00D1FE6A /* .gitignore */; };
-		77A1C4112F36793D00D1FE6A /* suggested_commands.md in Resources */ = {isa = PBXBuildFile; fileRef = 77A1C3372F36793D00D1FE6A /* suggested_commands.md */; };
-		77A1C4122F36793D00D1FE6A /* project.yml in Resources */ = {isa = PBXBuildFile; fileRef = 77A1C33A2F36793D00D1FE6A /* project.yml */; };
+		77A1C4892F368ED800D1FE6A /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 77A1C4872F368ED800D1FE6A /* Info.plist */; };
+		77A1C48A2F368ED800D1FE6A /* PluginProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4162F368ED800D1FE6A /* PluginProtocol.swift */; };
+		77A1C48B2F368ED800D1FE6A /* PerformanceMonitorService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C45B2F368ED800D1FE6A /* PerformanceMonitorService.swift */; };
+		77A1C48C2F368ED800D1FE6A /* LaunchAtLoginService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4572F368ED800D1FE6A /* LaunchAtLoginService.swift */; };
+		77A1C48D2F368ED800D1FE6A /* BundleActionsPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C41A2F368ED800D1FE6A /* BundleActionsPlugin.swift */; };
+		77A1C48E2F368ED800D1FE6A /* WindowManagementPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C41E2F368ED800D1FE6A /* WindowManagementPlugin.swift */; };
+		77A1C48F2F368ED800D1FE6A /* MenuIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4222F368ED800D1FE6A /* MenuIcon.swift */; };
+		77A1C4902F368ED800D1FE6A /* PluginSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4712F368ED800D1FE6A /* PluginSettingsView.swift */; };
+		77A1C4912F368ED800D1FE6A /* PluginSandbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4172F368ED800D1FE6A /* PluginSandbox.swift */; };
+		77A1C4922F368ED800D1FE6A /* DragModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4392F368ED800D1FE6A /* DragModifier.swift */; };
+		77A1C4932F368ED800D1FE6A /* GestureConfigurationSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C46E2F368ED800D1FE6A /* GestureConfigurationSheet.swift */; };
+		77A1C4942F368ED800D1FE6A /* DeveloperServicePlugins.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4432F368ED800D1FE6A /* DeveloperServicePlugins.swift */; };
+		77A1C4952F368ED800D1FE6A /* ServicePluginManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4482F368ED800D1FE6A /* ServicePluginManager.swift */; };
+		77A1C4962F368ED800D1FE6A /* UIServices.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4742F368ED800D1FE6A /* UIServices.swift */; };
+		77A1C4972F368ED800D1FE6A /* AccessibilityPermissionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C44D2F368ED800D1FE6A /* AccessibilityPermissionService.swift */; };
+		77A1C4982F368ED800D1FE6A /* GestureServicePlugins.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4442F368ED800D1FE6A /* GestureServicePlugins.swift */; };
+		77A1C4992F368ED800D1FE6A /* DebugLoggingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4512F368ED800D1FE6A /* DebugLoggingService.swift */; };
+		77A1C49A2F368ED800D1FE6A /* ActivationCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4332F368ED800D1FE6A /* ActivationCoordinator.swift */; };
+		77A1C49B2F368ED800D1FE6A /* MouseGesturesApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4232F368ED800D1FE6A /* MouseGesturesApp.swift */; };
+		77A1C49C2F368ED800D1FE6A /* MenuBarVisibilityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C45A2F368ED800D1FE6A /* MenuBarVisibilityService.swift */; };
+		77A1C49D2F368ED800D1FE6A /* ProfilesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4672F368ED800D1FE6A /* ProfilesView.swift */; };
+		77A1C49E2F368ED800D1FE6A /* ActionSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C46C2F368ED800D1FE6A /* ActionSelectionView.swift */; };
+		77A1C49F2F368ED800D1FE6A /* KeyboardShortcutDetectorPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C42E2F368ED800D1FE6A /* KeyboardShortcutDetectorPlugin.swift */; };
+		77A1C4A02F368ED800D1FE6A /* SavedActionsUIPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C47B2F368ED800D1FE6A /* SavedActionsUIPlugin.swift */; };
+		77A1C4A12F368ED800D1FE6A /* ApplicationDiscoveryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C44F2F368ED800D1FE6A /* ApplicationDiscoveryService.swift */; };
+		77A1C4A22F368ED800D1FE6A /* DetectionPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4342F368ED800D1FE6A /* DetectionPlugin.swift */; };
+		77A1C4A32F368ED800D1FE6A /* SavedActionConfigurationSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4722F368ED800D1FE6A /* SavedActionConfigurationSheet.swift */; };
+		77A1C4A42F368ED800D1FE6A /* GestureSearchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4552F368ED800D1FE6A /* GestureSearchService.swift */; };
+		77A1C4A52F368ED800D1FE6A /* AppProfilesUIPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4772F368ED800D1FE6A /* AppProfilesUIPlugin.swift */; };
+		77A1C4A62F368ED800D1FE6A /* TabManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4732F368ED800D1FE6A /* TabManager.swift */; };
+		77A1C4A72F368ED800D1FE6A /* MouseButtonDetectorPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4302F368ED800D1FE6A /* MouseButtonDetectorPlugin.swift */; };
+		77A1C4A82F368ED800D1FE6A /* SystemControlPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C41D2F368ED800D1FE6A /* SystemControlPlugin.swift */; };
+		77A1C4A92F368ED800D1FE6A /* ApplicationResetService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4502F368ED800D1FE6A /* ApplicationResetService.swift */; };
+		77A1C4AA2F368ED800D1FE6A /* DebugReportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4522F368ED800D1FE6A /* DebugReportService.swift */; };
+		77A1C4AB2F368ED800D1FE6A /* SettingsUIPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C47D2F368ED800D1FE6A /* SettingsUIPlugin.swift */; };
+		77A1C4AC2F368ED800D1FE6A /* ImportDefaultProfiles.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C46F2F368ED800D1FE6A /* ImportDefaultProfiles.swift */; };
+		77A1C4AD2F368ED800D1FE6A /* LogFileService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4582F368ED800D1FE6A /* LogFileService.swift */; };
+		77A1C4AE2F368ED800D1FE6A /* UIPluginProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4812F368ED800D1FE6A /* UIPluginProtocol.swift */; };
+		77A1C4AF2F368ED800D1FE6A /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4852F368ED800D1FE6A /* Extensions.swift */; };
+		77A1C4B02F368ED800D1FE6A /* Gesture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C42B2F368ED800D1FE6A /* Gesture.swift */; };
+		77A1C4B12F368ED800D1FE6A /* SavedActionsSortService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C45D2F368ED800D1FE6A /* SavedActionsSortService.swift */; };
+		77A1C4B22F368ED800D1FE6A /* ProfileStructures.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4402F368ED800D1FE6A /* ProfileStructures.swift */; };
+		77A1C4B32F368ED800D1FE6A /* DeveloperUIPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4782F368ED800D1FE6A /* DeveloperUIPlugin.swift */; };
+		77A1C4B42F368ED800D1FE6A /* ServicesUIPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C47C2F368ED800D1FE6A /* ServicesUIPlugin.swift */; };
+		77A1C4B52F368ED800D1FE6A /* BundleEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C46D2F368ED800D1FE6A /* BundleEditorView.swift */; };
+		77A1C4B62F368ED800D1FE6A /* ProfileTemplateService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4412F368ED800D1FE6A /* ProfileTemplateService.swift */; };
+		77A1C4B72F368ED800D1FE6A /* BundleConditions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4292F368ED800D1FE6A /* BundleConditions.swift */; };
+		77A1C4B82F368ED800D1FE6A /* ActionListHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C44E2F368ED800D1FE6A /* ActionListHelper.swift */; };
+		77A1C4B92F368ED800D1FE6A /* ModifierKeyDetectorPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C42F2F368ED800D1FE6A /* ModifierKeyDetectorPlugin.swift */; };
+		77A1C4BA2F368ED800D1FE6A /* ProfileManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C43F2F368ED800D1FE6A /* ProfileManager.swift */; };
+		77A1C4BB2F368ED800D1FE6A /* ScreenZone.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C43B2F368ED800D1FE6A /* ScreenZone.swift */; };
+		77A1C4BC2F368ED800D1FE6A /* ServicesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4692F368ED800D1FE6A /* ServicesView.swift */; };
+		77A1C4BD2F368ED800D1FE6A /* ProfileManagementService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C43E2F368ED800D1FE6A /* ProfileManagementService.swift */; };
+		77A1C4BE2F368ED800D1FE6A /* SettingsImportExportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C45E2F368ED800D1FE6A /* SettingsImportExportService.swift */; };
+		77A1C4BF2F368ED800D1FE6A /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C46A2F368ED800D1FE6A /* SettingsView.swift */; };
+		77A1C4C02F368ED800D1FE6A /* DefaultProfiles.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4262F368ED800D1FE6A /* DefaultProfiles.swift */; };
+		77A1C4C12F368ED800D1FE6A /* HapticFeedbackService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4562F368ED800D1FE6A /* HapticFeedbackService.swift */; };
+		77A1C4C22F368ED800D1FE6A /* SystemInformationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C45F2F368ED800D1FE6A /* SystemInformationService.swift */; };
+		77A1C4C32F368ED800D1FE6A /* GestureConfigurationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4542F368ED800D1FE6A /* GestureConfigurationService.swift */; };
+		77A1C4C42F368ED800D1FE6A /* ServicePluginAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4472F368ED800D1FE6A /* ServicePluginAdapter.swift */; };
+		77A1C4C52F368ED800D1FE6A /* CoreActionsPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C41B2F368ED800D1FE6A /* CoreActionsPlugin.swift */; };
+		77A1C4C62F368ED800D1FE6A /* DeveloperModeToggleService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4532F368ED800D1FE6A /* DeveloperModeToggleService.swift */; };
+		77A1C4C72F368ED800D1FE6A /* PluginSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4362F368ED800D1FE6A /* PluginSettings.swift */; };
+		77A1C4C82F368ED800D1FE6A /* ActionExecutionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4132F368ED800D1FE6A /* ActionExecutionManager.swift */; };
+		77A1C4C92F368ED800D1FE6A /* AnyCodable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4842F368ED800D1FE6A /* AnyCodable.swift */; };
+		77A1C4CA2F368ED800D1FE6A /* GesturesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4662F368ED800D1FE6A /* GesturesView.swift */; };
+		77A1C4CB2F368ED800D1FE6A /* ScreenZoneDetectorPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4312F368ED800D1FE6A /* ScreenZoneDetectorPlugin.swift */; };
+		77A1C4CC2F368ED800D1FE6A /* DetectionPluginManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4352F368ED800D1FE6A /* DetectionPluginManager.swift */; };
+		77A1C4CD2F368ED800D1FE6A /* AppProfilesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4642F368ED800D1FE6A /* AppProfilesView.swift */; };
+		77A1C4CE2F368ED800D1FE6A /* AutomationPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4192F368ED800D1FE6A /* AutomationPlugin.swift */; };
+		77A1C4CF2F368ED800D1FE6A /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4212F368ED800D1FE6A /* AppDelegate.swift */; };
+		77A1C4D02F368ED800D1FE6A /* SavedActionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4682F368ED800D1FE6A /* SavedActionsView.swift */; };
+		77A1C4D12F368ED800D1FE6A /* Configuration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4252F368ED800D1FE6A /* Configuration.swift */; };
+		77A1C4D22F368ED800D1FE6A /* ProfileImportExportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C43D2F368ED800D1FE6A /* ProfileImportExportService.swift */; };
+		77A1C4D32F368ED800D1FE6A /* BaseUIPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C47F2F368ED800D1FE6A /* BaseUIPlugin.swift */; };
+		77A1C4D42F368ED800D1FE6A /* Logger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4592F368ED800D1FE6A /* Logger.swift */; };
+		77A1C4D52F368ED800D1FE6A /* MediaControlPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C41C2F368ED800D1FE6A /* MediaControlPlugin.swift */; };
+		77A1C4D62F368ED800D1FE6A /* WindowTargeting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4612F368ED800D1FE6A /* WindowTargeting.swift */; };
+		77A1C4D72F368ED800D1FE6A /* PluginManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4152F368ED800D1FE6A /* PluginManager.swift */; };
+		77A1C4D82F368ED800D1FE6A /* UIPluginManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4802F368ED800D1FE6A /* UIPluginManager.swift */; };
+		77A1C4D92F368ED800D1FE6A /* SavedActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4272F368ED800D1FE6A /* SavedActions.swift */; };
+		77A1C4DA2F368ED800D1FE6A /* AccessibilityPermissionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C44C2F368ED800D1FE6A /* AccessibilityPermissionManager.swift */; };
+		77A1C4DB2F368ED800D1FE6A /* DataStructures.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C42A2F368ED800D1FE6A /* DataStructures.swift */; };
+		77A1C4DC2F368ED800D1FE6A /* KeyboardShortcutField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4702F368ED800D1FE6A /* KeyboardShortcutField.swift */; };
+		77A1C4DD2F368ED800D1FE6A /* ZoneVisualizationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4622F368ED800D1FE6A /* ZoneVisualizationService.swift */; };
+		77A1C4DE2F368ED800D1FE6A /* AppConfigurationDetectorPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C42D2F368ED800D1FE6A /* AppConfigurationDetectorPlugin.swift */; };
+		77A1C4DF2F368ED800D1FE6A /* DeveloperView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4652F368ED800D1FE6A /* DeveloperView.swift */; };
+		77A1C4E02F368ED800D1FE6A /* ProfilesUIPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C47A2F368ED800D1FE6A /* ProfilesUIPlugin.swift */; };
+		77A1C4E12F368ED800D1FE6A /* GestureLookup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C43A2F368ED800D1FE6A /* GestureLookup.swift */; };
+		77A1C4E22F368ED800D1FE6A /* PluginManagementService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C45C2F368ED800D1FE6A /* PluginManagementService.swift */; };
+		77A1C4E32F368ED800D1FE6A /* GesturesUIPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4792F368ED800D1FE6A /* GesturesUIPlugin.swift */; };
+		77A1C4E42F368ED800D1FE6A /* SystemServicePlugins.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4452F368ED800D1FE6A /* SystemServicePlugins.swift */; };
+		77A1C4E52F368ED800D1FE6A /* UpdateCheckService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4602F368ED800D1FE6A /* UpdateCheckService.swift */; };
+		77A1C4E62F368ED800D1FE6A /* ZoneHighlightWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4752F368ED800D1FE6A /* ZoneHighlightWindow.swift */; };
+		77A1C4E72F368ED800D1FE6A /* ServicePluginProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4492F368ED800D1FE6A /* ServicePluginProtocol.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		773428682E6E20FD003AB7F1 /* MouseGestures.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MouseGestures.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		77A1C3322F36793D00D1FE6A /* document_symbols_cache_v23-06-25.pkl */ = {isa = PBXFileReference; lastKnownFileType = file; path = "document_symbols_cache_v23-06-25.pkl"; sourceTree = "<group>"; };
-		77A1C3352F36793D00D1FE6A /* coding_conventions.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = coding_conventions.md; sourceTree = "<group>"; };
-		77A1C3362F36793D00D1FE6A /* project_overview.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = project_overview.md; sourceTree = "<group>"; };
-		77A1C3372F36793D00D1FE6A /* suggested_commands.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = suggested_commands.md; sourceTree = "<group>"; };
-		77A1C3392F36793D00D1FE6A /* .gitignore */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
-		77A1C33A2F36793D00D1FE6A /* project.yml */ = {isa = PBXFileReference; lastKnownFileType = text.yaml; path = project.yml; sourceTree = "<group>"; };
-		77A1C33C2F36793D00D1FE6A /* ActionExecutionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionExecutionManager.swift; sourceTree = "<group>"; };
-		77A1C33E2F36793D00D1FE6A /* PluginManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PluginManager.swift; sourceTree = "<group>"; };
-		77A1C33F2F36793D00D1FE6A /* PluginProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PluginProtocol.swift; sourceTree = "<group>"; };
-		77A1C3402F36793D00D1FE6A /* PluginSandbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PluginSandbox.swift; sourceTree = "<group>"; };
-		77A1C3422F36793D00D1FE6A /* AutomationPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutomationPlugin.swift; sourceTree = "<group>"; };
-		77A1C3432F36793D00D1FE6A /* BundleActionsPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BundleActionsPlugin.swift; sourceTree = "<group>"; };
-		77A1C3442F36793D00D1FE6A /* CoreActionsPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreActionsPlugin.swift; sourceTree = "<group>"; };
-		77A1C3452F36793D00D1FE6A /* MediaControlPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaControlPlugin.swift; sourceTree = "<group>"; };
-		77A1C3462F36793D00D1FE6A /* SystemControlPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemControlPlugin.swift; sourceTree = "<group>"; };
-		77A1C3472F36793D00D1FE6A /* WindowManagementPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowManagementPlugin.swift; sourceTree = "<group>"; };
-		77A1C34A2F36793D00D1FE6A /* Configuration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Configuration.swift; sourceTree = "<group>"; };
-		77A1C34B2F36793D00D1FE6A /* DefaultProfiles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DefaultProfiles.swift; sourceTree = "<group>"; };
-		77A1C34C2F36793D00D1FE6A /* SavedActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedActions.swift; sourceTree = "<group>"; };
-		77A1C34E2F36793D00D1FE6A /* AppConfigurationDetectorPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfigurationDetectorPlugin.swift; sourceTree = "<group>"; };
-		77A1C34F2F36793D00D1FE6A /* KeyboardShortcutDetectorPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardShortcutDetectorPlugin.swift; sourceTree = "<group>"; };
-		77A1C3502F36793D00D1FE6A /* ModifierKeyDetectorPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModifierKeyDetectorPlugin.swift; sourceTree = "<group>"; };
-		77A1C3512F36793D00D1FE6A /* MouseButtonDetectorPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MouseButtonDetectorPlugin.swift; sourceTree = "<group>"; };
-		77A1C3522F36793D00D1FE6A /* ScreenZoneDetectorPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenZoneDetectorPlugin.swift; sourceTree = "<group>"; };
-		77A1C3542F36793D00D1FE6A /* ActivationCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivationCoordinator.swift; sourceTree = "<group>"; };
-		77A1C3552F36793D00D1FE6A /* DetectionPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetectionPlugin.swift; sourceTree = "<group>"; };
-		77A1C3562F36793D00D1FE6A /* DetectionPluginManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetectionPluginManager.swift; sourceTree = "<group>"; };
-		77A1C3572F36793D00D1FE6A /* PluginSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PluginSettings.swift; sourceTree = "<group>"; };
-		77A1C35A2F36793D00D1FE6A /* DragModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DragModifier.swift; sourceTree = "<group>"; };
-		77A1C35B2F36793D00D1FE6A /* GestureLookup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GestureLookup.swift; sourceTree = "<group>"; };
-		77A1C35C2F36793D00D1FE6A /* ScreenZone.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenZone.swift; sourceTree = "<group>"; };
-		77A1C35E2F36793D00D1FE6A /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
-		77A1C35F2F36793D00D1FE6A /* MenuIcon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuIcon.swift; sourceTree = "<group>"; };
-		77A1C3602F36793D00D1FE6A /* MouseGesturesApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MouseGesturesApp.swift; sourceTree = "<group>"; };
-		77A1C3622F36793D00D1FE6A /* DeveloperServicePlugins.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeveloperServicePlugins.swift; sourceTree = "<group>"; };
-		77A1C3632F36793D00D1FE6A /* GestureServicePlugins.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GestureServicePlugins.swift; sourceTree = "<group>"; };
-		77A1C3642F36793D00D1FE6A /* SystemServicePlugins.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemServicePlugins.swift; sourceTree = "<group>"; };
-		77A1C3662F36793D00D1FE6A /* ServicePluginAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServicePluginAdapter.swift; sourceTree = "<group>"; };
-		77A1C3672F36793D00D1FE6A /* ServicePluginManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServicePluginManager.swift; sourceTree = "<group>"; };
-		77A1C3682F36793D00D1FE6A /* ServicePluginProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServicePluginProtocol.swift; sourceTree = "<group>"; };
-		77A1C36B2F36793D00D1FE6A /* AccessibilityPermissionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityPermissionManager.swift; sourceTree = "<group>"; };
-		77A1C36C2F36793D00D1FE6A /* AccessibilityPermissionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityPermissionService.swift; sourceTree = "<group>"; };
-		77A1C36D2F36793D00D1FE6A /* ActionListHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionListHelper.swift; sourceTree = "<group>"; };
-		77A1C36E2F36793D00D1FE6A /* ApplicationDiscoveryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationDiscoveryService.swift; sourceTree = "<group>"; };
-		77A1C36F2F36793D00D1FE6A /* ApplicationResetService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationResetService.swift; sourceTree = "<group>"; };
-		77A1C3702F36793D00D1FE6A /* DebugLoggingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugLoggingService.swift; sourceTree = "<group>"; };
-		77A1C3712F36793D00D1FE6A /* DebugReportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugReportService.swift; sourceTree = "<group>"; };
-		77A1C3722F36793D00D1FE6A /* DeveloperModeToggleService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeveloperModeToggleService.swift; sourceTree = "<group>"; };
-		77A1C3732F36793D00D1FE6A /* GestureConfigurationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GestureConfigurationService.swift; sourceTree = "<group>"; };
-		77A1C3742F36793D00D1FE6A /* GestureSearchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GestureSearchService.swift; sourceTree = "<group>"; };
-		77A1C3752F36793D00D1FE6A /* HapticFeedbackService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticFeedbackService.swift; sourceTree = "<group>"; };
-		77A1C3762F36793D00D1FE6A /* LaunchAtLoginService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLoginService.swift; sourceTree = "<group>"; };
-		77A1C3772F36793D00D1FE6A /* LogFileService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogFileService.swift; sourceTree = "<group>"; };
-		77A1C3782F36793D00D1FE6A /* Logger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Logger.swift; sourceTree = "<group>"; };
-		77A1C3792F36793D00D1FE6A /* MenuBarVisibilityService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarVisibilityService.swift; sourceTree = "<group>"; };
-		77A1C37A2F36793D00D1FE6A /* PerformanceMonitorService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceMonitorService.swift; sourceTree = "<group>"; };
-		77A1C37B2F36793D00D1FE6A /* PluginManagementService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PluginManagementService.swift; sourceTree = "<group>"; };
-		77A1C37C2F36793D00D1FE6A /* SavedActionsSortService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedActionsSortService.swift; sourceTree = "<group>"; };
-		77A1C37D2F36793D00D1FE6A /* SettingsImportExportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsImportExportService.swift; sourceTree = "<group>"; };
-		77A1C37E2F36793D00D1FE6A /* SystemInformationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemInformationService.swift; sourceTree = "<group>"; };
-		77A1C37F2F36793D00D1FE6A /* UpdateCheckService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateCheckService.swift; sourceTree = "<group>"; };
-		77A1C3802F36793D00D1FE6A /* WindowTargeting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowTargeting.swift; sourceTree = "<group>"; };
-		77A1C3812F36793D00D1FE6A /* ZoneVisualizationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZoneVisualizationService.swift; sourceTree = "<group>"; };
-		77A1C3832F36793D00D1FE6A /* AppProfilesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppProfilesView.swift; sourceTree = "<group>"; };
-		77A1C3842F36793D00D1FE6A /* DeveloperView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeveloperView.swift; sourceTree = "<group>"; };
-		77A1C3852F36793D00D1FE6A /* GesturesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GesturesView.swift; sourceTree = "<group>"; };
-		77A1C3862F36793D00D1FE6A /* ProfilesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfilesView.swift; sourceTree = "<group>"; };
-		77A1C3872F36793D00D1FE6A /* ProfileTemplateService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileTemplateService.swift; sourceTree = "<group>"; };
-		77A1C3882F36793D00D1FE6A /* SavedActionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedActionsView.swift; sourceTree = "<group>"; };
-		77A1C3892F36793D00D1FE6A /* ServicesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServicesView.swift; sourceTree = "<group>"; };
-		77A1C38A2F36793D00D1FE6A /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
-		77A1C38C2F36793D00D1FE6A /* ActionSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionSelectionView.swift; sourceTree = "<group>"; };
-		77A1C38D2F36793D00D1FE6A /* GestureConfigurationSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GestureConfigurationSheet.swift; sourceTree = "<group>"; };
-		77A1C38E2F36793D00D1FE6A /* ImportDefaultProfiles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportDefaultProfiles.swift; sourceTree = "<group>"; };
-		77A1C38F2F36793D00D1FE6A /* KeyboardShortcutField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardShortcutField.swift; sourceTree = "<group>"; };
-		77A1C3902F36793D00D1FE6A /* PluginSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PluginSettingsView.swift; sourceTree = "<group>"; };
-		77A1C3912F36793D00D1FE6A /* SavedActionConfigurationSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedActionConfigurationSheet.swift; sourceTree = "<group>"; };
-		77A1C3922F36793D00D1FE6A /* TabManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabManager.swift; sourceTree = "<group>"; };
-		77A1C3932F36793D00D1FE6A /* UIServices.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIServices.swift; sourceTree = "<group>"; };
-		77A1C3942F36793D00D1FE6A /* ZoneHighlightWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZoneHighlightWindow.swift; sourceTree = "<group>"; };
-		77A1C3962F36793D00D1FE6A /* AppProfilesUIPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppProfilesUIPlugin.swift; sourceTree = "<group>"; };
-		77A1C3972F36793D00D1FE6A /* DeveloperUIPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeveloperUIPlugin.swift; sourceTree = "<group>"; };
-		77A1C3982F36793D00D1FE6A /* GesturesUIPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GesturesUIPlugin.swift; sourceTree = "<group>"; };
-		77A1C3992F36793D00D1FE6A /* ProfilesUIPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfilesUIPlugin.swift; sourceTree = "<group>"; };
-		77A1C39A2F36793D00D1FE6A /* SavedActionsUIPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedActionsUIPlugin.swift; sourceTree = "<group>"; };
-		77A1C39B2F36793D00D1FE6A /* ServicesUIPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServicesUIPlugin.swift; sourceTree = "<group>"; };
-		77A1C39C2F36793D00D1FE6A /* SettingsUIPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsUIPlugin.swift; sourceTree = "<group>"; };
-		77A1C39E2F36793D00D1FE6A /* BaseUIPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BaseUIPlugin.swift; sourceTree = "<group>"; };
-		77A1C39F2F36793D00D1FE6A /* UIPluginManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIPluginManager.swift; sourceTree = "<group>"; };
-		77A1C3A02F36793D00D1FE6A /* UIPluginProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIPluginProtocol.swift; sourceTree = "<group>"; };
-		77A1C3A32F36793D00D1FE6A /* AnyCodable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnyCodable.swift; sourceTree = "<group>"; };
-		77A1C3A42F36793D00D1FE6A /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
-		77A1C3A62F36793D00D1FE6A /* BundleConditions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BundleConditions.swift; sourceTree = "<group>"; };
-		77A1C3A72F36793D00D1FE6A /* DataStructures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataStructures.swift; sourceTree = "<group>"; };
-		77A1C3A82F36793D00D1FE6A /* Gesture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Gesture.swift; sourceTree = "<group>"; };
-		77A1C3A92F36793D00D1FE6A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		77A1C3AA2F36793D00D1FE6A /* ProfileImportExportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileImportExportService.swift; sourceTree = "<group>"; };
-		77A1C3AB2F36793D00D1FE6A /* ProfileManagementService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileManagementService.swift; sourceTree = "<group>"; };
-		77A1C3AC2F36793D00D1FE6A /* ProfileManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileManager.swift; sourceTree = "<group>"; };
-		77A1C3AD2F36793D00D1FE6A /* ProfileStructures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileStructures.swift; sourceTree = "<group>"; };
-		B0A54EA3994C8F52FA92A084 /* BundleEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BundleEditorView.swift; path = MouseGesturesCodeBase/UI/BundleEditorView.swift; sourceTree = SOURCE_ROOT; };
+		77A1C4132F368ED800D1FE6A /* ActionExecutionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionExecutionManager.swift; sourceTree = "<group>"; };
+		77A1C4152F368ED800D1FE6A /* PluginManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PluginManager.swift; sourceTree = "<group>"; };
+		77A1C4162F368ED800D1FE6A /* PluginProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PluginProtocol.swift; sourceTree = "<group>"; };
+		77A1C4172F368ED800D1FE6A /* PluginSandbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PluginSandbox.swift; sourceTree = "<group>"; };
+		77A1C4192F368ED800D1FE6A /* AutomationPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutomationPlugin.swift; sourceTree = "<group>"; };
+		77A1C41A2F368ED800D1FE6A /* BundleActionsPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BundleActionsPlugin.swift; sourceTree = "<group>"; };
+		77A1C41B2F368ED800D1FE6A /* CoreActionsPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreActionsPlugin.swift; sourceTree = "<group>"; };
+		77A1C41C2F368ED800D1FE6A /* MediaControlPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaControlPlugin.swift; sourceTree = "<group>"; };
+		77A1C41D2F368ED800D1FE6A /* SystemControlPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemControlPlugin.swift; sourceTree = "<group>"; };
+		77A1C41E2F368ED800D1FE6A /* WindowManagementPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowManagementPlugin.swift; sourceTree = "<group>"; };
+		77A1C4212F368ED800D1FE6A /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		77A1C4222F368ED800D1FE6A /* MenuIcon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuIcon.swift; sourceTree = "<group>"; };
+		77A1C4232F368ED800D1FE6A /* MouseGesturesApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MouseGesturesApp.swift; sourceTree = "<group>"; };
+		77A1C4252F368ED800D1FE6A /* Configuration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Configuration.swift; sourceTree = "<group>"; };
+		77A1C4262F368ED800D1FE6A /* DefaultProfiles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DefaultProfiles.swift; sourceTree = "<group>"; };
+		77A1C4272F368ED800D1FE6A /* SavedActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedActions.swift; sourceTree = "<group>"; };
+		77A1C4292F368ED800D1FE6A /* BundleConditions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BundleConditions.swift; sourceTree = "<group>"; };
+		77A1C42A2F368ED800D1FE6A /* DataStructures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataStructures.swift; sourceTree = "<group>"; };
+		77A1C42B2F368ED800D1FE6A /* Gesture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Gesture.swift; sourceTree = "<group>"; };
+		77A1C42D2F368ED800D1FE6A /* AppConfigurationDetectorPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfigurationDetectorPlugin.swift; sourceTree = "<group>"; };
+		77A1C42E2F368ED800D1FE6A /* KeyboardShortcutDetectorPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardShortcutDetectorPlugin.swift; sourceTree = "<group>"; };
+		77A1C42F2F368ED800D1FE6A /* ModifierKeyDetectorPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModifierKeyDetectorPlugin.swift; sourceTree = "<group>"; };
+		77A1C4302F368ED800D1FE6A /* MouseButtonDetectorPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MouseButtonDetectorPlugin.swift; sourceTree = "<group>"; };
+		77A1C4312F368ED800D1FE6A /* ScreenZoneDetectorPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenZoneDetectorPlugin.swift; sourceTree = "<group>"; };
+		77A1C4332F368ED800D1FE6A /* ActivationCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivationCoordinator.swift; sourceTree = "<group>"; };
+		77A1C4342F368ED800D1FE6A /* DetectionPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetectionPlugin.swift; sourceTree = "<group>"; };
+		77A1C4352F368ED800D1FE6A /* DetectionPluginManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetectionPluginManager.swift; sourceTree = "<group>"; };
+		77A1C4362F368ED800D1FE6A /* PluginSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PluginSettings.swift; sourceTree = "<group>"; };
+		77A1C4392F368ED800D1FE6A /* DragModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DragModifier.swift; sourceTree = "<group>"; };
+		77A1C43A2F368ED800D1FE6A /* GestureLookup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GestureLookup.swift; sourceTree = "<group>"; };
+		77A1C43B2F368ED800D1FE6A /* ScreenZone.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenZone.swift; sourceTree = "<group>"; };
+		77A1C43D2F368ED800D1FE6A /* ProfileImportExportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileImportExportService.swift; sourceTree = "<group>"; };
+		77A1C43E2F368ED800D1FE6A /* ProfileManagementService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileManagementService.swift; sourceTree = "<group>"; };
+		77A1C43F2F368ED800D1FE6A /* ProfileManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileManager.swift; sourceTree = "<group>"; };
+		77A1C4402F368ED800D1FE6A /* ProfileStructures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileStructures.swift; sourceTree = "<group>"; };
+		77A1C4412F368ED800D1FE6A /* ProfileTemplateService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileTemplateService.swift; sourceTree = "<group>"; };
+		77A1C4432F368ED800D1FE6A /* DeveloperServicePlugins.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeveloperServicePlugins.swift; sourceTree = "<group>"; };
+		77A1C4442F368ED800D1FE6A /* GestureServicePlugins.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GestureServicePlugins.swift; sourceTree = "<group>"; };
+		77A1C4452F368ED800D1FE6A /* SystemServicePlugins.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemServicePlugins.swift; sourceTree = "<group>"; };
+		77A1C4472F368ED800D1FE6A /* ServicePluginAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServicePluginAdapter.swift; sourceTree = "<group>"; };
+		77A1C4482F368ED800D1FE6A /* ServicePluginManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServicePluginManager.swift; sourceTree = "<group>"; };
+		77A1C4492F368ED800D1FE6A /* ServicePluginProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServicePluginProtocol.swift; sourceTree = "<group>"; };
+		77A1C44C2F368ED800D1FE6A /* AccessibilityPermissionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityPermissionManager.swift; sourceTree = "<group>"; };
+		77A1C44D2F368ED800D1FE6A /* AccessibilityPermissionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityPermissionService.swift; sourceTree = "<group>"; };
+		77A1C44E2F368ED800D1FE6A /* ActionListHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionListHelper.swift; sourceTree = "<group>"; };
+		77A1C44F2F368ED800D1FE6A /* ApplicationDiscoveryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationDiscoveryService.swift; sourceTree = "<group>"; };
+		77A1C4502F368ED800D1FE6A /* ApplicationResetService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationResetService.swift; sourceTree = "<group>"; };
+		77A1C4512F368ED800D1FE6A /* DebugLoggingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugLoggingService.swift; sourceTree = "<group>"; };
+		77A1C4522F368ED800D1FE6A /* DebugReportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugReportService.swift; sourceTree = "<group>"; };
+		77A1C4532F368ED800D1FE6A /* DeveloperModeToggleService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeveloperModeToggleService.swift; sourceTree = "<group>"; };
+		77A1C4542F368ED800D1FE6A /* GestureConfigurationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GestureConfigurationService.swift; sourceTree = "<group>"; };
+		77A1C4552F368ED800D1FE6A /* GestureSearchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GestureSearchService.swift; sourceTree = "<group>"; };
+		77A1C4562F368ED800D1FE6A /* HapticFeedbackService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticFeedbackService.swift; sourceTree = "<group>"; };
+		77A1C4572F368ED800D1FE6A /* LaunchAtLoginService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLoginService.swift; sourceTree = "<group>"; };
+		77A1C4582F368ED800D1FE6A /* LogFileService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogFileService.swift; sourceTree = "<group>"; };
+		77A1C4592F368ED800D1FE6A /* Logger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Logger.swift; sourceTree = "<group>"; };
+		77A1C45A2F368ED800D1FE6A /* MenuBarVisibilityService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarVisibilityService.swift; sourceTree = "<group>"; };
+		77A1C45B2F368ED800D1FE6A /* PerformanceMonitorService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceMonitorService.swift; sourceTree = "<group>"; };
+		77A1C45C2F368ED800D1FE6A /* PluginManagementService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PluginManagementService.swift; sourceTree = "<group>"; };
+		77A1C45D2F368ED800D1FE6A /* SavedActionsSortService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedActionsSortService.swift; sourceTree = "<group>"; };
+		77A1C45E2F368ED800D1FE6A /* SettingsImportExportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsImportExportService.swift; sourceTree = "<group>"; };
+		77A1C45F2F368ED800D1FE6A /* SystemInformationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemInformationService.swift; sourceTree = "<group>"; };
+		77A1C4602F368ED800D1FE6A /* UpdateCheckService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateCheckService.swift; sourceTree = "<group>"; };
+		77A1C4612F368ED800D1FE6A /* WindowTargeting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowTargeting.swift; sourceTree = "<group>"; };
+		77A1C4622F368ED800D1FE6A /* ZoneVisualizationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZoneVisualizationService.swift; sourceTree = "<group>"; };
+		77A1C4642F368ED800D1FE6A /* AppProfilesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppProfilesView.swift; sourceTree = "<group>"; };
+		77A1C4652F368ED800D1FE6A /* DeveloperView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeveloperView.swift; sourceTree = "<group>"; };
+		77A1C4662F368ED800D1FE6A /* GesturesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GesturesView.swift; sourceTree = "<group>"; };
+		77A1C4672F368ED800D1FE6A /* ProfilesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfilesView.swift; sourceTree = "<group>"; };
+		77A1C4682F368ED800D1FE6A /* SavedActionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedActionsView.swift; sourceTree = "<group>"; };
+		77A1C4692F368ED800D1FE6A /* ServicesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServicesView.swift; sourceTree = "<group>"; };
+		77A1C46A2F368ED800D1FE6A /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		77A1C46C2F368ED800D1FE6A /* ActionSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionSelectionView.swift; sourceTree = "<group>"; };
+		77A1C46D2F368ED800D1FE6A /* BundleEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BundleEditorView.swift; sourceTree = "<group>"; };
+		77A1C46E2F368ED800D1FE6A /* GestureConfigurationSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GestureConfigurationSheet.swift; sourceTree = "<group>"; };
+		77A1C46F2F368ED800D1FE6A /* ImportDefaultProfiles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportDefaultProfiles.swift; sourceTree = "<group>"; };
+		77A1C4702F368ED800D1FE6A /* KeyboardShortcutField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardShortcutField.swift; sourceTree = "<group>"; };
+		77A1C4712F368ED800D1FE6A /* PluginSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PluginSettingsView.swift; sourceTree = "<group>"; };
+		77A1C4722F368ED800D1FE6A /* SavedActionConfigurationSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedActionConfigurationSheet.swift; sourceTree = "<group>"; };
+		77A1C4732F368ED800D1FE6A /* TabManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabManager.swift; sourceTree = "<group>"; };
+		77A1C4742F368ED800D1FE6A /* UIServices.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIServices.swift; sourceTree = "<group>"; };
+		77A1C4752F368ED800D1FE6A /* ZoneHighlightWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZoneHighlightWindow.swift; sourceTree = "<group>"; };
+		77A1C4772F368ED800D1FE6A /* AppProfilesUIPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppProfilesUIPlugin.swift; sourceTree = "<group>"; };
+		77A1C4782F368ED800D1FE6A /* DeveloperUIPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeveloperUIPlugin.swift; sourceTree = "<group>"; };
+		77A1C4792F368ED800D1FE6A /* GesturesUIPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GesturesUIPlugin.swift; sourceTree = "<group>"; };
+		77A1C47A2F368ED800D1FE6A /* ProfilesUIPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfilesUIPlugin.swift; sourceTree = "<group>"; };
+		77A1C47B2F368ED800D1FE6A /* SavedActionsUIPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedActionsUIPlugin.swift; sourceTree = "<group>"; };
+		77A1C47C2F368ED800D1FE6A /* ServicesUIPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServicesUIPlugin.swift; sourceTree = "<group>"; };
+		77A1C47D2F368ED800D1FE6A /* SettingsUIPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsUIPlugin.swift; sourceTree = "<group>"; };
+		77A1C47F2F368ED800D1FE6A /* BaseUIPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BaseUIPlugin.swift; sourceTree = "<group>"; };
+		77A1C4802F368ED800D1FE6A /* UIPluginManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIPluginManager.swift; sourceTree = "<group>"; };
+		77A1C4812F368ED800D1FE6A /* UIPluginProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIPluginProtocol.swift; sourceTree = "<group>"; };
+		77A1C4842F368ED800D1FE6A /* AnyCodable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnyCodable.swift; sourceTree = "<group>"; };
+		77A1C4852F368ED800D1FE6A /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
+		77A1C4872F368ED800D1FE6A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -226,302 +214,280 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		77A1C3332F36793D00D1FE6A /* swift */ = {
+		77A1C4142F368ED800D1FE6A /* Action Execution */ = {
 			isa = PBXGroup;
 			children = (
-				77A1C3322F36793D00D1FE6A /* document_symbols_cache_v23-06-25.pkl */,
-			);
-			path = swift;
-			sourceTree = "<group>";
-		};
-		77A1C3342F36793D00D1FE6A /* cache */ = {
-			isa = PBXGroup;
-			children = (
-				77A1C3332F36793D00D1FE6A /* swift */,
-			);
-			path = cache;
-			sourceTree = "<group>";
-		};
-		77A1C3382F36793D00D1FE6A /* memories */ = {
-			isa = PBXGroup;
-			children = (
-				77A1C3352F36793D00D1FE6A /* coding_conventions.md */,
-				77A1C3362F36793D00D1FE6A /* project_overview.md */,
-				77A1C3372F36793D00D1FE6A /* suggested_commands.md */,
-			);
-			path = memories;
-			sourceTree = "<group>";
-		};
-		77A1C33B2F36793D00D1FE6A /* .serena */ = {
-			isa = PBXGroup;
-			children = (
-				77A1C3342F36793D00D1FE6A /* cache */,
-				77A1C3382F36793D00D1FE6A /* memories */,
-				77A1C3392F36793D00D1FE6A /* .gitignore */,
-				77A1C33A2F36793D00D1FE6A /* project.yml */,
-			);
-			path = .serena;
-			sourceTree = "<group>";
-		};
-		77A1C33D2F36793D00D1FE6A /* Action Execution */ = {
-			isa = PBXGroup;
-			children = (
-				77A1C33C2F36793D00D1FE6A /* ActionExecutionManager.swift */,
+				77A1C4132F368ED800D1FE6A /* ActionExecutionManager.swift */,
 			);
 			path = "Action Execution";
 			sourceTree = "<group>";
 		};
-		77A1C3412F36793D00D1FE6A /* ActionPlugin Management */ = {
+		77A1C4182F368ED800D1FE6A /* ActionPlugin Management */ = {
 			isa = PBXGroup;
 			children = (
-				77A1C33E2F36793D00D1FE6A /* PluginManager.swift */,
-				77A1C33F2F36793D00D1FE6A /* PluginProtocol.swift */,
-				77A1C3402F36793D00D1FE6A /* PluginSandbox.swift */,
+				77A1C4152F368ED800D1FE6A /* PluginManager.swift */,
+				77A1C4162F368ED800D1FE6A /* PluginProtocol.swift */,
+				77A1C4172F368ED800D1FE6A /* PluginSandbox.swift */,
 			);
 			path = "ActionPlugin Management";
 			sourceTree = "<group>";
 		};
-		77A1C3482F36793D00D1FE6A /* Built-in ActionPlugins */ = {
+		77A1C41F2F368ED800D1FE6A /* Built-in ActionPlugins */ = {
 			isa = PBXGroup;
 			children = (
-				77A1C3422F36793D00D1FE6A /* AutomationPlugin.swift */,
-				77A1C3432F36793D00D1FE6A /* BundleActionsPlugin.swift */,
-				77A1C3442F36793D00D1FE6A /* CoreActionsPlugin.swift */,
-				77A1C3452F36793D00D1FE6A /* MediaControlPlugin.swift */,
-				77A1C3462F36793D00D1FE6A /* SystemControlPlugin.swift */,
-				77A1C3472F36793D00D1FE6A /* WindowManagementPlugin.swift */,
+				77A1C4192F368ED800D1FE6A /* AutomationPlugin.swift */,
+				77A1C41A2F368ED800D1FE6A /* BundleActionsPlugin.swift */,
+				77A1C41B2F368ED800D1FE6A /* CoreActionsPlugin.swift */,
+				77A1C41C2F368ED800D1FE6A /* MediaControlPlugin.swift */,
+				77A1C41D2F368ED800D1FE6A /* SystemControlPlugin.swift */,
+				77A1C41E2F368ED800D1FE6A /* WindowManagementPlugin.swift */,
 			);
 			path = "Built-in ActionPlugins";
 			sourceTree = "<group>";
 		};
-		77A1C3492F36793D00D1FE6A /* ActionPlugins */ = {
+		77A1C4202F368ED800D1FE6A /* ActionPlugins */ = {
 			isa = PBXGroup;
 			children = (
-				77A1C3412F36793D00D1FE6A /* ActionPlugin Management */,
-				77A1C3482F36793D00D1FE6A /* Built-in ActionPlugins */,
+				77A1C4182F368ED800D1FE6A /* ActionPlugin Management */,
+				77A1C41F2F368ED800D1FE6A /* Built-in ActionPlugins */,
 			);
 			path = ActionPlugins;
 			sourceTree = "<group>";
 		};
-		77A1C34D2F36793D00D1FE6A /* Configuration */ = {
+		77A1C4242F368ED800D1FE6A /* App */ = {
 			isa = PBXGroup;
 			children = (
-				77A1C34A2F36793D00D1FE6A /* Configuration.swift */,
-				77A1C34B2F36793D00D1FE6A /* DefaultProfiles.swift */,
-				77A1C34C2F36793D00D1FE6A /* SavedActions.swift */,
+				77A1C4212F368ED800D1FE6A /* AppDelegate.swift */,
+				77A1C4222F368ED800D1FE6A /* MenuIcon.swift */,
+				77A1C4232F368ED800D1FE6A /* MouseGesturesApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		77A1C4282F368ED800D1FE6A /* Configuration */ = {
+			isa = PBXGroup;
+			children = (
+				77A1C4252F368ED800D1FE6A /* Configuration.swift */,
+				77A1C4262F368ED800D1FE6A /* DefaultProfiles.swift */,
+				77A1C4272F368ED800D1FE6A /* SavedActions.swift */,
 			);
 			path = Configuration;
 			sourceTree = "<group>";
 		};
-		77A1C3532F36793D00D1FE6A /* Built-in Plugins */ = {
+		77A1C42C2F368ED800D1FE6A /* Core */ = {
 			isa = PBXGroup;
 			children = (
-				77A1C34E2F36793D00D1FE6A /* AppConfigurationDetectorPlugin.swift */,
-				77A1C34F2F36793D00D1FE6A /* KeyboardShortcutDetectorPlugin.swift */,
-				77A1C3502F36793D00D1FE6A /* ModifierKeyDetectorPlugin.swift */,
-				77A1C3512F36793D00D1FE6A /* MouseButtonDetectorPlugin.swift */,
-				77A1C3522F36793D00D1FE6A /* ScreenZoneDetectorPlugin.swift */,
+				77A1C4292F368ED800D1FE6A /* BundleConditions.swift */,
+				77A1C42A2F368ED800D1FE6A /* DataStructures.swift */,
+				77A1C42B2F368ED800D1FE6A /* Gesture.swift */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+		77A1C4322F368ED800D1FE6A /* Built-in Plugins */ = {
+			isa = PBXGroup;
+			children = (
+				77A1C42D2F368ED800D1FE6A /* AppConfigurationDetectorPlugin.swift */,
+				77A1C42E2F368ED800D1FE6A /* KeyboardShortcutDetectorPlugin.swift */,
+				77A1C42F2F368ED800D1FE6A /* ModifierKeyDetectorPlugin.swift */,
+				77A1C4302F368ED800D1FE6A /* MouseButtonDetectorPlugin.swift */,
+				77A1C4312F368ED800D1FE6A /* ScreenZoneDetectorPlugin.swift */,
 			);
 			path = "Built-in Plugins";
 			sourceTree = "<group>";
 		};
-		77A1C3582F36793D00D1FE6A /* Core */ = {
+		77A1C4372F368ED800D1FE6A /* Core */ = {
 			isa = PBXGroup;
 			children = (
-				77A1C3542F36793D00D1FE6A /* ActivationCoordinator.swift */,
-				77A1C3552F36793D00D1FE6A /* DetectionPlugin.swift */,
-				77A1C3562F36793D00D1FE6A /* DetectionPluginManager.swift */,
-				77A1C3572F36793D00D1FE6A /* PluginSettings.swift */,
+				77A1C4332F368ED800D1FE6A /* ActivationCoordinator.swift */,
+				77A1C4342F368ED800D1FE6A /* DetectionPlugin.swift */,
+				77A1C4352F368ED800D1FE6A /* DetectionPluginManager.swift */,
+				77A1C4362F368ED800D1FE6A /* PluginSettings.swift */,
 			);
 			path = Core;
 			sourceTree = "<group>";
 		};
-		77A1C3592F36793D00D1FE6A /* DetectionPlugins */ = {
+		77A1C4382F368ED800D1FE6A /* DetectionPlugins */ = {
 			isa = PBXGroup;
 			children = (
-				77A1C3532F36793D00D1FE6A /* Built-in Plugins */,
-				77A1C3582F36793D00D1FE6A /* Core */,
+				77A1C4322F368ED800D1FE6A /* Built-in Plugins */,
+				77A1C4372F368ED800D1FE6A /* Core */,
 			);
 			path = DetectionPlugins;
 			sourceTree = "<group>";
 		};
-		77A1C35D2F36793D00D1FE6A /* Detection */ = {
+		77A1C43C2F368ED800D1FE6A /* Detection */ = {
 			isa = PBXGroup;
 			children = (
-				77A1C3592F36793D00D1FE6A /* DetectionPlugins */,
-				77A1C35A2F36793D00D1FE6A /* DragModifier.swift */,
-				77A1C35B2F36793D00D1FE6A /* GestureLookup.swift */,
-				77A1C35C2F36793D00D1FE6A /* ScreenZone.swift */,
+				77A1C4382F368ED800D1FE6A /* DetectionPlugins */,
+				77A1C4392F368ED800D1FE6A /* DragModifier.swift */,
+				77A1C43A2F368ED800D1FE6A /* GestureLookup.swift */,
+				77A1C43B2F368ED800D1FE6A /* ScreenZone.swift */,
 			);
 			path = Detection;
 			sourceTree = "<group>";
 		};
-		77A1C3612F36793D00D1FE6A /* Initilization */ = {
+		77A1C4422F368ED800D1FE6A /* Profiles */ = {
 			isa = PBXGroup;
 			children = (
-				77A1C35E2F36793D00D1FE6A /* AppDelegate.swift */,
-				77A1C35F2F36793D00D1FE6A /* MenuIcon.swift */,
-				77A1C3602F36793D00D1FE6A /* MouseGesturesApp.swift */,
+				77A1C43D2F368ED800D1FE6A /* ProfileImportExportService.swift */,
+				77A1C43E2F368ED800D1FE6A /* ProfileManagementService.swift */,
+				77A1C43F2F368ED800D1FE6A /* ProfileManager.swift */,
+				77A1C4402F368ED800D1FE6A /* ProfileStructures.swift */,
+				77A1C4412F368ED800D1FE6A /* ProfileTemplateService.swift */,
 			);
-			path = Initilization;
+			path = Profiles;
 			sourceTree = "<group>";
 		};
-		77A1C3652F36793D00D1FE6A /* Built-in */ = {
+		77A1C4462F368ED800D1FE6A /* Built-in */ = {
 			isa = PBXGroup;
 			children = (
-				77A1C3622F36793D00D1FE6A /* DeveloperServicePlugins.swift */,
-				77A1C3632F36793D00D1FE6A /* GestureServicePlugins.swift */,
-				77A1C3642F36793D00D1FE6A /* SystemServicePlugins.swift */,
+				77A1C4432F368ED800D1FE6A /* DeveloperServicePlugins.swift */,
+				77A1C4442F368ED800D1FE6A /* GestureServicePlugins.swift */,
+				77A1C4452F368ED800D1FE6A /* SystemServicePlugins.swift */,
 			);
 			path = "Built-in";
 			sourceTree = "<group>";
 		};
-		77A1C3692F36793D00D1FE6A /* Core */ = {
+		77A1C44A2F368ED800D1FE6A /* Core */ = {
 			isa = PBXGroup;
 			children = (
-				77A1C3662F36793D00D1FE6A /* ServicePluginAdapter.swift */,
-				77A1C3672F36793D00D1FE6A /* ServicePluginManager.swift */,
-				77A1C3682F36793D00D1FE6A /* ServicePluginProtocol.swift */,
+				77A1C4472F368ED800D1FE6A /* ServicePluginAdapter.swift */,
+				77A1C4482F368ED800D1FE6A /* ServicePluginManager.swift */,
+				77A1C4492F368ED800D1FE6A /* ServicePluginProtocol.swift */,
 			);
 			path = Core;
 			sourceTree = "<group>";
 		};
-		77A1C36A2F36793D00D1FE6A /* ServicePlugins */ = {
+		77A1C44B2F368ED800D1FE6A /* ServicePlugins */ = {
 			isa = PBXGroup;
 			children = (
-				77A1C3652F36793D00D1FE6A /* Built-in */,
-				77A1C3692F36793D00D1FE6A /* Core */,
+				77A1C4462F368ED800D1FE6A /* Built-in */,
+				77A1C44A2F368ED800D1FE6A /* Core */,
 			);
 			path = ServicePlugins;
 			sourceTree = "<group>";
 		};
-		77A1C3822F36793D00D1FE6A /* Services */ = {
+		77A1C4632F368ED800D1FE6A /* Services */ = {
 			isa = PBXGroup;
 			children = (
-				77A1C36B2F36793D00D1FE6A /* AccessibilityPermissionManager.swift */,
-				77A1C36C2F36793D00D1FE6A /* AccessibilityPermissionService.swift */,
-				77A1C36D2F36793D00D1FE6A /* ActionListHelper.swift */,
-				77A1C36E2F36793D00D1FE6A /* ApplicationDiscoveryService.swift */,
-				77A1C36F2F36793D00D1FE6A /* ApplicationResetService.swift */,
-				77A1C3702F36793D00D1FE6A /* DebugLoggingService.swift */,
-				77A1C3712F36793D00D1FE6A /* DebugReportService.swift */,
-				77A1C3722F36793D00D1FE6A /* DeveloperModeToggleService.swift */,
-				77A1C3732F36793D00D1FE6A /* GestureConfigurationService.swift */,
-				77A1C3742F36793D00D1FE6A /* GestureSearchService.swift */,
-				77A1C3752F36793D00D1FE6A /* HapticFeedbackService.swift */,
-				77A1C3762F36793D00D1FE6A /* LaunchAtLoginService.swift */,
-				77A1C3772F36793D00D1FE6A /* LogFileService.swift */,
-				77A1C3782F36793D00D1FE6A /* Logger.swift */,
-				77A1C3792F36793D00D1FE6A /* MenuBarVisibilityService.swift */,
-				77A1C37A2F36793D00D1FE6A /* PerformanceMonitorService.swift */,
-				77A1C37B2F36793D00D1FE6A /* PluginManagementService.swift */,
-				77A1C37C2F36793D00D1FE6A /* SavedActionsSortService.swift */,
-				77A1C37D2F36793D00D1FE6A /* SettingsImportExportService.swift */,
-				77A1C37E2F36793D00D1FE6A /* SystemInformationService.swift */,
-				77A1C37F2F36793D00D1FE6A /* UpdateCheckService.swift */,
-				77A1C3802F36793D00D1FE6A /* WindowTargeting.swift */,
-				77A1C3812F36793D00D1FE6A /* ZoneVisualizationService.swift */,
+				77A1C44C2F368ED800D1FE6A /* AccessibilityPermissionManager.swift */,
+				77A1C44D2F368ED800D1FE6A /* AccessibilityPermissionService.swift */,
+				77A1C44E2F368ED800D1FE6A /* ActionListHelper.swift */,
+				77A1C44F2F368ED800D1FE6A /* ApplicationDiscoveryService.swift */,
+				77A1C4502F368ED800D1FE6A /* ApplicationResetService.swift */,
+				77A1C4512F368ED800D1FE6A /* DebugLoggingService.swift */,
+				77A1C4522F368ED800D1FE6A /* DebugReportService.swift */,
+				77A1C4532F368ED800D1FE6A /* DeveloperModeToggleService.swift */,
+				77A1C4542F368ED800D1FE6A /* GestureConfigurationService.swift */,
+				77A1C4552F368ED800D1FE6A /* GestureSearchService.swift */,
+				77A1C4562F368ED800D1FE6A /* HapticFeedbackService.swift */,
+				77A1C4572F368ED800D1FE6A /* LaunchAtLoginService.swift */,
+				77A1C4582F368ED800D1FE6A /* LogFileService.swift */,
+				77A1C4592F368ED800D1FE6A /* Logger.swift */,
+				77A1C45A2F368ED800D1FE6A /* MenuBarVisibilityService.swift */,
+				77A1C45B2F368ED800D1FE6A /* PerformanceMonitorService.swift */,
+				77A1C45C2F368ED800D1FE6A /* PluginManagementService.swift */,
+				77A1C45D2F368ED800D1FE6A /* SavedActionsSortService.swift */,
+				77A1C45E2F368ED800D1FE6A /* SettingsImportExportService.swift */,
+				77A1C45F2F368ED800D1FE6A /* SystemInformationService.swift */,
+				77A1C4602F368ED800D1FE6A /* UpdateCheckService.swift */,
+				77A1C4612F368ED800D1FE6A /* WindowTargeting.swift */,
+				77A1C4622F368ED800D1FE6A /* ZoneVisualizationService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
 		};
-		77A1C38B2F36793D00D1FE6A /* Tabs */ = {
+		77A1C46B2F368ED800D1FE6A /* Tabs */ = {
 			isa = PBXGroup;
 			children = (
-				77A1C3832F36793D00D1FE6A /* AppProfilesView.swift */,
-				77A1C3842F36793D00D1FE6A /* DeveloperView.swift */,
-				77A1C3852F36793D00D1FE6A /* GesturesView.swift */,
-				77A1C3862F36793D00D1FE6A /* ProfilesView.swift */,
-				77A1C3872F36793D00D1FE6A /* ProfileTemplateService.swift */,
-				77A1C3882F36793D00D1FE6A /* SavedActionsView.swift */,
-				77A1C3892F36793D00D1FE6A /* ServicesView.swift */,
-				77A1C38A2F36793D00D1FE6A /* SettingsView.swift */,
+				77A1C4642F368ED800D1FE6A /* AppProfilesView.swift */,
+				77A1C4652F368ED800D1FE6A /* DeveloperView.swift */,
+				77A1C4662F368ED800D1FE6A /* GesturesView.swift */,
+				77A1C4672F368ED800D1FE6A /* ProfilesView.swift */,
+				77A1C4682F368ED800D1FE6A /* SavedActionsView.swift */,
+				77A1C4692F368ED800D1FE6A /* ServicesView.swift */,
+				77A1C46A2F368ED800D1FE6A /* SettingsView.swift */,
 			);
 			path = Tabs;
 			sourceTree = "<group>";
 		};
-		77A1C3952F36793D00D1FE6A /* UI */ = {
+		77A1C4762F368ED800D1FE6A /* UI */ = {
 			isa = PBXGroup;
 			children = (
-				77A1C38B2F36793D00D1FE6A /* Tabs */,
-				77A1C38C2F36793D00D1FE6A /* ActionSelectionView.swift */,
-				77A1C38D2F36793D00D1FE6A /* GestureConfigurationSheet.swift */,
-				77A1C38E2F36793D00D1FE6A /* ImportDefaultProfiles.swift */,
-				77A1C38F2F36793D00D1FE6A /* KeyboardShortcutField.swift */,
-				77A1C3902F36793D00D1FE6A /* PluginSettingsView.swift */,
-				77A1C3912F36793D00D1FE6A /* SavedActionConfigurationSheet.swift */,
-				77A1C3922F36793D00D1FE6A /* TabManager.swift */,
-				77A1C3932F36793D00D1FE6A /* UIServices.swift */,
-				77A1C3942F36793D00D1FE6A /* ZoneHighlightWindow.swift */,
-				B0A54EA3994C8F52FA92A084 /* BundleEditorView.swift */,
+				77A1C46B2F368ED800D1FE6A /* Tabs */,
+				77A1C46C2F368ED800D1FE6A /* ActionSelectionView.swift */,
+				77A1C46D2F368ED800D1FE6A /* BundleEditorView.swift */,
+				77A1C46E2F368ED800D1FE6A /* GestureConfigurationSheet.swift */,
+				77A1C46F2F368ED800D1FE6A /* ImportDefaultProfiles.swift */,
+				77A1C4702F368ED800D1FE6A /* KeyboardShortcutField.swift */,
+				77A1C4712F368ED800D1FE6A /* PluginSettingsView.swift */,
+				77A1C4722F368ED800D1FE6A /* SavedActionConfigurationSheet.swift */,
+				77A1C4732F368ED800D1FE6A /* TabManager.swift */,
+				77A1C4742F368ED800D1FE6A /* UIServices.swift */,
+				77A1C4752F368ED800D1FE6A /* ZoneHighlightWindow.swift */,
 			);
 			path = UI;
 			sourceTree = "<group>";
 		};
-		77A1C39D2F36793D00D1FE6A /* Built-in */ = {
+		77A1C47E2F368ED800D1FE6A /* Built-in */ = {
 			isa = PBXGroup;
 			children = (
-				77A1C3962F36793D00D1FE6A /* AppProfilesUIPlugin.swift */,
-				77A1C3972F36793D00D1FE6A /* DeveloperUIPlugin.swift */,
-				77A1C3982F36793D00D1FE6A /* GesturesUIPlugin.swift */,
-				77A1C3992F36793D00D1FE6A /* ProfilesUIPlugin.swift */,
-				77A1C39A2F36793D00D1FE6A /* SavedActionsUIPlugin.swift */,
-				77A1C39B2F36793D00D1FE6A /* ServicesUIPlugin.swift */,
-				77A1C39C2F36793D00D1FE6A /* SettingsUIPlugin.swift */,
+				77A1C4772F368ED800D1FE6A /* AppProfilesUIPlugin.swift */,
+				77A1C4782F368ED800D1FE6A /* DeveloperUIPlugin.swift */,
+				77A1C4792F368ED800D1FE6A /* GesturesUIPlugin.swift */,
+				77A1C47A2F368ED800D1FE6A /* ProfilesUIPlugin.swift */,
+				77A1C47B2F368ED800D1FE6A /* SavedActionsUIPlugin.swift */,
+				77A1C47C2F368ED800D1FE6A /* ServicesUIPlugin.swift */,
+				77A1C47D2F368ED800D1FE6A /* SettingsUIPlugin.swift */,
 			);
 			path = "Built-in";
 			sourceTree = "<group>";
 		};
-		77A1C3A12F36793D00D1FE6A /* Core */ = {
+		77A1C4822F368ED800D1FE6A /* Core */ = {
 			isa = PBXGroup;
 			children = (
-				77A1C39E2F36793D00D1FE6A /* BaseUIPlugin.swift */,
-				77A1C39F2F36793D00D1FE6A /* UIPluginManager.swift */,
-				77A1C3A02F36793D00D1FE6A /* UIPluginProtocol.swift */,
+				77A1C47F2F368ED800D1FE6A /* BaseUIPlugin.swift */,
+				77A1C4802F368ED800D1FE6A /* UIPluginManager.swift */,
+				77A1C4812F368ED800D1FE6A /* UIPluginProtocol.swift */,
 			);
 			path = Core;
 			sourceTree = "<group>";
 		};
-		77A1C3A22F36793D00D1FE6A /* UIPlugins */ = {
+		77A1C4832F368ED800D1FE6A /* UIPlugins */ = {
 			isa = PBXGroup;
 			children = (
-				77A1C39D2F36793D00D1FE6A /* Built-in */,
-				77A1C3A12F36793D00D1FE6A /* Core */,
+				77A1C47E2F368ED800D1FE6A /* Built-in */,
+				77A1C4822F368ED800D1FE6A /* Core */,
 			);
 			path = UIPlugins;
 			sourceTree = "<group>";
 		};
-		77A1C3A52F36793D00D1FE6A /* Utility Functions */ = {
+		77A1C4862F368ED800D1FE6A /* Utilities */ = {
 			isa = PBXGroup;
 			children = (
-				77A1C3A32F36793D00D1FE6A /* AnyCodable.swift */,
-				77A1C3A42F36793D00D1FE6A /* Extensions.swift */,
+				77A1C4842F368ED800D1FE6A /* AnyCodable.swift */,
+				77A1C4852F368ED800D1FE6A /* Extensions.swift */,
 			);
-			path = "Utility Functions";
+			path = Utilities;
 			sourceTree = "<group>";
 		};
-		77A1C3AE2F36793D00D1FE6A /* MouseGesturesCodeBase */ = {
+		77A1C4882F368ED800D1FE6A /* MouseGesturesCodeBase */ = {
 			isa = PBXGroup;
 			children = (
-				77A1C33B2F36793D00D1FE6A /* .serena */,
-				77A1C33D2F36793D00D1FE6A /* Action Execution */,
-				77A1C3492F36793D00D1FE6A /* ActionPlugins */,
-				77A1C34D2F36793D00D1FE6A /* Configuration */,
-				77A1C35D2F36793D00D1FE6A /* Detection */,
-				77A1C3612F36793D00D1FE6A /* Initilization */,
-				77A1C36A2F36793D00D1FE6A /* ServicePlugins */,
-				77A1C3822F36793D00D1FE6A /* Services */,
-				77A1C3952F36793D00D1FE6A /* UI */,
-				77A1C3A22F36793D00D1FE6A /* UIPlugins */,
-				77A1C3A52F36793D00D1FE6A /* Utility Functions */,
-				77A1C3A62F36793D00D1FE6A /* BundleConditions.swift */,
-				77A1C3A72F36793D00D1FE6A /* DataStructures.swift */,
-				77A1C3A82F36793D00D1FE6A /* Gesture.swift */,
-				77A1C3AA2F36793D00D1FE6A /* ProfileImportExportService.swift */,
-				77A1C3AB2F36793D00D1FE6A /* ProfileManagementService.swift */,
-				77A1C3AC2F36793D00D1FE6A /* ProfileManager.swift */,
-				77A1C3AD2F36793D00D1FE6A /* ProfileStructures.swift */,
-				77A1C3A92F36793D00D1FE6A /* Info.plist */,
+				77A1C4142F368ED800D1FE6A /* Action Execution */,
+				77A1C4202F368ED800D1FE6A /* ActionPlugins */,
+				77A1C4242F368ED800D1FE6A /* App */,
+				77A1C4282F368ED800D1FE6A /* Configuration */,
+				77A1C42C2F368ED800D1FE6A /* Core */,
+				77A1C43C2F368ED800D1FE6A /* Detection */,
+				77A1C4422F368ED800D1FE6A /* Profiles */,
+				77A1C44B2F368ED800D1FE6A /* ServicePlugins */,
+				77A1C4632F368ED800D1FE6A /* Services */,
+				77A1C4762F368ED800D1FE6A /* UI */,
+				77A1C4832F368ED800D1FE6A /* UIPlugins */,
+				77A1C4862F368ED800D1FE6A /* Utilities */,
+				77A1C4872F368ED800D1FE6A /* Info.plist */,
 			);
 			path = MouseGesturesCodeBase;
 			sourceTree = "<group>";
@@ -529,8 +495,8 @@
 		A1234567890123456789014D = {
 			isa = PBXGroup;
 			children = (
+				77A1C4882F368ED800D1FE6A /* MouseGesturesCodeBase */,
 				773428682E6E20FD003AB7F1 /* MouseGestures.app */,
-				77A1C3AE2F36793D00D1FE6A /* MouseGesturesCodeBase */,
 			);
 			sourceTree = "<group>";
 		};
@@ -592,13 +558,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				77A1C40C2F36793D00D1FE6A /* document_symbols_cache_v23-06-25.pkl in Resources */,
-				77A1C40D2F36793D00D1FE6A /* Info.plist in Resources */,
-				77A1C40E2F36793D00D1FE6A /* project_overview.md in Resources */,
-				77A1C40F2F36793D00D1FE6A /* coding_conventions.md in Resources */,
-				77A1C4102F36793D00D1FE6A /* .gitignore in Resources */,
-				77A1C4112F36793D00D1FE6A /* suggested_commands.md in Resources */,
-				77A1C4122F36793D00D1FE6A /* project.yml in Resources */,
+				77A1C4892F368ED800D1FE6A /* Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -609,100 +569,100 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				77A1C3AF2F36793D00D1FE6A /* ProfileImportExportService.swift in Sources */,
-				77A1C3B02F36793D00D1FE6A /* UIPluginProtocol.swift in Sources */,
-				77A1C3B12F36793D00D1FE6A /* DeveloperModeToggleService.swift in Sources */,
-				77A1C3B22F36793D00D1FE6A /* ServicePluginManager.swift in Sources */,
-				77A1C3B32F36793D00D1FE6A /* DetectionPlugin.swift in Sources */,
-				77A1C3B42F36793D00D1FE6A /* ActionListHelper.swift in Sources */,
-				77A1C3B52F36793D00D1FE6A /* SettingsImportExportService.swift in Sources */,
-				77A1C3B62F36793D00D1FE6A /* AppConfigurationDetectorPlugin.swift in Sources */,
-				77A1C3B72F36793D00D1FE6A /* ActionSelectionView.swift in Sources */,
-				77A1C3B82F36793D00D1FE6A /* GestureLookup.swift in Sources */,
-				77A1C3B92F36793D00D1FE6A /* AnyCodable.swift in Sources */,
-				77A1C3BA2F36793D00D1FE6A /* LaunchAtLoginService.swift in Sources */,
-				77A1C3BB2F36793D00D1FE6A /* AccessibilityPermissionManager.swift in Sources */,
-				77A1C3BC2F36793D00D1FE6A /* PluginSandbox.swift in Sources */,
-				77A1C3BD2F36793D00D1FE6A /* SystemServicePlugins.swift in Sources */,
-				77A1C3BE2F36793D00D1FE6A /* MediaControlPlugin.swift in Sources */,
-				77A1C3BF2F36793D00D1FE6A /* Extensions.swift in Sources */,
-				77A1C3C02F36793D00D1FE6A /* WindowManagementPlugin.swift in Sources */,
-				77A1C3C12F36793D00D1FE6A /* SavedActions.swift in Sources */,
-				77A1C3C22F36793D00D1FE6A /* AccessibilityPermissionService.swift in Sources */,
-				77A1C3C32F36793D00D1FE6A /* GesturesView.swift in Sources */,
-				77A1C3C42F36793D00D1FE6A /* Configuration.swift in Sources */,
-				77A1C3C52F36793D00D1FE6A /* Gesture.swift in Sources */,
-				77A1C3C62F36793D00D1FE6A /* GesturesUIPlugin.swift in Sources */,
-				77A1C3C72F36793D00D1FE6A /* ProfileManager.swift in Sources */,
-				77A1C3C82F36793D00D1FE6A /* MouseGesturesApp.swift in Sources */,
-				77A1C3C92F36793D00D1FE6A /* ZoneVisualizationService.swift in Sources */,
-				77A1C3CA2F36793D00D1FE6A /* GestureSearchService.swift in Sources */,
-				77A1C3CB2F36793D00D1FE6A /* UIPluginManager.swift in Sources */,
-				77A1C3CC2F36793D00D1FE6A /* MouseButtonDetectorPlugin.swift in Sources */,
-				77A1C3CD2F36793D00D1FE6A /* ModifierKeyDetectorPlugin.swift in Sources */,
-				77A1C3CE2F36793D00D1FE6A /* UpdateCheckService.swift in Sources */,
-				77A1C3CF2F36793D00D1FE6A /* ProfileTemplateService.swift in Sources */,
-				77A1C3D02F36793D00D1FE6A /* DeveloperView.swift in Sources */,
-				77A1C3D12F36793D00D1FE6A /* ScreenZone.swift in Sources */,
-				77A1C3D22F36793D00D1FE6A /* ServicesView.swift in Sources */,
-				77A1C3D32F36793D00D1FE6A /* ProfilesUIPlugin.swift in Sources */,
-				77A1C3D42F36793D00D1FE6A /* PerformanceMonitorService.swift in Sources */,
-				77A1C3D52F36793D00D1FE6A /* ServicePluginAdapter.swift in Sources */,
-				77A1C3D62F36793D00D1FE6A /* DefaultProfiles.swift in Sources */,
-				77A1C3D72F36793D00D1FE6A /* DebugLoggingService.swift in Sources */,
-				77A1C3D82F36793D00D1FE6A /* KeyboardShortcutDetectorPlugin.swift in Sources */,
-				77A1C3D92F36793D00D1FE6A /* ProfileStructures.swift in Sources */,
-				77A1C3DA2F36793D00D1FE6A /* AutomationPlugin.swift in Sources */,
-				77A1C3DB2F36793D00D1FE6A /* DataStructures.swift in Sources */,
-				77A1C3DC2F36793D00D1FE6A /* WindowTargeting.swift in Sources */,
-				77A1C3DD2F36793D00D1FE6A /* GestureConfigurationService.swift in Sources */,
-				77A1C3DE2F36793D00D1FE6A /* SavedActionConfigurationSheet.swift in Sources */,
-				77A1C3DF2F36793D00D1FE6A /* ServicesUIPlugin.swift in Sources */,
-				77A1C3E02F36793D00D1FE6A /* SystemControlPlugin.swift in Sources */,
-				77A1C3E12F36793D00D1FE6A /* DeveloperUIPlugin.swift in Sources */,
-				77A1C3E22F36793D00D1FE6A /* DetectionPluginManager.swift in Sources */,
-				77A1C3E32F36793D00D1FE6A /* AppDelegate.swift in Sources */,
-				77A1C3E42F36793D00D1FE6A /* PluginSettings.swift in Sources */,
-				77A1C3E52F36793D00D1FE6A /* SavedActionsUIPlugin.swift in Sources */,
-				77A1C3E62F36793D00D1FE6A /* SettingsUIPlugin.swift in Sources */,
-				77A1C3E72F36793D00D1FE6A /* BaseUIPlugin.swift in Sources */,
-				77A1C3E82F36793D00D1FE6A /* ScreenZoneDetectorPlugin.swift in Sources */,
-				77A1C3E92F36793D00D1FE6A /* PluginManager.swift in Sources */,
-				77A1C3EA2F36793D00D1FE6A /* ZoneHighlightWindow.swift in Sources */,
-				77A1C3EB2F36793D00D1FE6A /* ProfileManagementService.swift in Sources */,
-				77A1C3EC2F36793D00D1FE6A /* AppProfilesUIPlugin.swift in Sources */,
-				77A1C3ED2F36793D00D1FE6A /* DragModifier.swift in Sources */,
-				77A1C3EE2F36793D00D1FE6A /* BundleActionsPlugin.swift in Sources */,
-				77A1C3EF2F36793D00D1FE6A /* ApplicationDiscoveryService.swift in Sources */,
-				77A1C3F02F36793D00D1FE6A /* BundleConditions.swift in Sources */,
-				77A1C3F12F36793D00D1FE6A /* KeyboardShortcutField.swift in Sources */,
-				77A1C3F22F36793D00D1FE6A /* SystemInformationService.swift in Sources */,
-				77A1C3F32F36793D00D1FE6A /* ProfilesView.swift in Sources */,
-				77A1C3F42F36793D00D1FE6A /* DebugReportService.swift in Sources */,
-				77A1C3F52F36793D00D1FE6A /* UIServices.swift in Sources */,
-				77A1C3F62F36793D00D1FE6A /* HapticFeedbackService.swift in Sources */,
-				77A1C3F72F36793D00D1FE6A /* PluginProtocol.swift in Sources */,
-				77A1C3F82F36793D00D1FE6A /* PluginSettingsView.swift in Sources */,
-				77A1C3F92F36793D00D1FE6A /* ActionExecutionManager.swift in Sources */,
-				77A1C3FA2F36793D00D1FE6A /* SavedActionsView.swift in Sources */,
-				77A1C3FB2F36793D00D1FE6A /* MenuIcon.swift in Sources */,
-				77A1C3FC2F36793D00D1FE6A /* GestureServicePlugins.swift in Sources */,
-				77A1C3FD2F36793D00D1FE6A /* ApplicationResetService.swift in Sources */,
-				77A1C3FE2F36793D00D1FE6A /* SavedActionsSortService.swift in Sources */,
-				77A1C3FF2F36793D00D1FE6A /* DeveloperServicePlugins.swift in Sources */,
-				77A1C4002F36793D00D1FE6A /* PluginManagementService.swift in Sources */,
-				77A1C4012F36793D00D1FE6A /* GestureConfigurationSheet.swift in Sources */,
-				77A1C4022F36793D00D1FE6A /* AppProfilesView.swift in Sources */,
-				77A1C4032F36793D00D1FE6A /* Logger.swift in Sources */,
-				77A1C4042F36793D00D1FE6A /* MenuBarVisibilityService.swift in Sources */,
-				77A1C4052F36793D00D1FE6A /* LogFileService.swift in Sources */,
-				77A1C4062F36793D00D1FE6A /* ImportDefaultProfiles.swift in Sources */,
-				77A1C4072F36793D00D1FE6A /* ServicePluginProtocol.swift in Sources */,
-				77A1C4082F36793D00D1FE6A /* CoreActionsPlugin.swift in Sources */,
-				77A1C4092F36793D00D1FE6A /* SettingsView.swift in Sources */,
-				77A1C40A2F36793D00D1FE6A /* TabManager.swift in Sources */,
-				77A1C40B2F36793D00D1FE6A /* ActivationCoordinator.swift in Sources */,
-				68F348D48A0770370E34F9A1 /* BundleEditorView.swift in Sources */,
+				77A1C48A2F368ED800D1FE6A /* PluginProtocol.swift in Sources */,
+				77A1C48B2F368ED800D1FE6A /* PerformanceMonitorService.swift in Sources */,
+				77A1C48C2F368ED800D1FE6A /* LaunchAtLoginService.swift in Sources */,
+				77A1C48D2F368ED800D1FE6A /* BundleActionsPlugin.swift in Sources */,
+				77A1C48E2F368ED800D1FE6A /* WindowManagementPlugin.swift in Sources */,
+				77A1C48F2F368ED800D1FE6A /* MenuIcon.swift in Sources */,
+				77A1C4902F368ED800D1FE6A /* PluginSettingsView.swift in Sources */,
+				77A1C4912F368ED800D1FE6A /* PluginSandbox.swift in Sources */,
+				77A1C4922F368ED800D1FE6A /* DragModifier.swift in Sources */,
+				77A1C4932F368ED800D1FE6A /* GestureConfigurationSheet.swift in Sources */,
+				77A1C4942F368ED800D1FE6A /* DeveloperServicePlugins.swift in Sources */,
+				77A1C4952F368ED800D1FE6A /* ServicePluginManager.swift in Sources */,
+				77A1C4962F368ED800D1FE6A /* UIServices.swift in Sources */,
+				77A1C4972F368ED800D1FE6A /* AccessibilityPermissionService.swift in Sources */,
+				77A1C4982F368ED800D1FE6A /* GestureServicePlugins.swift in Sources */,
+				77A1C4992F368ED800D1FE6A /* DebugLoggingService.swift in Sources */,
+				77A1C49A2F368ED800D1FE6A /* ActivationCoordinator.swift in Sources */,
+				77A1C49B2F368ED800D1FE6A /* MouseGesturesApp.swift in Sources */,
+				77A1C49C2F368ED800D1FE6A /* MenuBarVisibilityService.swift in Sources */,
+				77A1C49D2F368ED800D1FE6A /* ProfilesView.swift in Sources */,
+				77A1C49E2F368ED800D1FE6A /* ActionSelectionView.swift in Sources */,
+				77A1C49F2F368ED800D1FE6A /* KeyboardShortcutDetectorPlugin.swift in Sources */,
+				77A1C4A02F368ED800D1FE6A /* SavedActionsUIPlugin.swift in Sources */,
+				77A1C4A12F368ED800D1FE6A /* ApplicationDiscoveryService.swift in Sources */,
+				77A1C4A22F368ED800D1FE6A /* DetectionPlugin.swift in Sources */,
+				77A1C4A32F368ED800D1FE6A /* SavedActionConfigurationSheet.swift in Sources */,
+				77A1C4A42F368ED800D1FE6A /* GestureSearchService.swift in Sources */,
+				77A1C4A52F368ED800D1FE6A /* AppProfilesUIPlugin.swift in Sources */,
+				77A1C4A62F368ED800D1FE6A /* TabManager.swift in Sources */,
+				77A1C4A72F368ED800D1FE6A /* MouseButtonDetectorPlugin.swift in Sources */,
+				77A1C4A82F368ED800D1FE6A /* SystemControlPlugin.swift in Sources */,
+				77A1C4A92F368ED800D1FE6A /* ApplicationResetService.swift in Sources */,
+				77A1C4AA2F368ED800D1FE6A /* DebugReportService.swift in Sources */,
+				77A1C4AB2F368ED800D1FE6A /* SettingsUIPlugin.swift in Sources */,
+				77A1C4AC2F368ED800D1FE6A /* ImportDefaultProfiles.swift in Sources */,
+				77A1C4AD2F368ED800D1FE6A /* LogFileService.swift in Sources */,
+				77A1C4AE2F368ED800D1FE6A /* UIPluginProtocol.swift in Sources */,
+				77A1C4AF2F368ED800D1FE6A /* Extensions.swift in Sources */,
+				77A1C4B02F368ED800D1FE6A /* Gesture.swift in Sources */,
+				77A1C4B12F368ED800D1FE6A /* SavedActionsSortService.swift in Sources */,
+				77A1C4B22F368ED800D1FE6A /* ProfileStructures.swift in Sources */,
+				77A1C4B32F368ED800D1FE6A /* DeveloperUIPlugin.swift in Sources */,
+				77A1C4B42F368ED800D1FE6A /* ServicesUIPlugin.swift in Sources */,
+				77A1C4B52F368ED800D1FE6A /* BundleEditorView.swift in Sources */,
+				77A1C4B62F368ED800D1FE6A /* ProfileTemplateService.swift in Sources */,
+				77A1C4B72F368ED800D1FE6A /* BundleConditions.swift in Sources */,
+				77A1C4B82F368ED800D1FE6A /* ActionListHelper.swift in Sources */,
+				77A1C4B92F368ED800D1FE6A /* ModifierKeyDetectorPlugin.swift in Sources */,
+				77A1C4BA2F368ED800D1FE6A /* ProfileManager.swift in Sources */,
+				77A1C4BB2F368ED800D1FE6A /* ScreenZone.swift in Sources */,
+				77A1C4BC2F368ED800D1FE6A /* ServicesView.swift in Sources */,
+				77A1C4BD2F368ED800D1FE6A /* ProfileManagementService.swift in Sources */,
+				77A1C4BE2F368ED800D1FE6A /* SettingsImportExportService.swift in Sources */,
+				77A1C4BF2F368ED800D1FE6A /* SettingsView.swift in Sources */,
+				77A1C4C02F368ED800D1FE6A /* DefaultProfiles.swift in Sources */,
+				77A1C4C12F368ED800D1FE6A /* HapticFeedbackService.swift in Sources */,
+				77A1C4C22F368ED800D1FE6A /* SystemInformationService.swift in Sources */,
+				77A1C4C32F368ED800D1FE6A /* GestureConfigurationService.swift in Sources */,
+				77A1C4C42F368ED800D1FE6A /* ServicePluginAdapter.swift in Sources */,
+				77A1C4C52F368ED800D1FE6A /* CoreActionsPlugin.swift in Sources */,
+				77A1C4C62F368ED800D1FE6A /* DeveloperModeToggleService.swift in Sources */,
+				77A1C4C72F368ED800D1FE6A /* PluginSettings.swift in Sources */,
+				77A1C4C82F368ED800D1FE6A /* ActionExecutionManager.swift in Sources */,
+				77A1C4C92F368ED800D1FE6A /* AnyCodable.swift in Sources */,
+				77A1C4CA2F368ED800D1FE6A /* GesturesView.swift in Sources */,
+				77A1C4CB2F368ED800D1FE6A /* ScreenZoneDetectorPlugin.swift in Sources */,
+				77A1C4CC2F368ED800D1FE6A /* DetectionPluginManager.swift in Sources */,
+				77A1C4CD2F368ED800D1FE6A /* AppProfilesView.swift in Sources */,
+				77A1C4CE2F368ED800D1FE6A /* AutomationPlugin.swift in Sources */,
+				77A1C4CF2F368ED800D1FE6A /* AppDelegate.swift in Sources */,
+				77A1C4D02F368ED800D1FE6A /* SavedActionsView.swift in Sources */,
+				77A1C4D12F368ED800D1FE6A /* Configuration.swift in Sources */,
+				77A1C4D22F368ED800D1FE6A /* ProfileImportExportService.swift in Sources */,
+				77A1C4D32F368ED800D1FE6A /* BaseUIPlugin.swift in Sources */,
+				77A1C4D42F368ED800D1FE6A /* Logger.swift in Sources */,
+				77A1C4D52F368ED800D1FE6A /* MediaControlPlugin.swift in Sources */,
+				77A1C4D62F368ED800D1FE6A /* WindowTargeting.swift in Sources */,
+				77A1C4D72F368ED800D1FE6A /* PluginManager.swift in Sources */,
+				77A1C4D82F368ED800D1FE6A /* UIPluginManager.swift in Sources */,
+				77A1C4D92F368ED800D1FE6A /* SavedActions.swift in Sources */,
+				77A1C4DA2F368ED800D1FE6A /* AccessibilityPermissionManager.swift in Sources */,
+				77A1C4DB2F368ED800D1FE6A /* DataStructures.swift in Sources */,
+				77A1C4DC2F368ED800D1FE6A /* KeyboardShortcutField.swift in Sources */,
+				77A1C4DD2F368ED800D1FE6A /* ZoneVisualizationService.swift in Sources */,
+				77A1C4DE2F368ED800D1FE6A /* AppConfigurationDetectorPlugin.swift in Sources */,
+				77A1C4DF2F368ED800D1FE6A /* DeveloperView.swift in Sources */,
+				77A1C4E02F368ED800D1FE6A /* ProfilesUIPlugin.swift in Sources */,
+				77A1C4E12F368ED800D1FE6A /* GestureLookup.swift in Sources */,
+				77A1C4E22F368ED800D1FE6A /* PluginManagementService.swift in Sources */,
+				77A1C4E32F368ED800D1FE6A /* GesturesUIPlugin.swift in Sources */,
+				77A1C4E42F368ED800D1FE6A /* SystemServicePlugins.swift in Sources */,
+				77A1C4E52F368ED800D1FE6A /* UpdateCheckService.swift in Sources */,
+				77A1C4E62F368ED800D1FE6A /* ZoneHighlightWindow.swift in Sources */,
+				77A1C4E72F368ED800D1FE6A /* ServicePluginProtocol.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
