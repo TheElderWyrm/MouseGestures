@@ -14,7 +14,6 @@ Actions:
 Bugs
 - Saved actions does not allow for actions that require advanced configuration/opening a sheet (Example: Bundle actions)
 - Window Actions targeting multiple windows does not work
-- Bug: Will not display (first?) sheet when opening service sheet. Opening a different sheet then returning to the original sheet you were trying to open works.
 - Drag Detection seems unreliable
 
 Improve UI
