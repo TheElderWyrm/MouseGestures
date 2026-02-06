@@ -9,14 +9,16 @@ General:
 Actions:
 - Not all actions work.
 - Clean up unneeded actions
+- bundle actions vs execute bundle actions?
 
 Bugs
 - Efficiency system could be more exact (Example, not all modifier combinations result in gestures that need zone detection activation.)
-- Saved actions does not allow for actions that require advanced configuration/opening a sheet (Example: Bundle actions)
 - Window Actions targeting multiple windows does not work
 - Drag Detection seems unreliable
+- Prevent multiple gestures of the same modifiers to be created
 
 Improve UI
+- Bundle action UI needs to be improved. <-- Switch to siftUI
 - Improve appearance of Show Zone Highlights
 - Add search to settings
 - Pre-render UI to increase performance
@@ -24,9 +26,3 @@ Improve UI
 - Better Zone Configuration
 	- More visual menu
 	- More configuration options
-
-Improve actions menu
-- options listed
-	- Split action menu into section tabs  [DONE]
-	- Split actions into cascading menus (Media, System Control, Window Control, etc)  [DONE]
-	- Add action search (Search automatically when typing)  [DONE]

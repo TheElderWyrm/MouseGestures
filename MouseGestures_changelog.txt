@@ -1,4 +1,16 @@
 ## 2026-02-06
+### UI Improvement: Unified Action Selection in Bundle Actions Editor
+- Replaced NSPopUpButton-based action picker in BundleActionsEditor with SwiftUI ActionSelectionView
+  embedded via NSHostingView and an ActionSelectionBridge ObservableObject
+- Both the "Add Action" section and the "Edit Action" dialog (BundleActionEditDialog) now use
+  the same searchable, categorized ActionSelectionView
+- Increased editor window size (620x820) and edit dialog (580x520) to accommodate the richer UI
+- Removed ~130 lines of redundant AppKit action picker code (setupActionPopup,
+  actionSelectionChanged, createControl, parameterChanged methods)
+- Bundle editor now has full feature parity with gesture/saved action configuration sheets:
+  search, category chips, icon-rich list, inline parameter editing
+
+## 2026-02-06
 ### UI Improvement: Redesigned Action Selection View
 - Replaced plain category/action dropdown pickers with a rich, searchable action browser
 - **Search**: Added search field that filters actions by name, description, and category in real-time

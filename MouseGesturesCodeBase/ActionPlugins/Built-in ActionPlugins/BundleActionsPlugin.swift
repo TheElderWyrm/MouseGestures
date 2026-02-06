@@ -1,5 +1,6 @@
 import Cocoa
 import Foundation
+import SwiftUI
 
 // MARK: - Bundle Actions Plugin with Integrated UI
 
@@ -542,6 +543,13 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
     }
 }
 
+
+// MARK: - Bridge for SwiftUI ActionSelectionView in AppKit
+class ActionSelectionBridge: ObservableObject {
+    @Published var selectedActionId: String = ""
+    @Published var actionParameters: [String: AnyCodable] = [:]
+}
+
 // MARK: - Bundle Actions Editor
 
 public class BundleActionsEditor: NSWindowController, NSTableViewDelegate, NSTableViewDataSource {
@@ -556,10 +564,10 @@ public class BundleActionsEditor: NSWindowController, NSTableViewDelegate, NSTab
     var doneButton: NSButton!
     var cancelButton: NSButton!
     
-    // Inline action picker controls
-    var actionPopup: NSPopUpButton!
+    // SwiftUI action picker bridge
+    var actionBridge: ActionSelectionBridge!
+    var actionHostView: NSView!
     var addActionButton: NSButton!
-    var parameterContainer: NSView!
     
     // Advanced settings
     var advancedToggle: NSButton!
@@ -579,7 +587,6 @@ public class BundleActionsEditor: NSWindowController, NSTableViewDelegate, NSTab
     }
     var completionHandler: (([BundledAction]?) -> Void)?
     
-    private var currentParameters: [String: AnyCodable] = [:]
     private var currentCondition: BundleConditionGroup?
     
     // Child window controllers
@@ -587,7 +594,7 @@ public class BundleActionsEditor: NSWindowController, NSTableViewDelegate, NSTab
     private var conditionEditor: BundleConditionEditor?
     
     convenience init() {
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 600, height: 600),
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 620, height: 820),
                               styleMask: [.titled, .closable],
                               backing: .buffered,
                               defer: true)
@@ -603,11 +610,11 @@ public class BundleActionsEditor: NSWindowController, NSTableViewDelegate, NSTab
         
         // Title
         let titleLabel = NSTextField(labelWithString: "Actions will be executed in order from top to bottom:")
-        titleLabel.frame = NSRect(x: 20, y: 560, width: 560, height: 20)
+        titleLabel.frame = NSRect(x: 20, y: 780, width: 580, height: 20)
         contentView.addSubview(titleLabel)
         
         // Table View
-        let scrollView = NSScrollView(frame: NSRect(x: 20, y: 300, width: 560, height: 250))
+        let scrollView = NSScrollView(frame: NSRect(x: 20, y: 500, width: 580, height: 270))
         scrollView.hasVerticalScroller = true
         
         tableView = NSTableView(frame: scrollView.bounds)
@@ -635,40 +642,56 @@ public class BundleActionsEditor: NSWindowController, NSTableViewDelegate, NSTab
         
         // Table Management Buttons
         moveUpButton = NSButton(title: "▲", target: self, action: #selector(moveActionUp))
-        moveUpButton.frame = NSRect(x: 20, y: 265, width: 30, height: 25)
+        moveUpButton.frame = NSRect(x: 20, y: 468, width: 30, height: 25)
         contentView.addSubview(moveUpButton)
         
         moveDownButton = NSButton(title: "▼", target: self, action: #selector(moveActionDown))
-        moveDownButton.frame = NSRect(x: 55, y: 265, width: 30, height: 25)
+        moveDownButton.frame = NSRect(x: 55, y: 468, width: 30, height: 25)
         contentView.addSubview(moveDownButton)
         
         editButton = NSButton(title: "Edit", target: self, action: #selector(editSelectedAction))
-        editButton.frame = NSRect(x: 95, y: 265, width: 60, height: 25)
+        editButton.frame = NSRect(x: 95, y: 468, width: 60, height: 25)
         contentView.addSubview(editButton)
         
         removeButton = NSButton(title: "Remove", target: self, action: #selector(removeAction))
-        removeButton.frame = NSRect(x: 160, y: 265, width: 70, height: 25)
+        removeButton.frame = NSRect(x: 160, y: 468, width: 70, height: 25)
         contentView.addSubview(removeButton)
         
-        // Add Action Section
-        let addSectionBox = NSBox(frame: NSRect(x: 20, y: 60, width: 560, height: 195))
+        // Add Action Section - SwiftUI ActionSelectionView
+        let addSectionBox = NSBox(frame: NSRect(x: 20, y: 60, width: 580, height: 395))
         addSectionBox.title = "Add Action"
         contentView.addSubview(addSectionBox)
         
         let addSectionView = addSectionBox.contentView!
         
-        actionPopup = NSPopUpButton(frame: NSRect(x: 10, y: 150, width: 520, height: 25))
-        setupActionPopup(actionPopup, excludeBundleActions: true)
-        actionPopup.target = self
-        actionPopup.action = #selector(actionSelectionChanged)
-        addSectionView.addSubview(actionPopup)
-        
-        parameterContainer = NSView(frame: NSRect(x: 10, y: 40, width: 520, height: 100))
-        addSectionView.addSubview(parameterContainer)
+        actionBridge = ActionSelectionBridge()
+        let selectionView = ActionSelectionView(
+            selectedActionId: Binding(
+                get: { [weak self] in self?.actionBridge.selectedActionId ?? "" },
+                set: { [weak self] in self?.actionBridge.selectedActionId = $0 }
+            ),
+            actionParameters: Binding(
+                get: { [weak self] in self?.actionBridge.actionParameters ?? [:] },
+                set: { [weak self] in self?.actionBridge.actionParameters = $0 }
+            )
+        )
+        let hostView = NSHostingView(rootView: selectionView.environmentObject(actionBridge))
+        hostView.translatesAutoresizingMaskIntoConstraints = false
+        addSectionView.addSubview(hostView)
+        actionHostView = hostView
         
         addActionButton = NSButton(title: "Add Action to Bundle", target: self, action: #selector(addActionToList))
-        addActionButton.frame = NSRect(x: 400, y: 10, width: 130, height: 25)
+        addActionButton.translatesAutoresizingMaskIntoConstraints = false
         addSectionView.addSubview(addActionButton)
+        
+        NSLayoutConstraint.activate([
+            hostView.topAnchor.constraint(equalTo: addSectionView.topAnchor, constant: 4),
+            hostView.leadingAnchor.constraint(equalTo: addSectionView.leadingAnchor, constant: 4),
+            hostView.trailingAnchor.constraint(equalTo: addSectionView.trailingAnchor, constant: -4),
+            hostView.bottomAnchor.constraint(equalTo: addActionButton.topAnchor, constant: -8),
+            addActionButton.trailingAnchor.constraint(equalTo: addSectionView.trailingAnchor, constant: -10),
+            addActionButton.bottomAnchor.constraint(equalTo: addSectionView.bottomAnchor, constant: -8),
+        ])
         
         // Done/Cancel Buttons
         cancelButton = NSButton(title: "Cancel", target: self, action: #selector(cancel))
@@ -682,68 +705,25 @@ public class BundleActionsEditor: NSWindowController, NSTableViewDelegate, NSTab
         contentView.addSubview(doneButton)
         
         updateButtonStates()
-        actionSelectionChanged()
     }
     
     // Helper method to setup action popup (replacing ActionListHelper)
-    private func setupActionPopup(_ popup: NSPopUpButton, excludeBundleActions: Bool = false) {
-        popup.removeAllItems()
-        
-        let pluginManager = PluginManager.shared
-        let allPlugins = pluginManager.getAllPlugins()
-        
-        // Group actions by category
-        for category in ActionCategory.allCases {
-            var categoryActions: [(plugin: GestureActionPlugin, action: PluginAction)] = []
-            
-            for plugin in allPlugins {
-                for action in plugin.providedActions {
-                    if plugin.category == category {
-                        // Skip bundle actions if requested
-                        if excludeBundleActions && action.id.contains("bundle") {
-                            continue
-                        }
-                        categoryActions.append((plugin, action))
-                    }
-                }
-            }
-            
-            if !categoryActions.isEmpty {
-                // Add category header
-                popup.addItem(withTitle: "— \(category.rawValue) —")
-                popup.lastItem?.isEnabled = false
-                
-                // Add actions in this category
-                for (plugin, action) in categoryActions {
-                    popup.addItem(withTitle: action.name)
-                    // Store the full action identifier as represented object
-                    popup.lastItem?.representedObject = "\(plugin.identifier).\(action.id)"
-                    
-                    // Add icon if available
-                    if let iconName = action.icon,
-                       let image = NSImage(systemSymbolName: iconName, accessibilityDescription: nil) {
-                        popup.lastItem?.image = image
-                        popup.lastItem?.image?.size = NSSize(width: 16, height: 16)
-                    }
-                }
-            }
-        }
-    }
     
     // MARK: - Actions
     
     @objc func addActionToList() {
-        guard let actionIdentifier = actionPopup.selectedItem?.representedObject as? String else {
-            showAlert("No Action Selected", "Please select an action from the dropdown menu.")
+        let actionIdentifier = actionBridge.selectedActionId
+        guard !actionIdentifier.isEmpty else {
+            showAlert("No Action Selected", "Please select an action first.")
             return
         }
         
-        let bundledAction = BundledAction(actionIdentifier: actionIdentifier, parameters: currentParameters)
+        let bundledAction = BundledAction(actionIdentifier: actionIdentifier, parameters: actionBridge.actionParameters)
         bundledActions.append(bundledAction)
         
         // Reset for next action
-        actionPopup.selectItem(at: 0)
-        actionSelectionChanged()
+        actionBridge.selectedActionId = ""
+        actionBridge.actionParameters.removeAll()
     }
     
     @objc func removeAction() {
@@ -804,83 +784,6 @@ public class BundleActionsEditor: NSWindowController, NSTableViewDelegate, NSTab
     }
     
     // MARK: - UI Updates
-    
-    @objc private func actionSelectionChanged() {
-        parameterContainer.subviews.forEach { $0.removeFromSuperview() }
-        currentParameters.removeAll()
-        
-        guard let actionIdentifier = actionPopup.selectedItem?.representedObject as? String,
-              let (_, action) = PluginManager.shared.getAction(identifier: actionIdentifier) else {
-            return
-        }
-        
-        // Dynamically create UI for parameters
-        let stackView = NSStackView()
-        stackView.orientation = .vertical
-        stackView.spacing = 8
-        stackView.translatesAutoresizingMaskIntoConstraints = false
-        
-        for paramDef in action.supportedParameters {
-            let label = NSTextField(labelWithString: "\(paramDef.name):")
-            let control = createControl(for: paramDef)
-            
-            let row = NSStackView(views: [label, control])
-            row.orientation = .horizontal
-            stackView.addArrangedSubview(row)
-        }
-        
-        parameterContainer.addSubview(stackView)
-        NSLayoutConstraint.activate([
-            stackView.topAnchor.constraint(equalTo: parameterContainer.topAnchor),
-            stackView.leadingAnchor.constraint(equalTo: parameterContainer.leadingAnchor),
-            stackView.trailingAnchor.constraint(equalTo: parameterContainer.trailingAnchor),
-        ])
-    }
-    
-    private func createControl(for paramDef: ParameterDefinition) -> NSView {
-        let control: NSView
-        
-        switch paramDef.type {
-        case .string, .path, .url:
-            let textField = NSTextField()
-            textField.placeholderString = paramDef.description
-            textField.target = self
-            textField.action = #selector(parameterChanged(_:))
-            textField.identifier = NSUserInterfaceItemIdentifier(paramDef.key)
-            control = textField
-        case .number:
-            let numberField = NSTextField()
-            numberField.formatter = NumberFormatter()
-            numberField.target = self
-            numberField.action = #selector(parameterChanged(_:))
-            numberField.identifier = NSUserInterfaceItemIdentifier(paramDef.key)
-            control = numberField
-        case .boolean:
-            let checkbox = NSButton(checkboxWithTitle: "", target: self, action: #selector(parameterChanged(_:)))
-            checkbox.identifier = NSUserInterfaceItemIdentifier(paramDef.key)
-            control = checkbox
-        default:
-            let unsupportedLabel = NSTextField(labelWithString: "Configurable in Edit mode")
-            unsupportedLabel.textColor = .secondaryLabelColor
-            control = unsupportedLabel
-        }
-        
-        return control
-    }
-    
-    @objc func parameterChanged(_ sender: NSControl) {
-        guard let key = sender.identifier?.rawValue else { return }
-        
-        if let textField = sender as? NSTextField {
-            if textField.formatter is NumberFormatter {
-                currentParameters[key] = AnyCodable(textField.doubleValue)
-            } else {
-                currentParameters[key] = AnyCodable(textField.stringValue)
-            }
-        } else if let checkbox = sender as? NSButton {
-            currentParameters[key] = AnyCodable(checkbox.state == .on)
-        }
-    }
     
     private func updateButtonStates() {
         let hasSelection = tableView.selectedRow >= 0
@@ -946,14 +849,13 @@ internal class BundleActionEditDialog: NSWindowController {
     var completionHandler: ((BundledAction?) -> Void)?
     
     // UI Elements
-    var actionPopup: NSPopUpButton!
-    var parameterContainer: NSView!
+    var actionBridge: ActionSelectionBridge!
     var saveButton: NSButton!
     var cancelButton: NSButton!
     
     init(bundledAction: BundledAction) {
         self.bundledAction = bundledAction
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 500, height: 300),
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 580, height: 520),
                               styleMask: [.titled],
                               backing: .buffered,
                               defer: true)
@@ -967,13 +869,52 @@ internal class BundleActionEditDialog: NSWindowController {
     }
     
     private func setupUI() {
-        // Implementation similar to the original BundleActionEditDialog
-        // but integrated into the plugin
+        guard let contentView = window?.contentView else { return }
+        
+        actionBridge = ActionSelectionBridge()
+        actionBridge.selectedActionId = bundledAction.actionIdentifier
+        actionBridge.actionParameters = bundledAction.parameters
+        
+        let selectionView = ActionSelectionView(
+            selectedActionId: Binding(
+                get: { [weak self] in self?.actionBridge.selectedActionId ?? "" },
+                set: { [weak self] in self?.actionBridge.selectedActionId = $0 }
+            ),
+            actionParameters: Binding(
+                get: { [weak self] in self?.actionBridge.actionParameters ?? [:] },
+                set: { [weak self] in self?.actionBridge.actionParameters = $0 }
+            )
+        )
+        let hostView = NSHostingView(rootView: selectionView.environmentObject(actionBridge))
+        hostView.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(hostView)
+        
+        saveButton = NSButton(title: "Save", target: self, action: #selector(save))
+        saveButton.keyEquivalent = "\r"
+        saveButton.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(saveButton)
+        
+        cancelButton = NSButton(title: "Cancel", target: self, action: #selector(cancel))
+        cancelButton.keyEquivalent = "\u{1b}"
+        cancelButton.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(cancelButton)
+        
+        NSLayoutConstraint.activate([
+            hostView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 12),
+            hostView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 12),
+            hostView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -12),
+            hostView.bottomAnchor.constraint(equalTo: saveButton.topAnchor, constant: -12),
+            saveButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+            saveButton.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -16),
+            cancelButton.trailingAnchor.constraint(equalTo: saveButton.leadingAnchor, constant: -8),
+            cancelButton.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -16),
+        ])
     }
     
     @objc private func save() {
-        if let actionIdentifier = actionPopup.selectedItem?.representedObject as? String {
-            bundledAction.actionIdentifier = actionIdentifier
+        if !actionBridge.selectedActionId.isEmpty {
+            bundledAction.actionIdentifier = actionBridge.selectedActionId
+            bundledAction.parameters = actionBridge.actionParameters
         }
         completionHandler?(bundledAction)
         window?.sheetParent?.endSheet(window!)
