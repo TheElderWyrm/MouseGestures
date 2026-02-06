@@ -341,6 +341,9 @@ class ActivationCoordinator {
             dependentGates[dep.dependent, default: []].insert(dep.gate)
         }
         
+        // Get all activation types actually used in enabled gestures
+        let usedTypes = getUsedActivationTypes()
+        
         // For each potentially gated type
         for type in ActivationType.allCases {
             // Always-active types are always enabled
@@ -349,19 +352,19 @@ class ActivationCoordinator {
                 continue
             }
             
-            // Check if all gates for this type are satisfied
+            // Check if this type is used in any enabled gesture
+            if !usedTypes.contains(type) {
+                // Not used in any gesture, disable it
+                disableActivationType(type)
+                continue
+            }
+            
+            // Type is used - check if its gates are satisfied
             let gates = dependentGates[type] ?? []
             
             if gates.isEmpty {
-                // No gates means it depends on nothing - check if any gesture even uses it
-                let usedInGestures = dependencies.contains { $0.dependent == type }
-                if !usedInGestures {
-                    // Not used in any gestures, disable it
-                    disableActivationType(type)
-                } else {
-                    // Used but no gates - keep enabled
-                    enableActivationType(type)
-                }
+                // No gates - type is used and has no dependencies, so enable it
+                enableActivationType(type)
             } else {
                 // Check if ANY gate is satisfied (OR logic for multiple gates)
                 let anyGateSatisfied = gates.contains { isEngaged($0) }
@@ -373,6 +376,19 @@ class ActivationCoordinator {
                 }
             }
         }
+    }
+    
+    /// Get all activation types actually used in enabled gestures
+    private func getUsedActivationTypes() -> Set<ActivationType> {
+        var used = Set<ActivationType>()
+        let gestures = Configuration.shared.gestures.filter { $0.isEnabled }
+        
+        for gesture in gestures {
+            let types = analyzeGestureActivationTypes(gesture)
+            used.formUnion(types)
+        }
+        
+        return used
     }
     
     /// Enable an activation type
