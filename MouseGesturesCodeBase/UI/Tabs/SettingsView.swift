@@ -35,7 +35,6 @@ struct SettingsView: View {
         case detection = "Detection"
         case menuBar = "Menu Bar"
         case dataManagement = "Data Management"
-        case developerSettings = "Developer Settings"
         case updates = "Updates"
         
         var icon: String {
@@ -44,7 +43,6 @@ struct SettingsView: View {
             case .detection: return "hand.tap"
             case .menuBar: return "menubar.rectangle"
             case .dataManagement: return "externaldrive"
-            case .developerSettings: return "wrench.and.screwdriver"
             case .updates: return "arrow.clockwise.circle"
             }
         }
@@ -68,8 +66,6 @@ struct SettingsView: View {
                         menuBarSection
                     case .dataManagement:
                         dataManagementSection
-                    case .developerSettings:
-                        developerSettingsSection
                     case .updates:
                         updatesSection
                     }
@@ -138,11 +134,7 @@ struct SettingsView: View {
             
             VStack(alignment: .leading, spacing: 2) {
                 ForEach(SettingsSection.allCases, id: \.self) { section in
-                    if section == .developerSettings && !developerModeEnabled {
-                        // Hide developer settings section if developer mode is disabled
-                    } else {
-                        sidebarItem(for: section)
-                    }
+                    sidebarItem(for: section)
                 }
             }
             .padding(.horizontal, 10)
@@ -264,9 +256,10 @@ struct SettingsView: View {
                                 Text("Advanced")
                                     .font(.system(size: 9))
                                     .padding(.horizontal, 4)
-                                    .padding(.vertical, 1)
-                                    .background(RoundedRectangle(cornerRadius: 3).fill(Color.blue.opacity(0.2)))
-                                    .foregroundColor(.blue)
+                                    .padding(.vertical, 2)
+                                    .background(Color.orange.opacity(0.2))
+                                    .foregroundColor(.orange)
+                                    .cornerRadius(3)
                             }
                             Text("Show Developer tab and advanced developer settings")
                                 .font(.caption)
@@ -278,35 +271,6 @@ struct SettingsView: View {
                     }
                     
                     Divider()
-                }
-                
-                // Debug Logging
-                Toggle(isOn: $debugModeEnabled) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Enable Logging")
-                            .font(.system(size: 13, weight: .medium))
-                        Text("Record detailed debug information to log files for troubleshooting")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
-                .onChange(of: debugModeEnabled) { newValue in
-                    uiServices.setDebugModeEnabled(newValue)
-                }
-                
-                if debugModeEnabled {
-                    HStack(spacing: 10) {
-                        Button(action: openLogsFolder) {
-                            Label("Open Logs Folder", systemImage: "folder")
-                        }
-                        .buttonStyle(.plain)
-                        .foregroundColor(.accentColor)
-                        
-                        Text("~/Library/Logs/MouseGestures")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    .padding(.leading, 20)
                 }
             }
             .padding()
@@ -464,51 +428,6 @@ struct SettingsView: View {
         }
     }
     
-    // MARK: - Developer Settings Section
-    
-    private var developerSettingsSection: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            sectionHeader("Developer Settings")
-            
-            Text("Advanced settings for developers and power users")
-                .font(.caption)
-                .foregroundColor(.secondary)
-            
-            VStack(alignment: .leading, spacing: 15) {
-                // Performance & Permissions
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("System Permissions")
-                        .font(.system(size: 14, weight: .semibold))
-                    
-                    Text("Accessibility permissions required: \(checkAccessibilityStatus())")
-                        .font(.caption)
-                        .foregroundColor(hasAccessibilityPermissions() ? .green : .orange)
-                    
-                    if !hasAccessibilityPermissions() {
-                        Button("Open System Preferences") {
-                            openAccessibilityPreferences()
-                        }
-                        .buttonStyle(.plain)
-                        .foregroundColor(.accentColor)
-                    }
-                }
-                
-                Divider()
-                
-                // Additional developer settings can go here
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Developer Tools")
-                        .font(.system(size: 14, weight: .semibold))
-                    
-                    Text("Additional developer tools and diagnostics are available in the Developer tab")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-            }
-            .padding()
-            .background(RoundedRectangle(cornerRadius: 8).fill(Color(NSColor.controlBackgroundColor)))
-        }
-    }
     
     // MARK: - Updates Section
     

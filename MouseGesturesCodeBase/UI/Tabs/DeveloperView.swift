@@ -497,6 +497,41 @@ struct DeveloperView: View {
             sectionHeader("Performance Monitoring")
             
             VStack(alignment: .leading, spacing: 20) {
+                // System Permissions
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("System Permissions")
+                        .font(.system(size: 14, weight: .semibold))
+                    
+                    HStack(spacing: 10) {
+                        Text("Accessibility:")
+                            .foregroundColor(.secondary)
+                        
+                        if hasAccessibilityPermissions() {
+                            Label("Granted", systemImage: "checkmark.circle.fill")
+                                .foregroundColor(.green)
+                                .font(.caption)
+                        } else {
+                            Label("Not Granted", systemImage: "exclamationmark.triangle.fill")
+                                .foregroundColor(.orange)
+                                .font(.caption)
+                        }
+                        
+                        if !hasAccessibilityPermissions() {
+                            Button("Open System Settings") {
+                                openAccessibilityPreferences()
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .controlSize(.small)
+                        }
+                    }
+                    
+                    Text("Accessibility permissions are required for MouseGestures to detect and respond to mouse and keyboard events.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .padding()
+                .background(RoundedRectangle(cornerRadius: 8).fill(Color(NSColor.controlBackgroundColor)))
+                
                 // Memory Usage
                 VStack(alignment: .leading, spacing: 10) {
                     Text("Memory Usage")
@@ -958,6 +993,14 @@ struct DeveloperView: View {
                 }
             }
         }
+    }
+    
+    private func hasAccessibilityPermissions() -> Bool {
+        return AXIsProcessTrusted()
+    }
+    
+    private func openAccessibilityPreferences() {
+        NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
     }
 }
 
