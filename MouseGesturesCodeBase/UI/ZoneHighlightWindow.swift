@@ -130,7 +130,7 @@ class ZoneHighlightManager {
         ) { [weak self] notification in
             if let modifiers = notification.userInfo?["modifiers"] as? UInt {
                 let flags = NSEvent.ModifierFlags(rawValue: modifiers)
-                let normalized = self?.normalizeModifiers(flags) ?? []
+                let normalized = flags.normalized
                 if normalized.isEmpty {
                     // Debounce: schedule hide instead of immediate, lets rapid key
                     // transitions settle before deciding to hide
@@ -364,7 +364,7 @@ class ZoneHighlightManager {
             guard let self = self else { return }
             // Re-check actual system modifier state before hiding - rapid key
             // transitions may have restored modifiers since the hide was scheduled
-            let realMods = self.normalizeModifiers(NSEvent.modifierFlags)
+            let realMods = NSEvent.ModifierFlags.currentSystem
             guard realMods.isEmpty else {
                 // Modifiers are held again; update state and keep zones visible
                 self.currentModifiers = realMods
@@ -438,7 +438,7 @@ class ZoneHighlightManager {
         modifierCheckTimer?.invalidate()
         modifierCheckTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
             guard let self = self else { return }
-            let realModifiers = self.normalizeModifiers(NSEvent.modifierFlags)
+            let realModifiers = NSEvent.ModifierFlags.currentSystem
             if realModifiers.isEmpty && !self.currentModifiers.isEmpty {
                 self.currentModifiers = []
                 self.scheduleHide()
@@ -475,7 +475,7 @@ class ZoneHighlightManager {
     private func handleModifierChange(_ event: NSEvent) {
         guard Configuration.shared.showZoneHighlights else { return }
         
-        let modifiers = normalizeModifiers(event.modifierFlags)
+        let modifiers = event.modifierFlags.normalized
         currentModifiers = modifiers
         
         if !modifiers.isEmpty {
@@ -497,14 +497,8 @@ class ZoneHighlightManager {
         }
     }
     
-    private func normalizeModifiers(_ flags: NSEvent.ModifierFlags) -> NSEvent.ModifierFlags {
-        var normalized: NSEvent.ModifierFlags = []
-        if flags.contains(.command) { normalized.insert(.command) }
-        if flags.contains(.control) { normalized.insert(.control) }
-        if flags.contains(.option) { normalized.insert(.option) }
-        if flags.contains(.shift) { normalized.insert(.shift) }
-        return normalized
-    }
+    // Modifier normalization uses shared NSEvent.ModifierFlags.normalized
+    // from Extensions.swift.
 }
 
 // MARK: - Legacy Compatibility (Unused but kept for reference)

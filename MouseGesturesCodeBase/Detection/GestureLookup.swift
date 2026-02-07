@@ -93,19 +93,8 @@ class GestureLookup {
     
     /// Creates a lookup key for the given parameters
     private func createLookupKey(zone: ScreenZone, dragModifier: DragModifier, modifiers: NSEvent.ModifierFlags) -> String {
-        let normalizedModifiers = normalizeModifiers(modifiers)
         // Key format: "zone_dragModifier_modifiers"
-        return "\(zone.rawValue)_\(dragModifier.rawValue)_\(normalizedModifiers.rawValue)"
-    }
-    
-    /// Normalizes modifier flags to only include the ones we care about
-    private func normalizeModifiers(_ flags: NSEvent.ModifierFlags) -> NSEvent.ModifierFlags {
-        var normalized: NSEvent.ModifierFlags = []
-        if flags.contains(.command) { normalized.insert(.command) }
-        if flags.contains(.control) { normalized.insert(.control) }
-        if flags.contains(.option) { normalized.insert(.option) }
-        if flags.contains(.shift) { normalized.insert(.shift) }
-        return normalized
+        return "\(zone.rawValue)_\(dragModifier.rawValue)_\(modifiers.normalized.rawValue)"
     }
     
     /// Called when configuration changes

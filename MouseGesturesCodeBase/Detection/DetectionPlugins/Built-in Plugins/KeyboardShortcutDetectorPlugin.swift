@@ -5,6 +5,10 @@ import Carbon
 
 /// Plugin that detects keyboard shortcuts
 /// Implements ActivationProvider for the coordinator system
+///
+/// NOTE: This plugin does NOT track modifier state — that is the responsibility
+/// of ModifierKeyDetectorPlugin. This plugin only monitors keyDown events and
+/// reads modifiers from each event directly.
 class KeyboardShortcutDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     
     // MARK: - Constants
@@ -61,14 +65,11 @@ class KeyboardShortcutDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         settings.getDouble(SettingKeys.preventionInterval, default: 0.3)
     }
     
-    // Event monitors
+    // Event monitors — keyDown only (modifier tracking is ModifierKeyDetectorPlugin's job)
     private var globalKeyboardMonitor: Any?
     private var localKeyboardMonitor: Any?
-    private var globalModifierMonitor: Any?
-    private var localModifierMonitor: Any?
     
     // State tracking
-    private var currentModifiers: NSEvent.ModifierFlags = []
     private var lastKeyPressTime: Date?
     private var lastTriggeredShortcut: String?
     
@@ -138,17 +139,7 @@ class KeyboardShortcutDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     override func start() throws {
         try super.start()
         
-        // Monitor modifier key changes - both global and local
-        globalModifierMonitor = NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
-            self?.handleModifierChange(event)
-        }
-        
-        localModifierMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
-            self?.handleModifierChange(event)
-            return event
-        }
-        
-        // Monitor key presses - both global and local
+        // Monitor key presses only — both global and local
         globalKeyboardMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
             _ = self?.handleKeyPress(event)
         }
@@ -168,7 +159,7 @@ class KeyboardShortcutDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         // Notify coordinator that this plugin is stopping
         ActivationCoordinator.shared.pluginStopping(self)
         
-        // Remove all monitors
+        // Remove key monitors
         if let monitor = globalKeyboardMonitor {
             NSEvent.removeMonitor(monitor)
             globalKeyboardMonitor = nil
@@ -179,18 +170,7 @@ class KeyboardShortcutDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
             localKeyboardMonitor = nil
         }
         
-        if let monitor = globalModifierMonitor {
-            NSEvent.removeMonitor(monitor)
-            globalModifierMonitor = nil
-        }
-        
-        if let monitor = localModifierMonitor {
-            NSEvent.removeMonitor(monitor)
-            localModifierMonitor = nil
-        }
-        
         // Reset state
-        currentModifiers = []
         lastKeyPressTime = nil
         lastTriggeredShortcut = nil
         
@@ -204,10 +184,6 @@ class KeyboardShortcutDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     
     // MARK: - Event Handlers
     
-    private func handleModifierChange(_ event: NSEvent) {
-        currentModifiers = normalizeModifiers(event.modifierFlags)
-    }
-    
     private func handleKeyPress(_ event: NSEvent) -> Bool {
         // Prevent double-triggering
         if doubleTapPreventionEnabled,
@@ -216,13 +192,12 @@ class KeyboardShortcutDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
             return false
         }
         
-        // Check if shortcuts should be processed (app not disabled)
-        guard !(context?.pluginManager?.isCurrentAppDisabled() ?? false) else {
-            return false
-        }
+        // NOTE: App-disabled filtering is handled centrally by DetectionPluginManager
+        // in its detectionPlugin(_:didDetectGesture:context:) delegate method.
+        // This plugin only reports what it detects.
         
         let keyCode = event.keyCode
-        let modifiers = normalizeModifiers(event.modifierFlags)
+        let modifiers = event.modifierFlags.normalized
         
         guard let config = context?.configuration else { return false }
         
@@ -230,7 +205,7 @@ class KeyboardShortcutDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         for profile in config.profiles {
             if let trigger = profile.keyboardShortcut,
                trigger.keyCode == CGKeyCode(keyCode) &&
-               normalizeModifiers(trigger.modifiers) == modifiers {
+               trigger.modifiers.normalized == modifiers {
                 
                 lastKeyPressTime = Date()
                 lastTriggeredShortcut = trigger.displayString
@@ -273,7 +248,7 @@ class KeyboardShortcutDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
             guard let trigger = gesture.keyboardTrigger else { continue }
             
             if trigger.keyCode == CGKeyCode(keyCode) &&
-               normalizeModifiers(trigger.modifiers) == modifiers {
+               trigger.modifiers.normalized == modifiers {
                 
                 lastKeyPressTime = Date()
                 lastTriggeredShortcut = trigger.displayString
@@ -309,15 +284,8 @@ class KeyboardShortcutDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     }
     
     // MARK: - Helper Methods
-    
-    private func normalizeModifiers(_ flags: NSEvent.ModifierFlags) -> NSEvent.ModifierFlags {
-        var normalized: NSEvent.ModifierFlags = []
-        if flags.contains(.command) { normalized.insert(.command) }
-        if flags.contains(.control) { normalized.insert(.control) }
-        if flags.contains(.option) { normalized.insert(.option) }
-        if flags.contains(.shift) { normalized.insert(.shift) }
-        return normalized
-    }
+    // Modifier normalization uses shared NSEvent.ModifierFlags.normalized
+    // from Extensions.swift.
     
     private func logActiveShortcuts() {
         guard let config = context?.configuration else { return }
@@ -354,18 +322,8 @@ class KeyboardShortcutDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
             cpuUsage: 0.1,
             memoryUsage: 0,
             customStats: [
-                "currentModifiers": modifierString(currentModifiers),
                 "profileSwitches": profileSwitches
             ]
         )
-    }
-    
-    private func modifierString(_ modifiers: NSEvent.ModifierFlags) -> String {
-        var parts: [String] = []
-        if modifiers.contains(.command) { parts.append("⌘") }
-        if modifiers.contains(.control) { parts.append("⌃") }
-        if modifiers.contains(.option) { parts.append("⌥") }
-        if modifiers.contains(.shift) { parts.append("⇧") }
-        return parts.joined(separator: "")
     }
 }

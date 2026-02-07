@@ -563,7 +563,7 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     
     private func processZoneEntry(_ zone: ScreenZone) {
         // Get current modifiers via real-time system state
-        let currentModifiers = Self.currentSystemModifiers()
+        let currentModifiers = NSEvent.ModifierFlags.currentSystem
         
         // Check if we're still in the same zone with the same modifiers and drag state
         let isNewTrigger = lastTriggeredZone != zone ||
@@ -602,7 +602,7 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     
     private func detectGesture(zone: ScreenZone, dragState: DragModifier) {
         // Get current modifiers using real-time system state
-        let modifiers = Self.currentSystemModifiers()
+        let modifiers = NSEvent.ModifierFlags.currentSystem
         
         // Check own cooldown period
         if isInCooldownPeriod {
@@ -708,7 +708,7 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     private func repeatGesture(_ gesture: Gesture) {
         let gestureContext = GestureContext(
             source: .`repeat`,
-            modifiers: Self.currentSystemModifiers(),
+            modifiers: NSEvent.ModifierFlags.currentSystem,
             timestamp: Date()
         )
         
@@ -717,23 +717,15 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     
     // MARK: - Helper Methods
     
-    /// Get current system modifiers in real-time (self-contained, no cross-plugin dependency)
-    static func currentSystemModifiers() -> NSEvent.ModifierFlags {
-        let flags = NSEvent.modifierFlags
-        var normalized: NSEvent.ModifierFlags = []
-        if flags.contains(.command) { normalized.insert(.command) }
-        if flags.contains(.control) { normalized.insert(.control) }
-        if flags.contains(.option) { normalized.insert(.option) }
-        if flags.contains(.shift) { normalized.insert(.shift) }
-        return normalized
-    }
+    // Modifier normalization and system query use shared
+    // NSEvent.ModifierFlags extensions in Extensions.swift.
     
     private func shouldContinueRepeating() -> Bool {
         guard let gesture = currentRepeatingGesture else { return false }
         
         // Use real-time system modifiers for accuracy during repeat
         // This is a direct system query, not cross-plugin access
-        let currentSystemModifiers = Self.currentSystemModifiers()
+        let currentSystemModifiers = NSEvent.ModifierFlags.currentSystem
         
         // Check if required modifiers for the gesture are still held
         let requiredModifiers = gesture.modifiers

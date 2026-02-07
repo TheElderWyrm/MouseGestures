@@ -184,11 +184,12 @@ class AppConfigurationDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
             self?.handleAppSwitch(notification)
         }
         
-        // Notify coordinator of initial app
+        // Notify coordinator of initial app (include isDisabled for cross-plugin queries)
         if let bundleId = currentAppBundleId {
             ActivationCoordinator.shared.activationEngaged(.appChange, metadata: [
                 "bundleId": bundleId,
-                "appName": currentAppName ?? "Unknown"
+                "appName": currentAppName ?? "Unknown",
+                "isDisabled": context?.configuration.isAppDisabled(bundleId: bundleId) ?? false
             ])
         }
         
@@ -254,11 +255,12 @@ class AppConfigurationDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
             
             context?.logger.log("App switched: \(previousApp) → \(newAppName)", file: #file, function: #function, line: #line)
             
-            // Notify coordinator of app change
+            // Notify coordinator of app change (include isDisabled for cross-plugin queries)
             ActivationCoordinator.shared.activationEngaged(.appChange, metadata: [
                 "bundleId": bundleId,
                 "appName": newAppName,
-                "previousApp": previousApp
+                "previousApp": previousApp,
+                "isDisabled": context?.configuration.isAppDisabled(bundleId: bundleId) ?? false
             ])
             
             // Check for app-specific profile
@@ -327,6 +329,14 @@ class AppConfigurationDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         if let bundleId = currentAppBundleId,
            let name = currentAppName {
             checkForAppProfile(bundleId: bundleId, appName: name)
+            
+            // Re-notify coordinator with updated isDisabled status
+            // (user may have changed disabled apps in settings)
+            ActivationCoordinator.shared.activationEngaged(.appChange, metadata: [
+                "bundleId": bundleId,
+                "appName": name,
+                "isDisabled": context?.configuration.isAppDisabled(bundleId: bundleId) ?? false
+            ])
         }
     }
     

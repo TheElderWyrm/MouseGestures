@@ -236,16 +236,15 @@ class MouseButtonDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     // MARK: - Event Handlers
     
     private func handleMouseButtonClick(_ event: NSEvent, button: MouseButtonTrigger.MouseButton) {
-        // Check if mouse button triggers should be processed (app not disabled)
-        guard !(context?.pluginManager?.isCurrentAppDisabled() ?? false) else {
-            return
-        }
+        // NOTE: App-disabled filtering is handled centrally by DetectionPluginManager
+        // in its detectionPlugin(_:didDetectGesture:context:) delegate method.
+        // This plugin only reports what it detects.
         
         // Check if this button is allowed by settings
         guard isButtonAllowed(button) else { return }
         
         // Get current modifiers
-        let modifiers = normalizeModifiers(event.modifierFlags)
+        let modifiers = event.modifierFlags.normalized
         
         // Skip if no modifiers when required
         if requireModifiers && modifiers.isEmpty { return }
@@ -266,7 +265,7 @@ class MouseButtonDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
             guard let trigger = gesture.mouseButtonTrigger else { continue }
             
             if trigger.button == button &&
-               normalizeModifiers(trigger.modifiers) == modifiers {
+               trigger.modifiers.normalized == modifiers {
                 
                 buttonsTriggered += 1
                 lastTriggerTime = Date()
@@ -301,15 +300,8 @@ class MouseButtonDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     }
     
     // MARK: - Helper Methods
-    
-    private func normalizeModifiers(_ flags: NSEvent.ModifierFlags) -> NSEvent.ModifierFlags {
-        var normalized: NSEvent.ModifierFlags = []
-        if flags.contains(.command) { normalized.insert(.command) }
-        if flags.contains(.control) { normalized.insert(.control) }
-        if flags.contains(.option) { normalized.insert(.option) }
-        if flags.contains(.shift) { normalized.insert(.shift) }
-        return normalized
-    }
+    // Modifier normalization uses shared NSEvent.ModifierFlags.normalized
+    // from Extensions.swift.
     
     private func logActiveButtonTriggers() {
         guard let config = context?.configuration else { return }

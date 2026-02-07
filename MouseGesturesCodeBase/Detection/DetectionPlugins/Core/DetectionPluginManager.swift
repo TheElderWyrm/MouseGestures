@@ -363,22 +363,13 @@ class DetectionPluginManager: NSObject {
         log.log("Reset all settings for plugin: \(plugin.name)")
     }
     
-    // MARK: - Plugin Coordination
+    // MARK: - Cross-Plugin Queries (Coordinator-Based)
     
-    /// Get current modifier flags from ModifierKeyDetectorPlugin
-    func getCurrentModifiers() -> NSEvent.ModifierFlags {
-        guard let modifierPlugin = plugins[ModifierKeyDetectorPlugin.pluginIdentifier] as? ModifierKeyDetectorPlugin else {
-            return []
-        }
-        return modifierPlugin.currentModifiers
-    }
-    
-    /// Check if app is disabled from AppConfigurationDetectorPlugin
+    /// Check if the current app is disabled.
+    /// Queries via ActivationCoordinator metadata rather than casting to a specific plugin type.
     func isCurrentAppDisabled() -> Bool {
-        guard let appPlugin = plugins[AppConfigurationDetectorPlugin.pluginIdentifier] as? AppConfigurationDetectorPlugin else {
-            return false
-        }
-        return appPlugin.isCurrentAppDisabled()
+        let appState = ActivationCoordinator.shared.getState(for: .appChange)
+        return appState.metadata["isDisabled"] as? Bool ?? false
     }
     
 // MARK: - Helpers

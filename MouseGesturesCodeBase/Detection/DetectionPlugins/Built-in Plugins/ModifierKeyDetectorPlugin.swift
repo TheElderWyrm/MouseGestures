@@ -134,10 +134,10 @@ class ModifierKeyDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     
     /// Initialize modifier state from current system state
     private func initializeModifierState() {
-        let systemModifiers = Self.currentSystemModifiers()
+        let systemModifiers = NSEvent.ModifierFlags.currentSystem
         
         if !systemModifiers.isEmpty {
-            context?.logger.log("Initializing with modifiers already pressed: \(modifierString(systemModifiers))", file: #file, function: #function, line: #line)
+            context?.logger.log("Initializing with modifiers already pressed: \(systemModifiers.symbolString)", file: #file, function: #function, line: #line)
             
             currentModifiers = systemModifiers
             lastModifiers = systemModifiers
@@ -175,7 +175,7 @@ class ModifierKeyDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     // MARK: - Event Handling
     
     private func handleModifierChange(_ event: NSEvent) {
-        let newModifiers = normalizeModifiers(event.modifierFlags)
+        let newModifiers = event.modifierFlags.normalized
         
         guard newModifiers != currentModifiers else { return }
         
@@ -208,7 +208,7 @@ class ModifierKeyDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     // MARK: - State Transitions
     
     private func modifierPressed() {
-        context?.logger.log("First modifier pressed: \(modifierString(currentModifiers))", file: #file, function: #function, line: #line)
+        context?.logger.log("First modifier pressed: \(currentModifiers.symbolString)", file: #file, function: #function, line: #line)
         notifyModifierEngaged()
     }
     
@@ -219,7 +219,7 @@ class ModifierKeyDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     
     private func modifierCombinationChanged(from oldModifiers: NSEvent.ModifierFlags, to newModifiers: NSEvent.ModifierFlags) {
         if context?.logger.isDebugEnabled ?? false {
-            context?.logger.log("Modifiers changed from \(modifierString(oldModifiers)) to \(modifierString(newModifiers))", file: #file, function: #function, line: #line)
+            context?.logger.log("Modifiers changed from \(oldModifiers.symbolString) to \(newModifiers.symbolString)", file: #file, function: #function, line: #line)
         }
         
         ActivationCoordinator.shared.activationEngaged(.modifierKey, metadata: [
@@ -235,34 +235,8 @@ class ModifierKeyDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     }
     
     // MARK: - Helper Methods
-    
-    func normalizeModifiers(_ flags: NSEvent.ModifierFlags) -> NSEvent.ModifierFlags {
-        var normalized: NSEvent.ModifierFlags = []
-        if flags.contains(.command) { normalized.insert(.command) }
-        if flags.contains(.control) { normalized.insert(.control) }
-        if flags.contains(.option) { normalized.insert(.option) }
-        if flags.contains(.shift) { normalized.insert(.shift) }
-        return normalized
-    }
-    
-    public static func currentSystemModifiers() -> NSEvent.ModifierFlags {
-        let flags = NSEvent.modifierFlags
-        var normalized: NSEvent.ModifierFlags = []
-        if flags.contains(.command) { normalized.insert(.command) }
-        if flags.contains(.control) { normalized.insert(.control) }
-        if flags.contains(.option) { normalized.insert(.option) }
-        if flags.contains(.shift) { normalized.insert(.shift) }
-        return normalized
-    }
-    
-    private func modifierString(_ modifiers: NSEvent.ModifierFlags) -> String {
-        var parts: [String] = []
-        if modifiers.contains(.command) { parts.append("⌘") }
-        if modifiers.contains(.control) { parts.append("⌃") }
-        if modifiers.contains(.option) { parts.append("⌥") }
-        if modifiers.contains(.shift) { parts.append("⇧") }
-        return parts.joined(separator: "")
-    }
+    // Modifier normalization, system query, and display use shared
+    // NSEvent.ModifierFlags extensions in Extensions.swift.
     
     // MARK: - Statistics
     
@@ -275,7 +249,7 @@ class ModifierKeyDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
             cpuUsage: 0.1,
             memoryUsage: 0,
             customStats: [
-                "currentModifiers": modifierString(currentModifiers),
+                "currentModifiers": currentModifiers.symbolString,
                 "hasModifiers": hasModifiers,
             ]
         )

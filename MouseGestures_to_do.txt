@@ -7,7 +7,6 @@ General:
 - More isolated activation methods (Modifiers should be separate from zones, etc.)
 - Improve settings organization. [DONE]
 - missing highlight zone color setting.
-- Zone highlighting should probably be done by the zone detection plugin
 
 Actions (fix later):
 - Not all actions work.
