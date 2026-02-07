@@ -2,12 +2,8 @@
 - Reduce duplicate code, unify architecture whenever possible
 
 General:
-- Issue with nested developer mode, advanced settings menu. <-- With advanced toggle "advanced menu" might be unnecessary (See above). 
-	- Rename menu section developer settings.
 -Possible: Delete/remake the show zone highlights window instead of hiding to save memory.
-- Developer mode performance metrics are incorrect.
 - Refreshing a plugin under plugin management makes it disappear from the list
-- Services tab should get moved under developer setting 
 
 
 Actions:
@@ -33,6 +29,4 @@ Improve UI
 - Better Zone Configuration
 	- More visual menu
 	- More configuration options
-- Hide/remove services tab
-	- Maybe add a setting to enable it under developer mode.
-	- Installing plugins should be in developer mode
+- Installing plugins should be in developer mode (currently in Developer Settings > Plugin Management)

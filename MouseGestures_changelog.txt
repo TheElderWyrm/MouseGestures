@@ -1,3 +1,34 @@
+## 2026-02-07
+
+### Developer Tab Overhaul
+
+**Renamed Developer tab to "Developer Settings"**
+- Tab display name and sidebar header both updated from "Developer" / "Developer Tools"
+  to "Developer Settings" for clarity.
+- Settings view developer mode toggle description updated to list available sections.
+
+**Moved Services tab under Developer Settings**
+- Added "Services" section to the Developer Settings sidebar that embeds the full
+  ServicesView (category sidebar + service list + configuration sheets).
+- ServicesUIPlugin now only appears as a standalone tab when developer mode is enabled
+  (overrides shouldBeVisible to check isDeveloperModeEnabled).
+- Services content renders directly without ScrollView wrapper to avoid nested
+  HSplitView layout issues.
+
+**Fixed incorrect CPU performance metrics**
+- Replaced the memory-based "rough approximation" (resident_size / physicalMemory * 1000)
+  with proper thread-level CPU time measurement using task_threads + thread_basic_info.
+- PerformanceMonitorService now samples total user+system CPU time across all threads
+  and computes delta between intervals for accurate percentage.
+- DeveloperView now delegates to PerformanceMonitorService instead of duplicating
+  its own inline mach_task_basic_info calls, reducing code duplication.
+- CPU display shows one decimal place (e.g. "2.3%") instead of integer-only.
+
+### Housekeeping
+- Removed completed to-do items: rename developer menu section, developer mode
+  performance metrics incorrect, services tab moved under developer settings,
+  hide/remove services tab.
+
 ## 2026-02-06
 
 ### Bundle Editor UX Refinements
