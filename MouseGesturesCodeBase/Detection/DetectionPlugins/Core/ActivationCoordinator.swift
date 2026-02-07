@@ -139,8 +139,15 @@ class ActivationCoordinator {
     /// Current activation states
     private var activationStates: [ActivationType: ActivationState] = [:]
     
-    /// Dependencies computed from gesture configuration
+    /// Dependencies computed from gesture configuration (kept for debug/query)
     private var dependencies: Set<ActivationDependency> = []
+    
+    /// Per-gesture gate groups for each dependent type.
+    /// Each entry is a list of gate sets — one set per gesture that uses the dependent type.
+    /// A dependent should be enabled if ANY gate group has ALL its gates satisfied.
+    /// This ensures that a gesture requiring both modifiers + mouse button won't
+    /// enable screen zones when only the mouse button is held.
+    private var gateGroups: [ActivationType: [Set<ActivationType>]] = [:]
     
     /// Activation types that are currently enabled
     private var enabledTypes: Set<ActivationType> = []
@@ -292,6 +299,7 @@ class ActivationCoordinator {
         defer { lock.unlock() }
         
         dependencies.removeAll()
+        gateGroups.removeAll()
         gesturesPerType.removeAll()
         
         let gestures = Configuration.shared.gestures.filter { $0.isEnabled }
@@ -310,18 +318,30 @@ class ActivationCoordinator {
             for (index, type) in sortedTypes.enumerated() {
                 if queryIsAlwaysActive(for: type) { continue }
                 
+                // Collect ALL gates for this dependent type from THIS gesture
+                var gatesForThisGesture = Set<ActivationType>()
+                
                 for gateIndex in 0..<index {
                     let gate = sortedTypes[gateIndex]
                     let dependency = ActivationDependency(dependent: type, gate: gate)
                     dependencies.insert(dependency)
+                    gatesForThisGesture.insert(gate)
+                }
+                
+                // Add gate group: all gates from this gesture must be satisfied together
+                if !gatesForThisGesture.isEmpty {
+                    gateGroups[type, default: []].append(gatesForThisGesture)
                 }
             }
         }
         
         if log.isDebugEnabled {
             log.log("ActivationCoordinator: Built \(dependencies.count) dependencies from \(gestures.count) gestures")
-            for dep in dependencies {
-                log.log("  - \(dep.dependent.displayName) gated by \(dep.gate.displayName)")
+            for (dependent, groups) in gateGroups {
+                for group in groups {
+                    let gateNames = group.map { $0.displayName }.joined(separator: " AND ")
+                    log.log("  - \(dependent.displayName) gated by [\(gateNames)]")
+                }
             }
         }
         
@@ -331,11 +351,6 @@ class ActivationCoordinator {
     // MARK: - Gating Logic
     
     private func evaluateGatedActivations() {
-        var dependentGates: [ActivationType: Set<ActivationType>] = [:]
-        for dep in dependencies {
-            dependentGates[dep.dependent, default: []].insert(dep.gate)
-        }
-        
         let usedTypes = getUsedActivationTypes()
         
         for type in ActivationType.allCases {
@@ -357,14 +372,17 @@ class ActivationCoordinator {
                 continue
             }
             
-            // Check gates
-            let gates = dependentGates[type] ?? []
+            // Check gate groups: OR across groups, AND within each group
+            // Each group represents one gesture's gate requirements
+            let groups = gateGroups[type] ?? []
             
-            if gates.isEmpty {
+            if groups.isEmpty {
                 enableActivationType(type)
             } else {
-                let anyGateSatisfied = gates.contains { isGateSatisfied($0, for: type) }
-                if anyGateSatisfied {
+                let anyGroupFullySatisfied = groups.contains { group in
+                    group.allSatisfy { gate in isGateSatisfied(gate, for: type) }
+                }
+                if anyGroupFullySatisfied {
                     enableActivationType(type)
                 } else {
                     disableActivationType(type)

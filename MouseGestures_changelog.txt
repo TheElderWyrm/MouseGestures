@@ -1,5 +1,21 @@
 ## 2026-02-07
 
+### Fix: Gate Evaluation Logic — AND Within Gesture, OR Across Gestures
+- **Root Cause**: ActivationCoordinator used OR logic across all gates for a dependent
+  type. When a drag gesture required both modifier keys AND mouse button hold, the
+  coordinator flattened these into independent gates. Holding just a mouse button
+  (without modifiers) satisfied the mouseButton gate alone, enabling screen zone
+  tracking and drag monitors unnecessarily — causing ~2% CPU on every mouse drag.
+- **Fix**: Changed dependency model from flat `Set<ActivationDependency>` to per-gesture
+  gate groups (`gateGroups: [ActivationType: [Set<ActivationType>]]`). Evaluation now
+  uses AND within each group (all gates from one gesture must be satisfied) and OR
+  across groups (any gesture's complete gate set suffices).
+- Example: gesture "⌘ + Right Drag + Top Left" creates gate group
+  `{modifierKey, mouseButton}` for screenZone. Both must be engaged to enable tracking.
+  A separate modifier-only gesture adds its own group `{modifierKey}`, correctly
+  allowing modifier-only activation without requiring a button hold.
+- Updated debug logging to show grouped gate dependencies.
+
 ### CPU Optimization: Eliminate Redundant System Queries During Dragging
 - **ScreenZoneDetectorPlugin**: Added cached drag/modifier state to eliminate repeated
   OS queries during mouse dragging. Previously, `DragModifier.currentSystem` and
