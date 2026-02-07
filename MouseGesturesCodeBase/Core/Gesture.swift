@@ -135,6 +135,14 @@ struct Gesture: Codable, Equatable {
         return "\(trigger.zone.rawValue)_\(trigger.modifiers.rawValue)\(dragPart)_\(actionIdentifier)"
     }
     
+    /// Trigger-only key for conflict detection.
+    /// Two gestures with the same triggerKey would fire from the same
+    /// zone + modifier + drag combination, so only one should exist.
+    var triggerKey: String {
+        let dragPart = trigger.dragModifier != .none ? "_\(trigger.dragModifier.rawValue)" : ""
+        return "\(trigger.zone.rawValue)_\(trigger.modifiers.rawValue)\(dragPart)"
+    }
+    
     // Display description for UI
     var displayDescription: String {
         var parts: [String] = []

@@ -2,7 +2,9 @@
 - Reduce duplicate code, unify architecture whenever possible
 
 General:
-
+- Drag Detection/click detection seems to not be working
+- More isolated activation methods (Modifiers should be separate from zones, etc.)
+- Improve settings organization.
 
 Actions (fix later):
 - Not all actions work.
@@ -10,12 +12,7 @@ Actions (fix later):
 - bundle actions vs execute bundle actions?
 - Open application should bring up finder to select any application
 - Open File parameter should have a button to select from finder
-
-Bugs
-- Efficiency system could be more exact (Example, not all modifier combinations result in gestures that need zone detection activation.)
 - Window Actions targeting multiple windows does not work
-- Drag Detection/click detection seems to not be working
-- Prevent multiple gestures of the same modifiers to be created
 
 Improve UI
 - App selection UI (Maybe just select apps from finder)

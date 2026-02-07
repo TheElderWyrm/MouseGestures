@@ -16,9 +16,9 @@ class GestureConfigurationService {
     func addGesture(_ gesture: Gesture) -> Bool {
         var gestures = configuration.gestures
         
-        // Check for conflicts
-        if let existingIndex = gestures.firstIndex(where: { $0.id == gesture.id }) {
-            log.log("Gesture conflict detected at index \(existingIndex)")
+        // Check for trigger conflicts (same zone + modifiers + drag)
+        if let existingIndex = gestures.firstIndex(where: { $0.triggerKey == gesture.triggerKey }) {
+            log.log("Gesture trigger conflict detected at index \(existingIndex) (\(gestures[existingIndex].displayDescription))")
             return false
         }
         
@@ -39,10 +39,10 @@ class GestureConfigurationService {
             return false
         }
         
-        // Check if new gesture would conflict with others (excluding the one being updated)
-        if oldGesture.id != newGesture.id {
-            if gestures.contains(where: { $0.id == newGesture.id }) {
-                log.log("Update would create conflict with existing gesture")
+        // Check if new gesture trigger would conflict with others (excluding the one being updated)
+        if oldGesture.triggerKey != newGesture.triggerKey {
+            if gestures.contains(where: { $0.triggerKey == newGesture.triggerKey }) {
+                log.log("Update would create trigger conflict with existing gesture")
                 return false
             }
         }
@@ -78,7 +78,7 @@ class GestureConfigurationService {
     }
     
     func isGestureConflicting(_ gesture: Gesture) -> Bool {
-        return configuration.gestures.contains { $0.id == gesture.id }
+        return configuration.gestures.contains { $0.triggerKey == gesture.triggerKey }
     }
     
     // MARK: - Default Profiles

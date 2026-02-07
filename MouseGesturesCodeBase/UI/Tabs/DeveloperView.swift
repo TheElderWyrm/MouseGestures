@@ -49,8 +49,6 @@ struct DeveloperView: View {
     
     // Developer Settings
     @State private var developerModeEnabled: Bool = false
-    @State private var showZoneHighlights: Bool = false
-    @State private var showZoneLabels: Bool = false
     
     // Messages
     @State private var successMessage: String?
@@ -230,37 +228,7 @@ struct DeveloperView: View {
                     uiServices.setDebugModeEnabled(newValue)
                 }
                 
-                Divider()
-                
-                // Show Zone Highlights
-                Toggle(isOn: $showZoneHighlights) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Show Zone Highlights")
-                            .font(.system(size: 13, weight: .medium))
-                        Text("Display screen zone boundaries as colored overlays")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
-                .onChange(of: showZoneHighlights) { newValue in
-                    uiServices.setShowZoneHighlights(newValue)
-                }
-                
-                Divider()
-                
-                // Show Zone Labels
-                Toggle(isOn: $showZoneLabels) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Show Zone Labels")
-                            .font(.system(size: 13, weight: .medium))
-                        Text("Display zone names inside highlighted zones")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
-                .onChange(of: showZoneLabels) { newValue in
-                    uiServices.setShowZoneLabels(newValue)
-                }
+
             }
             .padding()
             .background(RoundedRectangle(cornerRadius: 8).fill(Color(NSColor.controlBackgroundColor)))
@@ -949,8 +917,6 @@ struct DeveloperView: View {
     private func loadInitialData() {
         developerModeEnabled = uiServices.isDeveloperModeEnabled()
         debugLoggingEnabled = uiServices.isDebugModeEnabled()
-        showZoneHighlights = uiServices.isShowZoneHighlights()
-        showZoneLabels = uiServices.isShowZoneLabels()
         refreshLogFiles()
         refreshPlugins()
         refreshPerformanceMetrics()

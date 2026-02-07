@@ -26,9 +26,37 @@
   its own inline mach_task_basic_info calls, reducing code duplication.
 - CPU display shows one decimal place (e.g. "2.3%") instead of integer-only.
 
+### Removed zone highlights from Developer Settings
+- Show Zone Highlights and Show Zone Labels toggles removed from Developer Settings.
+  These settings are already available in Settings > Detection via the
+  ScreenZoneDetectorPlugin settings (Appearance category).
+
+### Duplicate gesture trigger prevention
+- Added `triggerKey` computed property to Gesture (zone + modifiers + drag, excluding
+  action identifier) for trigger-based conflict detection.
+- `GestureConfigurationService.isGestureConflicting()`, `addGesture()`, and
+  `updateGesture()` now compare by triggerKey instead of full id, preventing
+  two gestures from sharing the same zone+modifier+drag combination even
+  if they have different actions.
+- Updated conflict alert message to clarify that each trigger combination
+  can only be assigned one action.
+
+### Precision modifier-gated zone activation
+- ActivationCoordinator now checks whether the currently held modifier
+  combination actually matches a gesture that uses screen zone detection
+  before enabling mouse tracking.
+- Previously, pressing ANY modifier (e.g. Shift alone) would activate zone
+  tracking even if no gesture used that modifier. Now only modifier combos
+  that appear in configured zone gestures trigger tracking.
+- Added cached set of zone-gesture modifier combinations, rebuilt when
+  dependencies change, for efficient O(n) matching per modifier event
+  (where n = number of unique modifier combos, typically very small).
+
 ### Housekeeping
 - Removed completed to-do items: developer mode performance metrics incorrect,
-  services tab moved under developer settings, hide/remove services tab.
+  services tab moved under developer settings, hide/remove services tab,
+  remove zone highlights from developer settings, prevent duplicate gesture
+  modifiers, efficiency system precision.
 
 ## 2026-02-06
 

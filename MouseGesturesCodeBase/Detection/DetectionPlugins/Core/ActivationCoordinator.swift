@@ -150,6 +150,13 @@ class ActivationCoordinator {
     /// Activation types that are currently enabled
     private var enabledTypes: Set<ActivationType> = []
     
+    /// Cached set of modifier flag values that have zone-based gestures.
+    /// Rebuilt when dependencies are rebuilt. Used for precision gating.
+    private var zoneGestureModifiers: Set<UInt> = []
+    
+    /// Whether any zone gesture has empty (no) modifier requirements
+    private var hasZoneGestureWithNoModifiers = false
+    
     /// Lock for thread safety (recursive to allow nested calls)
     private let lock = NSRecursiveLock()
     
@@ -308,6 +315,9 @@ class ActivationCoordinator {
             }
         }
         
+        // Rebuild precision caches
+        rebuildZoneGestureModifierCache()
+        
         // Re-evaluate what should be active
         evaluateGatedActivations()
     }
@@ -386,7 +396,7 @@ class ActivationCoordinator {
                 enableActivationType(type)
             } else {
                 // Check if ANY gate is satisfied (OR logic for multiple gates)
-                let anyGateSatisfied = gates.contains { isEngaged($0) }
+                let anyGateSatisfied = gates.contains { isGateSatisfied($0, for: type) }
                 
                 if anyGateSatisfied {
                     enableActivationType(type)
@@ -394,6 +404,64 @@ class ActivationCoordinator {
                     disableActivationType(type)
                 }
             }
+        }
+    }
+    
+    /// Check if a gate is satisfied for a dependent type, with precision checks.
+    /// For modifier->screenZone gating, verifies that the current modifier combination
+    /// actually matches at least one gesture that uses screen zones.
+    private func isGateSatisfied(_ gate: ActivationType, for dependent: ActivationType) -> Bool {
+        guard isEngaged(gate) else { return false }
+        
+        // Precision check: when modifierKey gates screenZone, verify
+        // the specific modifiers held match a gesture needing zone detection
+        if gate == .modifierKey && dependent == .screenZone {
+            return currentModifiersMatchAnyZoneGesture()
+        }
+        
+        // For other gate combinations, simple engagement check suffices
+        return true
+    }
+    
+    /// Check if the currently held modifiers match any gesture that uses screen zones.
+    /// Uses cached modifier sets for O(n) check where n = number of unique modifier combos.
+    private func currentModifiersMatchAnyZoneGesture() -> Bool {
+        // Zone gestures with no modifier requirements match any state
+        if hasZoneGestureWithNoModifiers { return true }
+        
+        guard let modState = activationStates[.modifierKey],
+              let rawValue = modState.metadata["modifiers"] as? UInt else {
+            return false
+        }
+        let currentMods = NSEvent.ModifierFlags(rawValue: rawValue)
+        
+        // Check if user is holding at least the modifiers required by any zone gesture
+        for requiredRaw in zoneGestureModifiers {
+            let required = NSEvent.ModifierFlags(rawValue: requiredRaw)
+            if currentMods.contains(required) {
+                return true
+            }
+        }
+        return false
+    }
+    
+    /// Rebuild the cached set of modifier combinations used by zone gestures
+    private func rebuildZoneGestureModifierCache() {
+        zoneGestureModifiers.removeAll()
+        hasZoneGestureWithNoModifiers = false
+        
+        let gestures = Configuration.shared.gestures.filter { $0.isEnabled }
+        for gesture in gestures {
+            guard gesture.activation.hasGesture else { continue }
+            if gesture.modifiers.isEmpty {
+                hasZoneGestureWithNoModifiers = true
+            } else {
+                zoneGestureModifiers.insert(gesture.modifiers.rawValue)
+            }
+        }
+        
+        if log.isDebugEnabled {
+            log.log("ActivationCoordinator: Cached \(zoneGestureModifiers.count) zone modifier combos, noModifiers=\(hasZoneGestureWithNoModifiers)")
         }
     }
     

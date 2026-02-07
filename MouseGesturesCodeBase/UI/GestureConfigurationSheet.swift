@@ -375,9 +375,9 @@ struct GestureConfigurationSheet: View {
             longPressThreshold: longPressThreshold
         )
         
-        if mode == .add || existingGesture?.id != gesture.id {
+        if mode == .add || existingGesture?.triggerKey != gesture.triggerKey {
             if uiServices.isGestureConflicting(gesture) {
-                conflictMessage = "A gesture with this combination of zone, modifiers, and drag already exists."
+                conflictMessage = "A gesture with this zone, modifier, and drag combination already exists. Each trigger combination can only be assigned one action."
                 showingConflictAlert = true
                 return
             }
