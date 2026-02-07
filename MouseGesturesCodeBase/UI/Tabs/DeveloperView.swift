@@ -29,6 +29,24 @@ struct DeveloperView: View {
     @State private var debugReport: String = ""
     @State private var showingExportReport = false
     
+    // Services
+    private let servicePluginManager = ServicePluginManager.shared
+    @State private var servicePlugins: [ServicePluginInfo] = []
+    @State private var serviceSearchText = ""
+    @State private var serviceCategory: ServiceCategory?
+    @State private var serviceActiveSheet: ServiceSheet?
+    
+    enum ServiceSheet: Identifiable {
+        case configure(ServicePluginInfo)
+        case install
+        var id: String {
+            switch self {
+            case .configure(let p): return "cfg-\(p.id)"
+            case .install: return "install"
+            }
+        }
+    }
+    
     // Messages
     @State private var successMessage: String?
     @State private var errorMessage: String?
@@ -36,17 +54,17 @@ struct DeveloperView: View {
     enum DeveloperSection: String, CaseIterable {
         case logging = "Logging"
         case plugins = "Plugin Management"
+        case services = "Services"
         case performance = "Performance"
         case diagnostics = "Diagnostics"
-        case services = "Services"
         
         var icon: String {
             switch self {
             case .logging: return "doc.text"
             case .plugins: return "puzzlepiece.extension"
+            case .services: return "gearshape.2"
             case .performance: return "speedometer"
             case .diagnostics: return "stethoscope"
-            case .services: return "gearshape.2"
             }
         }
     }
@@ -58,33 +76,25 @@ struct DeveloperView: View {
                 .frame(minWidth: 200, idealWidth: 220, maxWidth: 250)
             
             // Main content
-            Group {
-                if selectedSection == .services {
-                    // Services has its own HSplitView layout, so don't wrap in ScrollView
-                    ServicesView()
-                        .frame(minWidth: 600)
-                } else {
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 20) {
-                            switch selectedSection {
-                            case .logging:
-                                loggingSection
-                            case .plugins:
-                                pluginsSection
-                            case .performance:
-                                performanceSection
-                            case .diagnostics:
-                                diagnosticsSection
-                            case .services:
-                                EmptyView()
-                            }
-                        }
-                        .padding(20)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    switch selectedSection {
+                    case .logging:
+                        loggingSection
+                    case .plugins:
+                        pluginsSection
+                    case .services:
+                        servicesSection
+                    case .performance:
+                        performanceSection
+                    case .diagnostics:
+                        diagnosticsSection
                     }
-                    .frame(minWidth: 600)
                 }
+                .padding(20)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .frame(minWidth: 600)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
@@ -109,13 +119,23 @@ struct DeveloperView: View {
         ) { result in
             handleReportExport(result: result)
         }
+        .sheet(item: $serviceActiveSheet) { sheet in
+            switch sheet {
+            case .configure(let plugin):
+                ServiceConfigurationSheet(plugin: plugin)
+            case .install:
+                ServiceInstallSheet { url in
+                    installServicePlugin(from: url)
+                }
+            }
+        }
     }
     
     // MARK: - Sidebar
     
     private var sidebarView: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Developer Settings")
+            Text("Developer Tools")
                 .font(.title2)
                 .fontWeight(.semibold)
                 .padding(.horizontal, 20)
@@ -503,6 +523,101 @@ struct DeveloperView: View {
         .background(RoundedRectangle(cornerRadius: 8).fill(Color(NSColor.controlBackgroundColor)))
     }
     
+    // MARK: - Services Section
+    
+    private var filteredServicePlugins: [ServicePluginInfo] {
+        var result = servicePlugins
+        if let cat = serviceCategory {
+            result = result.filter { $0.category == cat }
+        }
+        if !serviceSearchText.isEmpty {
+            result = result.filter {
+                $0.name.localizedCaseInsensitiveContains(serviceSearchText) ||
+                $0.description.localizedCaseInsensitiveContains(serviceSearchText) ||
+                $0.identifier.localizedCaseInsensitiveContains(serviceSearchText)
+            }
+        }
+        return result.sorted { $0.name < $1.name }
+    }
+    
+    /// Categories that actually have services loaded
+    private var activeServiceCategories: [ServiceCategory] {
+        let cats = Set(servicePlugins.map(\.category))
+        return ServiceCategory.allCases.filter { cats.contains($0) }
+    }
+    
+    private var servicesSection: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            sectionHeader("Services")
+            
+            // Toolbar: category filter, search, install, refresh
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 12) {
+                    // Category picker
+                    Picker("Category:", selection: $serviceCategory) {
+                        Text("All").tag(ServiceCategory?.none)
+                        Divider()
+                        ForEach(activeServiceCategories, id: \.self) { cat in
+                            Label(cat.rawValue, systemImage: cat.icon).tag(ServiceCategory?.some(cat))
+                        }
+                    }
+                    .frame(width: 220)
+                    
+                    // Search
+                    HStack {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundColor(.secondary)
+                        TextField("Search services...", text: $serviceSearchText)
+                            .textFieldStyle(PlainTextFieldStyle())
+                    }
+                    .padding(6)
+                    .background(Color(NSColor.controlBackgroundColor))
+                    .cornerRadius(6)
+                    .frame(maxWidth: 220)
+                    
+                    Spacer()
+                    
+                    Button(action: { serviceActiveSheet = .install }) {
+                        Label("Install", systemImage: "plus.circle")
+                    }
+                    
+                    Button(action: loadServicePlugins) {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                }
+                
+                Text("\(filteredServicePlugins.count) service\(filteredServicePlugins.count == 1 ? "" : "s")")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            .padding()
+            .background(RoundedRectangle(cornerRadius: 8).fill(Color(NSColor.controlBackgroundColor)))
+            
+            // Service list
+            if filteredServicePlugins.isEmpty {
+                VStack(spacing: 12) {
+                    Image(systemName: "tray")
+                        .font(.system(size: 32))
+                        .foregroundColor(.secondary)
+                    Text(servicePlugins.isEmpty ? "No services loaded" : "No services match the current filter")
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 40)
+            } else {
+                LazyVStack(alignment: .leading, spacing: 8) {
+                    ForEach(filteredServicePlugins) { plugin in
+                        ServiceRow(plugin: plugin) {
+                            serviceActiveSheet = .configure(plugin)
+                        } onToggle: {
+                            toggleServicePlugin(plugin)
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
     // MARK: - Performance Section
     
     private var performanceSection: some View {
@@ -746,6 +861,7 @@ struct DeveloperView: View {
         refreshLogFiles()
         refreshPlugins()
         refreshPerformanceMetrics()
+        loadServicePlugins()
     }
     
     private func startPerformanceMonitoring() {
@@ -901,6 +1017,35 @@ struct DeveloperView: View {
             return perms.isEmpty ? "None" : perms.joined(separator: ", ")
         }
     }
+    
+    // MARK: - Service Helpers
+    
+    private func loadServicePlugins() {
+        servicePlugins = servicePluginManager.getAllPlugins()
+    }
+    
+    private func toggleServicePlugin(_ plugin: ServicePluginInfo) {
+        if plugin.isEnabled {
+            _ = servicePluginManager.disablePlugin(identifier: plugin.identifier)
+        } else {
+            _ = servicePluginManager.enablePlugin(identifier: plugin.identifier)
+        }
+        loadServicePlugins()
+    }
+    
+    private func installServicePlugin(from url: URL) {
+        let result = servicePluginManager.installPlugin(from: url)
+        if !result.success {
+            let alert = NSAlert()
+            alert.messageText = "Failed to install plugin"
+            alert.informativeText = result.error ?? "Unknown error"
+            alert.alertStyle = .warning
+            alert.runModal()
+        }
+        loadServicePlugins()
+    }
+    
+    // MARK: - General Helpers
     
     private func generateDebugReport() {
         debugReport = uiServices.generateDebugReport()

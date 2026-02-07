@@ -18,8 +18,8 @@ class ServicesUIPlugin: BaseUIPlugin {
     }
     
     override func shouldBeVisible(context: UIPluginContext) -> Bool {
-        // Only visible when developer mode is enabled
-        return context.isDeveloperModeEnabled
+        // Services are accessed through the Developer tab's Services section
+        return false
     }
     
     func validate() -> Bool {

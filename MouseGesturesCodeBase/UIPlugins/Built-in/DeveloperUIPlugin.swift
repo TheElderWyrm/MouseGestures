@@ -7,7 +7,7 @@ class DeveloperUIPlugin: DeveloperUIPluginBase {
     // MARK: - Plugin Metadata
     
     override var identifier: String { "com.mousegestures.ui.developer" }
-    override var displayName: String { "Developer Settings" }
+    override var displayName: String { "Developer" }
     override var iconName: String { "wrench.and.screwdriver" }
     override var version: String { "1.0.0" }
     override var author: String { "MouseGestures Team" }
