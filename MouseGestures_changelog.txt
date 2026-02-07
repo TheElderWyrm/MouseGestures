@@ -1,5 +1,21 @@
 ## 2026-02-07
 
+### Fix: Console Warnings - Variadic View Access and State Restoration
+- **Fixed "Accessing invalid variadic view child at index 0" errors**:
+  * Root cause: Using `.enumerated()` with `id: \.offset` in ForEach creates unstable
+    view identities. When data changes, SwiftUI cannot properly track views.
+  * SettingsView.swift: Changed search results from `id: \.offset` to `id: \.item.id`
+  * SettingsView.swift: Changed top-level and subcategory entry iteration from
+    `ForEach(Array(...enumerated()), id: \.offset)` to `ForEach(...indices, id: \.self)`
+  * SettingsCategoryProvider.swift: Made SearchableSettingItem Identifiable with
+    UUID-based IDs for stable view tracking
+  * Result: Eliminated all variadic view child access warnings
+- **Improved state restoration handling**:
+  * AppDelegate.swift: Added `applicationShouldAutomaticallySaveWindows` returning false
+  * AppDelegate.swift: Set proper UserDefaults for window persistence control
+  * Result: Reduced state restoration warnings for menu bar app
+- Opening preferences now shows clean console output without repetitive warnings
+
 ### Fix: Cascading Efficiency Chain for Activation Gating
 - **Root Cause**: ActivationCoordinator used OR logic across all gates and skipped
   "always-active" types (like mouseButton) during dependency building. This meant
