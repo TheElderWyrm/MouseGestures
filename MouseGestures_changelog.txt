@@ -539,3 +539,20 @@
 
 ### Housekeeping
 - Removed completed to-do items: Rework Add Gesture UI, Remove Duplicate code/unify architectures.
+
+### Refactor - Plugin-Independent Efficiency System
+- Made ActivationCoordinator entirely plugin-agnostic. It no longer contains any
+  knowledge of specific activation types, modifiers, or gesture fields.
+- Moved behavioral properties (efficiencyScore, isAlwaysActive, isInfrastructure)
+  from the ActivationType enum to the ActivationProvider protocol. Each plugin
+  now declares its own properties.
+- Added `gestureUsesActivation(_:for:)` to ActivationProvider. Plugins declare
+  which gestures they handle, unifying the efficiency system's activation map
+  with the gesture detection map (same logic in both paths).
+- Added `validateGate(for:gestures:)` to ActivationProvider for precision gating.
+  ModifierKeyDetectorPlugin now owns the modifier-matching logic that was
+  previously hardcoded in the coordinator (zoneGestureModifiers cache, etc.).
+- Removed from coordinator: analyzeGestureActivationTypes(), zoneGestureModifiers
+  cache, currentModifiersMatchAnyZoneGesture(), rebuildZoneGestureModifierCache().
+- Added gesturesPerType cache to coordinator for efficient gate validation.
+- All 5 detection plugins updated with protocol implementations.
