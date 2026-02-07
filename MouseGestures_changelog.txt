@@ -1,49 +1,51 @@
 ## 2026-02-07
 
-### Settings Overhaul — Dynamic Registry, Search, and Plugin-Driven Settings
+### Settings Overhaul — Unified Settings Architecture with Search and Subcategories
 
-**Simplified settings architecture: single SettingsProvider protocol**
-- Created `SettingsProvider` protocol with one property: `settingsEntries: [SettingsEntry]`.
-  Each entry specifies what category it belongs to via a `SettingsCategoryDescriptor`.
-  Categories are created automatically from whatever entries exist — no separate category
-  classes, no dual-protocol system.
-- `SettingsCategoryDescriptor` is a lightweight value type (id, title, icon, order).
-  Well-known descriptors live in `SettingsCategories` enum (general, detection, etc.).
-  Plugins can create new categories simply by using a new descriptor.
-- `SettingsCategoryRegistry` collects all entries, auto-groups by category ID into
-  `ResolvedCategory` structs, and provides search. Settings tab reads entirely from this.
+**Single SettingsProvider protocol drives all settings**
+- `SettingsProvider` protocol: one property `settingsEntries: [SettingsEntry]`.
+  Each entry targets a `SettingsCategoryDescriptor` and optional `SettingsSubcategoryDescriptor`.
+  Categories and subcategories are auto-created from whatever entries exist.
+- `SettingsCategoryRegistry` collects all entries, auto-groups into `ResolvedCategory`
+  and `ResolvedSubcategory` structs. Settings tab reads entirely from this.
+- Well-known descriptors: `SettingsCategories` enum (general, detection, dataManagement,
+  about) and `DetectionSubcategories` enum (general, detection, appearance, performance,
+  advanced).
 
-**Added settings search**
-- Search field in the settings sidebar filters categories and shows a results dropdown.
-- Each `SettingsEntry` declares `searchableItems` with title, description, and keywords.
-  Typing a query highlights matching categories and shows individual matching items
-  that navigate to their category on click.
+**Unified detection plugin settings into the same system**
+- `DetectionPluginSettingsProvider` bridges all detection plugin `PluginSettingDefinition`
+  arrays into `SettingsEntry` items. Each definition’s `SettingCategory` (.detection,
+  .appearance, .performance, etc.) maps to a `SettingsSubcategoryDescriptor`.
+- One entry per subcategory group, with a `DetectionSubcategoryView` that renders
+  `PluginSettingRow` views with shared `visibilityTrigger` for dependency tracking.
+- The old `PluginSettingsView` wrapper is no longer used from settings — the registry
+  drives detection settings directly. `PluginSettingRow` and `SliderSettingControl`
+  remain in use as the actual rendering components.
+- When a category has subcategorized entries, `SettingsView` shows a segmented picker
+  to switch between them. This is generalizable to any category, not just detection.
 
-**Reorganized settings tabs/sections**
-- Merged "Menu Bar" into "General" — too small for its own section.
-- Renamed "Updates" to "About", combined version info with update checking.
-- Sidebar order: General → Detection → Data Management → About, plus plugin categories.
+**Settings search**
+- Search field in sidebar filters categories and shows a results dropdown.
+- Each `SettingsEntry` declares `searchableItems` (title, description, keywords).
+  Detection entries auto-generate search items from `PluginSettingDefinition` metadata.
 
-**Made service plugin settings dynamic, not hardcoded**
+**Reorganized sections**
+- Merged "Menu Bar" into "General".
+- Renamed "Updates" to "About".
+- Sidebar: General → Detection → Data Management → About, plus plugin categories.
+
+**Service plugin settings are dynamic**
 - `LaunchAtLoginServicePlugin`, `HapticFeedbackServicePlugin`, and
-  `MenuBarVisibilityServicePlugin` conform to `SettingsProvider` and supply entries
-  targeting `SettingsCategories.general`. Each provides its own SwiftUI view.
-- Adding/removing a service plugin automatically adds/removes its settings.
-- Plugins can also create entirely new categories by targeting a new descriptor.
-- `BuiltInSettingsProvider` supplies core entries (Enable Gestures, Developer Mode,
-  Detection, Data Management, About).
+  `MenuBarVisibilityServicePlugin` conform to `SettingsProvider`.
+- Adding/removing a plugin automatically adds/removes its settings.
+- Plugins create new categories by targeting a new `SettingsCategoryDescriptor`.
 
-**New files:**
-- `UI/Settings/SettingsCategoryProvider.swift` — `SettingsProvider` protocol,
-  `SettingsEntry`, `SettingsCategoryDescriptor`, `SettingsCategoryRegistry`
-- `UI/Settings/BuiltInSettingsCategories.swift` — `BuiltInSettingsProvider`,
-  well-known descriptors, settings views, shared helpers
-
-**Refactored files:**
-- `UI/Tabs/SettingsView.swift` — reads from registry, has search, renders entries
+**Files:**
+- `UI/Settings/SettingsCategoryProvider.swift` — protocols, descriptors, registry
+- `UI/Settings/BuiltInSettingsCategories.swift` — built-in + detection bridge + views
+- `UI/Tabs/SettingsView.swift` — registry-driven with subcategory picker
 - `UIPlugins/Built-in/SettingsUIPlugin.swift` — triggers `registerAllSettings()`
-- `ServicePlugins/Built-in/SystemServicePlugins.swift` — three plugins now conform
-  to `SettingsProvider`
+- `ServicePlugins/Built-in/SystemServicePlugins.swift` — `SettingsProvider` conformance
 
 ### Developer Tab Overhaul
 

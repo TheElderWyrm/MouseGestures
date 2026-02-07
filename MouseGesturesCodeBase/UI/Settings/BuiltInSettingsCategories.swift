@@ -3,8 +3,6 @@ import UniformTypeIdentifiers
 
 // MARK: - Well-Known Category Descriptors
 
-/// Predefined category descriptors that built-in entries and service plugins can target.
-/// Plugins can also create entirely new categories by using a new descriptor.
 enum SettingsCategories {
     static let general = SettingsCategoryDescriptor(id: "general", title: "General", icon: "gear", order: 0)
     static let detection = SettingsCategoryDescriptor(id: "detection", title: "Detection", icon: "hand.tap", order: 10)
@@ -12,9 +10,30 @@ enum SettingsCategories {
     static let about = SettingsCategoryDescriptor(id: "about", title: "About", icon: "info.circle", order: 90)
 }
 
+// MARK: - Well-Known Subcategory Descriptors
+
+enum DetectionSubcategories {
+    static let general = SettingsSubcategoryDescriptor(id: "general", title: "General", icon: "gearshape", order: 0)
+    static let detection = SettingsSubcategoryDescriptor(id: "detection", title: "Detection", icon: "hand.tap", order: 1)
+    static let appearance = SettingsSubcategoryDescriptor(id: "appearance", title: "Appearance", icon: "paintbrush", order: 2)
+    static let performance = SettingsSubcategoryDescriptor(id: "performance", title: "Performance", icon: "speedometer", order: 3)
+    static let advanced = SettingsSubcategoryDescriptor(id: "advanced", title: "Advanced", icon: "wrench.and.screwdriver", order: 4)
+    
+    /// Map from PluginSettingDefinition.SettingCategory to a subcategory descriptor
+    static func from(_ category: PluginSettingDefinition.SettingCategory) -> SettingsSubcategoryDescriptor {
+        switch category {
+        case .general: return general
+        case .detection: return detection
+        case .appearance: return appearance
+        case .performance: return performance
+        case .advanced: return advanced
+        }
+    }
+}
+
 // MARK: - Built-In Settings Provider
 
-/// Provides core app settings entries that don't belong to any particular service plugin.
+/// Core app settings that don't belong to any particular plugin.
 struct BuiltInSettingsProvider: SettingsProvider {
     var settingsEntries: [SettingsEntry] {
         [
@@ -37,24 +56,6 @@ struct BuiltInSettingsProvider: SettingsProvider {
                     SearchableSettingItem(title: "Developer Mode", description: "Show Developer tab with logging, plugins, performance, services, and diagnostics", keywords: ["developer", "debug", "advanced", "dev"])
                 ],
                 viewBuilder: { _ in AnyView(DeveloperModeSettingView()) }
-            ),
-            
-            // Detection settings (wraps existing PluginSettingsView)
-            SettingsEntry(
-                category: SettingsCategories.detection,
-                order: 0,
-                searchableItems: detectionSearchableItems(),
-                viewBuilder: { showAdvanced in
-                    AnyView(
-                        VStack(alignment: .leading, spacing: 20) {
-                            Text("Configure how gestures are detected, including zone dimensions, visual feedback, and performance tuning.")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            
-                            PluginSettingsView(showAdvanced: showAdvanced)
-                        }
-                    )
-                }
             ),
             
             // Data Management
@@ -81,20 +82,81 @@ struct BuiltInSettingsProvider: SettingsProvider {
             )
         ]
     }
-    
-    private func detectionSearchableItems() -> [SearchableSettingItem] {
+}
+
+// MARK: - Detection Plugin Settings Provider
+
+/// Bridges detection plugin settings (PluginSettingDefinition) into the unified settings system.
+/// Creates one SettingsEntry per subcategory, each rendering all plugin rows for that group.
+struct DetectionPluginSettingsProvider: SettingsProvider {
+    var settingsEntries: [SettingsEntry] {
         let allSettings = DetectionPluginManager.shared.getAllSettingsDefinitions()
-        var items: [SearchableSettingItem] = []
-        for (_, categoryItems) in allSettings {
-            for item in categoryItems {
-                items.append(SearchableSettingItem(
+        
+        // allSettings is [SettingCategory: [(plugin, definition)]]
+        // Create one SettingsEntry per SettingCategory
+        return allSettings.compactMap { (settingCategory, items) -> SettingsEntry? in
+            guard !items.isEmpty else { return nil }
+            
+            let subcategory = DetectionSubcategories.from(settingCategory)
+            
+            let searchItems = items.map { item in
+                SearchableSettingItem(
                     title: item.definition.displayName,
                     description: item.definition.description ?? "",
-                    keywords: ["detection", "trigger", item.plugin.name.lowercased()]
-                ))
+                    keywords: ["detection", item.plugin.name.lowercased()]
+                )
             }
+            
+            // Capture items for the view builder
+            let capturedItems = items
+            
+            return SettingsEntry(
+                category: SettingsCategories.detection,
+                subcategory: subcategory,
+                order: subcategory.order,
+                searchableItems: searchItems,
+                viewBuilder: { showAdvanced in
+                    AnyView(DetectionSubcategoryView(items: capturedItems, showAdvanced: showAdvanced))
+                }
+            )
         }
-        return items
+    }
+}
+
+// MARK: - Detection Subcategory View
+
+/// Renders all PluginSettingRows for a single detection subcategory.
+/// Manages a shared visibilityTrigger for dependency-driven show/hide.
+struct DetectionSubcategoryView: View {
+    let items: [(plugin: DetectionPlugin, definition: PluginSettingDefinition)]
+    @Binding var showAdvanced: Bool
+    @State private var visibilityTrigger = UUID()
+    
+    private var visibleItems: [(plugin: DetectionPlugin, definition: PluginSettingDefinition)] {
+        items.filter { item in
+            if item.definition.isAdvanced && !showAdvanced { return false }
+            return true
+        }
+    }
+    
+    var body: some View {
+        if visibleItems.isEmpty {
+            Text("No settings available")
+                .foregroundColor(.secondary)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.vertical, 20)
+        } else {
+            VStack(alignment: .leading, spacing: 16) {
+                ForEach(Array(visibleItems.enumerated()), id: \.element.definition.key) { _, item in
+                    PluginSettingRow(
+                        plugin: item.plugin,
+                        definition: item.definition,
+                        visibilityTrigger: $visibilityTrigger
+                    )
+                }
+            }
+            .id(visibilityTrigger)
+        }
     }
 }
 
@@ -158,7 +220,6 @@ struct DataManagementSettingsView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            // Import/Export
             VStack(alignment: .leading, spacing: 10) {
                 Text("Settings Backup")
                     .font(.system(size: 14, weight: .semibold))
@@ -181,38 +242,29 @@ struct DataManagementSettingsView: View {
                 }
                 
                 if let msg = importSuccessMessage {
-                    Label(msg, systemImage: "checkmark.circle.fill")
-                        .font(.caption).foregroundColor(.green)
+                    Label(msg, systemImage: "checkmark.circle.fill").font(.caption).foregroundColor(.green)
                 }
                 if let msg = exportSuccessMessage {
-                    Label(msg, systemImage: "checkmark.circle.fill")
-                        .font(.caption).foregroundColor(.green)
+                    Label(msg, systemImage: "checkmark.circle.fill").font(.caption).foregroundColor(.green)
                 }
                 if let err = errorMessage {
-                    Label(err, systemImage: "exclamationmark.triangle.fill")
-                        .font(.caption).foregroundColor(.red)
+                    Label(err, systemImage: "exclamationmark.triangle.fill").font(.caption).foregroundColor(.red)
                 }
             }
             
             Divider()
             
-            // Reset
             VStack(alignment: .leading, spacing: 10) {
                 Text("Reset Application")
                     .font(.system(size: 14, weight: .semibold))
-                
                 Text("Reset all settings, profiles, and gestures to factory defaults")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                    .font(.caption).foregroundColor(.secondary)
                 
                 Button(action: { showingResetConfirmation = true }) {
                     Label("Reset to Defaults", systemImage: "arrow.counterclockwise")
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
+                        .foregroundColor(.white).frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.regular)
-                .tint(.red)
+                .buttonStyle(.borderedProminent).controlSize(.regular).tint(.red)
             }
         }
         .alert("Reset Application", isPresented: $showingResetConfirmation) {
@@ -222,23 +274,13 @@ struct DataManagementSettingsView: View {
             Text("This will reset all settings, profiles, and gestures to their default values. This action cannot be undone.")
         }
         .alert("Import Settings", isPresented: $showingImportOptions) {
-            Button("Replace All") {
-                mergeProfilesOnImport = false
-                showingImportDialog = true
-            }
-            Button("Merge Profiles") {
-                mergeProfilesOnImport = true
-                showingImportDialog = true
-            }
+            Button("Replace All") { mergeProfilesOnImport = false; showingImportDialog = true }
+            Button("Merge Profiles") { mergeProfilesOnImport = true; showingImportDialog = true }
             Button("Cancel", role: .cancel) { }
         } message: {
             Text("Would you like to replace all existing settings or merge the imported profiles with your current ones?")
         }
-        .fileImporter(
-            isPresented: $showingImportDialog,
-            allowedContentTypes: [UTType.json],
-            allowsMultipleSelection: false
-        ) { result in
+        .fileImporter(isPresented: $showingImportDialog, allowedContentTypes: [UTType.json], allowsMultipleSelection: false) { result in
             handleImport(result: result)
         }
         .fileExporter(
@@ -246,9 +288,7 @@ struct DataManagementSettingsView: View {
             document: SettingsExportDocument(data: uiServices.configuration.exportGlobalSettings() ?? Data()),
             contentType: UTType.json,
             defaultFilename: "MouseGestures_Settings_\(Date().formatted(date: .numeric, time: .omitted).replacingOccurrences(of: "/", with: "-")).json"
-        ) { result in
-            handleExport(result: result)
-        }
+        ) { result in handleExport(result: result) }
     }
     
     private func handleImport(result: Result<[URL], Error>) {
@@ -293,19 +333,14 @@ struct AboutSettingsView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             VStack(alignment: .leading, spacing: 10) {
-                Text("Version Information")
-                    .font(.system(size: 14, weight: .semibold))
-                
+                Text("Version Information").font(.system(size: 14, weight: .semibold))
                 HStack {
-                    Text("Current Version:")
-                        .font(.system(size: 13))
+                    Text("Current Version:").font(.system(size: 13))
                     Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown")
                         .font(.system(size: 13, weight: .medium))
                 }
-                
                 HStack {
-                    Text("Build Number:")
-                        .font(.system(size: 13))
+                    Text("Build Number:").font(.system(size: 13))
                     Text(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "Unknown")
                         .font(.system(size: 13, weight: .medium))
                 }
@@ -314,31 +349,19 @@ struct AboutSettingsView: View {
             Divider()
             
             VStack(alignment: .leading, spacing: 10) {
-                Text("Check for Updates")
-                    .font(.system(size: 14, weight: .semibold))
-                
-                Text("Check for the latest version of MouseGestures")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                
+                Text("Check for Updates").font(.system(size: 14, weight: .semibold))
+                Text("Check for the latest version of MouseGestures").font(.caption).foregroundColor(.secondary)
                 HStack {
                     Button(action: checkForUpdates) {
                         if isCheckingForUpdates {
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle())
-                                .scaleEffect(0.8)
-                                .frame(width: 16, height: 16)
+                            ProgressView().progressViewStyle(CircularProgressViewStyle()).scaleEffect(0.8).frame(width: 16, height: 16)
                             Text("Checking...")
                         } else {
                             Label("Check Now", systemImage: "arrow.clockwise")
                         }
                     }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(isCheckingForUpdates)
-                    
-                    if let msg = updateMessage {
-                        Text(msg).font(.caption).foregroundColor(.secondary)
-                    }
+                    .buttonStyle(.borderedProminent).disabled(isCheckingForUpdates)
+                    if let msg = updateMessage { Text(msg).font(.caption).foregroundColor(.secondary) }
                 }
             }
         }
@@ -347,24 +370,19 @@ struct AboutSettingsView: View {
     private func checkForUpdates() {
         isCheckingForUpdates = true; updateMessage = nil
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-            isCheckingForUpdates = false
-            updateMessage = "You are running the latest version"
+            isCheckingForUpdates = false; updateMessage = "You are running the latest version"
             DispatchQueue.main.asyncAfter(deadline: .now() + 5) { updateMessage = nil }
         }
     }
 }
 
-// MARK: - Shared Settings View Helpers
+// MARK: - Shared Helpers
 
-/// Reusable toggle row for settings
 func settingsToggle(isOn: Binding<Bool>, title: String, description: String, onChange: @escaping (Bool) -> Void) -> some View {
     Toggle(isOn: isOn) {
         VStack(alignment: .leading, spacing: 2) {
-            Text(title)
-                .font(.system(size: 13, weight: .medium))
-            Text(description)
-                .font(.caption)
-                .foregroundColor(.secondary)
+            Text(title).font(.system(size: 13, weight: .medium))
+            Text(description).font(.caption).foregroundColor(.secondary)
         }
     }
     .onChange(of: isOn.wrappedValue) { newValue in onChange(newValue) }
@@ -375,14 +393,11 @@ func settingsToggle(isOn: Binding<Bool>, title: String, description: String, onC
 struct SettingsExportDocument: FileDocument {
     static var readableContentTypes: [UTType] { [.json] }
     var data: Data
-    
     init(data: Data) { self.data = data }
-    
     init(configuration: ReadConfiguration) throws {
         guard let data = configuration.file.regularFileContents else { throw CocoaError(.fileReadCorruptFile) }
         self.data = data
     }
-    
     func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
         FileWrapper(regularFileWithContents: data)
     }
@@ -390,16 +405,18 @@ struct SettingsExportDocument: FileDocument {
 
 // MARK: - Settings Registration
 
-/// Registers all settings entries: built-in core entries + service plugin entries.
-/// Called during Settings UI plugin initialization.
+/// Registers all settings: built-in core + detection plugins + service plugins.
 func registerAllSettings() {
     let registry = SettingsCategoryRegistry.shared
     registry.clear()
     
-    // Built-in core entries
+    // Core app entries
     registry.register(BuiltInSettingsProvider())
     
-    // Discover service plugins that provide settings
+    // Detection plugin settings (bridged from PluginSettingDefinition system)
+    registry.register(DetectionPluginSettingsProvider())
+    
+    // Service plugins that provide settings
     for pluginInfo in ServicePluginManager.shared.getAllPlugins() {
         guard let plugin = ServicePluginManager.shared.getPlugin(identifier: pluginInfo.identifier) else { continue }
         if let provider = plugin as? SettingsProvider {

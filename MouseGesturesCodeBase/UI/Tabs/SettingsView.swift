@@ -8,8 +8,8 @@ struct SettingsView: View {
     @State private var selectedCategoryId: String = "general"
     @State private var showAdvanced: Bool = false
     @State private var searchText: String = ""
+    @State private var selectedSubcategoryIds: [String: String] = [:]  // categoryId -> subcategoryId
     
-    /// Filtered categories based on search
     private var filteredCategories: [ResolvedCategory] {
         let cats = registry.categories
         if searchText.isEmpty { return cats }
@@ -17,7 +17,6 @@ struct SettingsView: View {
         return cats.filter { matching.contains($0.id) }
     }
     
-    /// Search results for the dropdown
     private var searchResults: [(categoryId: String, categoryTitle: String, item: SearchableSettingItem)] {
         registry.searchResults(for: searchText)
     }
@@ -79,7 +78,6 @@ struct SettingsView: View {
             .padding(.horizontal, 14)
             .padding(.bottom, 10)
             
-            // Search results dropdown
             if !searchText.isEmpty && !searchResults.isEmpty {
                 searchResultsList
             }
@@ -88,7 +86,6 @@ struct SettingsView: View {
                 .padding(.horizontal, 20)
                 .padding(.bottom, 8)
             
-            // Category list
             ScrollView {
                 VStack(alignment: .leading, spacing: 2) {
                     ForEach(filteredCategories, id: \.id) { cat in
@@ -112,7 +109,6 @@ struct SettingsView: View {
                 .padding(.horizontal, 20)
                 .padding(.vertical, 6)
             
-            // Advanced toggle
             HStack {
                 Toggle(isOn: $showAdvanced) {
                     HStack(spacing: 6) {
@@ -192,11 +188,9 @@ struct SettingsView: View {
                 Image(systemName: cat.icon)
                     .frame(width: 20)
                     .foregroundColor(isSelected ? .white : .secondary)
-                
                 Text(cat.title)
                     .fontWeight(isSelected ? .medium : .regular)
                     .foregroundColor(isSelected ? .white : .primary)
-                
                 Spacer()
             }
             .padding(.horizontal, 10)
@@ -228,7 +222,7 @@ struct SettingsView: View {
         }
     }
     
-    /// Renders all entries for a resolved category
+    /// Renders a full category: header, top-level entries card, subcategory picker + entries card
     @ViewBuilder
     private func categoryContentView(for cat: ResolvedCategory) -> some View {
         // Category header
@@ -236,20 +230,74 @@ struct SettingsView: View {
             .font(.title2)
             .fontWeight(.semibold)
         
-        // Entries in a card
-        VStack(alignment: .leading, spacing: 15) {
-            let visibleEntries = cat.entries.filter { !$0.isAdvanced || showAdvanced }
-            
-            ForEach(Array(visibleEntries.enumerated()), id: \.offset) { idx, entry in
-                entry.viewBuilder($showAdvanced)
-                
-                if idx < visibleEntries.count - 1 {
-                    Divider()
+        // Top-level entries (no subcategory)
+        let visibleTopLevel = cat.topLevelEntries.filter { !$0.isAdvanced || showAdvanced }
+        if !visibleTopLevel.isEmpty {
+            VStack(alignment: .leading, spacing: 15) {
+                ForEach(Array(visibleTopLevel.enumerated()), id: \.offset) { idx, entry in
+                    entry.viewBuilder($showAdvanced)
+                    if idx < visibleTopLevel.count - 1 { Divider() }
                 }
             }
+            .padding()
+            .background(RoundedRectangle(cornerRadius: 8).fill(Color(NSColor.controlBackgroundColor)))
         }
-        .padding()
-        .background(RoundedRectangle(cornerRadius: 8).fill(Color(NSColor.controlBackgroundColor)))
+        
+        // Subcategories
+        if cat.hasSubcategories {
+            subcategoryView(for: cat)
+        }
+    }
+    
+    /// Renders the subcategory picker and entries for the selected subcategory
+    @ViewBuilder
+    private func subcategoryView(for cat: ResolvedCategory) -> some View {
+        let visibleSubs = cat.subcategories.filter { sub in
+            sub.entries.contains { !$0.isAdvanced || showAdvanced }
+        }
+        
+        if visibleSubs.count > 1 {
+            Picker("", selection: subcategorySelection(for: cat, visibleSubs: visibleSubs)) {
+                ForEach(visibleSubs, id: \.id) { sub in
+                    Label(sub.title, systemImage: sub.icon).tag(sub.id)
+                }
+            }
+            .pickerStyle(.segmented)
+        }
+        
+        // Entries for the selected subcategory
+        let selectedSubId = selectedSubcategoryIds[cat.id] ?? visibleSubs.first?.id ?? ""
+        if let sub = visibleSubs.first(where: { $0.id == selectedSubId }) ?? visibleSubs.first {
+            let visibleEntries = sub.entries.filter { !$0.isAdvanced || showAdvanced }
+            
+            if !visibleEntries.isEmpty {
+                VStack(alignment: .leading, spacing: 15) {
+                    ForEach(Array(visibleEntries.enumerated()), id: \.offset) { idx, entry in
+                        entry.viewBuilder($showAdvanced)
+                        if idx < visibleEntries.count - 1 { Divider() }
+                    }
+                }
+                .padding()
+                .background(RoundedRectangle(cornerRadius: 8).fill(Color(NSColor.controlBackgroundColor)))
+            }
+        }
+    }
+    
+    /// Binding for subcategory selection within a category
+    private func subcategorySelection(for cat: ResolvedCategory, visibleSubs: [ResolvedSubcategory]) -> Binding<String> {
+        Binding(
+            get: {
+                let current = selectedSubcategoryIds[cat.id]
+                // If current selection isn't in visible subs, default to first
+                if let current = current, visibleSubs.contains(where: { $0.id == current }) {
+                    return current
+                }
+                return visibleSubs.first?.id ?? ""
+            },
+            set: { newValue in
+                selectedSubcategoryIds[cat.id] = newValue
+            }
+        )
     }
     
     // MARK: - Empty State
