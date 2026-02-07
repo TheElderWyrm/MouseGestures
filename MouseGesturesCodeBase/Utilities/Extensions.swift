@@ -66,3 +66,18 @@ extension NSEvent.ModifierFlags {
         return parts.joined(separator: "")
     }
 }
+
+// MARK: - Shared Mouse Button Utilities
+
+extension DragModifier {
+    /// Returns the drag modifier corresponding to any currently pressed mouse button.
+    /// Direct OS query via `NSEvent.pressedMouseButtons` — no plugin dependency.
+    static var currentSystem: DragModifier {
+        let pressed = NSEvent.pressedMouseButtons
+        // Bit 0 = left, bit 1 = right, bit 2 = middle
+        if pressed & (1 << 0) != 0 { return .leftDrag }
+        if pressed & (1 << 1) != 0 { return .rightDrag }
+        if pressed & (1 << 2) != 0 { return .middleDrag }
+        return .none
+    }
+}

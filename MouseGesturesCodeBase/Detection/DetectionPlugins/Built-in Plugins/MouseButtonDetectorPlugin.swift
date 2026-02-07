@@ -77,20 +77,11 @@ class MouseButtonDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         }
     }
     
-    // Event monitors — mouseDown for clicks + hold, mouseUp for hold release
-    private var globalLeftDownMonitor: Any?
-    private var globalRightDownMonitor: Any?
-    private var globalOtherDownMonitor: Any?
-    private var globalLeftUpMonitor: Any?
-    private var globalRightUpMonitor: Any?
-    private var globalOtherUpMonitor: Any?
-    // Local monitors for when our app has focus
-    private var localLeftDownMonitor: Any?
-    private var localRightDownMonitor: Any?
-    private var localOtherDownMonitor: Any?
-    private var localLeftUpMonitor: Any?
-    private var localRightUpMonitor: Any?
-    private var localOtherUpMonitor: Any?
+    // Event monitors — consolidated: 1 global down, 1 local down, 1 global up, 1 local up
+    private var globalDownMonitor: Any?
+    private var localDownMonitor: Any?
+    private var globalUpMonitor: Any?
+    private var localUpMonitor: Any?
     
     // Detection state
     private var isMouseButtonDetectionActive = false
@@ -154,17 +145,8 @@ class MouseButtonDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     /// - A dragModifier != .none (requires a button to be held for zone detection)
     func gestureUsesActivation(_ gesture: Gesture, for type: ActivationType) -> Bool {
         guard type == .mouseButton else { return false }
-        
-        // Click-trigger gestures
-        if gesture.activation.hasMouseButton && gesture.mouseButtonTrigger != nil {
-            return true
-        }
-        
-        // Drag gestures: button hold + screen zone
-        if gesture.activation.hasGesture && gesture.dragModifier != .none {
-            return true
-        }
-        
+        if gesture.activation.hasMouseButton && gesture.mouseButtonTrigger != nil { return true }
+        if gesture.activation.hasGesture && gesture.dragModifier != .none { return true }
         return false
     }
     
@@ -174,19 +156,10 @@ class MouseButtonDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         guard let held = heldButton else { return false }
         let heldDrag = DragModifier.from(mouseButton: held)
         
-        // If any dependent gesture requires the currently held button, gate is satisfied
         for gesture in gestures {
-            if gesture.dragModifier == heldDrag {
-                return true
-            }
-            // Gestures with no drag requirement don't need mouse button gating
-            // (they're gated by modifiers instead), but if they're in this list
-            // they have mouseButton as a gate, so any held button satisfies them
-            if gesture.dragModifier == .none {
-                return true
-            }
+            if gesture.dragModifier == heldDrag { return true }
+            if gesture.dragModifier == .none { return true }
         }
-        
         return false
     }
     
@@ -217,75 +190,41 @@ class MouseButtonDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     
     // MARK: - Monitor Management
     
+    private static let downEvents: NSEvent.EventTypeMask = [.leftMouseDown, .rightMouseDown, .otherMouseDown]
+    private static let upEvents: NSEvent.EventTypeMask = [.leftMouseUp, .rightMouseUp, .otherMouseUp]
+    
     private func enableMouseButtonMonitors() {
         guard !isMouseButtonDetectionActive else { return }
         
-        // --- mouseDown monitors (click triggers + hold tracking) ---
-        globalLeftDownMonitor = NSEvent.addGlobalMonitorForEvents(matching: .leftMouseDown) { [weak self] e in
-            self?.handleMouseDown(e, button: .left)
+        globalDownMonitor = NSEvent.addGlobalMonitorForEvents(matching: Self.downEvents) { [weak self] e in
+            self?.handleMouseDown(e)
         }
-        localLeftDownMonitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] e in
-            self?.handleMouseDown(e, button: .left); return e
-        }
-        
-        globalRightDownMonitor = NSEvent.addGlobalMonitorForEvents(matching: .rightMouseDown) { [weak self] e in
-            self?.handleMouseDown(e, button: .right)
-        }
-        localRightDownMonitor = NSEvent.addLocalMonitorForEvents(matching: .rightMouseDown) { [weak self] e in
-            self?.handleMouseDown(e, button: .right); return e
+        localDownMonitor = NSEvent.addLocalMonitorForEvents(matching: Self.downEvents) { [weak self] e in
+            self?.handleMouseDown(e); return e
         }
         
-        globalOtherDownMonitor = NSEvent.addGlobalMonitorForEvents(matching: .otherMouseDown) { [weak self] e in
-            let btn = Self.otherButton(from: e)
-            self?.handleMouseDown(e, button: btn)
+        globalUpMonitor = NSEvent.addGlobalMonitorForEvents(matching: Self.upEvents) { [weak self] e in
+            self?.handleMouseUp(e)
         }
-        localOtherDownMonitor = NSEvent.addLocalMonitorForEvents(matching: .otherMouseDown) { [weak self] e in
-            let btn = Self.otherButton(from: e)
-            self?.handleMouseDown(e, button: btn); return e
-        }
-        
-        // --- mouseUp monitors (hold release tracking) ---
-        globalLeftUpMonitor = NSEvent.addGlobalMonitorForEvents(matching: .leftMouseUp) { [weak self] _ in
-            self?.handleMouseUp(button: .left)
-        }
-        localLeftUpMonitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseUp) { [weak self] e in
-            self?.handleMouseUp(button: .left); return e
-        }
-        
-        globalRightUpMonitor = NSEvent.addGlobalMonitorForEvents(matching: .rightMouseUp) { [weak self] _ in
-            self?.handleMouseUp(button: .right)
-        }
-        localRightUpMonitor = NSEvent.addLocalMonitorForEvents(matching: .rightMouseUp) { [weak self] e in
-            self?.handleMouseUp(button: .right); return e
-        }
-        
-        globalOtherUpMonitor = NSEvent.addGlobalMonitorForEvents(matching: .otherMouseUp) { [weak self] e in
-            self?.handleMouseUp(button: Self.otherButton(from: e))
-        }
-        localOtherUpMonitor = NSEvent.addLocalMonitorForEvents(matching: .otherMouseUp) { [weak self] e in
-            self?.handleMouseUp(button: Self.otherButton(from: e)); return e
+        localUpMonitor = NSEvent.addLocalMonitorForEvents(matching: Self.upEvents) { [weak self] e in
+            self?.handleMouseUp(e); return e
         }
         
         isMouseButtonDetectionActive = true
         
         if context?.logger.isDebugEnabled ?? false {
-            context?.logger.log("Mouse button monitoring ENABLED (click + hold)", file: #file, function: #function, line: #line)
+            context?.logger.log("Mouse button monitoring ENABLED (4 monitors)", file: #file, function: #function, line: #line)
         }
     }
     
     private func disableMouseButtonMonitors() {
-        let monitors: [Any?] = [
-            globalLeftDownMonitor, globalRightDownMonitor, globalOtherDownMonitor,
-            globalLeftUpMonitor, globalRightUpMonitor, globalOtherUpMonitor,
-            localLeftDownMonitor, localRightDownMonitor, localOtherDownMonitor,
-            localLeftUpMonitor, localRightUpMonitor, localOtherUpMonitor
-        ]
-        for m in monitors { if let m = m { NSEvent.removeMonitor(m) } }
+        guard isMouseButtonDetectionActive else { return }
         
-        globalLeftDownMonitor = nil; globalRightDownMonitor = nil; globalOtherDownMonitor = nil
-        globalLeftUpMonitor = nil; globalRightUpMonitor = nil; globalOtherUpMonitor = nil
-        localLeftDownMonitor = nil; localRightDownMonitor = nil; localOtherDownMonitor = nil
-        localLeftUpMonitor = nil; localRightUpMonitor = nil; localOtherUpMonitor = nil
+        for m in [globalDownMonitor, localDownMonitor, globalUpMonitor, localUpMonitor] {
+            if let m = m { NSEvent.removeMonitor(m) }
+        }
+        globalDownMonitor = nil; localDownMonitor = nil
+        globalUpMonitor = nil; localUpMonitor = nil
         
         if heldButton != nil {
             heldButton = nil
@@ -301,13 +240,14 @@ class MouseButtonDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     
     // MARK: - Event Handlers
     
-    private func handleMouseDown(_ event: NSEvent, button: MouseButtonTrigger.MouseButton) {
+    private func handleMouseDown(_ event: NSEvent) {
+        let button = Self.buttonFrom(event)
+        
         // --- 1. Update button hold state ---
         let wasHeld = heldButton
         heldButton = button
         
         if wasHeld == nil {
-            // First button pressed — engage coordinator
             holdEngagements += 1
             ActivationCoordinator.shared.activationEngaged(.mouseButton, metadata: buildMetadata())
             
@@ -315,7 +255,6 @@ class MouseButtonDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
                 context?.logger.log("Button held: \(button.rawValue)", file: #file, function: #function, line: #line)
             }
         } else if wasHeld != button {
-            // Different button now held — update coordinator metadata
             ActivationCoordinator.shared.activationEngaged(.mouseButton, metadata: buildMetadata())
         }
         
@@ -325,46 +264,35 @@ class MouseButtonDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         guard isButtonAllowed(button) else { return }
         
         let modifiers = event.modifierFlags.normalized
-        
-        // Skip click-trigger check if no modifiers when required
         if requireModifiers && modifiers.isEmpty { return }
         
         guard let config = context?.configuration else { return }
         
-        let enabledGestures = config.gestures.filter { gesture in
-            gesture.isEnabled &&
-            gesture.mouseButtonTrigger != nil &&
-            (gesture.activationType == .mouseButton ||
-             gesture.activationType == .gestureMouseButton ||
-             gesture.activationType == .keyboardMouseButton ||
-             gesture.activationType == .all)
+        let enabledGestures = config.gestures.filter { g in
+            g.isEnabled && g.mouseButtonTrigger != nil &&
+            (g.activationType == .mouseButton || g.activationType == .gestureMouseButton ||
+             g.activationType == .keyboardMouseButton || g.activationType == .all)
         }
         
         for gesture in enabledGestures {
             guard let trigger = gesture.mouseButtonTrigger else { continue }
-            
-            if trigger.button == button &&
-               trigger.modifiers.normalized == modifiers {
-                
+            if trigger.button == button && trigger.modifiers.normalized == modifiers {
                 clicksTriggered += 1
                 lastTriggerTime = Date()
                 
-                context?.logger.log("✓ Mouse button trigger activated: \(trigger.displayString) -> \(gesture.actionIdentifier)", file: #file, function: #function, line: #line)
+                context?.logger.log("✓ Mouse button trigger: \(trigger.displayString) -> \(gesture.actionIdentifier)", file: #file, function: #function, line: #line)
                 
-                let gestureContext = GestureContext(
+                triggerGesture(gesture, context: GestureContext(
                     source: .mouseButton(button: button, modifiers: modifiers),
-                    modifiers: modifiers,
-                    timestamp: Date()
-                )
-                
-                triggerGesture(gesture, context: gestureContext)
-                break // Only trigger the first match
+                    modifiers: modifiers, timestamp: Date()
+                ))
+                break
             }
         }
     }
     
-    private func handleMouseUp(button: MouseButtonTrigger.MouseButton) {
-        // Only disengage if this is the button we're tracking
+    private func handleMouseUp(_ event: NSEvent) {
+        let button = Self.buttonFrom(event)
         guard heldButton == button else { return }
         
         heldButton = nil
@@ -377,7 +305,6 @@ class MouseButtonDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     
     // MARK: - Helper Methods
     
-    /// Build coordinator metadata from current hold state
     private func buildMetadata() -> [String: Any] {
         var meta: [String: Any] = [:]
         if let held = heldButton {
@@ -387,30 +314,34 @@ class MouseButtonDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         return meta
     }
     
-    /// Map otherMouse event to button type
-    private static func otherButton(from event: NSEvent) -> MouseButtonTrigger.MouseButton {
-        switch event.buttonNumber {
-        case 2: return .middle
-        case 3: return .button4
-        default: return .button5
+    /// Determine which button from any mouseDown/mouseUp event
+    private static func buttonFrom(_ event: NSEvent) -> MouseButtonTrigger.MouseButton {
+        switch event.type {
+        case .leftMouseDown, .leftMouseUp: return .left
+        case .rightMouseDown, .rightMouseUp: return .right
+        default: // otherMouseDown/Up
+            switch event.buttonNumber {
+            case 2: return .middle
+            case 3: return .button4
+            default: return .button5
+            }
         }
     }
     
     private func logActiveButtonTriggers() {
         guard let config = context?.configuration else { return }
         
-        let clickTriggerCount = config.gestures.filter {
-            $0.mouseButtonTrigger != nil &&
+        let clickCount = config.gestures.filter {
+            $0.mouseButtonTrigger != nil && $0.isEnabled &&
             ($0.activationType == .mouseButton || $0.activationType == .gestureMouseButton ||
-             $0.activationType == .keyboardMouseButton || $0.activationType == .all) &&
-            $0.isEnabled
+             $0.activationType == .keyboardMouseButton || $0.activationType == .all)
         }.count
         
-        let dragGestureCount = config.gestures.filter {
+        let dragCount = config.gestures.filter {
             $0.isEnabled && $0.activation.hasGesture && $0.dragModifier != .none
         }.count
         
-        context?.logger.log("Mouse button detection started (click triggers: \(clickTriggerCount), drag gestures: \(dragGestureCount))", file: #file, function: #function, line: #line)
+        context?.logger.log("Mouse button detection started (clicks: \(clickCount), drag gestures: \(dragCount))", file: #file, function: #function, line: #line)
     }
     
     // MARK: - Statistics
