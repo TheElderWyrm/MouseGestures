@@ -2,6 +2,14 @@
 
 ### Developer Tab Overhaul
 
+**Added Developer Settings section to Developer tab**
+- New "Developer Settings" sidebar section is the default landing page for the Developer tab.
+- Consolidates developer-specific toggles: Developer Mode, Debug Logging,
+  Show Zone Highlights, and Show Zone Labels.
+- Warning label appears when developer mode is toggled off, informing the user
+  the tab will hide when they navigate away.
+- Debug logging toggle stays in sync with the Logging section's toggle.
+
 **Moved Services into Developer tab as inline section**
 - Removed Services as a standalone tab entirely (ServicesUIPlugin always hidden).
 - Added "Services" sidebar section inside Developer tab with category dropdown

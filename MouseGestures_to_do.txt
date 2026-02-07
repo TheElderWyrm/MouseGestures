@@ -20,7 +20,7 @@ Bugs
 - Prevent multiple gestures of the same modifiers to be created
 
 Improve UI
-- Improved gesture editing screen. 
+- Improved gesture editing screen. Current trigger UI is
 - Better gesture information (Base off current bundle actions selection.)
 - Action selection needs better indication of what is currently selected/add a select button to confirm selection (To prevent accidental overriding of previously selected action)
 - Improve appearance of Show Zone Highlights
