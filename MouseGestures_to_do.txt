@@ -2,8 +2,8 @@
 - Reduce duplicate code, unify architecture whenever possible
 
 General:
-- Drag Detection/click detection seems to not be working
-	- Should maybe not be its own system. Instead it just exists as a combination of two activation methods: Mouse button and zone.
+- Drag Detection/click detection seems to not be working [DONE - unified as button hold + zone]
+	- Should maybe not be its own system. Instead it just exists as a combination of two activation methods: Mouse button and zone. [DONE]
 - missing highlight zone color setting.
 - Why do some detection methods get to be always active?
 

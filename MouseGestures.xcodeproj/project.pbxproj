@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		776CFCB32F37AE1300664D2F /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = 776CFCB22F37AE1300664D2F /* AppIcon.icns */; };
 		77A1C48A2F368ED800D1FE6A /* PluginProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4162F368ED800D1FE6A /* PluginProtocol.swift */; };
 		77A1C48B2F368ED800D1FE6A /* PerformanceMonitorService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C45B2F368ED800D1FE6A /* PerformanceMonitorService.swift */; };
 		77A1C48C2F368ED800D1FE6A /* LaunchAtLoginService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4572F368ED800D1FE6A /* LaunchAtLoginService.swift */; };
@@ -108,6 +109,7 @@
 /* Begin PBXFileReference section */
 		08AA45A28A2516DB23980BC2 /* SettingsCategoryProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SettingsCategoryProvider.swift; path = MouseGesturesCodeBase/UI/Settings/SettingsCategoryProvider.swift; sourceTree = SOURCE_ROOT; };
 		773428682E6E20FD003AB7F1 /* MouseGestures.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MouseGestures.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		776CFCB22F37AE1300664D2F /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
 		77A1C4132F368ED800D1FE6A /* ActionExecutionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionExecutionManager.swift; sourceTree = "<group>"; };
 		77A1C4152F368ED800D1FE6A /* PluginManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PluginManager.swift; sourceTree = "<group>"; };
 		77A1C4162F368ED800D1FE6A /* PluginProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PluginProtocol.swift; sourceTree = "<group>"; };
@@ -491,6 +493,7 @@
 				77A1C4762F368ED800D1FE6A /* UI */,
 				77A1C4832F368ED800D1FE6A /* UIPlugins */,
 				77A1C4862F368ED800D1FE6A /* Utilities */,
+				776CFCB22F37AE1300664D2F /* AppIcon.icns */,
 				77A1C4872F368ED800D1FE6A /* Info.plist */,
 			);
 			path = MouseGesturesCodeBase;
@@ -571,6 +574,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				776CFCB32F37AE1300664D2F /* AppIcon.icns in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

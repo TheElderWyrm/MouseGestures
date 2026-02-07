@@ -1,5 +1,20 @@
 ## 2026-02-07
 
+### Remove .mouseDrag — Drag as Mouse Button Hold + Zone
+- Removed `.mouseDrag` activation type entirely. Drag gestures are now a combination
+  of two independent signals: button hold (MouseButtonDetectorPlugin) + zone position
+  (ScreenZoneDetectorPlugin), coordinated through the ActivationCoordinator.
+- **MouseButtonDetectorPlugin**: Now tracks mouseDown/mouseUp for all buttons as
+  sustained hold state. Reports `heldButton` and `heldDragModifier` via coordinator
+  metadata. `gestureUsesActivation` returns true for gestures with dragModifier != .none.
+  `validateGate` does precision checking. Priority raised to 160 to gate ScreenZone (150).
+- **ScreenZoneDetectorPlugin**: Removed all drag ownership — dragState, drag monitors,
+  enableDragDetection/disableDragDetection, handleMouseDrag, handleMouseUp.
+  enableMouseTracking now also listens to mouseDragged for position.
+  Queries coordinator for held button state via `currentHeldDragModifier()`.
+- **DragModifier**: Added `correspondingMouseButton` and `from(mouseButton:)` conversions.
+- Net result: -127 lines, cleaner separation, drag = button + zone.
+
 ### Detection Plugin Separation of Concerns
 - Extracted shared modifier utilities to `NSEvent.ModifierFlags` extension in Extensions.swift:
   `.normalized`, `.currentSystem`, `.symbolString` — replaces 6 duplicate `normalizeModifiers()`
