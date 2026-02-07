@@ -1,5 +1,15 @@
 ## 2026-02-07
 
+### Fix: Remaining Console Warnings - TabManager Variadic View Access
+- **Eliminated all remaining "Accessing invalid variadic view child" warnings**:
+  * TabManager: Replaced index-based ForEach (`indices, id: \.self`) with stable
+    plugin identifier-based iteration (`id: \.identifier`)
+  * TabManager: Changed tab selection from Int index to String plugin identifier,
+    matching the `.tag()` values for proper SwiftUI view identity tracking
+  * TabManager: Added loading guard — TabView only renders after plugins are loaded,
+    preventing SwiftUI from accessing empty variadic children during async init
+  * Also eliminates the `layoutSubtreeIfNeeded` recursion warning
+
 ### Fix: Console Warnings - Variadic View Access and State Restoration
 - **Fixed "Accessing invalid variadic view child at index 0" errors**:
   * Root cause: Using `.enumerated()` with unstable IDs in ForEach creates view identity
