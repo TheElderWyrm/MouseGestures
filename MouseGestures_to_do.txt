@@ -2,9 +2,7 @@
 - Reduce duplicate code, unify architecture whenever possible
 
 General:
-- Possible issue with mouse zones activating even with drag.
 - missing highlight zone color setting.
-- Why do some detection methods get to be always active?
 
 Actions (fix later):
 - Not all actions work.

@@ -1,5 +1,16 @@
 ## 2026-02-07
 
+### Optimize Drag Detection CPU Usage
+- **ScreenZoneDetectorPlugin**: `mouseDragged` monitors now only installed when
+  drag gestures exist (`hasDragGestures` flag rebuilt on config change). When no
+  drag gestures are configured, holding a mouse button while moving generates zero
+  event processing. Drag monitors dynamically installed/removed as config changes.
+- **MouseButtonDetectorPlugin**: Consolidated from 12 event monitors to 4 using
+  combined EventTypeMasks. Single `buttonFrom()` dispatcher.
+- Added `DragModifier.currentSystem` — direct OS query via `NSEvent.pressedMouseButtons`
+  (analogous to `.currentSystem` for modifiers). ScreenZoneDetectorPlugin now reads
+  held button state in real-time instead of round-tripping through coordinator metadata.
+
 ### Remove .mouseDrag — Drag as Mouse Button Hold + Zone
 - Removed `.mouseDrag` activation type entirely. Drag gestures are now a combination
   of two independent signals: button hold (MouseButtonDetectorPlugin) + zone position
