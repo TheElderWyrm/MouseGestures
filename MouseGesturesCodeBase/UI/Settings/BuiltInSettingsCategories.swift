@@ -147,7 +147,7 @@ struct DetectionSubcategoryView: View {
                 .padding(.vertical, 20)
         } else {
             VStack(alignment: .leading, spacing: 16) {
-                ForEach(Array(visibleItems.enumerated()), id: \.element.definition.key) { _, item in
+                ForEach(visibleItems, id: \.definition.key) { item in
                     PluginSettingRow(
                         plugin: item.plugin,
                         definition: item.definition,

@@ -137,7 +137,8 @@ struct BundleEditorView: View {
     
     private var actionList: some View {
         List(selection: $selection) {
-            ForEach(Array(bundledActions.enumerated()), id: \.element.id) { index, action in
+            ForEach(bundledActions.indices, id: \.self) { index in
+                let action = bundledActions[index]
                 BundleActionRow(
                     action: action,
                     index: index,
@@ -146,9 +147,7 @@ struct BundleEditorView: View {
                     delay: Binding(
                         get: { action.delayAfter ?? 0.2 },
                         set: { newVal in
-                            if let idx = bundledActions.firstIndex(where: { $0.id == action.id }) {
-                                bundledActions[idx].delayAfter = newVal
-                            }
+                            bundledActions[index].delayAfter = newVal
                         }
                     ),
                     onMoveUp: { moveAction(action, direction: -1) },

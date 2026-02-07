@@ -12,7 +12,8 @@ struct TabManager: View {
     
     var body: some View {
         TabView(selection: $selectedTab) {
-            ForEach(Array(uiPluginManager.visiblePlugins.enumerated()), id: \.element.identifier) { index, plugin in
+            ForEach(uiPluginManager.visiblePlugins.indices, id: \.self) { index in
+                let plugin = uiPluginManager.visiblePlugins[index]
                 createTabItem(for: plugin, tag: index)
             }
         }
