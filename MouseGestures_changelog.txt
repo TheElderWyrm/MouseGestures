@@ -1,5 +1,20 @@
 ## 2026-02-07
 
+### Architecture: Reduce Code Duplication (Round 2)
+- Extracted `releaseAllModifierKeys()` from AutomationPlugin and PluginSandbox into shared utility
+- Replaced inline key-code mapping in AutomationPlugin with centralized `CGKeyCode.displayString`
+- Extracted confirmation dialog pattern in SystemControlPlugin (restart/shutdown/logout → shared helper)
+- Extracted profile cycling duplication in CoreActionsPlugin (next/previous → shared `cycleProfile()`)
+- Net: 5 files changed, −67 lines
+
+### Architecture: Reduce Code Duplication (Round 1)
+- Unified modifier display strings: Replaced 5 duplicate implementations with `NSEvent.ModifierFlags.symbolString` and new `.verboseDescription` extension
+- Created `SimpleServicePlugin<T>` generic: Replaced 14 boilerplate service plugin classes with factory-created instances
+- Genericized `ServicePluginAdapter`: Replaced 20 copy-paste methods with single `getService(identifier:fallback:)` generic
+- Consolidated logger wrappers: Created shared `PrefixedLogger`, replaced `SandboxedLogger` and `DetectionPluginLogger`
+- Centralized key code mapping: Moved `CGKeyCode`→String table to `Extensions.swift` as `CGKeyCode.displayString`
+- Net: 12 files changed, −282 lines
+
 ### Fix: Remaining Console Warnings - TabManager Variadic View Access
 - **Eliminated all remaining "Accessing invalid variadic view child" warnings**:
   * TabManager: Replaced index-based ForEach (`indices, id: \.self`) with stable
