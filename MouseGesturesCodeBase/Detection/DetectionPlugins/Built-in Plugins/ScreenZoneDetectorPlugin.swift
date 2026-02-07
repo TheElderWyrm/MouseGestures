@@ -169,6 +169,10 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     private var lastTriggeredDrag: DragModifier = .none
     private var lastTriggeredModifiers: NSEvent.ModifierFlags = []
     
+    // Cached system state to avoid repeated queries
+    private var cachedDragModifier: DragModifier = .none
+    private var cachedModifiers: NSEvent.ModifierFlags = []
+    
     // Cooldown tracking
     private var lastActionTime: Date?
     
@@ -361,6 +365,10 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         lastTriggeredZone = nil
         stopRepeatTimer()
         
+        // Clear cached state
+        cachedDragModifier = .none
+        cachedModifiers = []
+        
         if context?.logger.isDebugEnabled ?? false {
             context?.logger.log("Zone tracking DISABLED", file: #file, function: #function, line: #line)
         }
@@ -415,13 +423,17 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     // MARK: - Event Handler
     
     /// Unified handler for all mouse position events (moved + dragged).
-    /// Only cares about position — button/modifier state queried in real-time.
+    /// Caches system state to avoid repeated queries during continuous movement.
     private func handleMousePosition(_ event: NSEvent) {
         let now = Date()
         guard now.timeIntervalSince(lastProcessedMouseTime) >= mouseProcessingInterval else { return }
         lastProcessedMouseTime = now
         
         let mouseLocation = NSEvent.mouseLocation
+        
+        // Update cached state on every mouse event (but only query once per event)
+        cachedDragModifier = DragModifier.currentSystem
+        cachedModifiers = NSEvent.ModifierFlags.currentSystem
         
         if let zone = detectZoneFromCache(point: mouseLocation) {
             processZoneEntry(zone)
@@ -433,9 +445,9 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     // MARK: - Zone Processing
     
     private func processZoneEntry(_ zone: ScreenZone) {
-        // Query real-time system state — no cross-plugin dependency
-        let currentModifiers = NSEvent.ModifierFlags.currentSystem
-        let currentDrag = DragModifier.currentSystem
+        // Use cached state from handleMousePosition (single query per mouse event)
+        let currentModifiers = cachedModifiers
+        let currentDrag = cachedDragModifier
         
         let isNewTrigger = lastTriggeredZone != zone ||
                            lastTriggeredDrag != currentDrag ||
@@ -465,7 +477,8 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     }
     
     private func detectGesture(zone: ScreenZone, dragModifier: DragModifier) {
-        let modifiers = NSEvent.ModifierFlags.currentSystem
+        // Use cached modifiers (already queried in handleMousePosition)
+        let modifiers = cachedModifiers
         
         if isInCooldownPeriod { return }
         
@@ -542,10 +555,11 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     }
     
     /// Check if conditions for the repeating gesture are still held.
-    /// Uses real-time system queries — no cross-plugin access.
+    /// Queries system state once per check (timer-based, not per-event).
     private func shouldContinueRepeating() -> Bool {
         guard let gesture = currentRepeatingGesture else { return false }
         
+        // Query system state (this is timer-based, not per-mouse-event, so overhead is acceptable)
         let mods = NSEvent.ModifierFlags.currentSystem
         let drag = DragModifier.currentSystem
         

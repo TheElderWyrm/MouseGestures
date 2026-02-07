@@ -152,13 +152,23 @@ class MouseButtonDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     
     /// Precision gate validation for dependent types (e.g., screen zones).
     /// Checks if the currently held button matches any dependent gesture's dragModifier.
+    /// This prevents screen zones from activating during drags when no matching drag gesture exists.
     func validateGate(for dependentType: ActivationType, gestures: [Gesture]) -> Bool {
+        guard dependentType == .screenZone else { return true }
         guard let held = heldButton else { return false }
         let heldDrag = DragModifier.from(mouseButton: held)
         
+        // Only enable screen zones if:
+        // 1. A gesture requires this specific drag modifier, OR
+        // 2. A gesture requires no drag (dragModifier == .none)
         for gesture in gestures {
             if gesture.dragModifier == heldDrag { return true }
             if gesture.dragModifier == .none { return true }
+        }
+        
+        // No matching drag gestures found - don't enable screen zones
+        if context?.logger.isDebugEnabled ?? false {
+            context?.logger.log("Gate validation FAILED: held button \(held.rawValue) doesn't match any screen zone gesture requirements", file: #file, function: #function, line: #line)
         }
         return false
     }
