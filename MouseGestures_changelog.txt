@@ -1,5 +1,25 @@
 ## 2026-02-07
 
+### Detection Plugin Separation of Concerns
+- Extracted shared modifier utilities to `NSEvent.ModifierFlags` extension in Extensions.swift:
+  `.normalized`, `.currentSystem`, `.symbolString` — replaces 6 duplicate `normalizeModifiers()`
+  and 2 duplicate `currentSystemModifiers()` implementations across the codebase.
+- **KeyboardShortcutDetectorPlugin**: Removed duplicate modifier monitoring (flagsChanged
+  monitors + `handleModifierChange` + `currentModifiers` property). Modifier state tracking
+  is now solely ModifierKeyDetectorPlugin's responsibility. This plugin only monitors keyDown
+  events and reads modifiers directly from each event.
+- **MouseButtonDetectorPlugin / KeyboardShortcutDetectorPlugin**: Removed app-disabled
+  checks (`pluginManager?.isCurrentAppDisabled()`). This filtering is already handled
+  centrally by DetectionPluginManager's delegate method — plugins now only report
+  their own detection metrics.
+- **DetectionPluginManager**: Removed typed plugin accessors (`getCurrentModifiers()` was
+  unused; `isCurrentAppDisabled()` was casting to specific plugin types). Replaced with
+  coordinator-based metadata query through `ActivationCoordinator.shared.getState()`.
+- **AppConfigurationDetectorPlugin**: Now includes `isDisabled` in coordinator engagement
+  metadata so cross-plugin queries work through the ActivationCoordinator abstraction.
+  Also re-notifies coordinator on `configurationChanged` to keep isDisabled status current.
+- Net result: -70 lines, zero cross-plugin type casts in detection plugins.
+
 ### Settings Overhaul — Unified Settings Architecture with Search and Subcategories
 
 **Single SettingsProvider protocol drives all settings**

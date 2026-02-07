@@ -4,7 +4,7 @@
 General:
 - Drag Detection/click detection seems to not be working
 	- Should maybe not be its own system. Instead it just exists as a combination of two activation methods: Mouse button and zone.
-- More isolated activation methods (Modifiers should be separate from zones, etc.)
+- More isolated activation methods (Modifiers should be separate from zones, etc.) [DONE]
 - Improve settings organization. [DONE]
 - missing highlight zone color setting.
 
