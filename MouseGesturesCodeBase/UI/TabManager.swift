@@ -3,43 +3,65 @@ import SwiftUI
 // MARK: - Plugin-Based Tab Manager
 
 struct TabManager: View {
-    @State private var selectedTab = 0
     @StateObject private var uiPluginManager = UIPluginManager.shared
     @StateObject private var uiServices = UIServices.shared
-    @State private var previousSelectedTab = 0
+    @State private var selectedTabID: String = ""
+    @State private var previousTabID: String = ""
     // Memory optimization: Track which tabs have been loaded to enable lazy loading
-    @State private var loadedTabs: Set<Int> = [0]
+    @State private var loadedTabs: Set<String> = []
     
     var body: some View {
-        TabView(selection: $selectedTab) {
-            ForEach(uiPluginManager.visiblePlugins.indices, id: \.self) { index in
-                let plugin = uiPluginManager.visiblePlugins[index]
-                createTabItem(for: plugin, tag: index)
-            }
-        }
-        .frame(width: 1000, height: 700)
-        .onChange(of: selectedTab) { newValue in
-            // Mark the new tab as loaded before handling the change
-            loadedTabs.insert(newValue)
-            handleTabChange(from: previousSelectedTab, to: newValue)
-            previousSelectedTab = newValue
-        }
-        .onAppear {
-            // Activate the first plugin
-            if let firstPlugin = uiPluginManager.visiblePlugins.first {
-                Task { @MainActor in
-                    uiPluginManager.activatePlugin(identifier: firstPlugin.identifier)
+        Group {
+            if uiPluginManager.isLoading || uiPluginManager.visiblePlugins.isEmpty {
+                // Show loading state until plugins are ready, prevents invalid variadic child access
+                VStack(spacing: 16) {
+                    ProgressView()
+                        .scaleEffect(1.5)
+                    Text("Loading...")
+                        .font(.headline)
+                        .foregroundColor(.secondary)
+                }
+                .frame(width: 1000, height: 700)
+            } else {
+                TabView(selection: $selectedTabID) {
+                    ForEach(uiPluginManager.visiblePlugins, id: \.identifier) { plugin in
+                        createTabItem(for: plugin)
+                    }
+                }
+                .frame(width: 1000, height: 700)
+                .onChange(of: selectedTabID) { newValue in
+                    // Mark the new tab as loaded before handling the change
+                    loadedTabs.insert(newValue)
+                    handleTabChange(from: previousTabID, to: newValue)
+                    previousTabID = newValue
+                }
+                .onAppear {
+                    initializeFirstTab()
                 }
             }
         }
     }
     
+    /// Set up the initial tab selection once plugins are available
+    private func initializeFirstTab() {
+        guard let firstPlugin = uiPluginManager.visiblePlugins.first else { return }
+        let firstID = firstPlugin.identifier
+        if selectedTabID.isEmpty {
+            loadedTabs.insert(firstID)
+            selectedTabID = firstID
+            previousTabID = firstID
+        }
+        Task { @MainActor in
+            uiPluginManager.activatePlugin(identifier: firstID)
+        }
+    }
+    
     @ViewBuilder
-    private func createTabItem(for plugin: any UIPlugin, tag: Int) -> some View {
+    private func createTabItem(for plugin: any UIPlugin) -> some View {
         // Memory optimization: Only create the actual view if this tab has been selected
         // This prevents all 8+ tabs from being rendered at startup
         Group {
-            if loadedTabs.contains(tag) {
+            if loadedTabs.contains(plugin.identifier) {
                 plugin.createView()
             } else {
                 // Lightweight placeholder until tab is first selected
@@ -49,25 +71,23 @@ struct TabManager: View {
         .tabItem {
             Label(plugin.displayName, systemImage: plugin.iconName)
         }
-        .tag(tag)
+        .tag(plugin.identifier)
     }
     
-    private func handleTabChange(from oldIndex: Int, to newIndex: Int) {
-        let plugins = uiPluginManager.visiblePlugins
+    private func handleTabChange(from oldID: String, to newID: String) {
+        guard oldID != newID else { return }
         
         // Deactivate old plugin
-        if oldIndex >= 0 && oldIndex < plugins.count {
-            let oldPlugin = plugins[oldIndex]
+        if !oldID.isEmpty {
             Task { @MainActor in
-                uiPluginManager.deactivatePlugin(identifier: oldPlugin.identifier)
+                uiPluginManager.deactivatePlugin(identifier: oldID)
             }
         }
         
         // Activate new plugin
-        if newIndex >= 0 && newIndex < plugins.count {
-            let newPlugin = plugins[newIndex]
+        if !newID.isEmpty {
             Task { @MainActor in
-                uiPluginManager.activatePlugin(identifier: newPlugin.identifier)
+                uiPluginManager.activatePlugin(identifier: newID)
             }
         }
     }
