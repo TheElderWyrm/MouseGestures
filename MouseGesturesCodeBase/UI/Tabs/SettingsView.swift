@@ -257,8 +257,17 @@ struct SettingsView: View {
                 if showAdvanced {
                     Toggle(isOn: $developerModeEnabled) {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Developer Mode")
-                                .font(.system(size: 13, weight: .medium))
+                            HStack(spacing: 6) {
+                                Text("Developer Mode")
+                                    .font(.system(size: 13, weight: .medium))
+                                
+                                Text("Advanced")
+                                    .font(.system(size: 9))
+                                    .padding(.horizontal, 4)
+                                    .padding(.vertical, 1)
+                                    .background(RoundedRectangle(cornerRadius: 3).fill(Color.blue.opacity(0.2)))
+                                    .foregroundColor(.blue)
+                            }
                             Text("Show Developer tab and advanced developer settings")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
