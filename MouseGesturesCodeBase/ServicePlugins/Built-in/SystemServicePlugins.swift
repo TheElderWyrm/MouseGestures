@@ -1,5 +1,6 @@
 import Foundation
 import AppKit
+import SwiftUI
 
 // MARK: - Accessibility Permission Service Plugin
 class AccessibilityPermissionServicePlugin: BaseServicePlugin {
@@ -26,12 +27,10 @@ class AccessibilityPermissionServicePlugin: BaseServicePlugin {
     }
     
     override func validateEnvironment() -> ServiceValidationResult {
-        // Check if we're running on macOS
         #if !os(macOS)
         return .failure("This service requires macOS")
         #endif
         
-        // Check if accessibility permissions are available
         if !AXIsProcessTrusted() {
             return .warning("Accessibility permissions not granted. Some features may not work.")
         }
@@ -41,7 +40,8 @@ class AccessibilityPermissionServicePlugin: BaseServicePlugin {
 }
 
 // MARK: - Launch at Login Service Plugin
-class LaunchAtLoginServicePlugin: BaseServicePlugin {
+
+class LaunchAtLoginServicePlugin: BaseServicePlugin, SettingsItemContributor {
     override var identifier: String { "com.mousegestures.service.launchatlogin" }
     override var name: String { "Launch at Login Service" }
     override var description: String { "Manages automatic app launch at system login" }
@@ -62,10 +62,42 @@ class LaunchAtLoginServicePlugin: BaseServicePlugin {
     override func getServiceInstance() -> Any? {
         return service
     }
+    
+    // MARK: - Settings Contribution
+    
+    var settingsContributions: [SettingsContribution] {
+        [SettingsContribution(
+            targetCategoryId: "general",
+            order: 10,
+            searchableItems: [
+                SearchableSettingItem(
+                    title: "Launch at Login",
+                    description: "Automatically start MouseGestures when you log in",
+                    keywords: ["launch", "login", "startup", "boot", "autostart", "automatic"]
+                )
+            ],
+            viewBuilder: { AnyView(LaunchAtLoginSettingView()) }
+        )]
+    }
+}
+
+/// Setting view provided by LaunchAtLoginServicePlugin
+private struct LaunchAtLoginSettingView: View {
+    @State private var launchAtLogin = false
+    
+    var body: some View {
+        settingsToggle(
+            isOn: $launchAtLogin,
+            title: "Launch at Login",
+            description: "Automatically start MouseGestures when you log in"
+        ) { UIServices.shared.setLaunchAtLoginEnabled($0) }
+        .onAppear { launchAtLogin = UIServices.shared.isLaunchAtLoginEnabled() }
+    }
 }
 
 // MARK: - Haptic Feedback Service Plugin
-class HapticFeedbackServicePlugin: BaseServicePlugin {
+
+class HapticFeedbackServicePlugin: BaseServicePlugin, SettingsItemContributor {
     override var identifier: String { "com.mousegestures.service.haptic" }
     override var name: String { "Haptic Feedback Service" }
     override var description: String { "Provides haptic feedback for gesture interactions" }
@@ -88,16 +120,47 @@ class HapticFeedbackServicePlugin: BaseServicePlugin {
     }
     
     override func validateEnvironment() -> ServiceValidationResult {
-        // Check if device supports haptic feedback
         if !NSHapticFeedbackManager.defaultPerformer.isKind(of: NSHapticFeedbackManager.self) {
             return .warning("Haptic feedback may not be available on this device")
         }
         return .success
     }
+    
+    // MARK: - Settings Contribution
+    
+    var settingsContributions: [SettingsContribution] {
+        [SettingsContribution(
+            targetCategoryId: "general",
+            order: 20,
+            searchableItems: [
+                SearchableSettingItem(
+                    title: "Haptic Feedback",
+                    description: "Provide haptic feedback when gestures are recognized",
+                    keywords: ["haptic", "feedback", "vibration", "force touch", "trackpad", "tactile"]
+                )
+            ],
+            viewBuilder: { AnyView(HapticFeedbackSettingView()) }
+        )]
+    }
+}
+
+/// Setting view provided by HapticFeedbackServicePlugin
+private struct HapticFeedbackSettingView: View {
+    @State private var hapticFeedback = true
+    
+    var body: some View {
+        settingsToggle(
+            isOn: $hapticFeedback,
+            title: "Haptic Feedback",
+            description: "Provide haptic feedback when gestures are recognized (MacBooks with Force Touch)"
+        ) { UIServices.shared.setHapticFeedbackEnabled($0) }
+        .onAppear { hapticFeedback = UIServices.shared.isHapticFeedbackEnabled() }
+    }
 }
 
 // MARK: - Menu Bar Visibility Service Plugin
-class MenuBarVisibilityServicePlugin: BaseServicePlugin {
+
+class MenuBarVisibilityServicePlugin: BaseServicePlugin, SettingsItemContributor {
     override var identifier: String { "com.mousegestures.service.menubar" }
     override var name: String { "Menu Bar Visibility Service" }
     override var description: String { "Controls the visibility of the menu bar icon" }
@@ -118,11 +181,61 @@ class MenuBarVisibilityServicePlugin: BaseServicePlugin {
     override func getServiceInstance() -> Any? {
         return service
     }
+    
+    // MARK: - Settings Contribution
+    
+    var settingsContributions: [SettingsContribution] {
+        [SettingsContribution(
+            targetCategoryId: "general",
+            order: 30,
+            searchableItems: [
+                SearchableSettingItem(
+                    title: "Show Menu Bar Icon",
+                    description: "Display MouseGestures icon in the menu bar for quick access",
+                    keywords: ["menu", "bar", "icon", "tray", "status", "menubar"]
+                )
+            ],
+            viewBuilder: { AnyView(MenuBarSettingView()) }
+        )]
+    }
+}
+
+/// Setting view provided by MenuBarVisibilityServicePlugin
+private struct MenuBarSettingView: View {
+    @State private var hideMenuBarIcon = false
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Toggle(isOn: Binding(
+                get: { !hideMenuBarIcon },
+                set: { hideMenuBarIcon = !$0 }
+            )) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Show Menu Bar Icon")
+                        .font(.system(size: 13, weight: .medium))
+                    Text("Display MouseGestures icon in the menu bar for quick access")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .onChange(of: hideMenuBarIcon) { newValue in
+                UIServices.shared.setMenuBarIconHidden(newValue)
+            }
+            
+            if hideMenuBarIcon {
+                Label("You can still access settings through the dock icon", systemImage: "info.circle")
+                    .font(.caption)
+                    .foregroundColor(.orange)
+                    .padding(.leading, 20)
+            }
+        }
+        .onAppear { hideMenuBarIcon = UIServices.shared.isMenuBarIconHidden() }
+    }
 }
 
 // MARK: - Zone Visualization Service Plugin
+
 class ZoneVisualizationServicePlugin: BaseServicePlugin {
-    // Store custom visualization preferences
     private var customColors: [String: String] = [:]
     private var animationDuration: Double = 0.2
     private var fadeOutDelay: Double = 1.0
@@ -140,24 +253,17 @@ class ZoneVisualizationServicePlugin: BaseServicePlugin {
     override func initialize() throws {
         service = ZoneVisualizationService.shared
         
-        // Load any custom configuration stored for this plugin
         if let savedConfig = loadConfiguration() {
-            // Load custom colors if saved
             if let colors = savedConfig["customColors"] as? [String: String] {
                 customColors = colors
                 log.log("ZoneVisualizationServicePlugin: Loaded \(colors.count) custom colors")
             }
-            
-            // Load animation settings
             if let duration = savedConfig["animationDuration"] as? Double {
                 animationDuration = duration
             }
-            
             if let delay = savedConfig["fadeOutDelay"] as? Double {
                 fadeOutDelay = delay
             }
-            
-            // Apply loaded configuration to the service
             applyConfiguration(savedConfig)
         }
         
@@ -224,53 +330,39 @@ class ZoneVisualizationServicePlugin: BaseServicePlugin {
     override func applyConfiguration(_ config: [String: Any]) {
         guard let service = service else { return }
         
-        // Apply basic settings to the service
         if let showHighlights = config["showHighlights"] as? Bool {
             service.setShowZoneHighlights(showHighlights)
         }
-        
         if let showLabels = config["showLabels"] as? Bool {
             service.setShowZoneLabels(showLabels)
         }
-        
         if let edgeThreshold = config["edgeThreshold"] as? CGFloat {
             service.setEdgeThreshold(edgeThreshold)
         }
-        
         if let cornerSize = config["cornerSize"] as? CGFloat {
             service.setCornerSize(cornerSize)
         }
-        
-        // Store custom configuration values
         if let duration = config["animationDuration"] as? Double {
             animationDuration = duration
         }
-        
         if let delay = config["fadeOutDelay"] as? Double {
             fadeOutDelay = delay
         }
-        
         if let colors = config["customColors"] as? [String: String] {
             customColors = colors
         }
         
-        // Save the configuration persistently
         saveConfiguration(config)
     }
     
-    /// Example method showing how to set a custom zone color
     func setZoneColor(for zone: String, color: String) {
         customColors[zone] = color
-        
-        // Save the updated configuration
         var config = loadConfiguration() ?? [:]
         config["customColors"] = customColors
         saveConfiguration(config)
-        
         log.log("ZoneVisualizationServicePlugin: Set color \(color) for zone \(zone)")
     }
     
-    /// Example method to get custom settings
     func getAnimationSettings() -> (duration: Double, fadeOutDelay: Double) {
         return (animationDuration, fadeOutDelay)
     }

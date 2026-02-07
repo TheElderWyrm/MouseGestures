@@ -3,8 +3,10 @@
 
 General:
 - Drag Detection/click detection seems to not be working
+	- Should maybe not be its own system. Instead it just exists as a combination of two activation methods: Mouse button and zone.
 - More isolated activation methods (Modifiers should be separate from zones, etc.)
-- Improve settings organization.
+- Improve settings organization. [DONE]
+
 Actions (fix later):
 - Not all actions work.
 - Clean up unneeded actions
@@ -19,7 +21,7 @@ Improve UI
 - Better gesture information (Base off current bundle actions selection.)
 - Action selection needs better indication of what is currently selected/add a select button to confirm selection (To prevent accidental overriding of previously selected action)
 - Improve appearance of Show Zone Highlights
-- Add searchbar to settings
+- Add searchbar to settings [DONE]
 - Pre-render UI to increase performance
 - Unify UI Styles throughout the app
 - Better Zone Configuration

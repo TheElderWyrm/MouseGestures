@@ -102,9 +102,12 @@
 		77A1C4E52F368ED800D1FE6A /* UpdateCheckService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4602F368ED800D1FE6A /* UpdateCheckService.swift */; };
 		77A1C4E62F368ED800D1FE6A /* ZoneHighlightWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4752F368ED800D1FE6A /* ZoneHighlightWindow.swift */; };
 		77A1C4E72F368ED800D1FE6A /* ServicePluginProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4492F368ED800D1FE6A /* ServicePluginProtocol.swift */; };
+		BD884DE9B9DBAF4A53E6123D /* SettingsCategoryProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08AA45A28A2516DB23980BC2 /* SettingsCategoryProvider.swift */; };
+		D37249979159DF938C105417 /* BuiltInSettingsCategories.swift in Sources */ = {isa = PBXBuildFile; fileRef = F50141A48E3DD816B8942DA8 /* BuiltInSettingsCategories.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		08AA45A28A2516DB23980BC2 /* SettingsCategoryProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SettingsCategoryProvider.swift; path = MouseGesturesCodeBase/UI/Settings/SettingsCategoryProvider.swift; sourceTree = SOURCE_ROOT; };
 		773428682E6E20FD003AB7F1 /* MouseGestures.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MouseGestures.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		77A1C4132F368ED800D1FE6A /* ActionExecutionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionExecutionManager.swift; sourceTree = "<group>"; };
 		77A1C4152F368ED800D1FE6A /* PluginManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PluginManager.swift; sourceTree = "<group>"; };
@@ -201,6 +204,7 @@
 		77A1C4842F368ED800D1FE6A /* AnyCodable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnyCodable.swift; sourceTree = "<group>"; };
 		77A1C4852F368ED800D1FE6A /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
 		77A1C4872F368ED800D1FE6A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		F50141A48E3DD816B8942DA8 /* BuiltInSettingsCategories.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BuiltInSettingsCategories.swift; path = MouseGesturesCodeBase/UI/Settings/BuiltInSettingsCategories.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -426,6 +430,7 @@
 				77A1C4732F368ED800D1FE6A /* TabManager.swift */,
 				77A1C4742F368ED800D1FE6A /* UIServices.swift */,
 				77A1C4752F368ED800D1FE6A /* ZoneHighlightWindow.swift */,
+				BF6148DCB25FBECE315D028A /* Settings */,
 			);
 			path = UI;
 			sourceTree = "<group>";
@@ -498,6 +503,15 @@
 				77A1C4882F368ED800D1FE6A /* MouseGesturesCodeBase */,
 				773428682E6E20FD003AB7F1 /* MouseGestures.app */,
 			);
+			sourceTree = "<group>";
+		};
+		BF6148DCB25FBECE315D028A /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				08AA45A28A2516DB23980BC2 /* SettingsCategoryProvider.swift */,
+				F50141A48E3DD816B8942DA8 /* BuiltInSettingsCategories.swift */,
+			);
+			name = Settings;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -663,6 +677,8 @@
 				77A1C4E52F368ED800D1FE6A /* UpdateCheckService.swift in Sources */,
 				77A1C4E62F368ED800D1FE6A /* ZoneHighlightWindow.swift in Sources */,
 				77A1C4E72F368ED800D1FE6A /* ServicePluginProtocol.swift in Sources */,
+				BD884DE9B9DBAF4A53E6123D /* SettingsCategoryProvider.swift in Sources */,
+				D37249979159DF938C105417 /* BuiltInSettingsCategories.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

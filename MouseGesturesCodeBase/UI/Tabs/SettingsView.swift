@@ -1,126 +1,58 @@
 import SwiftUI
-import UniformTypeIdentifiers
 
 // MARK: - Settings Tab
 
 struct SettingsView: View {
-    @StateObject private var uiServices = UIServices.shared
+    @StateObject private var registry = SettingsCategoryRegistry.shared
     
-    // State for toggles
-    @State private var gesturesEnabled: Bool = true
-    @State private var launchAtLogin: Bool = false
-    @State private var hapticFeedback: Bool = true
-    @State private var hideMenuBarIcon: Bool = false
-    @State private var developerModeEnabled: Bool = false
-    @State private var debugModeEnabled: Bool = false
-    
-    // UI State
-    @State private var showingImportDialog = false
-    @State private var showingExportDialog = false
-    @State private var showingResetConfirmation = false
-    @State private var showingImportOptions = false
-    @State private var mergeProfilesOnImport = false
-    @State private var importSuccessMessage: String?
-    @State private var exportSuccessMessage: String?
-    @State private var errorMessage: String?
-    @State private var selectedSection: SettingsSection = .general
+    @State private var selectedCategoryId: String = "general"
     @State private var showAdvanced: Bool = false
+    @State private var searchText: String = ""
     
-    // Update checking
-    @State private var isCheckingForUpdates = false
-    @State private var updateMessage: String?
+    /// Category IDs that match the current search query
+    private var matchingCategoryIds: Set<String> {
+        registry.matchingCategoryIds(for: searchText)
+    }
     
-    enum SettingsSection: String, CaseIterable {
-        case general = "General"
-        case detection = "Detection"
-        case menuBar = "Menu Bar"
-        case dataManagement = "Data Management"
-        case updates = "Updates"
-        
-        var icon: String {
-            switch self {
-            case .general: return "gear"
-            case .detection: return "hand.tap"
-            case .menuBar: return "menubar.rectangle"
-            case .dataManagement: return "externaldrive"
-            case .updates: return "arrow.clockwise.circle"
-            }
-        }
+    /// Filtered and sorted providers based on search
+    private var filteredProviders: [any SettingsCategoryProvider] {
+        let sorted = registry.sortedProviders
+        if searchText.isEmpty { return sorted }
+        let matching = matchingCategoryIds
+        return sorted.filter { matching.contains($0.settingsCategoryId) }
+    }
+    
+    /// Search results for the dropdown
+    private var searchResults: [(categoryId: String, categoryTitle: String, item: SearchableSettingItem)] {
+        registry.searchResults(for: searchText)
     }
     
     var body: some View {
         HSplitView {
-            // Sidebar with sections
             sidebarView
-                .frame(minWidth: 200, idealWidth: 220, maxWidth: 250)
+                .frame(minWidth: 200, idealWidth: 230, maxWidth: 260)
             
-            // Main content area
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    switch selectedSection {
-                    case .general:
-                        generalSettingsSection
-                    case .detection:
-                        detectionPluginSettingsSection
-                    case .menuBar:
-                        menuBarSection
-                    case .dataManagement:
-                        dataManagementSection
-                    case .updates:
-                        updatesSection
-                    }
-                }
-                .padding(20)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .frame(minWidth: 400)
+            contentView
+                .frame(minWidth: 400)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
-            loadSettings()
-        }
-        .alert("Reset Application", isPresented: $showingResetConfirmation) {
-            Button("Cancel", role: .cancel) { }
-            Button("Reset", role: .destructive) {
-                resetApplication()
+            // Ensure built-in categories are registered
+            if registry.providers.isEmpty {
+                registerBuiltInSettingsCategories()
             }
-        } message: {
-            Text("This will reset all settings, profiles, and gestures to their default values. This action cannot be undone.")
-        }
-        .alert("Import Settings", isPresented: $showingImportOptions) {
-            Button("Replace All") {
-                mergeProfilesOnImport = false
-                showingImportDialog = true
+            // Default to first category
+            if let first = registry.sortedProviders.first {
+                selectedCategoryId = first.settingsCategoryId
             }
-            Button("Merge Profiles") {
-                mergeProfilesOnImport = true
-                showingImportDialog = true
-            }
-            Button("Cancel", role: .cancel) { }
-        } message: {
-            Text("Would you like to replace all existing settings or merge the imported profiles with your current ones?")
-        }
-        .fileImporter(
-            isPresented: $showingImportDialog,
-            allowedContentTypes: [UTType.json],
-            allowsMultipleSelection: false
-        ) { result in
-            handleImport(result: result)
-        }
-        .fileExporter(
-            isPresented: $showingExportDialog,
-            document: SettingsExportDocument(data: uiServices.configuration.exportGlobalSettings() ?? Data()),
-            contentType: UTType.json,
-            defaultFilename: "MouseGestures_Settings_\(Date().formatted(date: .numeric, time: .omitted).replacingOccurrences(of: "/", with: "-")).json"
-        ) { result in
-            handleExport(result: result)
         }
     }
     
-    // MARK: - Sidebar View
+    // MARK: - Sidebar
     
     private var sidebarView: some View {
         VStack(alignment: .leading, spacing: 0) {
+            // Header
             Text("Settings")
                 .font(.title2)
                 .fontWeight(.semibold)
@@ -128,16 +60,59 @@ struct SettingsView: View {
                 .padding(.top, 20)
                 .padding(.bottom, 10)
             
-            Divider()
-                .padding(.horizontal, 20)
-                .padding(.bottom, 10)
-            
-            VStack(alignment: .leading, spacing: 2) {
-                ForEach(SettingsSection.allCases, id: \.self) { section in
-                    sidebarItem(for: section)
+            // Search field
+            HStack(spacing: 6) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundColor(.secondary)
+                    .font(.system(size: 12))
+                TextField("Search settings…", text: $searchText)
+                    .textFieldStyle(PlainTextFieldStyle())
+                    .font(.system(size: 12))
+                if !searchText.isEmpty {
+                    Button(action: { searchText = "" }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.secondary)
+                            .font(.system(size: 11))
+                    }
+                    .buttonStyle(PlainButtonStyle())
                 }
             }
-            .padding(.horizontal, 10)
+            .padding(7)
+            .background(Color(NSColor.controlBackgroundColor).opacity(0.8))
+            .cornerRadius(6)
+            .overlay(
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(Color(NSColor.separatorColor), lineWidth: 0.5)
+            )
+            .padding(.horizontal, 14)
+            .padding(.bottom, 10)
+            
+            // Search results dropdown
+            if !searchText.isEmpty && !searchResults.isEmpty {
+                searchResultsList
+            }
+            
+            Divider()
+                .padding(.horizontal, 20)
+                .padding(.bottom, 8)
+            
+            // Category list
+            ScrollView {
+                VStack(alignment: .leading, spacing: 2) {
+                    ForEach(filteredProviders, id: \.settingsCategoryId) { provider in
+                        sidebarItem(for: provider)
+                    }
+                    
+                    if filteredProviders.isEmpty && !searchText.isEmpty {
+                        Text("No matching settings")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 10)
+                    }
+                }
+                .padding(.horizontal, 10)
+            }
             
             Spacer()
             
@@ -145,6 +120,7 @@ struct SettingsView: View {
                 .padding(.horizontal, 20)
                 .padding(.vertical, 6)
             
+            // Advanced toggle
             HStack {
                 Toggle(isOn: $showAdvanced) {
                     HStack(spacing: 6) {
@@ -164,18 +140,72 @@ struct SettingsView: View {
         .background(Color(NSColor.controlBackgroundColor))
     }
     
-    private func sidebarItem(for section: SettingsSection) -> some View {
-        Button(action: {
-            selectedSection = section
+    // MARK: - Search Results List
+    
+    private var searchResultsList: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(Array(searchResults.prefix(8).enumerated()), id: \.offset) { _, result in
+                Button(action: {
+                    selectedCategoryId = result.categoryId
+                    searchText = ""
+                }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 10))
+                            .foregroundColor(.secondary)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(result.item.title)
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundColor(.primary)
+                                .lineLimit(1)
+                            Text(result.categoryTitle)
+                                .font(.system(size: 10))
+                                .foregroundColor(.secondary)
+                                .lineLimit(1)
+                        }
+                        Spacer()
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(PlainButtonStyle())
+                
+                if result.item.title != searchResults.prefix(8).last?.item.title {
+                    Divider().padding(.horizontal, 10)
+                }
+            }
+        }
+        .padding(.vertical, 4)
+        .background(
+            RoundedRectangle(cornerRadius: 6)
+                .fill(Color(NSColor.controlBackgroundColor))
+                .shadow(color: .black.opacity(0.1), radius: 4, y: 2)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 6)
+                .stroke(Color(NSColor.separatorColor), lineWidth: 0.5)
+        )
+        .padding(.horizontal, 14)
+        .padding(.bottom, 6)
+    }
+    
+    // MARK: - Sidebar Item
+    
+    private func sidebarItem(for provider: any SettingsCategoryProvider) -> some View {
+        let isSelected = provider.settingsCategoryId == selectedCategoryId
+        
+        return Button(action: {
+            selectedCategoryId = provider.settingsCategoryId
         }) {
             HStack(spacing: 8) {
-                Image(systemName: section.icon)
+                Image(systemName: provider.settingsCategoryIcon)
                     .frame(width: 20)
-                    .foregroundColor(selectedSection == section ? .white : .secondary)
+                    .foregroundColor(isSelected ? .white : .secondary)
                 
-                Text(section.rawValue)
-                    .fontWeight(selectedSection == section ? .medium : .regular)
-                    .foregroundColor(selectedSection == section ? .white : .primary)
+                Text(provider.settingsCategoryTitle)
+                    .fontWeight(isSelected ? .medium : .regular)
+                    .foregroundColor(isSelected ? .white : .primary)
                 
                 Spacer()
             }
@@ -183,462 +213,48 @@ struct SettingsView: View {
             .padding(.vertical, 6)
             .background(
                 RoundedRectangle(cornerRadius: 6)
-                    .fill(selectedSection == section ? Color.accentColor : Color.clear)
+                    .fill(isSelected ? Color.accentColor : Color.clear)
             )
             .contentShape(Rectangle())
         }
         .buttonStyle(PlainButtonStyle())
     }
     
-    // MARK: - General Settings Section
+    // MARK: - Content Area
     
-    private var generalSettingsSection: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            sectionHeader("General Settings")
-            
-            VStack(alignment: .leading, spacing: 15) {
-                // Enable Mouse Gestures
-                Toggle(isOn: $gesturesEnabled) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Enable Mouse Gestures")
-                            .font(.system(size: 13, weight: .medium))
-                        Text("Master switch to enable or disable all gesture recognition")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
-                .onChange(of: gesturesEnabled) { newValue in
-                    uiServices.setGesturesEnabled(newValue)
-                }
-                
-                Divider()
-                
-                // Launch at Login
-                Toggle(isOn: $launchAtLogin) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Launch at Login")
-                            .font(.system(size: 13, weight: .medium))
-                        Text("Automatically start MouseGestures when you log in")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
-                .onChange(of: launchAtLogin) { newValue in
-                    uiServices.setLaunchAtLoginEnabled(newValue)
-                }
-                
-                Divider()
-                
-                // Haptic Feedback
-                Toggle(isOn: $hapticFeedback) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Haptic Feedback")
-                            .font(.system(size: 13, weight: .medium))
-                        Text("Provide haptic feedback when gestures are recognized (MacBooks with Force Touch)")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
-                .onChange(of: hapticFeedback) { newValue in
-                    uiServices.setHapticFeedbackEnabled(newValue)
-                }
-                
-                Divider()
-                
-                // Developer Mode (only visible when showAdvanced is enabled)
-                if showAdvanced {
-                    Toggle(isOn: $developerModeEnabled) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            HStack(spacing: 6) {
-                                Text("Developer Mode")
-                                    .font(.system(size: 13, weight: .medium))
-                                
-                                Text("Advanced")
-                                    .font(.system(size: 9))
-                                    .padding(.horizontal, 4)
-                                    .padding(.vertical, 2)
-                                    .background(Color.orange.opacity(0.2))
-                                    .foregroundColor(.orange)
-                                    .cornerRadius(3)
-                            }
-                            Text("Show Developer tab with logging, plugins, performance, services, and diagnostics")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                    .onChange(of: developerModeEnabled) { newValue in
-                        uiServices.setDeveloperModeEnabled(newValue)
-                    }
-                    
-                    Divider()
+    private var contentView: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                if let provider = registry.sortedProviders.first(where: { $0.settingsCategoryId == selectedCategoryId }) {
+                    provider.createSettingsView(showAdvanced: $showAdvanced)
+                } else if let first = filteredProviders.first {
+                    first.createSettingsView(showAdvanced: $showAdvanced)
+                } else {
+                    emptyStateView
                 }
             }
-            .padding()
-            .background(RoundedRectangle(cornerRadius: 8).fill(Color(NSColor.controlBackgroundColor)))
+            .padding(20)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
     
-    // MARK: - Detection Plugin Settings Section
+    // MARK: - Empty State
     
-    private var detectionPluginSettingsSection: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            sectionHeader("Detection Settings")
-            
-            Text("Configure how gestures are detected, including zone dimensions, visual feedback, and performance tuning.")
-                .font(.caption)
+    private var emptyStateView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 36))
                 .foregroundColor(.secondary)
-            
-            PluginSettingsView(showAdvanced: $showAdvanced)
-        }
-    }
-    
-    // MARK: - Menu Bar Section
-    
-    private var menuBarSection: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            sectionHeader("Menu Bar Icon")
-            
-            VStack(alignment: .leading, spacing: 15) {
-                Toggle(isOn: Binding(
-                    get: { !hideMenuBarIcon },
-                    set: { hideMenuBarIcon = !$0 }
-                )) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Show Menu Bar Icon")
-                            .font(.system(size: 13, weight: .medium))
-                        Text("Display MouseGestures icon in the menu bar for quick access")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
-                .onChange(of: hideMenuBarIcon) { newValue in
-                    uiServices.setMenuBarIconHidden(newValue)
-                }
-                
-                if !hideMenuBarIcon {
-                    Divider()
-                    
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Menu Bar Options")
-                            .font(.system(size: 13, weight: .medium))
-                        
-                        Text("\u{2022} Quick enable/disable gestures")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        Text("\u{2022} Switch between profiles")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        Text("\u{2022} Open preferences window")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        Text("\u{2022} View current profile")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
-                
-                if hideMenuBarIcon {
-                    Label("Note: You can still access settings through the dock icon", systemImage: "info.circle")
-                        .font(.caption)
-                        .foregroundColor(.orange)
-                }
-            }
-            .padding()
-            .background(RoundedRectangle(cornerRadius: 8).fill(Color(NSColor.controlBackgroundColor)))
-        }
-    }
-    
-    // MARK: - Data Management Section
-    
-    private var dataManagementSection: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            sectionHeader("Data Management")
-            
-            VStack(alignment: .leading, spacing: 20) {
-                // Import/Export
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Settings Backup")
-                        .font(.system(size: 14, weight: .semibold))
-                    
-                    Text("Export or import all application settings, including profiles, gestures, and preferences")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    
-                    HStack(spacing: 10) {
-                        Button(action: {
-                            showingExportDialog = true
-                        }) {
-                            Label("Export Settings", systemImage: "square.and.arrow.up")
-                                .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(.borderedProminent)
-                        
-                        Button(action: {
-                            showingImportOptions = true
-                        }) {
-                            Label("Import Settings", systemImage: "square.and.arrow.down")
-                                .frame(maxWidth: .infinity)
-                        }
-                    }
-                    
-                    if let successMessage = importSuccessMessage {
-                        Label(successMessage, systemImage: "checkmark.circle.fill")
-                            .font(.caption)
-                            .foregroundColor(.green)
-                    }
-                    
-                    if let successMessage = exportSuccessMessage {
-                        Label(successMessage, systemImage: "checkmark.circle.fill")
-                            .font(.caption)
-                            .foregroundColor(.green)
-                    }
-                    
-                    if let error = errorMessage {
-                        Label(error, systemImage: "exclamationmark.triangle.fill")
-                            .font(.caption)
-                            .foregroundColor(.red)
-                    }
-                }
-                
-                Divider()
-                
-                // Reset
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Reset Application")
-                        .font(.system(size: 14, weight: .semibold))
-                    
-                    Text("Reset all settings, profiles, and gestures to factory defaults")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    
-                    Button(action: {
-                        showingResetConfirmation = true
-                    }) {
-                        Label("Reset to Defaults", systemImage: "arrow.counterclockwise")
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.regular)
-                    .tint(.red)
-                }
-            }
-            .padding()
-            .background(RoundedRectangle(cornerRadius: 8).fill(Color(NSColor.controlBackgroundColor)))
-        }
-    }
-    
-    
-    // MARK: - Updates Section
-    
-    private var updatesSection: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            sectionHeader("Application Updates")
-            
-            VStack(alignment: .leading, spacing: 20) {
-                // Current Version
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Version Information")
-                        .font(.system(size: 14, weight: .semibold))
-                    
-                    HStack {
-                        Text("Current Version:")
-                            .font(.system(size: 13))
-                        Text(getCurrentVersion())
-                            .font(.system(size: 13, weight: .medium))
-                    }
-                    
-                    HStack {
-                        Text("Build Number:")
-                            .font(.system(size: 13))
-                        Text(getBuildNumber())
-                            .font(.system(size: 13, weight: .medium))
-                    }
-                }
-                
-                Divider()
-                
-                // Update Check
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Check for Updates")
-                        .font(.system(size: 14, weight: .semibold))
-                    
-                    Text("Check for the latest version of MouseGestures")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    
-                    HStack {
-                        Button(action: checkForUpdates) {
-                            if isCheckingForUpdates {
-                                ProgressView()
-                                    .progressViewStyle(CircularProgressViewStyle())
-                                    .scaleEffect(0.8)
-                                    .frame(width: 16, height: 16)
-                                Text("Checking...")
-                            } else {
-                                Label("Check Now", systemImage: "arrow.clockwise")
-                            }
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .disabled(isCheckingForUpdates)
-                        
-                        if let message = updateMessage {
-                            Text(message)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                }
-                
-                Divider()
-                
-                // Auto Update Settings
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Update Settings")
-                        .font(.system(size: 14, weight: .semibold))
-                    
-                    Text("Automatic update checking is not yet implemented")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-            }
-            .padding()
-            .background(RoundedRectangle(cornerRadius: 8).fill(Color(NSColor.controlBackgroundColor)))
-        }
-    }
-    
-    // MARK: - Helper Views
-    
-    private func sectionHeader(_ title: String) -> some View {
-        Text(title)
-            .font(.title2)
-            .fontWeight(.semibold)
-    }
-    
-    // MARK: - Helper Functions
-    
-    private func loadSettings() {
-        gesturesEnabled = uiServices.isGesturesEnabled()
-        launchAtLogin = uiServices.isLaunchAtLoginEnabled()
-        hapticFeedback = uiServices.isHapticFeedbackEnabled()
-        hideMenuBarIcon = uiServices.isMenuBarIconHidden()
-        developerModeEnabled = uiServices.isDeveloperModeEnabled()
-        debugModeEnabled = uiServices.isDebugModeEnabled()
-    }
-    
-    private func handleImport(result: Result<[URL], Error>) {
-        errorMessage = nil
-        importSuccessMessage = nil
-        
-        switch result {
-        case .success(let urls):
-            guard let url = urls.first else { return }
-            if uiServices.importAppSettings(from: url, mergeProfiles: mergeProfilesOnImport) {
-                importSuccessMessage = mergeProfilesOnImport ? "Settings merged successfully" : "Settings imported successfully"
-                loadSettings()
-                
-                // Clear message after 3 seconds
-                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                    importSuccessMessage = nil
-                }
-            } else {
-                errorMessage = uiServices.errorMessage ?? "Import failed"
-            }
-        case .failure(let error):
-            errorMessage = "Import failed: \(error.localizedDescription)"
-        }
-    }
-    
-    private func handleExport(result: Result<URL, Error>) {
-        errorMessage = nil
-        exportSuccessMessage = nil
-        
-        switch result {
-        case .success(_):
-            exportSuccessMessage = "Settings exported successfully"
-            
-            // Clear message after 3 seconds
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                exportSuccessMessage = nil
-            }
-        case .failure(let error):
-            errorMessage = "Export failed: \(error.localizedDescription)"
-        }
-    }
-    
-    private func resetApplication() {
-        uiServices.resetAppToDefaults()
-        loadSettings()
-        errorMessage = nil
-        importSuccessMessage = "Application reset to defaults"
-        
-        // Clear message after 3 seconds
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-            importSuccessMessage = nil
-        }
-    }
-    
-    private func checkForUpdates() {
-        isCheckingForUpdates = true
-        updateMessage = nil
-        
-        // Simulate update check - replace with actual implementation
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-            isCheckingForUpdates = false
-            updateMessage = "You are running the latest version"
-            
-            // Clear message after 5 seconds
-            DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
-                updateMessage = nil
+            Text("No settings found")
+                .font(.headline)
+                .foregroundColor(.secondary)
+            if !searchText.isEmpty {
+                Text("Try a different search term")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
             }
         }
-    }
-    
-    private func getCurrentVersion() -> String {
-        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown"
-    }
-    
-    private func getBuildNumber() -> String {
-        Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "Unknown"
-    }
-    
-    private func openLogsFolder() {
-        let logsPath = NSHomeDirectory() + "/Library/Logs/MouseGestures"
-        NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: logsPath)
-    }
-    
-    private func hasAccessibilityPermissions() -> Bool {
-        return AXIsProcessTrusted()
-    }
-    
-    private func checkAccessibilityStatus() -> String {
-        return hasAccessibilityPermissions() ? "Granted \u{2713}" : "Not Granted"
-    }
-    
-    private func openAccessibilityPreferences() {
-        NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
-    }
-}
-
-// MARK: - Settings Export Document
-
-struct SettingsExportDocument: FileDocument {
-    static var readableContentTypes: [UTType] { [.json] }
-    
-    var data: Data
-    
-    init(data: Data) {
-        self.data = data
-    }
-    
-    init(configuration: ReadConfiguration) throws {
-        guard let data = configuration.file.regularFileContents else {
-            throw CocoaError(.fileReadCorruptFile)
-        }
-        self.data = data
-    }
-    
-    func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
-        return FileWrapper(regularFileWithContents: data)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.top, 100)
     }
 }
