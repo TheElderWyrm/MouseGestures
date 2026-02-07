@@ -132,37 +132,37 @@ struct SettingsView: View {
     
     private var searchResultsList: some View {
         VStack(alignment: .leading, spacing: 0) {
-            ForEach(Array(searchResults.prefix(8).enumerated()), id: \.offset) { _, result in
-                Button(action: {
-                    selectedCategoryId = result.categoryId
-                    searchText = ""
-                }) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "magnifyingglass")
-                            .font(.system(size: 10))
-                            .foregroundColor(.secondary)
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(result.item.title)
-                                .font(.system(size: 11, weight: .medium))
-                                .foregroundColor(.primary)
-                                .lineLimit(1)
-                            Text(result.categoryTitle)
-                                .font(.system(size: 10))
-                                .foregroundColor(.secondary)
-                                .lineLimit(1)
-                        }
-                        Spacer()
-                    }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(PlainButtonStyle())
-                
-                if result.item.title != searchResults.prefix(8).last?.item.title {
-                    Divider().padding(.horizontal, 10)
-                }
-            }
+        ForEach(searchResults.prefix(8), id: \.item.id) { result in
+        Button(action: {
+        selectedCategoryId = result.categoryId
+        searchText = ""
+        }) {
+        HStack(spacing: 8) {
+        Image(systemName: "magnifyingglass")
+        .font(.system(size: 10))
+        .foregroundColor(.secondary)
+        VStack(alignment: .leading, spacing: 1) {
+        Text(result.item.title)
+        .font(.system(size: 11, weight: .medium))
+        .foregroundColor(.primary)
+        .lineLimit(1)
+        Text(result.categoryTitle)
+        .font(.system(size: 10))
+        .foregroundColor(.secondary)
+        .lineLimit(1)
+        }
+        Spacer()
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 4)
+        .contentShape(Rectangle())
+        }
+        .buttonStyle(PlainButtonStyle())
+        
+        if result.item.title != searchResults.prefix(8).last?.item.title {
+        Divider().padding(.horizontal, 10)
+        }
+        }
         }
         .padding(.vertical, 4)
         .background(
@@ -234,8 +234,8 @@ struct SettingsView: View {
         let visibleTopLevel = cat.topLevelEntries.filter { !$0.isAdvanced || showAdvanced }
         if !visibleTopLevel.isEmpty {
             VStack(alignment: .leading, spacing: 15) {
-                ForEach(Array(visibleTopLevel.enumerated()), id: \.offset) { idx, entry in
-                    entry.viewBuilder($showAdvanced)
+                ForEach(visibleTopLevel.indices, id: \.self) { idx in
+                    visibleTopLevel[idx].viewBuilder($showAdvanced)
                     if idx < visibleTopLevel.count - 1 { Divider() }
                 }
             }
@@ -272,8 +272,8 @@ struct SettingsView: View {
             
             if !visibleEntries.isEmpty {
                 VStack(alignment: .leading, spacing: 15) {
-                    ForEach(Array(visibleEntries.enumerated()), id: \.offset) { idx, entry in
-                        entry.viewBuilder($showAdvanced)
+                    ForEach(visibleEntries.indices, id: \.self) { idx in
+                        visibleEntries[idx].viewBuilder($showAdvanced)
                         if idx < visibleEntries.count - 1 { Divider() }
                     }
                 }

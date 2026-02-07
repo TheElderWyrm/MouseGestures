@@ -2,7 +2,7 @@
 - Reduce duplicate code, unify architecture whenever possible
 
 General:
-- missing highlight zone color setting.
+- 
 
 Actions (fix later):
 - Not all actions work.

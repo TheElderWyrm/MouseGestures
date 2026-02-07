@@ -32,8 +32,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         
-        // Ensure no restoration of windows
-        UserDefaults.standard.set(true, forKey: "NSQuitAlwaysKeepsWindows")
+        // Disable window restoration completely
+        UserDefaults.standard.set(false, forKey: "NSQuitAlwaysKeepsWindows")
+        UserDefaults.standard.set(false, forKey: "ApplePersistenceIgnoreState")
         
         // Initialize accessibility manager
         accessibilityManager = AccessibilityPermissionManager(delegate: self)
@@ -90,7 +91,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool {
-        return false  // Disable state restoration
+        // Explicitly disable state restoration for this menu bar app
+        return false
+    }
+    
+    func applicationShouldAutomaticallySaveWindows(_ sender: NSApplication) -> Bool {
+        // Don't automatically save window state
+        return false
     }
     
     @objc func showPreferences() {

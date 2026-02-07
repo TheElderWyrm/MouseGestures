@@ -69,10 +69,18 @@ struct SettingsEntry {
 
 // MARK: - Searchable Setting Item
 
-struct SearchableSettingItem {
+struct SearchableSettingItem: Identifiable {
+    let id: String
     let title: String
     let description: String
     let keywords: [String]
+    
+    init(title: String, description: String, keywords: [String]) {
+        self.id = UUID().uuidString
+        self.title = title
+        self.description = description
+        self.keywords = keywords
+    }
     
     func matches(query: String) -> Bool {
         let q = query.lowercased()
