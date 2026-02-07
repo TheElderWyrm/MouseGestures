@@ -11,10 +11,15 @@ class ServicesUIPlugin: BaseUIPlugin {
     override var author: String { "MouseGestures" }
     override var sortOrder: Int { 700 }
     var isBuiltIn: Bool { true }
-    override var isVisibleByDefault: Bool { true }
+    override var isVisibleByDefault: Bool { false }
     
     override func createView() -> AnyView {
         AnyView(ServicesView())
+    }
+    
+    override func shouldBeVisible(context: UIPluginContext) -> Bool {
+        // Only visible when developer mode is enabled
+        return context.isDeveloperModeEnabled
     }
     
     func validate() -> Bool {

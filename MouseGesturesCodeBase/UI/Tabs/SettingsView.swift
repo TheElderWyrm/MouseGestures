@@ -261,7 +261,7 @@ struct SettingsView: View {
                                     .foregroundColor(.orange)
                                     .cornerRadius(3)
                             }
-                            Text("Show Developer tab and advanced developer settings")
+                            Text("Show Developer Settings tab with logging, plugins, performance, services, and diagnostics")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }

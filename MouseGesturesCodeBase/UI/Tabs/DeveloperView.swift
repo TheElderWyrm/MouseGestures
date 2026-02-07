@@ -19,7 +19,8 @@ struct DeveloperView: View {
     @State private var showingPluginDetails = false
     @State private var showingInstallPlugin = false
     
-    // Performance
+    // Performance (driven by PerformanceMonitorService)
+    private let perfMonitor = PerformanceMonitorService.shared
     @State private var memoryUsage: (resident: String, virtual: String) = ("", "")
     @State private var cpuUsage: Double = 0.0
     @State private var updateTimer: Timer?
@@ -37,6 +38,7 @@ struct DeveloperView: View {
         case plugins = "Plugin Management"
         case performance = "Performance"
         case diagnostics = "Diagnostics"
+        case services = "Services"
         
         var icon: String {
             switch self {
@@ -44,6 +46,7 @@ struct DeveloperView: View {
             case .plugins: return "puzzlepiece.extension"
             case .performance: return "speedometer"
             case .diagnostics: return "stethoscope"
+            case .services: return "gearshape.2"
             }
         }
     }
@@ -55,23 +58,33 @@ struct DeveloperView: View {
                 .frame(minWidth: 200, idealWidth: 220, maxWidth: 250)
             
             // Main content
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    switch selectedSection {
-                    case .logging:
-                        loggingSection
-                    case .plugins:
-                        pluginsSection
-                    case .performance:
-                        performanceSection
-                    case .diagnostics:
-                        diagnosticsSection
+            Group {
+                if selectedSection == .services {
+                    // Services has its own HSplitView layout, so don't wrap in ScrollView
+                    ServicesView()
+                        .frame(minWidth: 600)
+                } else {
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 20) {
+                            switch selectedSection {
+                            case .logging:
+                                loggingSection
+                            case .plugins:
+                                pluginsSection
+                            case .performance:
+                                performanceSection
+                            case .diagnostics:
+                                diagnosticsSection
+                            case .services:
+                                EmptyView()
+                            }
+                        }
+                        .padding(20)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
+                    .frame(minWidth: 600)
                 }
-                .padding(20)
-                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .frame(minWidth: 600)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
@@ -102,7 +115,7 @@ struct DeveloperView: View {
     
     private var sidebarView: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Developer Tools")
+            Text("Developer Settings")
                 .font(.title2)
                 .fontWeight(.semibold)
                 .padding(.horizontal, 20)
@@ -555,7 +568,7 @@ struct DeveloperView: View {
                         GridRow {
                             Text("System Memory:")
                                 .foregroundColor(.secondary)
-                            Text(ByteCountFormatter.string(fromByteCount: Int64(ProcessInfo.processInfo.physicalMemory), countStyle: .memory))
+                            Text(perfMonitor.getSystemMemory())
                                 .font(.system(.body, design: .monospaced))
                         }
                     }
@@ -569,15 +582,15 @@ struct DeveloperView: View {
                         .font(.system(size: 14, weight: .semibold))
                     
                     HStack {
-                        ProgressView(value: cpuUsage, total: 100)
+                        ProgressView(value: min(cpuUsage, 100), total: 100)
                             .progressViewStyle(.linear)
                         
-                        Text("\(Int(cpuUsage))%")
+                        Text(String(format: "%.1f%%", cpuUsage))
                             .font(.system(.body, design: .monospaced))
-                            .frame(width: 50)
+                            .frame(width: 60)
                     }
                     
-                    Text("Processor: \(ProcessInfo.processInfo.processorCount) cores")
+                    Text("Processor: \(perfMonitor.getProcessorCount()) cores")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -593,26 +606,26 @@ struct DeveloperView: View {
                         GridRow {
                             Text("macOS Version:")
                                 .foregroundColor(.secondary)
-                            Text(ProcessInfo.processInfo.operatingSystemVersionString)
+                            Text(perfMonitor.getSystemVersion())
                         }
                         
                         GridRow {
                             Text("App Version:")
                                 .foregroundColor(.secondary)
-                            Text("\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown") (\(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "Unknown"))")
+                            Text(perfMonitor.getAppVersion())
                         }
                         
                         GridRow {
                             Text("Process ID:")
                                 .foregroundColor(.secondary)
-                            Text("\(ProcessInfo.processInfo.processIdentifier)")
+                            Text("\(perfMonitor.getProcessID())")
                                 .font(.system(.body, design: .monospaced))
                         }
                         
                         GridRow {
                             Text("Uptime:")
                                 .foregroundColor(.secondary)
-                            Text(formatUptime(ProcessInfo.processInfo.systemUptime))
+                            Text(perfMonitor.getUptime())
                         }
                     }
                 }
@@ -732,19 +745,25 @@ struct DeveloperView: View {
         debugLoggingEnabled = uiServices.isDebugModeEnabled()
         refreshLogFiles()
         refreshPlugins()
-        updateMemoryUsage()
+        refreshPerformanceMetrics()
     }
     
     private func startPerformanceMonitoring() {
+        perfMonitor.startMonitoring(updateInterval: 2.0)
         updateTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { _ in
-            updateMemoryUsage()
-            updateCPUUsage()
+            refreshPerformanceMetrics()
         }
     }
     
     private func stopPerformanceMonitoring() {
         updateTimer?.invalidate()
         updateTimer = nil
+        perfMonitor.stopMonitoring()
+    }
+    
+    private func refreshPerformanceMetrics() {
+        memoryUsage = perfMonitor.getMemoryUsage()
+        cpuUsage = perfMonitor.getCPUUsage()
     }
     
     private func refreshLogFiles() {
@@ -863,8 +882,6 @@ struct DeveloperView: View {
     }
     
     private func showPluginPermissions(_ plugin: PluginInfo) {
-        // Would show a permissions editor sheet
-        // For now, just show current permissions
         let perms = describePermissions(plugin.permissions)
         successMessage = "Permissions: \(perms)"
     }
@@ -885,67 +902,6 @@ struct DeveloperView: View {
         }
     }
     
-    private func updateMemoryUsage() {
-        if let usage = getMemoryUsage() {
-            memoryUsage = (
-                ByteCountFormatter.string(fromByteCount: Int64(usage.resident), countStyle: .memory),
-                ByteCountFormatter.string(fromByteCount: Int64(usage.virtual), countStyle: .memory)
-            )
-        }
-    }
-    
-    private func updateCPUUsage() {
-        // Simple CPU usage calculation
-        var info = mach_task_basic_info()
-        var count = mach_msg_type_number_t(MemoryLayout<mach_task_basic_info>.size) / 4
-        
-        let result = withUnsafeMutablePointer(to: &info) {
-            $0.withMemoryRebound(to: integer_t.self, capacity: 1) {
-                task_info(mach_task_self_,
-                         task_flavor_t(MACH_TASK_BASIC_INFO),
-                         $0,
-                         &count)
-            }
-        }
-        
-        if result == KERN_SUCCESS {
-            // This is a simplified calculation
-            let usage = Double(info.resident_size) / Double(ProcessInfo.processInfo.physicalMemory) * 100
-            cpuUsage = min(usage * 10, 100) // Rough approximation
-        }
-    }
-    
-    private func getMemoryUsage() -> (resident: Int, virtual: Int)? {
-        var info = mach_task_basic_info()
-        var count = mach_msg_type_number_t(MemoryLayout<mach_task_basic_info>.size) / 4
-        
-        let result = withUnsafeMutablePointer(to: &info) {
-            $0.withMemoryRebound(to: integer_t.self, capacity: 1) {
-                task_info(mach_task_self_,
-                         task_flavor_t(MACH_TASK_BASIC_INFO),
-                         $0,
-                         &count)
-            }
-        }
-        
-        guard result == KERN_SUCCESS else { return nil }
-        return (resident: Int(info.resident_size), virtual: Int(info.virtual_size))
-    }
-    
-    private func formatUptime(_ seconds: TimeInterval) -> String {
-        let hours = Int(seconds) / 3600
-        let minutes = (Int(seconds) % 3600) / 60
-        let secs = Int(seconds) % 60
-        
-        if hours > 0 {
-            return "\(hours)h \(minutes)m \(secs)s"
-        } else if minutes > 0 {
-            return "\(minutes)m \(secs)s"
-        } else {
-            return "\(secs)s"
-        }
-    }
-    
     private func generateDebugReport() {
         debugReport = uiServices.generateDebugReport()
         successMessage = "Debug report generated"
@@ -961,13 +917,11 @@ struct DeveloperView: View {
     }
     
     private func resetPreferences() {
-        // Show confirmation dialog
         uiServices.resetAppToDefaults()
         successMessage = "Preferences reset to defaults"
     }
     
     private func clearCaches() {
-        // Clear any caches
         successMessage = "Caches cleared"
     }
     
