@@ -438,31 +438,17 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
         }
         
         // Generate display string from the parsed data
-        var parts: [String] = []
         let flags = CGEventFlags(rawValue: UInt64(modifiers))
         
-        if flags.contains(.maskControl) { parts.append("⌃") }
-        if flags.contains(.maskAlternate) { parts.append("⌥") }
-        if flags.contains(.maskShift) { parts.append("⇧") }
-        if flags.contains(.maskCommand) { parts.append("⌘") }
+        // Build display string using centralized utilities
+        var modParts: [String] = []
+        if flags.contains(.maskControl) { modParts.append("⌃") }
+        if flags.contains(.maskAlternate) { modParts.append("⌥") }
+        if flags.contains(.maskShift) { modParts.append("⇧") }
+        if flags.contains(.maskCommand) { modParts.append("⌘") }
+        modParts.append(keyCode.displayString)
         
-        // Simple key code to string mapping for display
-        let keyStr: String
-        switch keyCode {
-        case 0: keyStr = "A"
-        case 1: keyStr = "S"
-        case 2: keyStr = "D"
-        case 3: keyStr = "F"
-        case 8: keyStr = "C"
-        case 9: keyStr = "V"
-        case 7: keyStr = "X"
-        case 36: keyStr = "Return"
-        case 49: keyStr = "Space"
-        default: keyStr = "Key\(keyCode)"
-        }
-        parts.append(keyStr)
-        
-        let displayString = parts.joined()
+        let displayString = modParts.joined()
         
         return KeyboardShortcut(
             keyCode: keyCode,
@@ -472,7 +458,7 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
     }
     
     private func executeKeyboardShortcut(_ shortcut: KeyboardShortcut) {
-        releaseAllModifiers()
+        releaseAllModifierKeys()
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             guard let source = CGEventSource(stateID: .combinedSessionState) else { return }
@@ -745,32 +731,8 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
         }
     }
     
-    private func releaseAllModifiers() {
-        guard let source = CGEventSource(stateID: .combinedSessionState) else { return }
-        
-        let modifierKeys: [(CGKeyCode, CGKeyCode)] = [
-            (0x37, 0x36), // Command L/R
-            (0x3B, 0x3E), // Control L/R
-            (0x3A, 0x3D), // Option L/R
-            (0x38, 0x3C)  // Shift L/R
-        ]
-        
-        for (left, right) in modifierKeys {
-            if let keyUp = CGEvent(keyboardEventSource: source, virtualKey: left, keyDown: false) {
-                keyUp.flags = []
-                keyUp.post(tap: .cghidEventTap)
-            }
-            if let keyUp = CGEvent(keyboardEventSource: source, virtualKey: right, keyDown: false) {
-                keyUp.flags = []
-                keyUp.post(tap: .cghidEventTap)
-            }
-        }
-        
-        usleep(10000)
-    }
-    
     private func sendKeyboardShortcut(keyCode: CGKeyCode, modifiers: CGEventFlags) {
-        releaseAllModifiers()
+        releaseAllModifierKeys()
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
             guard let source = CGEventSource(stateID: .combinedSessionState) else { return }

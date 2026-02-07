@@ -400,21 +400,24 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
     
     // MARK: - Profile Management
     
-    private func switchToNextProfile(context: PluginContext) {
+    /// Cycle to an adjacent profile (next or previous).
+    private func cycleProfile(forward: Bool, context: PluginContext) {
         let profiles = context.getProfiles()
         guard !profiles.isEmpty else { return }
         
         let currentId = context.getActiveProfileId()
-        let currentIndex = profiles.firstIndex(where: { 
-            ($0["id"] as? String).flatMap(UUID.init(uuidString:)) == currentId 
+        let currentIndex = profiles.firstIndex(where: {
+            ($0["id"] as? String).flatMap(UUID.init(uuidString:)) == currentId
         }) ?? 0
         
-        let nextIndex = (currentIndex + 1) % profiles.count
-        let nextProfile = profiles[nextIndex]
+        let targetIndex = forward
+            ? (currentIndex + 1) % profiles.count
+            : (currentIndex > 0 ? currentIndex - 1 : profiles.count - 1)
+        let targetProfile = profiles[targetIndex]
         
-        if let idString = nextProfile["id"] as? String,
+        if let idString = targetProfile["id"] as? String,
            let profileId = UUID(uuidString: idString),
-           let profileName = nextProfile["name"] as? String {
+           let profileName = targetProfile["name"] as? String {
             context.applyProfile(profileId: profileId)
             context.saveConfiguration()
             context.postNotification(name: NSNotification.Name("GestureConfigurationChanged"), userInfo: nil)
@@ -422,26 +425,12 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
         }
     }
     
+    private func switchToNextProfile(context: PluginContext) {
+        cycleProfile(forward: true, context: context)
+    }
+    
     private func switchToPreviousProfile(context: PluginContext) {
-        let profiles = context.getProfiles()
-        guard !profiles.isEmpty else { return }
-        
-        let currentId = context.getActiveProfileId()
-        let currentIndex = profiles.firstIndex(where: { 
-            ($0["id"] as? String).flatMap(UUID.init(uuidString:)) == currentId 
-        }) ?? 0
-        
-        let previousIndex = currentIndex > 0 ? currentIndex - 1 : profiles.count - 1
-        let previousProfile = profiles[previousIndex]
-        
-        if let idString = previousProfile["id"] as? String,
-           let profileId = UUID(uuidString: idString),
-           let profileName = previousProfile["name"] as? String {
-            context.applyProfile(profileId: profileId)
-            context.saveConfiguration()
-            context.postNotification(name: NSNotification.Name("GestureConfigurationChanged"), userInfo: nil)
-            showProfileNotification(profileName: profileName, context: context)
-        }
+        cycleProfile(forward: false, context: context)
     }
     
     private func switchToSpecificProfile(_ profileId: UUID, context: PluginContext) {

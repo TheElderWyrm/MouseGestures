@@ -129,6 +129,30 @@ extension CGKeyCode {
     }
 }
 
+// MARK: - CGEvent Utilities
+
+/// Release all modifier keys (Command, Control, Option, Shift).
+/// Shared by AutomationPlugin, PluginSandbox, and any code that needs
+/// to reset modifier state before posting synthetic keyboard events.
+func releaseAllModifierKeys() {
+    guard let source = CGEventSource(stateID: .combinedSessionState) else { return }
+    let modifierKeys: [(CGKeyCode, CGKeyCode)] = [
+        (0x37, 0x36), // Command L/R
+        (0x3B, 0x3E), // Control L/R
+        (0x3A, 0x3D), // Option L/R
+        (0x38, 0x3C)  // Shift L/R
+    ]
+    for (left, right) in modifierKeys {
+        if let keyUp = CGEvent(keyboardEventSource: source, virtualKey: left, keyDown: false) {
+            keyUp.flags = []; keyUp.post(tap: .cghidEventTap)
+        }
+        if let keyUp = CGEvent(keyboardEventSource: source, virtualKey: right, keyDown: false) {
+            keyUp.flags = []; keyUp.post(tap: .cghidEventTap)
+        }
+    }
+    usleep(10000)
+}
+
 // MARK: - Shared Mouse Button Utilities
 
 extension DragModifier {

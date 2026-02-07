@@ -243,8 +243,8 @@ class SandboxedPluginContext: PluginContext {
             return
         }
         
-        // Release all modifiers first
-        releaseAllModifiers()
+        // Release all modifiers first (shared utility from Extensions.swift)
+        releaseAllModifierKeys()
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
             guard let source = CGEventSource(stateID: .combinedSessionState) else { return }
@@ -258,30 +258,6 @@ class SandboxedPluginContext: PluginContext {
             usleep(50000)
             keyUp.post(tap: .cghidEventTap)
         }
-    }
-    
-    private func releaseAllModifiers() {
-        guard let source = CGEventSource(stateID: .combinedSessionState) else { return }
-        
-        let modifierKeys: [(CGKeyCode, CGKeyCode)] = [
-            (0x37, 0x36), // Command L/R
-            (0x3B, 0x3E), // Control L/R
-            (0x3A, 0x3D), // Option L/R
-            (0x38, 0x3C)  // Shift L/R
-        ]
-        
-        for (left, right) in modifierKeys {
-            if let keyUp = CGEvent(keyboardEventSource: source, virtualKey: left, keyDown: false) {
-                keyUp.flags = []
-                keyUp.post(tap: .cghidEventTap)
-            }
-            if let keyUp = CGEvent(keyboardEventSource: source, virtualKey: right, keyDown: false) {
-                keyUp.flags = []
-                keyUp.post(tap: .cghidEventTap)
-            }
-        }
-        
-        usleep(10000)
     }
     
     func executeAppleScript(_ script: String) throws {

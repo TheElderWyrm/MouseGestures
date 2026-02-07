@@ -328,60 +328,42 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
         try? context.executeAppleScript(script)
     }
     
-    private func restart(showConfirmation: Bool, context: PluginContext) {
-        if showConfirmation {
-            DispatchQueue.main.async {
-                let alert = NSAlert()
-                alert.messageText = "Restart Computer"
-                alert.informativeText = "Are you sure you want to restart your computer?"
-                alert.alertStyle = .warning
-                alert.addButton(withTitle: "Restart")
-                alert.addButton(withTitle: "Cancel")
-                
-                if alert.runModal() == .alertFirstButtonReturn {
-                    try? context.executeAppleScript("tell application \"System Events\" to restart")
-                }
-            }
-        } else {
-            try? context.executeAppleScript("tell application \"System Events\" to restart")
+    /// Shared helper: optionally show a confirmation dialog, then run an AppleScript command.
+    private func executeWithConfirmation(title: String, message: String, buttonTitle: String,
+                                         showConfirmation: Bool, script: String, context: PluginContext) {
+        let run = {
+            try? context.executeAppleScript(script)
         }
+        guard showConfirmation else { run(); return }
+        DispatchQueue.main.async {
+            let alert = NSAlert()
+            alert.messageText = title
+            alert.informativeText = message
+            alert.alertStyle = .warning
+            alert.addButton(withTitle: buttonTitle)
+            alert.addButton(withTitle: "Cancel")
+            if alert.runModal() == .alertFirstButtonReturn { run() }
+        }
+    }
+    
+    private func restart(showConfirmation: Bool, context: PluginContext) {
+        executeWithConfirmation(title: "Restart Computer",
+                               message: "Are you sure you want to restart your computer?",
+                               buttonTitle: "Restart", showConfirmation: showConfirmation,
+                               script: "tell application \"System Events\" to restart", context: context)
     }
     
     private func shutdown(showConfirmation: Bool, context: PluginContext) {
-        if showConfirmation {
-            DispatchQueue.main.async {
-                let alert = NSAlert()
-                alert.messageText = "Shutdown Computer"
-                alert.informativeText = "Are you sure you want to shut down your computer?"
-                alert.alertStyle = .warning
-                alert.addButton(withTitle: "Shutdown")
-                alert.addButton(withTitle: "Cancel")
-                
-                if alert.runModal() == .alertFirstButtonReturn {
-                    try? context.executeAppleScript("tell application \"System Events\" to shut down")
-                }
-            }
-        } else {
-            try? context.executeAppleScript("tell application \"System Events\" to shut down")
-        }
+        executeWithConfirmation(title: "Shutdown Computer",
+                               message: "Are you sure you want to shut down your computer?",
+                               buttonTitle: "Shutdown", showConfirmation: showConfirmation,
+                               script: "tell application \"System Events\" to shut down", context: context)
     }
     
     private func logOut(showConfirmation: Bool, context: PluginContext) {
-        if showConfirmation {
-            DispatchQueue.main.async {
-                let alert = NSAlert()
-                alert.messageText = "Log Out"
-                alert.informativeText = "Are you sure you want to log out?"
-                alert.alertStyle = .warning
-                alert.addButton(withTitle: "Log Out")
-                alert.addButton(withTitle: "Cancel")
-                
-                if alert.runModal() == .alertFirstButtonReturn {
-                    try? context.executeAppleScript("tell application \"System Events\" to log out")
-                }
-            }
-        } else {
-            try? context.executeAppleScript("tell application \"System Events\" to log out")
-        }
+        executeWithConfirmation(title: "Log Out",
+                               message: "Are you sure you want to log out?",
+                               buttonTitle: "Log Out", showConfirmation: showConfirmation,
+                               script: "tell application \"System Events\" to log out", context: context)
     }
 }
