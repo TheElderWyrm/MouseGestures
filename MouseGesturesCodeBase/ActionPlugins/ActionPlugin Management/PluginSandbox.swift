@@ -759,25 +759,8 @@ class PluginResourceMonitor {
 }
 
 // MARK: - Sandboxed Logger
-
-/// A logger that prefixes all messages with the plugin ID
-class SandboxedLogger: PluginLogger {
-    
-    private let pluginId: String
-    
-    init(pluginId: String) {
-        self.pluginId = pluginId
-    }
-    
-    func log(_ message: String, file: String = #file, function: String = #function, line: Int = #line) {
-        let prefixedMessage = "[\(pluginId)] \(message)"
-        Logger.shared.log(prefixedMessage, file: file, function: function, line: line)
-    }
-    
-    var isDebugEnabled: Bool {
-        return Logger.shared.isDebugEnabled
-    }
-}
+// Now uses the shared PrefixedLogger from Extensions.swift
+typealias SandboxedLogger = PrefixedLogger
 
 // MARK: - Plugin Sandbox Errors
 

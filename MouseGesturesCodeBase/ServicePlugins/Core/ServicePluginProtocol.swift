@@ -91,27 +91,40 @@ public enum ServiceCategory: String, CaseIterable, Codable {
 
 // MARK: - Service Permissions
 public struct ServicePermissions: Codable, Equatable {
-    var requiresAccessibility: Bool = false
-    var requiresFileAccess: Bool = false
-    var requiresNetworkAccess: Bool = false
-    var requiresNotifications: Bool = false
-    var requiresScreenRecording: Bool = false
-    var requiresAutomation: Bool = false
-    var requiresFullDiskAccess: Bool = false
+    public var requiresAccessibility: Bool = false
+    public var requiresFileAccess: Bool = false
+    public var requiresNetworkAccess: Bool = false
+    public var requiresNotifications: Bool = false
+    public var requiresScreenRecording: Bool = false
+    public var requiresAutomation: Bool = false
+    public var requiresFullDiskAccess: Bool = false
     
-    static var none: ServicePermissions {
+    public init(requiresAccessibility: Bool = false, requiresFileAccess: Bool = false,
+                requiresNetworkAccess: Bool = false, requiresNotifications: Bool = false,
+                requiresScreenRecording: Bool = false, requiresAutomation: Bool = false,
+                requiresFullDiskAccess: Bool = false) {
+        self.requiresAccessibility = requiresAccessibility
+        self.requiresFileAccess = requiresFileAccess
+        self.requiresNetworkAccess = requiresNetworkAccess
+        self.requiresNotifications = requiresNotifications
+        self.requiresScreenRecording = requiresScreenRecording
+        self.requiresAutomation = requiresAutomation
+        self.requiresFullDiskAccess = requiresFullDiskAccess
+    }
+    
+    public static var none: ServicePermissions {
         return ServicePermissions()
     }
     
-    static var basic: ServicePermissions {
+    public static var basic: ServicePermissions {
         return ServicePermissions(requiresFileAccess: true)
     }
     
-    static var accessibility: ServicePermissions {
+    public static var accessibility: ServicePermissions {
         return ServicePermissions(requiresAccessibility: true)
     }
     
-    static var full: ServicePermissions {
+    public static var full: ServicePermissions {
         return ServicePermissions(
             requiresAccessibility: true,
             requiresFileAccess: true,
@@ -283,4 +296,50 @@ public struct ServicePluginInfo: Identifiable, Codable {
 public protocol RegisterableService {
     static var serviceIdentifier: String { get }
     static var shared: Self { get }
+}
+
+// MARK: - Simple Service Plugin
+/// Generic service plugin that wraps a singleton service with zero custom logic.
+/// Replaces dozens of boilerplate BaseServicePlugin subclasses.
+public class SimpleServicePlugin<T>: BaseServicePlugin {
+    private let _identifier: String
+    private let _name: String
+    private let _description: String
+    private let _category: ServiceCategory
+    private let _permissions: ServicePermissions
+    private let factory: () -> T
+    private var service: T?
+    
+    public init(id: String, name: String, description: String,
+                category: ServiceCategory = .utility,
+                permissions: ServicePermissions = .none,
+                factory: @escaping () -> T) {
+        self._identifier = id
+        self._name = name
+        self._description = description
+        self._category = category
+        self._permissions = permissions
+        self.factory = factory
+        super.init()
+    }
+    
+    public override var identifier: String { _identifier }
+    public override var name: String { _name }
+    public override var description: String { _description }
+    public override var category: ServiceCategory { _category }
+    public override var requiredPermissions: ServicePermissions { _permissions }
+    
+    public override func initialize() throws {
+        service = factory()
+        log.log("\(_name): Initialized")
+    }
+    
+    public override func cleanup() {
+        service = nil
+        log.log("\(_name): Cleaned up")
+    }
+    
+    public override func getServiceInstance() -> Any? {
+        return service
+    }
 }

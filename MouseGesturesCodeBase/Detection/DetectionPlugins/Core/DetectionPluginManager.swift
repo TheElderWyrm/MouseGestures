@@ -93,7 +93,7 @@ class DetectionPluginManager: NSObject {
         let identifier = plugin.identifier
         
         // Create plugin context
-        let logger = DetectionPluginLogger(pluginId: identifier)
+        let logger = PrefixedLogger(prefix: "[DetectionPlugin:\(identifier)]")
         let pluginStorage = storageDirectory.appendingPathComponent(identifier, isDirectory: true)
         try? FileManager.default.createDirectory(at: pluginStorage, withIntermediateDirectories: true)
         
@@ -431,23 +431,8 @@ extension DetectionPluginManager: DetectionPluginDelegate {
 }
 
 // MARK: - Detection Plugin Logger
-
-/// Logger implementation for detection plugins
-class DetectionPluginLogger: PluginLogger {
-    let pluginId: String
-    
-    init(pluginId: String) {
-        self.pluginId = pluginId
-    }
-    
-    func log(_ message: String, file: String = #file, function: String = #function, line: Int = #line) {
-        MouseGestures.log.log("[DetectionPlugin:\(pluginId)] \(message)")
-    }
-    
-    var isDebugEnabled: Bool {
-        return MouseGestures.log.isDebugEnabled
-    }
-}
+// Now uses the shared PrefixedLogger from Extensions.swift
+typealias DetectionPluginLogger = PrefixedLogger
 
 // MARK: - Configuration Access Adapter
 

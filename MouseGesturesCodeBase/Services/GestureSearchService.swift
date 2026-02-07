@@ -87,11 +87,6 @@ class GestureSearchService {
     // MARK: - Modifier Description
     
     func modifiersDescription(_ modifiers: NSEvent.ModifierFlags) -> String {
-        var parts: [String] = []
-        if modifiers.contains(.command) { parts.append("Command ⌘") }
-        if modifiers.contains(.control) { parts.append("Control ⌃") }
-        if modifiers.contains(.option) { parts.append("Option ⌥") }
-        if modifiers.contains(.shift) { parts.append("Shift ⇧") }
-        return parts.isEmpty ? "None" : parts.joined(separator: " + ")
+        return modifiers.verboseDescription
     }
 }

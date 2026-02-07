@@ -17,20 +17,12 @@ struct GestureTrigger: Codable, Equatable {
     }
     
     var displayString: String {
-        var desc = "\(zone.rawValue) + \(modifiersDescription)"
+        let modDesc = modifiers.symbolString.isEmpty ? "No Modifiers" : modifiers.symbolString
+        var desc = "\(zone.rawValue) + \(modDesc)"
         if dragModifier != .none {
             desc += " + \(dragModifier.displayName)"
         }
         return desc
-    }
-    
-    private var modifiersDescription: String {
-        var parts: [String] = []
-        if modifiers.contains(.command) { parts.append("⌘") }
-        if modifiers.contains(.control) { parts.append("⌃") }
-        if modifiers.contains(.option) { parts.append("⌥") }
-        if modifiers.contains(.shift) { parts.append("⇧") }
-        return parts.isEmpty ? "No Modifiers" : parts.joined(separator: "")
     }
 }
 

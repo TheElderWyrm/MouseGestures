@@ -1,154 +1,98 @@
 import Foundation
 
 // MARK: - Service Plugin Adapter
-/// Provides compatibility layer for transitioning from direct service access to plugin-based access
+/// Provides compatibility layer for transitioning from direct service access to plugin-based access.
+/// Uses a single generic method instead of per-service boilerplate.
 public class ServicePluginAdapter {
     
     private let pluginManager = ServicePluginManager.shared
     
-    // Service cache to maintain singletons
-    private var serviceCache: [String: Any] = [:]
+    // MARK: - Generic Service Lookup
     
-    // MARK: - Service Getters with Fallback
+    /// Retrieve a service by plugin identifier, falling back to a default instance.
+    func getService<T>(identifier: String, fallback: @autoclosure () -> T) -> T {
+        return pluginManager.getService(identifier: identifier, type: T.self) ?? fallback()
+    }
+    
+    // MARK: - Typed Accessors (thin wrappers over generic lookup)
     
     func getGestureConfigurationService() -> GestureConfigurationService {
-        if let service = pluginManager.getService(identifier: "com.mousegestures.service.gestureconfig", type: GestureConfigurationService.self) {
-            return service
-        }
-        // Fallback to direct access if plugin not loaded
-        return GestureConfigurationService.shared
+        getService(identifier: "com.mousegestures.service.gestureconfig", fallback: GestureConfigurationService.shared)
     }
     
     func getProfileManagementService() -> ProfileManagementService {
-        if let service = pluginManager.getService(identifier: "com.mousegestures.service.profilemanagement", type: ProfileManagementService.self) {
-            return service
-        }
-        return ProfileManagementService.shared
+        getService(identifier: "com.mousegestures.service.profilemanagement", fallback: ProfileManagementService.shared)
     }
     
     func getProfileImportExportService() -> ProfileImportExportService {
-        if let service = pluginManager.getService(identifier: "com.mousegestures.service.profileimportexport", type: ProfileImportExportService.self) {
-            return service
-        }
-        return ProfileImportExportService.shared
+        getService(identifier: "com.mousegestures.service.profileimportexport", fallback: ProfileImportExportService.shared)
     }
     
     func getHapticFeedbackService() -> HapticFeedbackService {
-        if let service = pluginManager.getService(identifier: "com.mousegestures.service.haptic", type: HapticFeedbackService.self) {
-            return service
-        }
-        return HapticFeedbackService.shared
+        getService(identifier: "com.mousegestures.service.haptic", fallback: HapticFeedbackService.shared)
     }
     
     func getZoneVisualizationService() -> ZoneVisualizationService {
-        if let service = pluginManager.getService(identifier: "com.mousegestures.service.zonevisualization", type: ZoneVisualizationService.self) {
-            return service
-        }
-        return ZoneVisualizationService.shared
+        getService(identifier: "com.mousegestures.service.zonevisualization", fallback: ZoneVisualizationService.shared)
     }
     
     func getDeveloperModeToggleService() -> DeveloperModeToggleService {
-        if let service = pluginManager.getService(identifier: "com.mousegestures.service.devmode", type: DeveloperModeToggleService.self) {
-            return service
-        }
-        return DeveloperModeToggleService.shared
+        getService(identifier: "com.mousegestures.service.devmode", fallback: DeveloperModeToggleService.shared)
     }
     
     func getDebugLoggingService() -> DebugLoggingService {
-        if let service = pluginManager.getService(identifier: "com.mousegestures.service.debuglogging", type: DebugLoggingService.self) {
-            return service
-        }
-        return DebugLoggingService.shared
+        getService(identifier: "com.mousegestures.service.debuglogging", fallback: DebugLoggingService.shared)
     }
     
     func getSettingsImportExportService() -> SettingsImportExportService {
-        if let service = pluginManager.getService(identifier: "com.mousegestures.service.settingsimportexport", type: SettingsImportExportService.self) {
-            return service
-        }
-        return SettingsImportExportService.shared
+        getService(identifier: "com.mousegestures.service.settingsimportexport", fallback: SettingsImportExportService.shared)
     }
     
     func getApplicationResetService() -> ApplicationResetService {
-        if let service = pluginManager.getService(identifier: "com.mousegestures.service.appreset", type: ApplicationResetService.self) {
-            return service
-        }
-        return ApplicationResetService.shared
+        getService(identifier: "com.mousegestures.service.appreset", fallback: ApplicationResetService.shared)
     }
     
     func getUpdateCheckService() -> UpdateCheckService {
-        if let service = pluginManager.getService(identifier: "com.mousegestures.service.updatecheck", type: UpdateCheckService.self) {
-            return service
-        }
-        return UpdateCheckService.shared
+        getService(identifier: "com.mousegestures.service.updatecheck", fallback: UpdateCheckService.shared)
     }
     
     func getAccessibilityPermissionService() -> AccessibilityPermissionService {
-        if let service = pluginManager.getService(identifier: "com.mousegestures.service.accessibility", type: AccessibilityPermissionService.self) {
-            return service
-        }
-        return AccessibilityPermissionService.shared
+        getService(identifier: "com.mousegestures.service.accessibility", fallback: AccessibilityPermissionService.shared)
     }
     
     func getMenuBarVisibilityService() -> MenuBarVisibilityService {
-        if let service = pluginManager.getService(identifier: "com.mousegestures.service.menubar", type: MenuBarVisibilityService.self) {
-            return service
-        }
-        return MenuBarVisibilityService.shared
+        getService(identifier: "com.mousegestures.service.menubar", fallback: MenuBarVisibilityService.shared)
     }
     
     func getLogFileService() -> LogFileService {
-        if let service = pluginManager.getService(identifier: "com.mousegestures.service.logfile", type: LogFileService.self) {
-            return service
-        }
-        return LogFileService.shared
+        getService(identifier: "com.mousegestures.service.logfile", fallback: LogFileService.shared)
     }
     
     func getPluginManagementService() -> PluginManagementService {
-        if let service = pluginManager.getService(identifier: "com.mousegestures.service.pluginmanagement", type: PluginManagementService.self) {
-            return service
-        }
-        return PluginManagementService.shared
+        getService(identifier: "com.mousegestures.service.pluginmanagement", fallback: PluginManagementService.shared)
     }
     
     func getPerformanceMonitorService() -> PerformanceMonitorService {
-        if let service = pluginManager.getService(identifier: "com.mousegestures.service.perfmonitor", type: PerformanceMonitorService.self) {
-            return service
-        }
-        return PerformanceMonitorService.shared
+        getService(identifier: "com.mousegestures.service.perfmonitor", fallback: PerformanceMonitorService.shared)
     }
     
     func getDebugReportService() -> DebugReportService {
-        if let service = pluginManager.getService(identifier: "com.mousegestures.service.debugreport", type: DebugReportService.self) {
-            return service
-        }
-        return DebugReportService.shared
+        getService(identifier: "com.mousegestures.service.debugreport", fallback: DebugReportService.shared)
     }
     
     func getGestureSearchService() -> GestureSearchService {
-        if let service = pluginManager.getService(identifier: "com.mousegestures.service.gesturesearch", type: GestureSearchService.self) {
-            return service
-        }
-        return GestureSearchService.shared
+        getService(identifier: "com.mousegestures.service.gesturesearch", fallback: GestureSearchService.shared)
     }
     
     func getSavedActionsSortService() -> SavedActionsSortService {
-        if let service = pluginManager.getService(identifier: "com.mousegestures.service.savedactionssort", type: SavedActionsSortService.self) {
-            return service
-        }
-        return SavedActionsSortService.shared
+        getService(identifier: "com.mousegestures.service.savedactionssort", fallback: SavedActionsSortService.shared)
     }
     
     func getSystemInformationService() -> SystemInformationService {
-        if let service = pluginManager.getService(identifier: "com.mousegestures.service.systeminfo", type: SystemInformationService.self) {
-            return service
-        }
-        return SystemInformationService.shared
+        getService(identifier: "com.mousegestures.service.systeminfo", fallback: SystemInformationService.shared)
     }
     
     func getApplicationDiscoveryService() -> ApplicationDiscoveryService {
-        if let service = pluginManager.getService(identifier: "com.mousegestures.service.appdiscovery", type: ApplicationDiscoveryService.self) {
-            return service
-        }
-        return ApplicationDiscoveryService.shared
+        getService(identifier: "com.mousegestures.service.appdiscovery", fallback: ApplicationDiscoveryService.shared)
     }
 }

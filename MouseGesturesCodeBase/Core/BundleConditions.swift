@@ -82,12 +82,8 @@ struct BundleCondition: Codable, Equatable {
     
     private var modifierKeyDescription: String {
         guard let modifiers = modifierKey else { return "modifier" }
-        var parts: [String] = []
-        if modifiers.contains(.command) { parts.append("⌘") }
-        if modifiers.contains(.control) { parts.append("⌃") }
-        if modifiers.contains(.option) { parts.append("⌥") }
-        if modifiers.contains(.shift) { parts.append("⇧") }
-        return parts.isEmpty ? "No Modifiers" : parts.joined(separator: "")
+        let s = modifiers.symbolString
+        return s.isEmpty ? "No Modifiers" : s
     }
     
     /// Evaluates the condition and returns true if it passes

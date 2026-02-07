@@ -29,6 +29,29 @@ extension CGEventFlags: @retroactive Codable {
 }
 
 
+// MARK: - Prefixed Logger
+/// A reusable logger that prefixes all messages. Replaces SandboxedLogger, DetectionPluginLogger, etc.
+class PrefixedLogger: PluginLogger {
+    private let prefix: String
+    
+    init(prefix: String) {
+        self.prefix = prefix
+    }
+    
+    /// Convenience initializer for plugin loggers
+    convenience init(pluginId: String) {
+        self.init(prefix: "[\(pluginId)]")
+    }
+    
+    func log(_ message: String, file: String = #file, function: String = #function, line: Int = #line) {
+        Logger.shared.log("\(prefix) \(message)", file: file, function: function, line: line)
+    }
+    
+    var isDebugEnabled: Bool {
+        return Logger.shared.isDebugEnabled
+    }
+}
+
 // Safe array subscript extension
 extension Array {
     subscript(safe index: Int) -> Element? {
@@ -64,6 +87,45 @@ extension NSEvent.ModifierFlags {
         if contains(.option)  { parts.append("⌥") }
         if contains(.shift)   { parts.append("⇧") }
         return parts.joined(separator: "")
+    }
+    
+    /// Verbose modifier description (e.g. "Command ⌘ + Shift ⇧")
+    var verboseDescription: String {
+        var parts: [String] = []
+        if contains(.command) { parts.append("Command ⌘") }
+        if contains(.control) { parts.append("Control ⌃") }
+        if contains(.option)  { parts.append("Option ⌥") }
+        if contains(.shift)   { parts.append("Shift ⇧") }
+        return parts.isEmpty ? "None" : parts.joined(separator: " + ")
+    }
+}
+
+// MARK: - Key Code Utilities
+
+extension CGKeyCode {
+    /// Convert a virtual key code to its string representation.
+    /// Centralized here so all components share one mapping table.
+    var displayString: String {
+        let keyMap: [CGKeyCode: String] = [
+            // Letters
+            0: "A", 1: "S", 2: "D", 3: "F", 4: "H", 5: "G", 6: "Z", 7: "X", 8: "C", 9: "V",
+            11: "B", 12: "Q", 13: "W", 14: "E", 15: "R", 16: "Y", 17: "T", 31: "O", 32: "U",
+            34: "I", 35: "P", 37: "L", 38: "J", 40: "K", 45: "N", 46: "M",
+            // Numbers
+            18: "1", 19: "2", 20: "3", 21: "4", 22: "6", 23: "5", 24: "=", 25: "9", 26: "7",
+            27: "-", 28: "8", 29: "0",
+            // Symbols
+            30: "]", 33: "[", 39: "'", 41: ";", 42: "\\", 43: ",", 44: "/", 47: ".", 50: "`",
+            // Function keys
+            122: "F1", 120: "F2", 99: "F3", 118: "F4", 96: "F5", 97: "F6", 98: "F7",
+            100: "F8", 101: "F9", 109: "F10", 103: "F11", 111: "F12",
+            105: "F13", 107: "F14", 113: "F15",
+            // Special keys
+            36: "\u{21a9}", 48: "\u{21e5}", 49: "Space", 51: "\u{232b}", 53: "\u{238b}", 117: "\u{2326}",
+            123: "\u{2190}", 124: "\u{2192}", 125: "\u{2193}", 126: "\u{2191}",
+            115: "\u{2196}", 119: "\u{2198}", 116: "\u{21de}", 121: "\u{21df}"
+        ]
+        return keyMap[self] ?? "Key\(self)"
     }
 }
 

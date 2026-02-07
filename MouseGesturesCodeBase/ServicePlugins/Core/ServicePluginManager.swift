@@ -48,29 +48,32 @@ public class ServicePluginManager: ObservableObject {
         log.log("ServicePluginManager: Loading built-in plugins")
         
         // Register all built-in service plugins
+        // Plugins with custom logic remain as classes; simple wrappers use factories.
         let builtInPlugins: [ServicePlugin] = [
+            // Custom-logic plugins (have SettingsProvider, config options, or custom cleanup)
             AccessibilityPermissionServicePlugin(),
             LaunchAtLoginServicePlugin(),
             HapticFeedbackServicePlugin(),
             MenuBarVisibilityServicePlugin(),
             ZoneVisualizationServicePlugin(),
-            GestureConfigurationServicePlugin(),
-            ProfileManagementServicePlugin(),
-            ProfileImportExportServicePlugin(),
             DebugLoggingServicePlugin(),
-            LogFileServicePlugin(),
             UpdateCheckServicePlugin(),
-            ApplicationResetServicePlugin(),
-            SettingsImportExportServicePlugin(),
-            SystemInformationServicePlugin(),
             PerformanceMonitorServicePlugin(),
-            ApplicationDiscoveryServicePlugin(),
-            GestureSearchServicePlugin(),
-            SavedActionsSortServicePlugin(),
-            DebugReportServicePlugin(),
-            DeveloperModeToggleServicePlugin(),
-            PluginManagementServicePlugin(),
-            WindowTargetingServicePlugin()
+            // Simple singleton wrappers via factory
+            GestureServicePluginFactory.gestureConfiguration(),
+            GestureServicePluginFactory.profileManagement(),
+            GestureServicePluginFactory.profileImportExport(),
+            GestureServicePluginFactory.gestureSearch(),
+            GestureServicePluginFactory.savedActionsSort(),
+            DeveloperServicePluginFactory.logFile(),
+            DeveloperServicePluginFactory.applicationReset(),
+            DeveloperServicePluginFactory.settingsImportExport(),
+            DeveloperServicePluginFactory.systemInformation(),
+            DeveloperServicePluginFactory.applicationDiscovery(),
+            DeveloperServicePluginFactory.debugReport(),
+            DeveloperServicePluginFactory.developerModeToggle(),
+            DeveloperServicePluginFactory.pluginManagement(),
+            DeveloperServicePluginFactory.windowTargeting()
         ]
         
         for plugin in builtInPlugins {
