@@ -2,18 +2,12 @@
 
 ### Developer Tab Overhaul
 
-**Renamed Developer tab to "Developer Settings"**
-- Tab display name and sidebar header both updated from "Developer" / "Developer Tools"
-  to "Developer Settings" for clarity.
-- Settings view developer mode toggle description updated to list available sections.
-
-**Moved Services tab under Developer Settings**
-- Added "Services" section to the Developer Settings sidebar that embeds the full
-  ServicesView (category sidebar + service list + configuration sheets).
-- ServicesUIPlugin now only appears as a standalone tab when developer mode is enabled
-  (overrides shouldBeVisible to check isDeveloperModeEnabled).
-- Services content renders directly without ScrollView wrapper to avoid nested
-  HSplitView layout issues.
+**Moved Services into Developer tab as inline section**
+- Removed Services as a standalone tab entirely (ServicesUIPlugin always hidden).
+- Added "Services" sidebar section inside Developer tab with category dropdown
+  filter, search field, and flat service list using existing ServiceRow component.
+- Install and configure service sheets remain functional via the inline UI.
+- Settings developer mode toggle description updated to list available sections.
 
 **Fixed incorrect CPU performance metrics**
 - Replaced the memory-based "rough approximation" (resident_size / physicalMemory * 1000)
@@ -25,9 +19,8 @@
 - CPU display shows one decimal place (e.g. "2.3%") instead of integer-only.
 
 ### Housekeeping
-- Removed completed to-do items: rename developer menu section, developer mode
-  performance metrics incorrect, services tab moved under developer settings,
-  hide/remove services tab.
+- Removed completed to-do items: developer mode performance metrics incorrect,
+  services tab moved under developer settings, hide/remove services tab.
 
 ## 2026-02-06
 
