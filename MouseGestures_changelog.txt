@@ -1,20 +1,31 @@
 ## 2026-02-07
 
-### Fix: Gate Evaluation Logic — AND Within Gesture, OR Across Gestures
-- **Root Cause**: ActivationCoordinator used OR logic across all gates for a dependent
-  type. When a drag gesture required both modifier keys AND mouse button hold, the
-  coordinator flattened these into independent gates. Holding just a mouse button
-  (without modifiers) satisfied the mouseButton gate alone, enabling screen zone
-  tracking and drag monitors unnecessarily — causing ~2% CPU on every mouse drag.
-- **Fix**: Changed dependency model from flat `Set<ActivationDependency>` to per-gesture
-  gate groups (`gateGroups: [ActivationType: [Set<ActivationType>]]`). Evaluation now
-  uses AND within each group (all gates from one gesture must be satisfied) and OR
-  across groups (any gesture's complete gate set suffices).
-- Example: gesture "⌘ + Right Drag + Top Left" creates gate group
-  `{modifierKey, mouseButton}` for screenZone. Both must be engaged to enable tracking.
-  A separate modifier-only gesture adds its own group `{modifierKey}`, correctly
-  allowing modifier-only activation without requiring a button hold.
-- Updated debug logging to show grouped gate dependencies.
+### Fix: Cascading Efficiency Chain for Activation Gating
+- **Root Cause**: ActivationCoordinator used OR logic across all gates and skipped
+  "always-active" types (like mouseButton) during dependency building. This meant
+  mouseButton monitors were never gated, and holding a mouse button without modifiers
+  could satisfy a screenZone gate independently — enabling screen zone tracking and
+  drag monitors unnecessarily, causing ~2% CPU on every mouse drag.
+- **Fix**: Replaced flat dependency set with per-gesture efficiency chains. Every
+  non-infrastructure type now participates in the chain regardless of efficiency score.
+  Evaluation uses AND-within-group (all predecessors in a gesture's chain must be
+  satisfied) and OR-across-groups (any gesture's complete chain suffices).
+- The most efficient type in each gesture's chain gets an empty gate group (always
+  passes), making it unconditionally active for that gesture. Types only used as
+  chain intermediates are properly gated by their predecessors.
+- Example: gesture "⌘ + Right Drag + Top Left" builds chain
+  modifierKey(100) → mouseButton(90) → screenZone(20).
+  - modifierKey: unconditional (top of chain)
+  - mouseButton: gated by {modifierKey}
+  - screenZone: gated by {modifierKey, mouseButton}
+  If a separate "Middle Click" gesture exists, mouseButton also gets an
+  unconditional group (it's top of that chain), keeping it always active.
+- Removed `isAlwaysActive` bypass from evaluation — chain structure now
+  determines what runs, not a blanket efficiency threshold.
+- **MouseButtonDetectorPlugin**: Added `initializeButtonState()` to detect
+  already-held buttons when monitors enable (mirrors ModifierKeyDetector's
+  `initializeModifierState`). Handles the case where user holds a mouse button
+  before pressing the gating modifier key.
 
 ### CPU Optimization: Eliminate Redundant System Queries During Dragging
 - **ScreenZoneDetectorPlugin**: Added cached drag/modifier state to eliminate repeated

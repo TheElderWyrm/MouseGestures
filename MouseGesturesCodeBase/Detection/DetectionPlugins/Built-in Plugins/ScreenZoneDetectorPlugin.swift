@@ -98,7 +98,7 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
                 category: .appearance,
                 type: .color,
                 defaultValue: NSColor.systemBlue.withAlphaComponent(0.3),
-                isAdvanced: true,
+                isAdvanced: false,
                 dependsOn: .init(key: SettingKeys.showZoneHighlights, condition: .isTrue)
             ),
             PluginSettingDefinition(

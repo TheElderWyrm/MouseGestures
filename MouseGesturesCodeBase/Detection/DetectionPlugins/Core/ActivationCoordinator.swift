@@ -312,25 +312,29 @@ class ActivationCoordinator {
                 gesturesPerType[type, default: []].append(gesture)
             }
             
-            // Build dependencies: low-efficiency types depend on high-efficiency types
-            let sortedTypes = usedTypes.sorted { queryEfficiencyScore(for: $0) > queryEfficiencyScore(for: $1) }
+            // Build efficiency chain for this gesture.
+            // Infrastructure types are excluded (always unconditionally active).
+            // Every other type participates in the chain regardless of efficiency.
+            let chainTypes = usedTypes
+                .filter { !queryIsInfrastructure(for: $0) }
+                .sorted { queryEfficiencyScore(for: $0) > queryEfficiencyScore(for: $1) }
             
-            for (index, type) in sortedTypes.enumerated() {
-                if queryIsAlwaysActive(for: type) { continue }
+            guard !chainTypes.isEmpty else { continue }
+            
+            // The most efficient type in this gesture's chain has no prerequisites —
+            // mark it unconditionally needed (empty gate group always passes).
+            gateGroups[chainTypes[0], default: []].append(Set<ActivationType>())
+            
+            // Each subsequent type is gated by ALL more-efficient predecessors.
+            // AND-within ensures the full chain of prerequisites must be satisfied.
+            for index in 1..<chainTypes.count {
+                let type = chainTypes[index]
+                let gates = Set(chainTypes[0..<index])
                 
-                // Collect ALL gates for this dependent type from THIS gesture
-                var gatesForThisGesture = Set<ActivationType>()
+                gateGroups[type, default: []].append(gates)
                 
-                for gateIndex in 0..<index {
-                    let gate = sortedTypes[gateIndex]
-                    let dependency = ActivationDependency(dependent: type, gate: gate)
-                    dependencies.insert(dependency)
-                    gatesForThisGesture.insert(gate)
-                }
-                
-                // Add gate group: all gates from this gesture must be satisfied together
-                if !gatesForThisGesture.isEmpty {
-                    gateGroups[type, default: []].append(gatesForThisGesture)
+                for gate in gates {
+                    dependencies.insert(ActivationDependency(dependent: type, gate: gate))
                 }
             }
         }
@@ -339,8 +343,12 @@ class ActivationCoordinator {
             log.log("ActivationCoordinator: Built \(dependencies.count) dependencies from \(gestures.count) gestures")
             for (dependent, groups) in gateGroups {
                 for group in groups {
-                    let gateNames = group.map { $0.displayName }.joined(separator: " AND ")
-                    log.log("  - \(dependent.displayName) gated by [\(gateNames)]")
+                    if group.isEmpty {
+                        log.log("  - \(dependent.displayName): unconditional (top of chain)")
+                    } else {
+                        let gateNames = group.map { $0.displayName }.joined(separator: " AND ")
+                        log.log("  - \(dependent.displayName) gated by [\(gateNames)]")
+                    }
                 }
             }
         }
@@ -366,14 +374,10 @@ class ActivationCoordinator {
                 continue
             }
             
-            // Always-active types that ARE used don't need gating
-            if queryIsAlwaysActive(for: type) {
-                enableActivationType(type)
-                continue
-            }
-            
-            // Check gate groups: OR across groups, AND within each group
-            // Each group represents one gesture's gate requirements
+            // Check gate groups: OR across groups, AND within each group.
+            // Each group represents one gesture's chain requirements.
+            // An empty group (from top-of-chain) always passes, keeping the
+            // type unconditionally active when any gesture needs it ungated.
             let groups = gateGroups[type] ?? []
             
             if groups.isEmpty {

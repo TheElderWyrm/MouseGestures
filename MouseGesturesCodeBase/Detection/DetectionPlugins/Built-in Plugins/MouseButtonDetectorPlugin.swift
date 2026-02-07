@@ -225,6 +225,34 @@ class MouseButtonDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         if context?.logger.isDebugEnabled ?? false {
             context?.logger.log("Mouse button monitoring ENABLED (4 monitors)", file: #file, function: #function, line: #line)
         }
+        
+        // Check if a button is already physically held when monitors enable.
+        // This handles the case where the user holds a mouse button before
+        // satisfying the gate (e.g., holds right-click then presses ⌘).
+        initializeButtonState()
+    }
+    
+    /// Detect already-held buttons when monitoring starts (mirrors ModifierKeyDetector's
+    /// initializeModifierState). Uses NSEvent.pressedMouseButtons for direct OS query.
+    private func initializeButtonState() {
+        let pressed = NSEvent.pressedMouseButtons
+        guard pressed != 0 else { return }
+        
+        // Determine which button is held (priority: right > middle > left,
+        // since left-click is rarely used as a drag gesture trigger)
+        let button: MouseButtonTrigger.MouseButton
+        if pressed & (1 << 1) != 0 { button = .right }
+        else if pressed & (1 << 2) != 0 { button = .middle }
+        else if pressed & (1 << 0) != 0 { button = .left }
+        else if pressed & (1 << 3) != 0 { button = .button4 }
+        else if pressed & (1 << 4) != 0 { button = .button5 }
+        else { return }
+        
+        context?.logger.log("Initializing with button already held: \(button.rawValue)", file: #file, function: #function, line: #line)
+        
+        heldButton = button
+        holdEngagements += 1
+        ActivationCoordinator.shared.activationEngaged(.mouseButton, metadata: buildMetadata())
     }
     
     private func disableMouseButtonMonitors() {
