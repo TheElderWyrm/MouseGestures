@@ -493,5 +493,21 @@
 - Removed duplicate parameter binding helpers (strBinding, numBinding, boolBinding,
   paramField, advancedConfigBox, etc.) that existed in both sheets.
 
+### Bug Fix - Plugin Reload
+- Fixed plugin reload in Developer > Plugin Management causing plugins to disappear from the list.
+  Previously, `reloadPlugin` would unload the plugin but never re-register it.
+- Added `reloadBuiltInPlugin()` to PluginManager: re-instantiates built-in plugin with fresh
+  sandbox and re-registers all actions. Maps identifiers to factory closures.
+- Added `reloadExternalPlugin()` to PluginManager: saves bundle URL, unloads, then reloads
+  from disk.
+- Updated `PluginManagementService.reloadPlugin()` to use the new methods instead of bare
+  unload + TODO stub.
+
+### Memory Optimization - Zone Highlight Windows
+- Zone highlight windows are now destroyed (closed and deallocated) after fade-out animation
+  instead of merely being ordered out and kept in memory.
+- Windows are recreated on demand when modifier keys trigger zone display.
+- Reduces idle memory footprint when zone highlights are enabled but not currently visible.
+
 ### Housekeeping
 - Removed completed to-do items: Rework Add Gesture UI, Remove Duplicate code/unify architectures.

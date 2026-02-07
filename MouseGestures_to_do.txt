@@ -2,8 +2,6 @@
 - Reduce duplicate code, unify architecture whenever possible
 
 General:
--Possible: Delete/remake the show zone highlights window instead of hiding to save memory.
-- Refreshing a plugin under plugin management in developer tab makes it disappear from the list (plugin reload failed)
 
 
 Actions (fix later):
