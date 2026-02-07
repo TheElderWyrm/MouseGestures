@@ -6,7 +6,7 @@ struct DeveloperView: View {
     @StateObject private var uiServices = UIServices.shared
     
     // State
-    @State private var selectedSection: DeveloperSection = .logging
+    @State private var selectedSection: DeveloperSection = .settings
     @State private var debugLoggingEnabled: Bool = false
     @State private var logFiles: [LogFileInfo] = []
     @State private var selectedLogFile: LogFileInfo?
@@ -47,11 +47,17 @@ struct DeveloperView: View {
         }
     }
     
+    // Developer Settings
+    @State private var developerModeEnabled: Bool = false
+    @State private var showZoneHighlights: Bool = false
+    @State private var showZoneLabels: Bool = false
+    
     // Messages
     @State private var successMessage: String?
     @State private var errorMessage: String?
     
     enum DeveloperSection: String, CaseIterable {
+        case settings = "Developer Settings"
         case logging = "Logging"
         case plugins = "Plugin Management"
         case services = "Services"
@@ -60,6 +66,7 @@ struct DeveloperView: View {
         
         var icon: String {
             switch self {
+            case .settings: return "gearshape"
             case .logging: return "doc.text"
             case .plugins: return "puzzlepiece.extension"
             case .services: return "gearshape.2"
@@ -79,6 +86,8 @@ struct DeveloperView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     switch selectedSection {
+                    case .settings:
+                        developerSettingsSection
                     case .logging:
                         loggingSection
                     case .plugins:
@@ -182,6 +191,87 @@ struct DeveloperView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(PlainButtonStyle())
+    }
+    
+    // MARK: - Developer Settings Section
+    
+    private var developerSettingsSection: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            sectionHeader("Developer Settings")
+            
+            VStack(alignment: .leading, spacing: 15) {
+                // Developer Mode
+                Toggle(isOn: $developerModeEnabled) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Developer Mode")
+                            .font(.system(size: 13, weight: .medium))
+                        Text("Enables this Developer tab and other advanced developer features")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .onChange(of: developerModeEnabled) { newValue in
+                    uiServices.setDeveloperModeEnabled(newValue)
+                }
+                
+                Divider()
+                
+                // Debug Logging
+                Toggle(isOn: $debugLoggingEnabled) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Debug Logging")
+                            .font(.system(size: 13, weight: .medium))
+                        Text("Records detailed debug information to log files. Manage logs in the Logging section.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .onChange(of: debugLoggingEnabled) { newValue in
+                    uiServices.setDebugModeEnabled(newValue)
+                }
+                
+                Divider()
+                
+                // Show Zone Highlights
+                Toggle(isOn: $showZoneHighlights) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Show Zone Highlights")
+                            .font(.system(size: 13, weight: .medium))
+                        Text("Display screen zone boundaries as colored overlays")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .onChange(of: showZoneHighlights) { newValue in
+                    uiServices.setShowZoneHighlights(newValue)
+                }
+                
+                Divider()
+                
+                // Show Zone Labels
+                Toggle(isOn: $showZoneLabels) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Show Zone Labels")
+                            .font(.system(size: 13, weight: .medium))
+                        Text("Display zone names inside highlighted zones")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .onChange(of: showZoneLabels) { newValue in
+                    uiServices.setShowZoneLabels(newValue)
+                }
+            }
+            .padding()
+            .background(RoundedRectangle(cornerRadius: 8).fill(Color(NSColor.controlBackgroundColor)))
+            
+            // Warning about disabling developer mode
+            if !developerModeEnabled {
+                Label("Developer mode is disabled. This tab will be hidden when you navigate away.", systemImage: "exclamationmark.triangle")
+                    .font(.caption)
+                    .foregroundColor(.orange)
+            }
+        }
     }
     
     // MARK: - Logging Section
@@ -857,7 +947,10 @@ struct DeveloperView: View {
     // MARK: - Helper Functions
     
     private func loadInitialData() {
+        developerModeEnabled = uiServices.isDeveloperModeEnabled()
         debugLoggingEnabled = uiServices.isDebugModeEnabled()
+        showZoneHighlights = uiServices.isShowZoneHighlights()
+        showZoneLabels = uiServices.isShowZoneLabels()
         refreshLogFiles()
         refreshPlugins()
         refreshPerformanceMetrics()
