@@ -35,7 +35,7 @@ struct SettingsView: View {
         case detection = "Detection"
         case menuBar = "Menu Bar"
         case dataManagement = "Data Management"
-        case advanced = "Advanced"
+        case developerSettings = "Developer Settings"
         case updates = "Updates"
         
         var icon: String {
@@ -44,7 +44,7 @@ struct SettingsView: View {
             case .detection: return "hand.tap"
             case .menuBar: return "menubar.rectangle"
             case .dataManagement: return "externaldrive"
-            case .advanced: return "wrench.and.screwdriver"
+            case .developerSettings: return "wrench.and.screwdriver"
             case .updates: return "arrow.clockwise.circle"
             }
         }
@@ -68,8 +68,8 @@ struct SettingsView: View {
                         menuBarSection
                     case .dataManagement:
                         dataManagementSection
-                    case .advanced:
-                        advancedSection
+                    case .developerSettings:
+                        developerSettingsSection
                     case .updates:
                         updatesSection
                     }
@@ -138,8 +138,8 @@ struct SettingsView: View {
             
             VStack(alignment: .leading, spacing: 2) {
                 ForEach(SettingsSection.allCases, id: \.self) { section in
-                    if section == .advanced && !developerModeEnabled {
-                        // Hide advanced section if developer mode is disabled
+                    if section == .developerSettings && !developerModeEnabled {
+                        // Hide developer settings section if developer mode is disabled
                     } else {
                         sidebarItem(for: section)
                     }
@@ -156,7 +156,7 @@ struct SettingsView: View {
             HStack {
                 Toggle(isOn: $showAdvanced) {
                     HStack(spacing: 6) {
-                        Image(systemName: "wrench.and.screwdriver")
+                        Image(systemName: "slider.horizontal.3")
                             .frame(width: 20)
                             .foregroundColor(.secondary)
                         Text("Advanced")
@@ -252,6 +252,24 @@ struct SettingsView: View {
                 }
                 
                 Divider()
+                
+                // Developer Mode (only visible when showAdvanced is enabled)
+                if showAdvanced {
+                    Toggle(isOn: $developerModeEnabled) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Developer Mode")
+                                .font(.system(size: 13, weight: .medium))
+                            Text("Show Developer tab and advanced developer settings")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .onChange(of: developerModeEnabled) { newValue in
+                        uiServices.setDeveloperModeEnabled(newValue)
+                    }
+                    
+                    Divider()
+                }
                 
                 // Debug Logging
                 Toggle(isOn: $debugModeEnabled) {
@@ -437,34 +455,20 @@ struct SettingsView: View {
         }
     }
     
-    // MARK: - Advanced Section
+    // MARK: - Developer Settings Section
     
-    private var advancedSection: some View {
+    private var developerSettingsSection: some View {
         VStack(alignment: .leading, spacing: 20) {
-            sectionHeader("Advanced Settings")
+            sectionHeader("Developer Settings")
+            
+            Text("Advanced settings for developers and power users")
+                .font(.caption)
+                .foregroundColor(.secondary)
             
             VStack(alignment: .leading, spacing: 15) {
-                Text("Developer Options")
-                    .font(.system(size: 14, weight: .semibold))
-                
-                Toggle(isOn: $developerModeEnabled) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Developer Mode")
-                            .font(.system(size: 13, weight: .medium))
-                        Text("Show Developer tab in the sidebar with advanced tools and diagnostics")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
-                .onChange(of: developerModeEnabled) { newValue in
-                    uiServices.setDeveloperModeEnabled(newValue)
-                }
-                
-Divider()
-                
-                // Performance
+                // Performance & Permissions
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("Performance")
+                    Text("System Permissions")
                         .font(.system(size: 14, weight: .semibold))
                     
                     Text("Accessibility permissions required: \(checkAccessibilityStatus())")
@@ -478,6 +482,18 @@ Divider()
                         .buttonStyle(.plain)
                         .foregroundColor(.accentColor)
                     }
+                }
+                
+                Divider()
+                
+                // Additional developer settings can go here
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Developer Tools")
+                        .font(.system(size: 14, weight: .semibold))
+                    
+                    Text("Additional developer tools and diagnostics are available in the Developer tab")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                 }
             }
             .padding()
