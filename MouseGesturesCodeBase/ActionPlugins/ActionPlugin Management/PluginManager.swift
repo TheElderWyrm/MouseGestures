@@ -208,6 +208,75 @@ public class PluginManager: NSObject {
         }
     }
     
+    // MARK: - Plugin Reload
+    
+    /// Reload a built-in plugin by re-instantiating and re-registering it
+    public func reloadBuiltInPlugin(identifier: String) -> Bool {
+        guard loadedPlugins[identifier] != nil else {
+            log.log("Cannot reload: plugin \(identifier) not found")
+            return false
+        }
+        
+        // Map identifier to a fresh instance of the built-in plugin
+        let builtInMap: [String: () -> GestureActionPlugin] = [
+            "com.mousegestures.core": { CoreActionsPlugin() },
+            "com.mousegestures.window": { WindowManagementPlugin() },
+            "com.mousegestures.media": { MediaControlPlugin() },
+            "com.mousegestures.system": { SystemControlPlugin() },
+            "com.mousegestures.automation": { AutomationPlugin() },
+            "com.mousegestures.bundle": { BundleActionsPlugin() }
+        ]
+        
+        guard let factory = builtInMap[identifier] else {
+            log.log("Plugin \(identifier) is not a recognized built-in plugin")
+            return false
+        }
+        
+        // Unload old instance
+        unloadPlugin(identifier: identifier)
+        
+        // Create and register fresh instance
+        let plugin = factory()
+        do {
+            let sandbox = PluginSandbox(plugin: plugin, permissions: .builtIn)
+            try sandbox.initialize()
+            
+            loadedPlugins[plugin.identifier] = plugin
+            sandboxedPlugins[plugin.identifier] = sandbox
+            pluginPermissions[plugin.identifier] = .builtIn
+            
+            for action in plugin.providedActions {
+                let actionId = "\(plugin.identifier).\(action.id)"
+                actionRegistry[actionId] = (plugin, action)
+            }
+            
+            lifecycleDelegates.forEach { $0.pluginDidLoad(plugin) }
+            log.log("Successfully reloaded built-in plugin: \(plugin.name)")
+            return true
+        } catch {
+            log.log("Failed to reload built-in plugin \(plugin.name): \(error)")
+            return false
+        }
+    }
+    
+    /// Reload an external plugin from its bundle
+    public func reloadExternalPlugin(identifier: String) -> Bool {
+        guard let bundle = pluginBundles[identifier] else {
+            log.log("Cannot reload external plugin \(identifier): no bundle found")
+            return false
+        }
+        
+        let bundleURL = bundle.bundleURL
+        let wasSystem = pluginPermissions[identifier] == .default
+        
+        // Unload the plugin (this also unloads the bundle)
+        unloadPlugin(identifier: identifier)
+        
+        // Reload from disk
+        loadPlugin(at: bundleURL, isSystem: wasSystem)
+        return loadedPlugins[identifier] != nil
+    }
+    
     // MARK: - Plugin Unloading
     
     public func unloadPlugin(identifier: String) {

@@ -385,11 +385,9 @@ class ZoneHighlightManager {
             }
         } completionHandler: { [weak self] in
             guard let self = self else { return }
-            // Only order out if we weren't interrupted by a new show
+            // Only destroy if we weren't interrupted by a new show
             if self.isHiding {
-                for (_, window) in self.zoneWindows {
-                    window.orderOut(nil)
-                }
+                self.closeAllWindows()
                 self.isHiding = false
             }
         }

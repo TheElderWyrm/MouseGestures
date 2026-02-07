@@ -66,19 +66,15 @@ class PluginManagementService {
     func reloadPlugin(_ identifier: String) -> Bool {
         let permissions = pluginManager.getPermissions(for: identifier) ?? .restricted
         
-        // Unload the plugin
-        pluginManager.unloadPlugin(identifier: identifier)
-        
-        // Built-in plugins need special handling
         if permissions == .builtIn {
-            // Built-in plugins are reloaded on app restart
-            log.log("Built-in plugin \(identifier) will reload on app restart")
-            return false
+            let success = pluginManager.reloadBuiltInPlugin(identifier: identifier)
+            log.log(success ? "Reloaded built-in plugin: \(identifier)" : "Failed to reload built-in plugin: \(identifier)")
+            return success
+        } else {
+            let success = pluginManager.reloadExternalPlugin(identifier: identifier)
+            log.log(success ? "Reloaded external plugin: \(identifier)" : "Failed to reload external plugin: \(identifier)")
+            return success
         }
-        
-        // TODO: Implement actual plugin reloading
-        log.log("Plugin reload not yet fully implemented for: \(identifier)")
-        return true
     }
     
     func reloadAllPlugins() {
