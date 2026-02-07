@@ -3,25 +3,16 @@ import Cocoa
 
 // MARK: - Activation Type
 
-/// Represents a type of activation/trigger condition that a detection plugin can provide
-/// Efficiency scores determine which detectors run by default vs. are gated
+/// Represents a type of activation/trigger condition that a detection plugin can provide.
+/// This enum defines identity and display names only. All behavioral properties
+/// (efficiency, gating, infrastructure) are declared by the plugins themselves
+/// through the ActivationProvider protocol, keeping the coordinator plugin-agnostic.
 enum ActivationType: String, CaseIterable, Hashable {
-    /// Modifier keys (Cmd, Ctrl, Option, Shift) - event-based, very efficient
     case modifierKey = "modifier_key"
-    
-    /// Keyboard shortcuts - event-based, efficient
     case keyboardShortcut = "keyboard_shortcut"
-    
-    /// Mouse button clicks - event-based, efficient
     case mouseButton = "mouse_button"
-    
-    /// Mouse drag state - event-based, efficient
     case mouseDrag = "mouse_drag"
-    
-    /// Screen zone detection - requires mouse tracking, less efficient
     case screenZone = "screen_zone"
-    
-    /// App change detection - event-based, moderate efficiency
     case appChange = "app_change"
     
     /// Display name for UI
@@ -33,38 +24,6 @@ enum ActivationType: String, CaseIterable, Hashable {
         case .mouseDrag: return "Mouse Drag"
         case .screenZone: return "Screen Zones"
         case .appChange: return "App Change"
-        }
-    }
-    
-    /// Efficiency score (higher = more efficient, less resource usage)
-    /// 100 = Pure event-based, no polling
-    /// 50 = Some computation on events
-    /// 0 = Requires active polling/tracking
-    var efficiencyScore: Int {
-        switch self {
-        case .modifierKey: return 100      // Pure event monitoring
-        case .keyboardShortcut: return 95  // Event monitoring + lookup
-        case .mouseButton: return 90       // Event monitoring + lookup
-        case .mouseDrag: return 85         // Event monitoring, some state
-        case .appChange: return 70         // Event-based but has computation
-        case .screenZone: return 20        // Requires active mouse tracking
-        }
-    }
-    
-    /// Whether this activation type should always run (not gated by other types)
-    /// Note: even alwaysActive types are still disabled if no gesture uses them,
-    /// unless they are infrastructure types.
-    var alwaysActive: Bool {
-        return efficiencyScore >= 70
-    }
-    
-    /// Infrastructure types run unconditionally because they provide
-    /// system-level functionality (app disabling, profile switching)
-    /// rather than gesture-specific detection.
-    var isInfrastructure: Bool {
-        switch self {
-        case .appChange: return true
-        default: return false
         }
     }
 }
@@ -86,7 +45,9 @@ struct ActivationState {
 
 // MARK: - Activation Provider Protocol
 
-/// Protocol for plugins that provide activation types
+/// Protocol for plugins that provide activation types.
+/// Plugins declare all behavioral properties — the coordinator never inspects
+/// plugin-specific details like modifier flags or gesture fields directly.
 protocol ActivationProvider: AnyObject {
     /// Activation types this plugin provides
     var providedActivationTypes: [ActivationType] { get }
@@ -102,21 +63,56 @@ protocol ActivationProvider: AnyObject {
     
     /// Whether detection is currently active for a type
     func isDetectionActive(for type: ActivationType) -> Bool
+    
+    // MARK: - Plugin-Declared Behavioral Properties
+    
+    /// Efficiency score for an activation type (higher = more efficient, less resource usage)
+    /// 100 = Pure event-based, no polling. 0 = Requires active polling/tracking.
+    func efficiencyScore(for type: ActivationType) -> Int
+    
+    /// Whether this type should always run when used by gestures (not gated by other types)
+    func isAlwaysActive(for type: ActivationType) -> Bool
+    
+    /// Whether this type provides infrastructure (runs unconditionally, e.g. app detection)
+    func isInfrastructure(for type: ActivationType) -> Bool
+    
+    /// Whether a gesture uses this plugin's activation type.
+    /// This is the single source of truth — it should match the same logic the plugin
+    /// uses when actually detecting/triggering gestures (unifying the activation map).
+    func gestureUsesActivation(_ gesture: Gesture, for type: ActivationType) -> Bool
+    
+    /// Validate whether the current gate state justifies enabling a dependent type.
+    /// Called when this provider's activation type is a gate for a dependent type.
+    /// `dependentType`: the type that wants to be enabled
+    /// `gestures`: enabled gestures that use the dependent type
+    /// Returns true if the current engaged state actually warrants enabling the dependent.
+    ///
+    /// Default implementation: returns true if engaged (simple gate check).
+    /// Plugins can override for precision gating (e.g., checking if held modifiers
+    /// match any gesture that actually needs the dependent type).
+    func validateGate(for dependentType: ActivationType, gestures: [Gesture]) -> Bool
+}
+
+// MARK: - Default Implementations
+
+extension ActivationProvider {
+    func efficiencyScore(for type: ActivationType) -> Int { return 50 }
+    func isAlwaysActive(for type: ActivationType) -> Bool { return efficiencyScore(for: type) >= 70 }
+    func isInfrastructure(for type: ActivationType) -> Bool { return false }
+    
+    func validateGate(for dependentType: ActivationType, gestures: [Gesture]) -> Bool {
+        // Default: gate is satisfied if this provider is engaged
+        // (The coordinator checks engagement before calling this)
+        return true
+    }
 }
 
 // MARK: - Activation Dependency
 
 /// Represents a dependency between activation types
-/// "screenZone requires modifierKey" means screen zone detection should only run
-/// when modifier key detection reports an engaged state
 struct ActivationDependency: Hashable {
-    /// The activation type that depends on another
     let dependent: ActivationType
-    
-    /// The activation type that must be engaged first (the gate)
     let gate: ActivationType
-    
-    /// Optional: specific condition for the gate (e.g., specific modifiers)
     let condition: String?
     
     init(dependent: ActivationType, gate: ActivationType, condition: String? = nil) {
@@ -128,8 +124,9 @@ struct ActivationDependency: Hashable {
 
 // MARK: - Activation Coordinator
 
-/// Coordinates activation states across detection plugins
-/// Manages efficiency-based gating so low-efficiency detectors only run when needed
+/// Coordinates activation states across detection plugins.
+/// This class is entirely plugin-agnostic — it queries registered providers for all
+/// behavioral decisions rather than containing plugin-specific logic.
 class ActivationCoordinator {
     
     // MARK: - Singleton
@@ -150,12 +147,9 @@ class ActivationCoordinator {
     /// Activation types that are currently enabled
     private var enabledTypes: Set<ActivationType> = []
     
-    /// Cached set of modifier flag values that have zone-based gestures.
-    /// Rebuilt when dependencies are rebuilt. Used for precision gating.
-    private var zoneGestureModifiers: Set<UInt> = []
-    
-    /// Whether any zone gesture has empty (no) modifier requirements
-    private var hasZoneGestureWithNoModifiers = false
+    /// Cached per-type gesture lists: which enabled gestures use each activation type.
+    /// Rebuilt together with dependencies for efficient gate validation lookups.
+    private var gesturesPerType: [ActivationType: [Gesture]] = [:]
     
     /// Lock for thread safety (recursive to allow nested calls)
     private let lock = NSRecursiveLock()
@@ -163,12 +157,10 @@ class ActivationCoordinator {
     // MARK: - Initialization
     
     private init() {
-        // Initialize all activation states
         for type in ActivationType.allCases {
             activationStates[type] = ActivationState(type: type)
         }
         
-        // Listen for configuration changes
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(configurationChanged),
@@ -183,7 +175,6 @@ class ActivationCoordinator {
     
     // MARK: - Provider Registration
     
-    /// Register a provider for activation types
     func registerProvider(_ provider: ActivationProvider, for types: [ActivationType]) {
         lock.lock()
         defer { lock.unlock() }
@@ -195,29 +186,24 @@ class ActivationCoordinator {
         log.log("ActivationCoordinator: Registered provider for \(types.map { $0.rawValue })")
     }
     
-    /// Unregister a provider
     func unregisterProvider(_ provider: ActivationProvider) {
         lock.lock()
         defer { lock.unlock() }
         
-        // Remove all entries for this provider
         providers = providers.filter { _, weakRef in
             guard let obj = weakRef.value else { return false }
             return obj !== (provider as AnyObject)
         }
     }
     
-    /// Called when a plugin is stopping - cleans up all activation types it provides
     func pluginStopping(_ provider: ActivationProvider) {
         lock.lock()
         defer { lock.unlock() }
         
         for type in provider.providedActivationTypes {
-            // Disengage any engaged states
             if activationStates[type]?.isEngaged == true {
                 activationStates[type] = ActivationState(type: type, isEngaged: false, metadata: [:])
             }
-            // Remove from enabled types
             enabledTypes.remove(type)
         }
         
@@ -226,80 +212,106 @@ class ActivationCoordinator {
     
     // MARK: - Activation State Management
     
-    /// Called by plugins when an activation type becomes engaged
     func activationEngaged(_ type: ActivationType, metadata: [String: Any] = [:]) {
         lock.lock()
         defer { lock.unlock() }
         
-        // Update state
         activationStates[type] = ActivationState(type: type, isEngaged: true, metadata: metadata)
         
         if log.isDebugEnabled {
             log.log("ActivationCoordinator: \(type.displayName) ENGAGED")
         }
         
-        // Check if any dependent types should now be enabled
         evaluateGatedActivations()
     }
     
-    /// Called by plugins when an activation type is no longer engaged
     func activationDisengaged(_ type: ActivationType) {
         lock.lock()
         defer { lock.unlock() }
         
-        // Update state
         activationStates[type] = ActivationState(type: type, isEngaged: false, metadata: [:])
         
         if log.isDebugEnabled {
             log.log("ActivationCoordinator: \(type.displayName) DISENGAGED")
         }
         
-        // Check if any dependent types should now be disabled
         evaluateGatedActivations()
     }
     
-    /// Get current state for an activation type
     func getState(for type: ActivationType) -> ActivationState {
         lock.lock()
         defer { lock.unlock() }
         return activationStates[type] ?? ActivationState(type: type)
     }
     
-    /// Check if an activation type is currently   engaged
     func isEngaged(_ type: ActivationType) -> Bool {
         return getState(for: type).isEngaged
     }
     
+    // MARK: - Provider Query Helpers
+    
+    /// Get the provider for an activation type (if registered and alive)
+    private func getProvider(for type: ActivationType) -> ActivationProvider? {
+        guard let weakRef = providers[type], let obj = weakRef.value else { return nil }
+        return obj as? ActivationProvider
+    }
+    
+    /// Query provider for efficiency score, with fallback
+    private func queryEfficiencyScore(for type: ActivationType) -> Int {
+        return getProvider(for: type)?.efficiencyScore(for: type) ?? 50
+    }
+    
+    /// Query provider for always-active status
+    private func queryIsAlwaysActive(for type: ActivationType) -> Bool {
+        return getProvider(for: type)?.isAlwaysActive(for: type) ?? false
+    }
+    
+    /// Query provider for infrastructure status
+    private func queryIsInfrastructure(for type: ActivationType) -> Bool {
+        return getProvider(for: type)?.isInfrastructure(for: type) ?? false
+    }
+    
+    /// Ask providers which activation types a gesture uses
+    private func queryActivationTypes(for gesture: Gesture) -> Set<ActivationType> {
+        var types = Set<ActivationType>()
+        for (type, weakRef) in providers {
+            guard let obj = weakRef.value, let provider = obj as? ActivationProvider else { continue }
+            if provider.gestureUsesActivation(gesture, for: type) {
+                types.insert(type)
+            }
+        }
+        return types
+    }
+    
     // MARK: - Dependency Management
     
-    /// Rebuild dependencies from current gesture configuration
     @objc func configurationChanged() {
         rebuildDependencies()
     }
     
-    /// Analyze gestures and build dependency graph
     func rebuildDependencies() {
         lock.lock()
         defer { lock.unlock() }
         
         dependencies.removeAll()
+        gesturesPerType.removeAll()
         
         let gestures = Configuration.shared.gestures.filter { $0.isEnabled }
         
         for gesture in gestures {
-            // Check what activation types this gesture uses
-            let usedTypes = analyzeGestureActivationTypes(gesture)
+            let usedTypes = queryActivationTypes(for: gesture)
             
-            // If gesture uses multiple types, create dependencies
-            // Low-efficiency types depend on high-efficiency types
-            let sortedTypes = usedTypes.sorted { $0.efficiencyScore > $1.efficiencyScore }
+            // Cache which gestures use each type
+            for type in usedTypes {
+                gesturesPerType[type, default: []].append(gesture)
+            }
             
-            // Each type depends on all higher-efficiency types in this gesture
+            // Build dependencies: low-efficiency types depend on high-efficiency types
+            let sortedTypes = usedTypes.sorted { queryEfficiencyScore(for: $0) > queryEfficiencyScore(for: $1) }
+            
             for (index, type) in sortedTypes.enumerated() {
-                // Skip always-active types as dependents
-                if type.alwaysActive { continue }
+                if queryIsAlwaysActive(for: type) { continue }
                 
-                // Add dependencies on all higher-efficiency types
                 for gateIndex in 0..<index {
                     let gate = sortedTypes[gateIndex]
                     let dependency = ActivationDependency(dependent: type, gate: gate)
@@ -315,89 +327,45 @@ class ActivationCoordinator {
             }
         }
         
-        // Rebuild precision caches
-        rebuildZoneGestureModifierCache()
-        
-        // Re-evaluate what should be active
         evaluateGatedActivations()
-    }
-    
-    /// Analyze what activation types a gesture uses
-    private func analyzeGestureActivationTypes(_ gesture: Gesture) -> Set<ActivationType> {
-        var types = Set<ActivationType>()
-        
-        // Check for zone-based activation
-        if gesture.activation.hasGesture {
-            types.insert(.screenZone)
-            
-            // Screen zones always need modifiers or drag
-            if !gesture.modifiers.isEmpty {
-                types.insert(.modifierKey)
-            }
-            
-            if gesture.dragModifier != .none {
-                types.insert(.mouseDrag)
-            }
-        }
-        
-        // Check for keyboard shortcut activation
-        if gesture.activation.hasKeyboard && gesture.keyboardTrigger != nil {
-            types.insert(.keyboardShortcut)
-        }
-        
-        // Check for mouse button activation
-        if gesture.activation.hasMouseButton && gesture.mouseButtonTrigger != nil {
-            types.insert(.mouseButton)
-        }
-        
-        return types
     }
     
     // MARK: - Gating Logic
     
-    /// Evaluate which gated activation types should be enabled/disabled
     private func evaluateGatedActivations() {
-        // Group dependencies by dependent type
         var dependentGates: [ActivationType: Set<ActivationType>] = [:]
         for dep in dependencies {
             dependentGates[dep.dependent, default: []].insert(dep.gate)
         }
         
-        // Get all activation types actually used in enabled gestures
         let usedTypes = getUsedActivationTypes()
         
-        // For each potentially gated type
         for type in ActivationType.allCases {
-            // Infrastructure types always run (e.g., app change detection)
-            if type.isInfrastructure {
+            // Infrastructure types always run
+            if queryIsInfrastructure(for: type) {
                 enableActivationType(type)
                 continue
             }
             
-            // Check if this type is used in any enabled gesture
-            // This applies to ALL types, including alwaysActive ones
+            // Not used in any gesture → disable
             if !usedTypes.contains(type) {
-                // Not used in any gesture, disable it
                 disableActivationType(type)
                 continue
             }
             
             // Always-active types that ARE used don't need gating
-            if type.alwaysActive {
+            if queryIsAlwaysActive(for: type) {
                 enableActivationType(type)
                 continue
             }
             
-            // Type is used - check if its gates are satisfied
+            // Check gates
             let gates = dependentGates[type] ?? []
             
             if gates.isEmpty {
-                // No gates - type is used and has no dependencies, so enable it
                 enableActivationType(type)
             } else {
-                // Check if ANY gate is satisfied (OR logic for multiple gates)
                 let anyGateSatisfied = gates.contains { isGateSatisfied($0, for: type) }
-                
                 if anyGateSatisfied {
                     enableActivationType(type)
                 } else {
@@ -407,98 +375,39 @@ class ActivationCoordinator {
         }
     }
     
-    /// Check if a gate is satisfied for a dependent type, with precision checks.
-    /// For modifier->screenZone gating, verifies that the current modifier combination
-    /// actually matches at least one gesture that uses screen zones.
+    /// Check if a gate is satisfied for a dependent type.
+    /// Delegates precision validation to the gate's provider — no plugin-specific logic here.
     private func isGateSatisfied(_ gate: ActivationType, for dependent: ActivationType) -> Bool {
         guard isEngaged(gate) else { return false }
         
-        // Precision check: when modifierKey gates screenZone, verify
-        // the specific modifiers held match a gesture needing zone detection
-        if gate == .modifierKey && dependent == .screenZone {
-            return currentModifiersMatchAnyZoneGesture()
-        }
-        
-        // For other gate combinations, simple engagement check suffices
-        return true
+        // Ask the gate provider to validate whether its current state
+        // actually warrants enabling the dependent type
+        guard let provider = getProvider(for: gate) else { return true }
+        let dependentGestures = gesturesPerType[dependent] ?? []
+        return provider.validateGate(for: dependent, gestures: dependentGestures)
     }
     
-    /// Check if the currently held modifiers match any gesture that uses screen zones.
-    /// Uses cached modifier sets for O(n) check where n = number of unique modifier combos.
-    private func currentModifiersMatchAnyZoneGesture() -> Bool {
-        // Zone gestures with no modifier requirements match any state
-        if hasZoneGestureWithNoModifiers { return true }
-        
-        guard let modState = activationStates[.modifierKey],
-              let rawValue = modState.metadata["modifiers"] as? UInt else {
-            return false
-        }
-        let currentMods = NSEvent.ModifierFlags(rawValue: rawValue)
-        
-        // Check if user is holding at least the modifiers required by any zone gesture
-        for requiredRaw in zoneGestureModifiers {
-            let required = NSEvent.ModifierFlags(rawValue: requiredRaw)
-            if currentMods.contains(required) {
-                return true
-            }
-        }
-        return false
-    }
-    
-    /// Rebuild the cached set of modifier combinations used by zone gestures
-    private func rebuildZoneGestureModifierCache() {
-        zoneGestureModifiers.removeAll()
-        hasZoneGestureWithNoModifiers = false
-        
-        let gestures = Configuration.shared.gestures.filter { $0.isEnabled }
-        for gesture in gestures {
-            guard gesture.activation.hasGesture else { continue }
-            if gesture.modifiers.isEmpty {
-                hasZoneGestureWithNoModifiers = true
-            } else {
-                zoneGestureModifiers.insert(gesture.modifiers.rawValue)
-            }
-        }
-        
-        if log.isDebugEnabled {
-            log.log("ActivationCoordinator: Cached \(zoneGestureModifiers.count) zone modifier combos, noModifiers=\(hasZoneGestureWithNoModifiers)")
-        }
-    }
-    
-    /// Get all activation types actually used in enabled gestures
+    /// Get all activation types used in enabled gestures (queried from providers)
     private func getUsedActivationTypes() -> Set<ActivationType> {
-        var used = Set<ActivationType>()
-        let gestures = Configuration.shared.gestures.filter { $0.isEnabled }
-        
-        for gesture in gestures {
-            let types = analyzeGestureActivationTypes(gesture)
-            used.formUnion(types)
-        }
-        
-        return used
+        return Set(gesturesPerType.keys)
     }
     
-    /// Enable an activation type
     private func enableActivationType(_ type: ActivationType) {
         guard !enabledTypes.contains(type) else { return }
         
         enabledTypes.insert(type)
         
-        if let weakProvider = providers[type], let provider = weakProvider.value as? ActivationProvider {
-            if !provider.isDetectionActive(for: type) {
-                provider.enableDetection(for: type)
-                log.log("ActivationCoordinator: Enabled \(type.displayName)")
-            }
+        if let provider = getProvider(for: type), !provider.isDetectionActive(for: type) {
+            provider.enableDetection(for: type)
+            log.log("ActivationCoordinator: Enabled \(type.displayName)")
         }
     }
     
-    /// Disable an activation type
     private func disableActivationType(_ type: ActivationType) {
         guard enabledTypes.contains(type) else { return }
         
         enabledTypes.remove(type)
         
-        // If the type was engaged, disengage it since its gates are no longer satisfied
         if activationStates[type]?.isEngaged == true {
             activationStates[type] = ActivationState(type: type, isEngaged: false, metadata: [:])
             if log.isDebugEnabled {
@@ -506,31 +415,26 @@ class ActivationCoordinator {
             }
         }
         
-        if let weakProvider = providers[type], let provider = weakProvider.value as? ActivationProvider {
-            if provider.isDetectionActive(for: type) {
-                provider.disableDetection(for: type)
-                log.log("ActivationCoordinator: Disabled \(type.displayName)")
-            }
+        if let provider = getProvider(for: type), provider.isDetectionActive(for: type) {
+            provider.disableDetection(for: type)
+            log.log("ActivationCoordinator: Disabled \(type.displayName)")
         }
     }
     
     // MARK: - Query Methods
     
-    /// Get all activation types that should currently be active
     func getActiveActivationTypes() -> Set<ActivationType> {
         lock.lock()
         defer { lock.unlock() }
         return enabledTypes
     }
     
-    /// Get all dependencies for a given activation type
     func getDependencies(for type: ActivationType) -> Set<ActivationType> {
         lock.lock()
         defer { lock.unlock() }
         return Set(dependencies.filter { $0.dependent == type }.map { $0.gate })
     }
     
-    /// Get all types that depend on a given type
     func getDependents(for type: ActivationType) -> Set<ActivationType> {
         lock.lock()
         defer { lock.unlock() }
@@ -539,17 +443,17 @@ class ActivationCoordinator {
     
     // MARK: - Debug
     
-    /// Get a debug description of the current state
     func debugDescription() -> String {
         lock.lock()
         defer { lock.unlock() }
         
         var desc = "ActivationCoordinator State:\n"
         desc += "Activation States:\n"
-        for (type, state) in activationStates.sorted(by: { $0.key.efficiencyScore > $1.key.efficiencyScore }) {
+        for (type, state) in activationStates.sorted(by: { queryEfficiencyScore(for: $0.key) > queryEfficiencyScore(for: $1.key) }) {
             let engaged = state.isEngaged ? "✓" : "○"
             let active = enabledTypes.contains(type) ? "ACTIVE" : "inactive"
-            desc += "  \(engaged) \(type.displayName) (efficiency: \(type.efficiencyScore)) - \(active)\n"
+            let score = queryEfficiencyScore(for: type)
+            desc += "  \(engaged) \(type.displayName) (efficiency: \(score)) - \(active)\n"
         }
         
         desc += "\nDependencies:\n"
@@ -563,7 +467,6 @@ class ActivationCoordinator {
 
 // MARK: - Weak Reference Wrapper
 
-/// Weak reference wrapper for storing providers
 private class Weak<T: AnyObject> {
     weak var value: T?
     init(_ value: T) { self.value = value }
@@ -572,18 +475,14 @@ private class Weak<T: AnyObject> {
 // MARK: - Convenience Extensions
 
 extension ActivationCoordinator {
-    
-    /// Quick check if screen zone detection should be active
     var shouldTrackMouse: Bool {
         return enabledTypes.contains(.screenZone)
     }
     
-    /// Quick check if any modifier is currently held
     var hasActiveModifiers: Bool {
         return isEngaged(.modifierKey)
     }
     
-    /// Quick check if any drag is in progress
     var isDragging: Bool {
         return isEngaged(.mouseDrag)
     }

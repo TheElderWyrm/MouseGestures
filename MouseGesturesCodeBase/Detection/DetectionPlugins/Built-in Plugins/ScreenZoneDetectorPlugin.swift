@@ -219,6 +219,42 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         }
     }
     
+    // MARK: - Plugin-Declared Behavioral Properties
+    
+    func efficiencyScore(for type: ActivationType) -> Int {
+        switch type {
+        case .screenZone: return 20  // Requires active mouse tracking
+        case .mouseDrag: return 85   // Event monitoring, some state
+        default: return 50
+        }
+    }
+    
+    func isAlwaysActive(for type: ActivationType) -> Bool {
+        switch type {
+        case .screenZone: return false // Gated by higher-efficiency types
+        case .mouseDrag: return true   // Event-based, efficient
+        default: return false
+        }
+    }
+    
+    func isInfrastructure(for type: ActivationType) -> Bool {
+        return false
+    }
+    
+    /// Determines whether a gesture uses screen zone or drag detection.
+    /// Uses the same logic as GestureLookup.shouldIncludeGesture, unifying
+    /// the activation map with the gesture detection map.
+    func gestureUsesActivation(_ gesture: Gesture, for type: ActivationType) -> Bool {
+        switch type {
+        case .screenZone:
+            return gesture.activation.hasGesture
+        case .mouseDrag:
+            return gesture.activation.hasGesture && gesture.dragModifier != .none
+        default:
+            return false
+        }
+    }
+    
     func enableDetection(for type: ActivationType) {
         switch type {
         case .screenZone:

@@ -50,17 +50,58 @@ class ModifierKeyDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     
     func enableDetection(for type: ActivationType) {
         // Modifier detection is always active - nothing to enable
-        // This plugin is always listening for modifier events
     }
     
     func disableDetection(for type: ActivationType) {
         // Modifier detection is always active - nothing to disable
-        // This plugin is always listening for modifier events
     }
     
     func isDetectionActive(for type: ActivationType) -> Bool {
-        // Modifier detection is always active when plugin is running
         return state == .running
+    }
+    
+    // MARK: - Plugin-Declared Behavioral Properties
+    
+    func efficiencyScore(for type: ActivationType) -> Int {
+        guard type == .modifierKey else { return 50 }
+        return 100 // Pure event monitoring
+    }
+    
+    func isAlwaysActive(for type: ActivationType) -> Bool {
+        guard type == .modifierKey else { return false }
+        return true // Event-based, very efficient
+    }
+    
+    func isInfrastructure(for type: ActivationType) -> Bool {
+        return false
+    }
+    
+    /// Determines whether a gesture uses modifier key activation.
+    /// A gesture uses modifiers when it has gesture-type activation with non-empty modifiers.
+    /// This matches the same logic used in gesture detection/lookup.
+    func gestureUsesActivation(_ gesture: Gesture, for type: ActivationType) -> Bool {
+        guard type == .modifierKey else { return false }
+        return gesture.activation.hasGesture && !gesture.modifiers.isEmpty
+    }
+    
+    /// Precision gate validation: checks if the currently held modifiers match
+    /// at least one gesture that uses the dependent type (e.g., screen zones).
+    /// This prevents enabling expensive detectors when the wrong modifiers are held.
+    func validateGate(for dependentType: ActivationType, gestures: [Gesture]) -> Bool {
+        // If any dependent gesture has no modifier requirements, any modifier state suffices
+        if gestures.contains(where: { $0.modifiers.isEmpty }) {
+            return true
+        }
+        
+        // Check if current modifiers match any of the dependent gestures
+        let currentMods = currentModifiers
+        for gesture in gestures {
+            if currentMods.contains(gesture.modifiers) {
+                return true
+            }
+        }
+        
+        return false
     }
     
     // MARK: - Plugin Lifecycle
@@ -98,21 +139,17 @@ class ModifierKeyDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         if !systemModifiers.isEmpty {
             context?.logger.log("Initializing with modifiers already pressed: \(modifierString(systemModifiers))", file: #file, function: #function, line: #line)
             
-            // Set current state
             currentModifiers = systemModifiers
             lastModifiers = systemModifiers
             hasModifiers = true
             
-            // Notify coordinator that modifiers are engaged
             notifyModifierEngaged()
         }
     }
     
     override func stop() {
-        // Notify coordinator that this plugin is stopping
         ActivationCoordinator.shared.pluginStopping(self)
         
-        // Remove event monitors
         if let monitor = globalModifierMonitor {
             NSEvent.removeMonitor(monitor)
             globalModifierMonitor = nil
@@ -123,7 +160,6 @@ class ModifierKeyDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
             localModifierMonitor = nil
         }
         
-        // Reset state
         currentModifiers = []
         lastModifiers = []
         hasModifiers = false
@@ -141,36 +177,27 @@ class ModifierKeyDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     private func handleModifierChange(_ event: NSEvent) {
         let newModifiers = normalizeModifiers(event.modifierFlags)
         
-        // Check if modifiers actually changed
         guard newModifiers != currentModifiers else { return }
         
-        // Store previous state
         let previousModifiers = currentModifiers
         let previousHadModifiers = hasModifiers
         
-        // Update current state
         currentModifiers = newModifiers
         hasModifiers = !newModifiers.isEmpty
         
-        // Update statistics
         modifierPressCount += 1
         lastEventTime = Date()
         
-        // Detect state transitions
         if !previousHadModifiers && hasModifiers {
-            // First modifier pressed
             modifierPressed()
         } else if previousHadModifiers && !hasModifiers {
-            // All modifiers released
             allModifiersReleased()
         } else if previousHadModifiers && hasModifiers {
-            // Modifier combination changed
             modifierCombinationChanged(from: previousModifiers, to: newModifiers)
         }
         
         lastModifiers = newModifiers
         
-        // Post notification for other plugins to react to modifier changes
         NotificationCenter.default.post(
             name: NSNotification.Name("ModifierStateChanged"),
             object: self,
@@ -182,16 +209,11 @@ class ModifierKeyDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     
     private func modifierPressed() {
         context?.logger.log("First modifier pressed: \(modifierString(currentModifiers))", file: #file, function: #function, line: #line)
-        
-        // Notify coordinator - this will trigger gated detectors
         notifyModifierEngaged()
     }
     
     private func allModifiersReleased() {
         context?.logger.log("All modifiers released", file: #file, function: #function, line: #line)
-        
-        
-        // Notify coordinator - this will deactivate gated detectors
         ActivationCoordinator.shared.activationDisengaged(.modifierKey)
     }
     
@@ -200,7 +222,6 @@ class ModifierKeyDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
             context?.logger.log("Modifiers changed from \(modifierString(oldModifiers)) to \(modifierString(newModifiers))", file: #file, function: #function, line: #line)
         }
         
-        // Update coordinator with new modifier metadata
         ActivationCoordinator.shared.activationEngaged(.modifierKey, metadata: [
             "modifiers": newModifiers.rawValue,
             "previous": oldModifiers.rawValue
@@ -215,7 +236,6 @@ class ModifierKeyDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     
     // MARK: - Helper Methods
     
-    /// Normalize modifier flags to only include the ones we care about
     func normalizeModifiers(_ flags: NSEvent.ModifierFlags) -> NSEvent.ModifierFlags {
         var normalized: NSEvent.ModifierFlags = []
         if flags.contains(.command) { normalized.insert(.command) }
@@ -225,7 +245,6 @@ class ModifierKeyDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         return normalized
     }
     
-    /// Get current system modifiers in real-time
     public static func currentSystemModifiers() -> NSEvent.ModifierFlags {
         let flags = NSEvent.modifierFlags
         var normalized: NSEvent.ModifierFlags = []
@@ -236,7 +255,6 @@ class ModifierKeyDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         return normalized
     }
     
-    /// Convert modifiers to human-readable string
     private func modifierString(_ modifiers: NSEvent.ModifierFlags) -> String {
         var parts: [String] = []
         if modifiers.contains(.command) { parts.append("⌘") }
@@ -246,17 +264,15 @@ class ModifierKeyDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         return parts.joined(separator: "")
     }
     
-    /// Mark that an action was executed for cooldown tracking
-    /// Check if we're in cooldown period
     // MARK: - Statistics
     
     override func getStatistics() -> DetectionPluginStatistics {
         return DetectionPluginStatistics(
             eventsDetected: modifierPressCount,
-            gesturesTriggered: 0, // This plugin doesn't directly trigger gestures
+            gesturesTriggered: 0,
             errorsEncountered: 0,
             timeSinceLastEvent: lastEventTime.map { Date().timeIntervalSince($0) },
-            cpuUsage: 0.1, // Minimal CPU usage
+            cpuUsage: 0.1,
             memoryUsage: 0,
             customStats: [
                 "currentModifiers": modifierString(currentModifiers),

@@ -103,6 +103,29 @@ class KeyboardShortcutDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         return state == .running
     }
     
+    // MARK: - Plugin-Declared Behavioral Properties
+    
+    func efficiencyScore(for type: ActivationType) -> Int {
+        guard type == .keyboardShortcut else { return 50 }
+        return 95 // Event monitoring + lookup
+    }
+    
+    func isAlwaysActive(for type: ActivationType) -> Bool {
+        guard type == .keyboardShortcut else { return false }
+        return true // Event-based, efficient
+    }
+    
+    func isInfrastructure(for type: ActivationType) -> Bool {
+        return false
+    }
+    
+    /// A gesture uses keyboard shortcut activation when it has a keyboard trigger
+    /// and its activation type includes keyboard.
+    func gestureUsesActivation(_ gesture: Gesture, for type: ActivationType) -> Bool {
+        guard type == .keyboardShortcut else { return false }
+        return gesture.activation.hasKeyboard && gesture.keyboardTrigger != nil
+    }
+    
     // MARK: - Plugin Lifecycle
     
     override func initialize(context: DetectionContext) throws {

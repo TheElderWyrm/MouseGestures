@@ -117,6 +117,29 @@ class AppConfigurationDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         return state == .running
     }
     
+    // MARK: - Plugin-Declared Behavioral Properties
+    
+    func efficiencyScore(for type: ActivationType) -> Int {
+        guard type == .appChange else { return 50 }
+        return 70 // Event-based but has computation
+    }
+    
+    func isAlwaysActive(for type: ActivationType) -> Bool {
+        guard type == .appChange else { return false }
+        return true
+    }
+    
+    func isInfrastructure(for type: ActivationType) -> Bool {
+        guard type == .appChange else { return false }
+        return true // Provides system-level app tracking, always runs
+    }
+    
+    /// App change detection is infrastructure — it doesn't correspond to
+    /// individual gesture activation, so no gesture "uses" it directly.
+    func gestureUsesActivation(_ gesture: Gesture, for type: ActivationType) -> Bool {
+        return false
+    }
+    
     // MARK: - Public Interface
     
     /// Check if the current app has gestures disabled

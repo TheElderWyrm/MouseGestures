@@ -5,6 +5,9 @@ General:
 - Drag Detection/click detection seems to not be working
 - More isolated activation methods (Modifiers should be separate from zones, etc.)
 - Improve settings organization.
+- Efficiency system optimization
+	- Should be entirely plugin independent (Example should not deal with specific modifiers)
+	- Should unify its activation. Map with the gesture activation map used for actually activating gestures. This will allow for exact behavior combination and reduce duplication. 
 
 Actions (fix later):
 - Not all actions work.

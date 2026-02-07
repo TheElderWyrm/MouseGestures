@@ -121,6 +121,29 @@ class MouseButtonDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         return isMouseButtonDetectionActive
     }
     
+    // MARK: - Plugin-Declared Behavioral Properties
+    
+    func efficiencyScore(for type: ActivationType) -> Int {
+        guard type == .mouseButton else { return 50 }
+        return 90 // Event monitoring + lookup
+    }
+    
+    func isAlwaysActive(for type: ActivationType) -> Bool {
+        guard type == .mouseButton else { return false }
+        return true // Event-based, efficient
+    }
+    
+    func isInfrastructure(for type: ActivationType) -> Bool {
+        return false
+    }
+    
+    /// A gesture uses mouse button activation when it has a mouse button trigger
+    /// and its activation type includes mouse button.
+    func gestureUsesActivation(_ gesture: Gesture, for type: ActivationType) -> Bool {
+        guard type == .mouseButton else { return false }
+        return gesture.activation.hasMouseButton && gesture.mouseButtonTrigger != nil
+    }
+    
     // MARK: - Plugin Lifecycle
     
     override func initialize(context: DetectionContext) throws {
