@@ -11,7 +11,6 @@ enum ActivationType: String, CaseIterable, Hashable {
     case modifierKey = "modifier_key"
     case keyboardShortcut = "keyboard_shortcut"
     case mouseButton = "mouse_button"
-    case mouseDrag = "mouse_drag"
     case screenZone = "screen_zone"
     case appChange = "app_change"
     
@@ -21,7 +20,6 @@ enum ActivationType: String, CaseIterable, Hashable {
         case .modifierKey: return "Modifier Keys"
         case .keyboardShortcut: return "Keyboard Shortcuts"
         case .mouseButton: return "Mouse Buttons"
-        case .mouseDrag: return "Mouse Drag"
         case .screenZone: return "Screen Zones"
         case .appChange: return "App Change"
         }
@@ -481,9 +479,5 @@ extension ActivationCoordinator {
     
     var hasActiveModifiers: Bool {
         return isEngaged(.modifierKey)
-    }
-    
-    var isDragging: Bool {
-        return isEngaged(.mouseDrag)
     }
 }

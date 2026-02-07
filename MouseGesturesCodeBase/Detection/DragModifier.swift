@@ -15,5 +15,27 @@ enum DragModifier: String, Codable, CaseIterable {
         case .middleDrag: return "Middle Drag"
         }
     }
+    
+    // MARK: - MouseButton Conversion
+    
+    /// The mouse button that must be held for this drag modifier.
+    /// Returns nil for `.none`.
+    var correspondingMouseButton: MouseButtonTrigger.MouseButton? {
+        switch self {
+        case .none: return nil
+        case .leftDrag: return .left
+        case .rightDrag: return .right
+        case .middleDrag: return .middle
+        }
+    }
+    
+    /// Create a DragModifier from a held mouse button.
+    static func from(mouseButton: MouseButtonTrigger.MouseButton) -> DragModifier {
+        switch mouseButton {
+        case .left: return .leftDrag
+        case .right: return .rightDrag
+        case .middle: return .middleDrag
+        case .button4, .button5: return .none
+        }
+    }
 }
-

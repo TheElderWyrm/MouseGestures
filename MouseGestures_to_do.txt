@@ -4,9 +4,8 @@
 General:
 - Drag Detection/click detection seems to not be working
 	- Should maybe not be its own system. Instead it just exists as a combination of two activation methods: Mouse button and zone.
-- More isolated activation methods (Modifiers should be separate from zones, etc.) [DONE]
-- Improve settings organization. [DONE]
 - missing highlight zone color setting.
+- Why do some detection methods get to be always active?
 
 Actions (fix later):
 - Not all actions work.
@@ -19,6 +18,7 @@ Actions (fix later):
 	-Command + Control + F
 	-Using Accessibility to click the full screen button doesn't work when buttons aren't shown (common when in full screen) 
 - Window Actions targeting multiple windows does not work
+- May just start from scratch and rewrite actions.
 
 Improve UI
 - App selection UI (Maybe just select apps from finder)
