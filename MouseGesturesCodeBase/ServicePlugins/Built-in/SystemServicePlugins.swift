@@ -41,7 +41,7 @@ class AccessibilityPermissionServicePlugin: BaseServicePlugin {
 
 // MARK: - Launch at Login Service Plugin
 
-class LaunchAtLoginServicePlugin: BaseServicePlugin, SettingsItemContributor {
+class LaunchAtLoginServicePlugin: BaseServicePlugin, SettingsProvider {
     override var identifier: String { "com.mousegestures.service.launchatlogin" }
     override var name: String { "Launch at Login Service" }
     override var description: String { "Manages automatic app launch at system login" }
@@ -63,20 +63,16 @@ class LaunchAtLoginServicePlugin: BaseServicePlugin, SettingsItemContributor {
         return service
     }
     
-    // MARK: - Settings Contribution
+    // MARK: - Settings
     
-    var settingsContributions: [SettingsContribution] {
-        [SettingsContribution(
-            targetCategoryId: "general",
+    var settingsEntries: [SettingsEntry] {
+        [SettingsEntry(
+            category: SettingsCategories.general,
             order: 10,
             searchableItems: [
-                SearchableSettingItem(
-                    title: "Launch at Login",
-                    description: "Automatically start MouseGestures when you log in",
-                    keywords: ["launch", "login", "startup", "boot", "autostart", "automatic"]
-                )
+                SearchableSettingItem(title: "Launch at Login", description: "Automatically start MouseGestures when you log in", keywords: ["launch", "login", "startup", "boot", "autostart", "automatic"])
             ],
-            viewBuilder: { AnyView(LaunchAtLoginSettingView()) }
+            viewBuilder: { _ in AnyView(LaunchAtLoginSettingView()) }
         )]
     }
 }
@@ -97,7 +93,7 @@ private struct LaunchAtLoginSettingView: View {
 
 // MARK: - Haptic Feedback Service Plugin
 
-class HapticFeedbackServicePlugin: BaseServicePlugin, SettingsItemContributor {
+class HapticFeedbackServicePlugin: BaseServicePlugin, SettingsProvider {
     override var identifier: String { "com.mousegestures.service.haptic" }
     override var name: String { "Haptic Feedback Service" }
     override var description: String { "Provides haptic feedback for gesture interactions" }
@@ -126,20 +122,16 @@ class HapticFeedbackServicePlugin: BaseServicePlugin, SettingsItemContributor {
         return .success
     }
     
-    // MARK: - Settings Contribution
+    // MARK: - Settings
     
-    var settingsContributions: [SettingsContribution] {
-        [SettingsContribution(
-            targetCategoryId: "general",
+    var settingsEntries: [SettingsEntry] {
+        [SettingsEntry(
+            category: SettingsCategories.general,
             order: 20,
             searchableItems: [
-                SearchableSettingItem(
-                    title: "Haptic Feedback",
-                    description: "Provide haptic feedback when gestures are recognized",
-                    keywords: ["haptic", "feedback", "vibration", "force touch", "trackpad", "tactile"]
-                )
+                SearchableSettingItem(title: "Haptic Feedback", description: "Provide haptic feedback when gestures are recognized", keywords: ["haptic", "feedback", "vibration", "force touch", "trackpad", "tactile"])
             ],
-            viewBuilder: { AnyView(HapticFeedbackSettingView()) }
+            viewBuilder: { _ in AnyView(HapticFeedbackSettingView()) }
         )]
     }
 }
@@ -160,7 +152,7 @@ private struct HapticFeedbackSettingView: View {
 
 // MARK: - Menu Bar Visibility Service Plugin
 
-class MenuBarVisibilityServicePlugin: BaseServicePlugin, SettingsItemContributor {
+class MenuBarVisibilityServicePlugin: BaseServicePlugin, SettingsProvider {
     override var identifier: String { "com.mousegestures.service.menubar" }
     override var name: String { "Menu Bar Visibility Service" }
     override var description: String { "Controls the visibility of the menu bar icon" }
@@ -182,20 +174,16 @@ class MenuBarVisibilityServicePlugin: BaseServicePlugin, SettingsItemContributor
         return service
     }
     
-    // MARK: - Settings Contribution
+    // MARK: - Settings
     
-    var settingsContributions: [SettingsContribution] {
-        [SettingsContribution(
-            targetCategoryId: "general",
+    var settingsEntries: [SettingsEntry] {
+        [SettingsEntry(
+            category: SettingsCategories.general,
             order: 30,
             searchableItems: [
-                SearchableSettingItem(
-                    title: "Show Menu Bar Icon",
-                    description: "Display MouseGestures icon in the menu bar for quick access",
-                    keywords: ["menu", "bar", "icon", "tray", "status", "menubar"]
-                )
+                SearchableSettingItem(title: "Show Menu Bar Icon", description: "Display MouseGestures icon in the menu bar for quick access", keywords: ["menu", "bar", "icon", "tray", "status", "menubar"])
             ],
-            viewBuilder: { AnyView(MenuBarSettingView()) }
+            viewBuilder: { _ in AnyView(MenuBarSettingView()) }
         )]
     }
 }
@@ -282,75 +270,25 @@ class ZoneVisualizationServicePlugin: BaseServicePlugin {
     
     override func getConfigurationOptions() -> [ServiceConfigOption] {
         return [
-            ServiceConfigOption(
-                key: "showHighlights",
-                label: "Show Zone Highlights",
-                type: .boolean,
-                defaultValue: true,
-                description: "Display visual highlights when hovering over zones"
-            ),
-            ServiceConfigOption(
-                key: "showLabels",
-                label: "Show Zone Labels",
-                type: .boolean,
-                defaultValue: false,
-                description: "Display text labels on zone highlights"
-            ),
-            ServiceConfigOption(
-                key: "edgeThreshold",
-                label: "Edge Threshold",
-                type: .double(min: 10, max: 100),
-                defaultValue: 40.0,
-                description: "Pixel distance from edge to activate zones"
-            ),
-            ServiceConfigOption(
-                key: "cornerSize",
-                label: "Corner Size",
-                type: .double(min: 50, max: 200),
-                defaultValue: 100.0,
-                description: "Size of corner zones in pixels"
-            ),
-            ServiceConfigOption(
-                key: "animationDuration",
-                label: "Animation Duration",
-                type: .double(min: 0.1, max: 1.0),
-                defaultValue: 0.2,
-                description: "Duration of zone highlight animations in seconds"
-            ),
-            ServiceConfigOption(
-                key: "fadeOutDelay",
-                label: "Fade Out Delay",
-                type: .double(min: 0.5, max: 5.0),
-                defaultValue: 1.0,
-                description: "Delay before zone highlights fade out"
-            )
+            ServiceConfigOption(key: "showHighlights", label: "Show Zone Highlights", type: .boolean, defaultValue: true, description: "Display visual highlights when hovering over zones"),
+            ServiceConfigOption(key: "showLabels", label: "Show Zone Labels", type: .boolean, defaultValue: false, description: "Display text labels on zone highlights"),
+            ServiceConfigOption(key: "edgeThreshold", label: "Edge Threshold", type: .double(min: 10, max: 100), defaultValue: 40.0, description: "Pixel distance from edge to activate zones"),
+            ServiceConfigOption(key: "cornerSize", label: "Corner Size", type: .double(min: 50, max: 200), defaultValue: 100.0, description: "Size of corner zones in pixels"),
+            ServiceConfigOption(key: "animationDuration", label: "Animation Duration", type: .double(min: 0.1, max: 1.0), defaultValue: 0.2, description: "Duration of zone highlight animations in seconds"),
+            ServiceConfigOption(key: "fadeOutDelay", label: "Fade Out Delay", type: .double(min: 0.5, max: 5.0), defaultValue: 1.0, description: "Delay before zone highlights fade out")
         ]
     }
     
     override func applyConfiguration(_ config: [String: Any]) {
         guard let service = service else { return }
         
-        if let showHighlights = config["showHighlights"] as? Bool {
-            service.setShowZoneHighlights(showHighlights)
-        }
-        if let showLabels = config["showLabels"] as? Bool {
-            service.setShowZoneLabels(showLabels)
-        }
-        if let edgeThreshold = config["edgeThreshold"] as? CGFloat {
-            service.setEdgeThreshold(edgeThreshold)
-        }
-        if let cornerSize = config["cornerSize"] as? CGFloat {
-            service.setCornerSize(cornerSize)
-        }
-        if let duration = config["animationDuration"] as? Double {
-            animationDuration = duration
-        }
-        if let delay = config["fadeOutDelay"] as? Double {
-            fadeOutDelay = delay
-        }
-        if let colors = config["customColors"] as? [String: String] {
-            customColors = colors
-        }
+        if let showHighlights = config["showHighlights"] as? Bool { service.setShowZoneHighlights(showHighlights) }
+        if let showLabels = config["showLabels"] as? Bool { service.setShowZoneLabels(showLabels) }
+        if let edgeThreshold = config["edgeThreshold"] as? CGFloat { service.setEdgeThreshold(edgeThreshold) }
+        if let cornerSize = config["cornerSize"] as? CGFloat { service.setCornerSize(cornerSize) }
+        if let duration = config["animationDuration"] as? Double { animationDuration = duration }
+        if let delay = config["fadeOutDelay"] as? Double { fadeOutDelay = delay }
+        if let colors = config["customColors"] as? [String: String] { customColors = colors }
         
         saveConfiguration(config)
     }

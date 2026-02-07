@@ -13,6 +13,10 @@ Actions (fix later):
 - bundle actions vs execute bundle actions?
 - Open application should bring up finder to select any application
 - Open File parameter should have a button to select from finder
+- Full screen unreliable.
+	-Fn + F works on some apps
+	-Command + Control + F
+	-Using Accessibility to click the full screen button doesn't work when buttons aren't shown (common when in full screen) 
 - Window Actions targeting multiple windows does not work
 
 Improve UI

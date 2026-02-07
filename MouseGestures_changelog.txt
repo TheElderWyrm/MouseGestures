@@ -2,48 +2,48 @@
 
 ### Settings Overhaul — Dynamic Registry, Search, and Plugin-Driven Settings
 
-**Redesigned settings architecture to be fully plugin-driven**
-- Created `SettingsCategoryProvider` protocol: any plugin/service can register a full settings
-  category (sidebar entry + content view + searchable items) with the new `SettingsCategoryRegistry`.
-- Created `SettingsItemContributor` protocol: services can contribute individual setting items
-  (toggle, picker, etc.) to an existing category without owning the whole section.
-  Example: `HapticFeedbackServicePlugin` contributes a toggle to the "General" category.
-- Created `SettingsCategoryRegistry` (singleton): central registry that collects all categories
-  and contributions. The Settings tab reads entirely from this registry — no hardcoded sections.
+**Simplified settings architecture: single SettingsProvider protocol**
+- Created `SettingsProvider` protocol with one property: `settingsEntries: [SettingsEntry]`.
+  Each entry specifies what category it belongs to via a `SettingsCategoryDescriptor`.
+  Categories are created automatically from whatever entries exist — no separate category
+  classes, no dual-protocol system.
+- `SettingsCategoryDescriptor` is a lightweight value type (id, title, icon, order).
+  Well-known descriptors live in `SettingsCategories` enum (general, detection, etc.).
+  Plugins can create new categories simply by using a new descriptor.
+- `SettingsCategoryRegistry` collects all entries, auto-groups by category ID into
+  `ResolvedCategory` structs, and provides search. Settings tab reads entirely from this.
 
 **Added settings search**
 - Search field in the settings sidebar filters categories and shows a results dropdown.
-- Each `SettingsCategoryProvider` declares `settingsSearchableItems` with title, description, and
-  keywords. Typing a query filters the sidebar to matching categories and shows individual matching
-  items that navigate to their category on click.
+- Each `SettingsEntry` declares `searchableItems` with title, description, and keywords.
+  Typing a query highlights matching categories and shows individual matching items
+  that navigate to their category on click.
 
 **Reorganized settings tabs/sections**
-- Merged "Menu Bar" into "General" — it was too small for its own section. The menu bar toggle is
-  now contributed dynamically by `MenuBarVisibilityServicePlugin`.
-- Renamed "Updates" to "About" and combined version info with update checking.
-- Settings sidebar order: General → Detection → Data Management → About, plus any plugin-provided
-  categories inserted by sort order.
+- Merged "Menu Bar" into "General" — too small for its own section.
+- Renamed "Updates" to "About", combined version info with update checking.
+- Sidebar order: General → Detection → Data Management → About, plus plugin categories.
 
 **Made service plugin settings dynamic, not hardcoded**
-- `LaunchAtLoginServicePlugin`, `HapticFeedbackServicePlugin`, and `MenuBarVisibilityServicePlugin`
-  now conform to `SettingsItemContributor` and provide their own settings views.
-- The General settings view renders its core toggle (Enable Gestures) plus all dynamic contributions
-  from the registry, so adding/removing a service automatically adds/removes its settings.
-- Service plugins can also conform to `SettingsCategoryProvider` to register entirely new sidebar
-  categories (e.g. a hypothetical cloud sync plugin could add a "Cloud" settings section).
-- Built-in category registration and service plugin discovery happen in `SettingsUIPlugin` init
-  and are refreshed on tab activation and when service plugins change.
+- `LaunchAtLoginServicePlugin`, `HapticFeedbackServicePlugin`, and
+  `MenuBarVisibilityServicePlugin` conform to `SettingsProvider` and supply entries
+  targeting `SettingsCategories.general`. Each provides its own SwiftUI view.
+- Adding/removing a service plugin automatically adds/removes its settings.
+- Plugins can also create entirely new categories by targeting a new descriptor.
+- `BuiltInSettingsProvider` supplies core entries (Enable Gestures, Developer Mode,
+  Detection, Data Management, About).
 
 **New files:**
-- `UI/Settings/SettingsCategoryProvider.swift` — protocols and registry
-- `UI/Settings/BuiltInSettingsCategories.swift` — General, Detection, Data Management, About
-  categories plus shared helpers and registration functions
+- `UI/Settings/SettingsCategoryProvider.swift` — `SettingsProvider` protocol,
+  `SettingsEntry`, `SettingsCategoryDescriptor`, `SettingsCategoryRegistry`
+- `UI/Settings/BuiltInSettingsCategories.swift` — `BuiltInSettingsProvider`,
+  well-known descriptors, settings views, shared helpers
 
 **Refactored files:**
-- `UI/Tabs/SettingsView.swift` — now reads from registry, has search, no hardcoded sections
-- `UIPlugins/Built-in/SettingsUIPlugin.swift` — triggers registration on init and activation
-- `ServicePlugins/Built-in/SystemServicePlugins.swift` — LaunchAtLogin, HapticFeedback, and
-  MenuBarVisibility plugins now conform to `SettingsItemContributor`
+- `UI/Tabs/SettingsView.swift` — reads from registry, has search, renders entries
+- `UIPlugins/Built-in/SettingsUIPlugin.swift` — triggers `registerAllSettings()`
+- `ServicePlugins/Built-in/SystemServicePlugins.swift` — three plugins now conform
+  to `SettingsProvider`
 
 ### Developer Tab Overhaul
 

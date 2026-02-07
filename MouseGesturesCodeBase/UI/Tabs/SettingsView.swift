@@ -9,17 +9,12 @@ struct SettingsView: View {
     @State private var showAdvanced: Bool = false
     @State private var searchText: String = ""
     
-    /// Category IDs that match the current search query
-    private var matchingCategoryIds: Set<String> {
-        registry.matchingCategoryIds(for: searchText)
-    }
-    
-    /// Filtered and sorted providers based on search
-    private var filteredProviders: [any SettingsCategoryProvider] {
-        let sorted = registry.sortedProviders
-        if searchText.isEmpty { return sorted }
-        let matching = matchingCategoryIds
-        return sorted.filter { matching.contains($0.settingsCategoryId) }
+    /// Filtered categories based on search
+    private var filteredCategories: [ResolvedCategory] {
+        let cats = registry.categories
+        if searchText.isEmpty { return cats }
+        let matching = registry.matchingCategoryIds(for: searchText)
+        return cats.filter { matching.contains($0.id) }
     }
     
     /// Search results for the dropdown
@@ -37,13 +32,11 @@ struct SettingsView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
-            // Ensure built-in categories are registered
-            if registry.providers.isEmpty {
-                registerBuiltInSettingsCategories()
+            if registry.entries.isEmpty {
+                registerAllSettings()
             }
-            // Default to first category
-            if let first = registry.sortedProviders.first {
-                selectedCategoryId = first.settingsCategoryId
+            if let first = registry.categories.first {
+                selectedCategoryId = first.id
             }
         }
     }
@@ -52,7 +45,6 @@ struct SettingsView: View {
     
     private var sidebarView: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Header
             Text("Settings")
                 .font(.title2)
                 .fontWeight(.semibold)
@@ -99,11 +91,11 @@ struct SettingsView: View {
             // Category list
             ScrollView {
                 VStack(alignment: .leading, spacing: 2) {
-                    ForEach(filteredProviders, id: \.settingsCategoryId) { provider in
-                        sidebarItem(for: provider)
+                    ForEach(filteredCategories, id: \.id) { cat in
+                        sidebarItem(for: cat)
                     }
                     
-                    if filteredProviders.isEmpty && !searchText.isEmpty {
+                    if filteredCategories.isEmpty && !searchText.isEmpty {
                         Text("No matching settings")
                             .font(.caption)
                             .foregroundColor(.secondary)
@@ -140,7 +132,7 @@ struct SettingsView: View {
         .background(Color(NSColor.controlBackgroundColor))
     }
     
-    // MARK: - Search Results List
+    // MARK: - Search Results
     
     private var searchResultsList: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -192,18 +184,16 @@ struct SettingsView: View {
     
     // MARK: - Sidebar Item
     
-    private func sidebarItem(for provider: any SettingsCategoryProvider) -> some View {
-        let isSelected = provider.settingsCategoryId == selectedCategoryId
+    private func sidebarItem(for cat: ResolvedCategory) -> some View {
+        let isSelected = cat.id == selectedCategoryId
         
-        return Button(action: {
-            selectedCategoryId = provider.settingsCategoryId
-        }) {
+        return Button(action: { selectedCategoryId = cat.id }) {
             HStack(spacing: 8) {
-                Image(systemName: provider.settingsCategoryIcon)
+                Image(systemName: cat.icon)
                     .frame(width: 20)
                     .foregroundColor(isSelected ? .white : .secondary)
                 
-                Text(provider.settingsCategoryTitle)
+                Text(cat.title)
                     .fontWeight(isSelected ? .medium : .regular)
                     .foregroundColor(isSelected ? .white : .primary)
                 
@@ -225,10 +215,10 @@ struct SettingsView: View {
     private var contentView: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                if let provider = registry.sortedProviders.first(where: { $0.settingsCategoryId == selectedCategoryId }) {
-                    provider.createSettingsView(showAdvanced: $showAdvanced)
-                } else if let first = filteredProviders.first {
-                    first.createSettingsView(showAdvanced: $showAdvanced)
+                if let cat = registry.category(id: selectedCategoryId) {
+                    categoryContentView(for: cat)
+                } else if let first = filteredCategories.first {
+                    categoryContentView(for: first)
                 } else {
                     emptyStateView
                 }
@@ -236,6 +226,30 @@ struct SettingsView: View {
             .padding(20)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
+    }
+    
+    /// Renders all entries for a resolved category
+    @ViewBuilder
+    private func categoryContentView(for cat: ResolvedCategory) -> some View {
+        // Category header
+        Text(cat.title)
+            .font(.title2)
+            .fontWeight(.semibold)
+        
+        // Entries in a card
+        VStack(alignment: .leading, spacing: 15) {
+            let visibleEntries = cat.entries.filter { !$0.isAdvanced || showAdvanced }
+            
+            ForEach(Array(visibleEntries.enumerated()), id: \.offset) { idx, entry in
+                entry.viewBuilder($showAdvanced)
+                
+                if idx < visibleEntries.count - 1 {
+                    Divider()
+                }
+            }
+        }
+        .padding()
+        .background(RoundedRectangle(cornerRadius: 8).fill(Color(NSColor.controlBackgroundColor)))
     }
     
     // MARK: - Empty State

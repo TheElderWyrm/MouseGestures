@@ -1,51 +1,59 @@
 import SwiftUI
 
-// MARK: - Settings Category Provider Protocol
+// MARK: - Settings Provider Protocol
 
-/// Protocol for anything that provides a complete settings category/section in the Settings tab.
-/// Plugins, services, and built-in components can conform to register their settings dynamically.
-protocol SettingsCategoryProvider {
-    /// Unique identifier for this settings category
-    var settingsCategoryId: String { get }
-    /// Display title shown in the sidebar
-    var settingsCategoryTitle: String { get }
-    /// SF Symbol name for the sidebar icon
-    var settingsCategoryIcon: String { get }
-    /// Sort order — lower values appear higher in the sidebar
-    var settingsCategoryOrder: Int { get }
-    /// Searchable items within this category (used by settings search)
-    var settingsSearchableItems: [SearchableSettingItem] { get }
-    
-    /// Create the SwiftUI view for this settings category
-    @MainActor
-    func createSettingsView(showAdvanced: Binding<Bool>) -> AnyView
+/// Single protocol for anything that provides settings entries.
+/// Each entry specifies what category it belongs to — categories are created automatically.
+protocol SettingsProvider {
+    /// The settings entries this provider contributes.
+    var settingsEntries: [SettingsEntry] { get }
 }
 
-// MARK: - Settings Item Contributor Protocol
+// MARK: - Settings Category Descriptor
 
-/// Protocol for services/plugins that contribute individual setting items to an existing category.
-/// For example, HapticFeedbackService contributes a toggle to the "general" category
-/// without needing to own the entire category.
-protocol SettingsItemContributor {
-    /// The settings contributions this service/plugin provides
-    var settingsContributions: [SettingsContribution] { get }
+/// Lightweight description of a settings category. Multiple entries can target the same
+/// category ID; the registry uses the lowest-order descriptor for the sidebar metadata.
+struct SettingsCategoryDescriptor {
+    let id: String
+    let title: String
+    let icon: String
+    /// Sidebar sort order — lower values appear higher
+    let order: Int
 }
 
-/// A single settings contribution: a view + metadata placed into a target category.
-struct SettingsContribution {
-    /// The category ID to contribute to (e.g. "general")
-    let targetCategoryId: String
+// MARK: - Settings Entry
+
+/// A single item (or group of items) contributed to a settings category.
+struct SettingsEntry {
+    /// Which category this entry belongs to — the category is created if it doesn't exist yet
+    let category: SettingsCategoryDescriptor
     /// Sort order within the category (lower = higher position)
     let order: Int
-    /// Searchable items for this contribution
+    /// Whether this entry requires the Advanced toggle
+    let isAdvanced: Bool
+    /// Searchable metadata for the settings search
     let searchableItems: [SearchableSettingItem]
-    /// Builds the settings view for this contribution
-    let viewBuilder: @MainActor () -> AnyView
+    /// Builds the SwiftUI view for this entry
+    let viewBuilder: @MainActor (_ showAdvanced: Binding<Bool>) -> AnyView
+    
+    init(
+        category: SettingsCategoryDescriptor,
+        order: Int = 50,
+        isAdvanced: Bool = false,
+        searchableItems: [SearchableSettingItem] = [],
+        viewBuilder: @escaping @MainActor (_ showAdvanced: Binding<Bool>) -> AnyView
+    ) {
+        self.category = category
+        self.order = order
+        self.isAdvanced = isAdvanced
+        self.searchableItems = searchableItems
+        self.viewBuilder = viewBuilder
+    }
 }
 
 // MARK: - Searchable Setting Item
 
-/// Represents a single searchable setting for the settings search functionality.
+/// Represents a single searchable setting for the settings search.
 struct SearchableSettingItem {
     let title: String
     let description: String
@@ -59,98 +67,117 @@ struct SearchableSettingItem {
     }
 }
 
+// MARK: - Resolved Category
+
+/// A category assembled from all entries that share the same category ID.
+struct ResolvedCategory {
+    let id: String
+    let title: String
+    let icon: String
+    let order: Int
+    let entries: [SettingsEntry]
+    
+    /// All searchable items across all entries in this category
+    var allSearchableItems: [SearchableSettingItem] {
+        entries.flatMap(\.searchableItems)
+    }
+}
+
 // MARK: - Settings Category Registry
 
-/// Central registry that collects all settings categories and individual contributions.
-/// The Settings tab reads from this registry to dynamically build its sidebar and content.
+/// Central registry that collects settings entries, auto-groups them by category,
+/// and provides search. The Settings tab reads entirely from this registry.
 class SettingsCategoryRegistry: ObservableObject {
     static let shared = SettingsCategoryRegistry()
     
-    @Published private(set) var providers: [any SettingsCategoryProvider] = []
-    @Published private(set) var contributions: [SettingsContribution] = []
+    @Published private(set) var entries: [SettingsEntry] = []
     
     private init() {}
     
-    /// All providers sorted by their declared order
-    var sortedProviders: [any SettingsCategoryProvider] {
-        providers.sorted { $0.settingsCategoryOrder < $1.settingsCategoryOrder }
+    // MARK: - Registration
+    
+    /// Register all entries from a settings provider.
+    func register(_ provider: any SettingsProvider) {
+        entries.append(contentsOf: provider.settingsEntries)
     }
     
-    // MARK: - Category Registration
-    
-    /// Register a settings category provider. Replaces any existing provider with the same ID.
-    func register(_ provider: any SettingsCategoryProvider) {
-        providers.removeAll { $0.settingsCategoryId == provider.settingsCategoryId }
-        providers.append(provider)
+    /// Register a single entry directly.
+    func register(entry: SettingsEntry) {
+        entries.append(entry)
     }
     
-    /// Unregister a provider by category ID
-    func unregister(id: String) {
-        providers.removeAll { $0.settingsCategoryId == id }
+    /// Remove all entries (call before re-discovery to avoid duplicates).
+    func clear() {
+        entries.removeAll()
     }
     
-    // MARK: - Item Contribution Registration
+    // MARK: - Resolved Categories
     
-    /// Register all contributions from a contributor.
-    func registerContributions(from contributor: any SettingsItemContributor) {
-        for contribution in contributor.settingsContributions {
-            contributions.append(contribution)
+    /// All categories, assembled from entries, sorted by category order.
+    var categories: [ResolvedCategory] {
+        // Group entries by category ID
+        var grouped: [String: (descriptor: SettingsCategoryDescriptor, entries: [SettingsEntry])] = [:]
+        
+        for entry in entries {
+            let catId = entry.category.id
+            if var existing = grouped[catId] {
+                existing.entries.append(entry)
+                // Use descriptor with lowest order for sidebar metadata
+                if entry.category.order < existing.descriptor.order {
+                    existing.descriptor = entry.category
+                }
+                grouped[catId] = existing
+            } else {
+                grouped[catId] = (entry.category, [entry])
+            }
         }
-    }
-    
-    /// Clear all contributions (useful before re-discovery)
-    func clearContributions() {
-        contributions.removeAll()
-    }
-    
-    /// Get sorted contributions for a specific category
-    func contributions(for categoryId: String) -> [SettingsContribution] {
-        contributions
-            .filter { $0.targetCategoryId == categoryId }
+        
+        return grouped.values
+            .map { info in
+                ResolvedCategory(
+                    id: info.descriptor.id,
+                    title: info.descriptor.title,
+                    icon: info.descriptor.icon,
+                    order: info.descriptor.order,
+                    entries: info.entries.sorted { $0.order < $1.order }
+                )
+            }
             .sorted { $0.order < $1.order }
+    }
+    
+    /// Get a single resolved category by ID
+    func category(id: String) -> ResolvedCategory? {
+        categories.first { $0.id == id }
     }
     
     // MARK: - Search
     
-    /// All searchable items across all providers and contributions
+    /// All searchable items with their category context
     private var allSearchableItems: [(categoryId: String, categoryTitle: String, item: SearchableSettingItem)] {
         var items: [(String, String, SearchableSettingItem)] = []
-        
-        // From category providers
-        for p in providers {
-            for item in p.settingsSearchableItems {
-                items.append((p.settingsCategoryId, p.settingsCategoryTitle, item))
+        for cat in categories {
+            for item in cat.allSearchableItems {
+                items.append((cat.id, cat.title, item))
             }
         }
-        
-        // From contributions
-        for c in contributions {
-            if let p = providers.first(where: { $0.settingsCategoryId == c.targetCategoryId }) {
-                for item in c.searchableItems {
-                    items.append((c.targetCategoryId, p.settingsCategoryTitle, item))
-                }
-            }
-        }
-        
         return items
     }
     
-    /// Returns the set of category IDs that match the given search query.
+    /// Returns category IDs that match the query. Empty query returns all.
     func matchingCategoryIds(for query: String) -> Set<String> {
         guard !query.isEmpty else {
-            return Set(providers.map(\.settingsCategoryId))
+            return Set(categories.map(\.id))
         }
-        let q = query.lowercased()
         var result = Set<String>()
         for (catId, catTitle, item) in allSearchableItems {
-            if catTitle.lowercased().contains(q) || item.matches(query: q) {
+            if catTitle.lowercased().contains(query.lowercased()) || item.matches(query: query) {
                 result.insert(catId)
             }
         }
         return result
     }
     
-    /// Returns all matching items across all categories for a given query.
+    /// Returns individual matching items for the search dropdown.
     func searchResults(for query: String) -> [(categoryId: String, categoryTitle: String, item: SearchableSettingItem)] {
         guard !query.isEmpty else { return [] }
         return allSearchableItems.filter { $0.item.matches(query: query) }

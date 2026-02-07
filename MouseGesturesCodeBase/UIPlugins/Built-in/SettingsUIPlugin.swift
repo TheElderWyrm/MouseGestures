@@ -26,31 +26,27 @@ class SettingsUIPlugin: StandardUIPlugin {
     override func performInitialization() async throws {
         log("Initializing Settings UI Plugin")
         
-        // Register built-in settings categories and discover service plugin settings
         await MainActor.run {
-            registerBuiltInSettingsCategories()
+            registerAllSettings()
         }
     }
     
     @MainActor
     override func onActivate() {
         log("Settings tab activated", level: .debug)
-        
-        // Re-discover service plugin settings in case new plugins were loaded
-        registerServicePluginSettings()
+        // Re-discover in case plugins changed
+        registerAllSettings()
     }
     
     override func setupObservations() async {
-        // Listen for developer mode changes
         observeNotification(Notification.Name("developerModeChanged")) { [weak self] _ in
             self?.log("Developer mode changed", level: .debug)
         }
         
-        // Listen for service plugin changes to re-discover settings providers
         observeNotification(.servicePluginsDidChange) { [weak self] _ in
-            self?.log("Service plugins changed, re-discovering settings providers", level: .debug)
+            self?.log("Service plugins changed, re-discovering settings", level: .debug)
             DispatchQueue.main.async {
-                registerServicePluginSettings()
+                registerAllSettings()
             }
         }
     }
