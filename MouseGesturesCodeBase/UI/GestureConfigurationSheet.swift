@@ -1,7 +1,7 @@
 import SwiftUI
 import AppKit
 
-// MARK: - Add/Edit Gesture Sheet
+// MARK: - Add/Edit Gesture Sheet (Component-Based)
 
 struct GestureConfigurationSheet: View {
     let mode: Mode
@@ -11,25 +11,12 @@ struct GestureConfigurationSheet: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var uiServices = UIServices.shared
     
-    // Gesture configuration state
-    @State private var selectedZone: ScreenZone
-    @State private var selectedModifiers: NSEvent.ModifierFlags
-    @State private var selectedDragModifier: DragModifier
+    // Component-based state
+    @State private var components: GestureActivationComponents
     @State private var selectedActionId: String
-    @State private var keyboardShortcut: KeyboardTrigger?
-    @State private var mouseButton: MouseButtonTrigger?
-    @State private var isEnabled: Bool
-    @State private var repeatOnHold: Bool
-    @State private var repeatInitialDelay: TimeInterval
-    @State private var repeatInterval: TimeInterval
-    @State private var longPressEnabled: Bool
-    @State private var longPressThreshold: TimeInterval
     @State private var actionParameters: [String: AnyCodable]
-    
-    // New: Individual trigger type toggles
-    @State private var useGesture: Bool
-    @State private var useKeyboard: Bool
-    @State private var useMouseButton: Bool
+    @State private var timing: TimingSettings
+    @State private var isEnabled: Bool
     
     // UI State
     @State private var showingConflictAlert = false
@@ -47,58 +34,22 @@ struct GestureConfigurationSheet: View {
         self.onSave = onSave
         
         if let g = existingGesture {
-            _selectedZone = State(initialValue: g.zone)
-            _selectedModifiers = State(initialValue: g.modifiers)
-            _selectedDragModifier = State(initialValue: g.dragModifier)
+            var gesture = g
+            _components = State(initialValue: gesture.getComponents())
             _selectedActionId = State(initialValue: g.actionIdentifier)
-            _keyboardShortcut = State(initialValue: g.activation.keyboardTrigger)
-            _mouseButton = State(initialValue: g.activation.mouseButtonTrigger)
-            _isEnabled = State(initialValue: g.activation.isEnabled)
-            _repeatOnHold = State(initialValue: g.timing.repeatOnHold)
-            _repeatInitialDelay = State(initialValue: g.timing.repeatInitialDelay)
-            _repeatInterval = State(initialValue: g.timing.repeatInterval)
-            _longPressEnabled = State(initialValue: g.timing.longPressEnabled)
-            _longPressThreshold = State(initialValue: g.timing.longPressThreshold)
             _actionParameters = State(initialValue: g.parameters)
-            
-            // Initialize trigger toggles from activation type
-            let settings = g.activation
-            _useGesture = State(initialValue: settings.hasGesture)
-            _useKeyboard = State(initialValue: settings.hasKeyboard)
-            _useMouseButton = State(initialValue: settings.hasMouseButton)
+            _timing = State(initialValue: g.timing)
+            _isEnabled = State(initialValue: g.isEnabled)
         } else {
-            _selectedZone = State(initialValue: .topRight)
-            _selectedModifiers = State(initialValue: [.command, .control])
-            _selectedDragModifier = State(initialValue: .none)
+            // Default: screen zone with modifiers
+            var defaultComponents = GestureActivationComponents()
+            defaultComponents.modifierKey = ModifierKeyConfig(isEnabled: true, modifiers: [.command, .control])
+            defaultComponents.screenZone = ScreenZoneConfig(isEnabled: true, zone: .topRight)
+            _components = State(initialValue: defaultComponents)
             _selectedActionId = State(initialValue: "")
-            _keyboardShortcut = State(initialValue: nil)
-            _mouseButton = State(initialValue: nil)
-            _isEnabled = State(initialValue: true)
-            _repeatOnHold = State(initialValue: false)
-            _repeatInitialDelay = State(initialValue: 0.5)
-            _repeatInterval = State(initialValue: 0.5)
-            _longPressEnabled = State(initialValue: false)
-            _longPressThreshold = State(initialValue: 0.8)
             _actionParameters = State(initialValue: [:])
-            
-            // Default: gesture only
-            _useGesture = State(initialValue: true)
-            _useKeyboard = State(initialValue: false)
-            _useMouseButton = State(initialValue: false)
-        }
-    }
-    
-    // Computed activation type from individual toggles
-    private var activationType: ActivationSettings.ActivationType {
-        switch (useGesture, useKeyboard, useMouseButton) {
-        case (true, false, false): return .gesture
-        case (false, true, false): return .keyboard
-        case (false, false, true): return .mouseButton
-        case (true, true, false): return .both
-        case (true, false, true): return .gestureMouseButton
-        case (false, true, true): return .keyboardMouseButton
-        case (true, true, true): return .all
-        default: return .gesture // Fallback if nothing selected
+            _timing = State(initialValue: TimingSettings())
+            _isEnabled = State(initialValue: true)
         }
     }
     
@@ -109,11 +60,8 @@ struct GestureConfigurationSheet: View {
             
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    // Prominent preview at top
                     gesturePreviewCard
-                    
-                    activationMethodSection
-                    triggerConfigurationSection
+                    activationComponentsSection
                     actionSection
                     timingSettingsSection
                 }
@@ -175,7 +123,7 @@ struct GestureConfigurationSheet: View {
                     Spacer()
                 }
                 
-                Text(gesturePreviewText)
+                Text(components.previewString + actionPreview)
                     .font(.system(.body, design: .monospaced))
                     .padding(8)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -186,44 +134,158 @@ struct GestureConfigurationSheet: View {
         }
     }
     
-    // MARK: - Activation Method (Improved)
+    private var actionPreview: String {
+        if let action = PluginManager.shared.getAction(identifier: selectedActionId)?.action {
+            return " → \(action.name)"
+        } else if !selectedActionId.isEmpty {
+            return " → [Action: \(selectedActionId)]"
+        } else {
+            return " → [No action selected]"
+        }
+    }
     
-    private var activationMethodSection: some View {
-        GroupBox("Trigger Methods") {
+    // MARK: - Activation Components Section
+    
+    private var activationComponentsSection: some View {
+        GroupBox("Trigger Configuration") {
             VStack(alignment: .leading, spacing: 16) {
-                Text("Select which methods can activate this gesture:")
+                Text("Configure which conditions must be met to activate this gesture:")
                     .font(.caption)
                     .foregroundColor(.secondary)
                 
                 VStack(spacing: 12) {
-                    TriggerMethodToggle(
-                        isOn: $useGesture,
+                    // Modifier Keys Component
+                    ComponentToggleCard(
+                        icon: "command.square",
+                        title: "Modifier Keys",
+                        description: "Require specific modifier keys to be held",
+                        isEnabled: Binding(
+                            get: { components.modifierKey?.isEnabled ?? false },
+                            set: { enabled in
+                                if enabled {
+                                    if components.modifierKey == nil {
+                                        components.modifierKey = ModifierKeyConfig(isEnabled: true, modifiers: [.command])
+                                    } else {
+                                        components.modifierKey?.isEnabled = true
+                                    }
+                                } else {
+                                    components.modifierKey?.isEnabled = false
+                                }
+                            }
+                        )
+                    )
+                    
+                    if components.modifierKey?.isEnabled == true {
+                        modifierKeyConfigView
+                    }
+                    
+                    // Screen Zone Component
+                    ComponentToggleCard(
+                        icon: "square.grid.3x3",
+                        title: "Screen Zone",
+                        description: "Activate in a specific screen zone",
+                        isEnabled: Binding(
+                            get: { components.screenZone?.isEnabled ?? false },
+                            set: { enabled in
+                                if enabled {
+                                    if components.screenZone == nil {
+                                        components.screenZone = ScreenZoneConfig(isEnabled: true, zone: .topRight)
+                                    } else {
+                                        components.screenZone?.isEnabled = true
+                                    }
+                                } else {
+                                    components.screenZone?.isEnabled = false
+                                }
+                            }
+                        )
+                    )
+                    
+                    if components.screenZone?.isEnabled == true {
+                        screenZoneConfigView
+                    }
+                    
+                    // Drag Type Component
+                    ComponentToggleCard(
                         icon: "hand.draw",
-                        title: "Screen Zone Gesture",
-                        description: "Activate by clicking and dragging in a screen zone"
+                        title: "Drag Type",
+                        description: "Require dragging with a specific mouse button",
+                        isEnabled: Binding(
+                            get: { components.dragType?.isEnabled ?? false },
+                            set: { enabled in
+                                if enabled {
+                                    if components.dragType == nil {
+                                        components.dragType = DragTypeConfig(isEnabled: true, dragType: .leftDrag)
+                                    } else {
+                                        components.dragType?.isEnabled = true
+                                    }
+                                } else {
+                                    components.dragType?.isEnabled = false
+                                }
+                            }
+                        )
                     )
                     
-                    TriggerMethodToggle(
-                        isOn: $useKeyboard,
-                        icon: "keyboard",
-                        title: "Keyboard Shortcut",
-                        description: "Activate with a keyboard combination"
-                    )
+                    if components.dragType?.isEnabled == true {
+                        dragTypeConfigView
+                    }
                     
-                    TriggerMethodToggle(
-                        isOn: $useMouseButton,
+                    // Mouse Button Component
+                    ComponentToggleCard(
                         icon: "computermouse",
                         title: "Mouse Button",
-                        description: "Activate with a mouse button click"
+                        description: "Activate with a mouse button click",
+                        isEnabled: Binding(
+                            get: { components.mouseButton?.isEnabled ?? false },
+                            set: { enabled in
+                                if enabled {
+                                    if components.mouseButton == nil {
+                                        components.mouseButton = MouseButtonConfig(isEnabled: true, button: .left)
+                                    } else {
+                                        components.mouseButton?.isEnabled = true
+                                    }
+                                } else {
+                                    components.mouseButton?.isEnabled = false
+                                }
+                            }
+                        )
                     )
+                    
+                    if components.mouseButton?.isEnabled == true {
+                        mouseButtonConfigView
+                    }
+                    
+                    // Keyboard Shortcut Component
+                    ComponentToggleCard(
+                        icon: "keyboard",
+                        title: "Keyboard Shortcut",
+                        description: "Activate with a keyboard combination",
+                        isEnabled: Binding(
+                            get: { components.keyboardShortcut?.isEnabled ?? false },
+                            set: { enabled in
+                                if enabled {
+                                    if components.keyboardShortcut == nil {
+                                        components.keyboardShortcut = KeyboardShortcutConfig(isEnabled: true, keyboardTrigger: nil)
+                                    } else {
+                                        components.keyboardShortcut?.isEnabled = true
+                                    }
+                                } else {
+                                    components.keyboardShortcut?.isEnabled = false
+                                }
+                            }
+                        )
+                    )
+                    
+                    if components.keyboardShortcut?.isEnabled == true {
+                        keyboardShortcutConfigView
+                    }
                 }
                 
                 // Validation hint
-                if !useGesture && !useKeyboard && !useMouseButton {
+                if !components.isValid {
                     HStack {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .foregroundColor(.orange)
-                        Text("At least one trigger method must be selected")
+                        Text("At least one trigger component must be enabled")
                             .font(.caption)
                             .foregroundColor(.orange)
                     }
@@ -234,119 +296,129 @@ struct GestureConfigurationSheet: View {
         }
     }
     
-    // MARK: - Trigger Configuration (dynamic)
+    // MARK: - Component Configuration Views
     
-    private var triggerConfigurationSection: some View {
-        GroupBox("Trigger Configuration") {
-            VStack(alignment: .leading, spacing: 16) {
-                if !useGesture && !useKeyboard && !useMouseButton {
-                    Text("Select at least one trigger method above to configure")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .padding()
-                } else {
-                    // Gesture trigger fields
-                    if useGesture {
-                        gestureTriggerFields
-                    }
-                    
-                    // Keyboard shortcut field
-                    if useKeyboard {
-                        if useGesture { Divider().padding(.vertical, 4) }
-                        keyboardTriggerField
-                    }
-                    
-                    // Mouse button field
-                    if useMouseButton {
-                        if useGesture || useKeyboard { Divider().padding(.vertical, 4) }
-                        mouseButtonField
-                    }
-                }
-            }
-            .padding(.vertical, 8)
-            .animation(.easeInOut(duration: 0.2), value: useGesture)
-            .animation(.easeInOut(duration: 0.2), value: useKeyboard)
-            .animation(.easeInOut(duration: 0.2), value: useMouseButton)
-        }
-    }
-    
-    private var gestureTriggerFields: some View {
-        VStack(alignment: .leading, spacing: 12) {
+    private var modifierKeyConfigView: some View {
+        VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Image(systemName: "hand.draw")
-                    .foregroundColor(.blue)
-                Text("Screen Zone Gesture")
-                    .font(.system(size: 13, weight: .semibold))
+                Text("Modifiers:")
+                    .frame(width: 100, alignment: .trailing)
+                HStack(spacing: 10) {
+                    ModifierToggle(label: "⌘", flag: .command, modifiers: Binding(
+                        get: { components.modifierKey?.modifiers ?? [] },
+                        set: { components.modifierKey?.modifiers = $0 }
+                    ))
+                    ModifierToggle(label: "⌃", flag: .control, modifiers: Binding(
+                        get: { components.modifierKey?.modifiers ?? [] },
+                        set: { components.modifierKey?.modifiers = $0 }
+                    ))
+                    ModifierToggle(label: "⌥", flag: .option, modifiers: Binding(
+                        get: { components.modifierKey?.modifiers ?? [] },
+                        set: { components.modifierKey?.modifiers = $0 }
+                    ))
+                    ModifierToggle(label: "⇧", flag: .shift, modifiers: Binding(
+                        get: { components.modifierKey?.modifiers ?? [] },
+                        set: { components.modifierKey?.modifiers = $0 }
+                    ))
+                }
+                Spacer()
             }
-            
-            VStack(alignment: .leading, spacing: 10) {
-                HStack {
-                    Text("Zone:")
-                        .frame(width: 100, alignment: .trailing)
-                    Picker("", selection: $selectedZone) {
-                        ForEach(ScreenZone.allCases, id: \.self) { zone in
-                            Text(zone.displayName).tag(zone)
-                        }
-                    }
-                    .pickerStyle(.menu)
-                    .frame(width: 180)
-                    Spacer()
-                }
-                
-                HStack {
-                    Text("Modifiers:")
-                        .frame(width: 100, alignment: .trailing)
-                    HStack(spacing: 10) {
-                        ModifierToggle(label: "⌘", flag: .command, modifiers: $selectedModifiers)
-                        ModifierToggle(label: "⌃", flag: .control, modifiers: $selectedModifiers)
-                        ModifierToggle(label: "⌥", flag: .option, modifiers: $selectedModifiers)
-                        ModifierToggle(label: "⇧", flag: .shift, modifiers: $selectedModifiers)
-                    }
-                    Spacer()
-                }
-                
-                HStack {
-                    Text("Drag Type:")
-                        .frame(width: 100, alignment: .trailing)
-                    Picker("", selection: $selectedDragModifier) {
-                        ForEach(DragModifier.allCases, id: \.self) { drag in
-                            Text(drag.displayName).tag(drag)
-                        }
-                    }
-                    .pickerStyle(.menu)
-                    .frame(width: 180)
-                    Spacer()
-                }
-            }
-            .padding(.leading, 24)
         }
+        .padding(.leading, 20)
         .padding(12)
         .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
         .cornerRadius(8)
     }
     
-    private var keyboardTriggerField: some View {
-        VStack(alignment: .leading, spacing: 12) {
+    private var screenZoneConfigView: some View {
+        VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Image(systemName: "keyboard")
-                    .foregroundColor(.green)
-                Text("Keyboard Shortcut")
-                    .font(.system(size: 13, weight: .semibold))
+                Text("Zone:")
+                    .frame(width: 100, alignment: .trailing)
+                Picker("", selection: Binding(
+                    get: { components.screenZone?.zone ?? .topRight },
+                    set: { components.screenZone?.zone = $0 }
+                )) {
+                    ForEach(ScreenZone.allCases, id: \.self) { zone in
+                        Text(zone.displayName).tag(zone)
+                    }
+                }
+                .pickerStyle(.menu)
+                .frame(width: 180)
+                Spacer()
             }
-            
+        }
+        .padding(.leading, 20)
+        .padding(12)
+        .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
+        .cornerRadius(8)
+    }
+    
+    private var dragTypeConfigView: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("Drag Type:")
+                    .frame(width: 100, alignment: .trailing)
+                Picker("", selection: Binding(
+                    get: { components.dragType?.dragType ?? .leftDrag },
+                    set: { components.dragType?.dragType = $0 }
+                )) {
+                    ForEach(DragModifier.allCases.filter { $0 != .none }, id: \.self) { drag in
+                        Text(drag.displayName).tag(drag)
+                    }
+                }
+                .pickerStyle(.menu)
+                .frame(width: 180)
+                Spacer()
+            }
+        }
+        .padding(.leading, 20)
+        .padding(12)
+        .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
+        .cornerRadius(8)
+    }
+    
+    private var mouseButtonConfigView: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("Button:")
+                    .frame(width: 100, alignment: .trailing)
+                Picker("", selection: Binding(
+                    get: { components.mouseButton?.button ?? .left },
+                    set: { components.mouseButton?.button = $0 }
+                )) {
+                    ForEach(MouseButtonTrigger.MouseButton.allCases.filter { $0 != .none }, id: \.self) { button in
+                        Text(button.rawValue).tag(button)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 300)
+                Spacer()
+            }
+        }
+        .padding(.leading, 20)
+        .padding(12)
+        .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
+        .cornerRadius(8)
+    }
+    
+    private var keyboardShortcutConfigView: some View {
+        VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text("Shortcut:")
                     .frame(width: 100, alignment: .trailing)
-                KeyboardShortcutFieldView(shortcut: $keyboardShortcut)
-                    .frame(width: 220, height: 28)
+                KeyboardShortcutFieldView(shortcut: Binding(
+                    get: { components.keyboardShortcut?.keyboardTrigger },
+                    set: { components.keyboardShortcut?.keyboardTrigger = $0 }
+                ))
+                .frame(width: 220, height: 28)
                 Spacer()
             }
-            .padding(.leading, 24)
+            .padding(.leading, 20)
             
-            if useKeyboard && keyboardShortcut == nil {
+            if components.keyboardShortcut?.isEnabled == true && components.keyboardShortcut?.keyboardTrigger == nil {
                 HStack {
-                    Spacer().frame(width: 124)
+                    Spacer().frame(width: 120)
                     Image(systemName: "exclamationmark.circle.fill")
                         .foregroundColor(.orange)
                         .font(.caption)
@@ -362,54 +434,7 @@ struct GestureConfigurationSheet: View {
         .cornerRadius(8)
     }
     
-    private var mouseButtonField: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Image(systemName: "computermouse")
-                    .foregroundColor(.purple)
-                Text("Mouse Button")
-                    .font(.system(size: 13, weight: .semibold))
-            }
-            
-            HStack {
-                Text("Button:")
-                    .frame(width: 100, alignment: .trailing)
-                Picker("", selection: Binding<MouseButtonTrigger.MouseButton>(
-                    get: { mouseButton?.button ?? .left },
-                    set: { btn in
-                        if mouseButton != nil { mouseButton?.button = btn }
-                        else { mouseButton = MouseButtonTrigger(button: btn, modifiers: []) }
-                    }
-                )) {
-                    Text("Left").tag(MouseButtonTrigger.MouseButton.left)
-                    Text("Right").tag(MouseButtonTrigger.MouseButton.right)
-                    Text("Middle").tag(MouseButtonTrigger.MouseButton.middle)
-                }
-                .pickerStyle(.segmented)
-                .frame(width: 220)
-                Spacer()
-            }
-            .padding(.leading, 24)
-            
-            if useMouseButton && mouseButton == nil {
-                HStack {
-                    Spacer().frame(width: 124)
-                    Image(systemName: "exclamationmark.circle.fill")
-                        .foregroundColor(.orange)
-                        .font(.caption)
-                    Text("Mouse button configuration required")
-                        .font(.caption)
-                        .foregroundColor(.orange)
-                    Spacer()
-                }
-            }
-        }
-        .padding(12)
-        .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
-        .cornerRadius(8)
-    }
-    
-    // MARK: - Action (shared component)
+    // MARK: - Action Section
     
     private var actionSection: some View {
         ActionSelectionView(
@@ -423,15 +448,15 @@ struct GestureConfigurationSheet: View {
     private var timingSettingsSection: some View {
         GroupBox("Timing Options") {
             VStack(alignment: .leading, spacing: 12) {
-                Toggle("Repeat on Hold", isOn: $repeatOnHold)
-                if repeatOnHold {
+                Toggle("Repeat on Hold", isOn: $timing.repeatOnHold)
+                if timing.repeatOnHold {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
                             Text("Initial Delay:")
                                 .frame(width: 120, alignment: .leading)
-                            Slider(value: $repeatInitialDelay, in: 0.1...2.0, step: 0.1)
+                            Slider(value: $timing.repeatInitialDelay, in: 0.1...2.0, step: 0.1)
                                 .frame(width: 200)
-                            Text(String(format: "%.1f s", repeatInitialDelay))
+                            Text(String(format: "%.1f s", timing.repeatInitialDelay))
                                 .frame(width: 50, alignment: .trailing)
                                 .foregroundColor(.secondary)
                         }
@@ -440,9 +465,9 @@ struct GestureConfigurationSheet: View {
                         HStack {
                             Text("Repeat Interval:")
                                 .frame(width: 120, alignment: .leading)
-                            Slider(value: $repeatInterval, in: 0.1...2.0, step: 0.1)
+                            Slider(value: $timing.repeatInterval, in: 0.1...2.0, step: 0.1)
                                 .frame(width: 200)
-                            Text(String(format: "%.1f s", repeatInterval))
+                            Text(String(format: "%.1f s", timing.repeatInterval))
                                 .frame(width: 50, alignment: .trailing)
                                 .foregroundColor(.secondary)
                         }
@@ -452,14 +477,14 @@ struct GestureConfigurationSheet: View {
                 
                 Divider()
                 
-                Toggle("Long Press Action", isOn: $longPressEnabled)
-                if longPressEnabled {
+                Toggle("Long Press Action", isOn: $timing.longPressEnabled)
+                if timing.longPressEnabled {
                     HStack {
                         Text("Threshold:")
                             .frame(width: 120, alignment: .leading)
-                        Slider(value: $longPressThreshold, in: 0.3...2.0, step: 0.1)
+                        Slider(value: $timing.longPressThreshold, in: 0.3...2.0, step: 0.1)
                             .frame(width: 200)
-                        Text(String(format: "%.1f s", longPressThreshold))
+                        Text(String(format: "%.1f s", timing.longPressThreshold))
                             .frame(width: 50, alignment: .trailing)
                             .foregroundColor(.secondary)
                     }
@@ -470,7 +495,45 @@ struct GestureConfigurationSheet: View {
         }
     }
     
-    // MARK: - Helpers
+    // MARK: - Helper Views
+    
+    struct ComponentToggleCard: View {
+        let icon: String
+        let title: String
+        let description: String
+        @Binding var isEnabled: Bool
+        
+        var body: some View {
+            HStack(spacing: 12) {
+                Toggle("", isOn: $isEnabled)
+                    .toggleStyle(.switch)
+                    .labelsHidden()
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 6) {
+                        Image(systemName: icon)
+                            .foregroundColor(isEnabled ? .blue : .secondary)
+                        Text(title)
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(isEnabled ? .primary : .secondary)
+                    }
+                    
+                    Text(description)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                
+                Spacer()
+            }
+            .padding(10)
+            .background(isEnabled ? Color.blue.opacity(0.08) : Color.clear)
+            .cornerRadius(8)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(isEnabled ? Color.blue.opacity(0.3) : Color.clear, lineWidth: 1)
+            )
+        }
+    }
     
     struct ModifierToggle: View {
         let label: String
@@ -490,128 +553,33 @@ struct GestureConfigurationSheet: View {
         }
     }
     
-    struct TriggerMethodToggle: View {
-        @Binding var isOn: Bool
-        let icon: String
-        let title: String
-        let description: String
-        
-        var body: some View {
-            HStack(spacing: 12) {
-                Toggle("", isOn: $isOn)
-                    .toggleStyle(.switch)
-                    .labelsHidden()
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 6) {
-                        Image(systemName: icon)
-                            .foregroundColor(isOn ? .blue : .secondary)
-                        Text(title)
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(isOn ? .primary : .secondary)
-                    }
-                    
-                    Text(description)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                
-                Spacer()
-            }
-            .padding(10)
-            .background(isOn ? Color.blue.opacity(0.08) : Color.clear)
-            .cornerRadius(8)
-            .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(isOn ? Color.blue.opacity(0.3) : Color.clear, lineWidth: 1)
-            )
-        }
-    }
-    
-    private var gesturePreviewText: String {
-        var parts: [String] = []
-        
-        if useGesture {
-            var gestureParts: [String] = [selectedZone.displayName]
-            var mods: [String] = []
-            if selectedModifiers.contains(.command) { mods.append("⌘") }
-            if selectedModifiers.contains(.control) { mods.append("⌃") }
-            if selectedModifiers.contains(.option) { mods.append("⌥") }
-            if selectedModifiers.contains(.shift) { mods.append("⇧") }
-            if !mods.isEmpty { gestureParts.append("+"); gestureParts.append(mods.joined()) }
-            if selectedDragModifier != .none { 
-                gestureParts.append("+")
-                gestureParts.append(selectedDragModifier.displayName) 
-            }
-            parts.append(gestureParts.joined(separator: " "))
-        }
-        
-        if useKeyboard {
-            if let kbd = keyboardShortcut {
-                parts.append(kbd.displayString)
-            } else {
-                parts.append("[Keyboard: Not Set]")
-            }
-        }
-        
-        if useMouseButton {
-            if let mb = mouseButton {
-                parts.append(mb.displayString)
-            } else {
-                parts.append("[Mouse: Not Set]")
-            }
-        }
-        
-        if parts.isEmpty {
-            parts.append("[No trigger methods selected]")
-        }
-        
-        let triggerText = parts.joined(separator: " | ")
-        
-        if let action = PluginManager.shared.getAction(identifier: selectedActionId)?.action {
-            return "\(triggerText) → \(action.name)"
-        } else if !selectedActionId.isEmpty {
-            return "\(triggerText) → [Action: \(selectedActionId)]"
-        } else {
-            return "\(triggerText) → [No action selected]"
-        }
-    }
+    // MARK: - Validation & Save
     
     private var isValid: Bool {
-        // Must have at least one trigger method
-        guard useGesture || useKeyboard || useMouseButton else { return false }
-        
-        // Must have an action
+        guard components.isValid else { return false }
         guard !selectedActionId.isEmpty else { return false }
         
-        // Validate required fields for each enabled trigger
-        if useKeyboard && keyboardShortcut == nil { return false }
-        if useMouseButton && mouseButton == nil { return false }
+        // Check required fields for enabled components
+        if components.keyboardShortcut?.isEnabled == true && components.keyboardShortcut?.keyboardTrigger == nil {
+            return false
+        }
         
         return true
     }
     
     private func saveGesture() {
+        // Create gesture from components
         let gesture = Gesture(
-            zone: selectedZone,
-            modifiers: selectedModifiers,
-            dragModifier: selectedDragModifier,
+            components: components,
             actionIdentifier: selectedActionId,
-            parameters: actionParameters,
-            keyboardTrigger: keyboardShortcut,
-            mouseButtonTrigger: mouseButton,
-            activationType: activationType,
-            isEnabled: isEnabled,
-            repeatOnHold: repeatOnHold,
-            repeatInitialDelay: repeatInitialDelay,
-            repeatInterval: repeatInterval,
-            longPressEnabled: longPressEnabled,
-            longPressThreshold: longPressThreshold
+            timing: timing,
+            parameters: actionParameters
         )
         
+        // Check for conflicts (only if adding or changing trigger)
         if mode == .add || existingGesture?.triggerKey != gesture.triggerKey {
             if uiServices.isGestureConflicting(gesture) {
-                conflictMessage = "A gesture with this zone, modifier, and drag combination already exists. Each trigger combination can only be assigned one action."
+                conflictMessage = "A gesture with this trigger combination already exists. Each trigger combination can only be assigned one action."
                 showingConflictAlert = true
                 return
             }

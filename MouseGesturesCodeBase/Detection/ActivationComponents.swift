@@ -90,6 +90,9 @@ struct GestureActivationComponents: Codable, Equatable {
     var mouseButton: MouseButtonConfig? = nil
     var keyboardShortcut: KeyboardShortcutConfig? = nil
     
+    /// Default initializer
+    init() {}
+    
     /// Get all enabled activation types
     var enabledTypes: Set<ActivationType> {
         var types = Set<ActivationType>()

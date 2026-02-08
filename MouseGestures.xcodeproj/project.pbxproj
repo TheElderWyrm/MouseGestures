@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		212E4EB8A4F446405206B88D /* ActivationComponentService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A7844B6B3BB98B841022947 /* ActivationComponentService.swift */; };
 		231D4D12905AE874B7331D1A /* ActivationMapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08B54313B0ED9B193F3749C6 /* ActivationMapper.swift */; };
 		776CFCB32F37AE1300664D2F /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = 776CFCB22F37AE1300664D2F /* AppIcon.icns */; };
 		77A1C48A2F368ED800D1FE6A /* PluginProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4162F368ED800D1FE6A /* PluginProtocol.swift */; };
@@ -209,6 +210,7 @@
 		77A1C4842F368ED800D1FE6A /* AnyCodable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnyCodable.swift; sourceTree = "<group>"; };
 		77A1C4852F368ED800D1FE6A /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
 		77A1C4872F368ED800D1FE6A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		7A7844B6B3BB98B841022947 /* ActivationComponentService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActivationComponentService.swift; path = MouseGesturesCodeBase/Services/ActivationComponentService.swift; sourceTree = SOURCE_ROOT; };
 		F50141A48E3DD816B8942DA8 /* BuiltInSettingsCategories.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BuiltInSettingsCategories.swift; path = MouseGesturesCodeBase/UI/Settings/BuiltInSettingsCategories.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
@@ -405,6 +407,7 @@
 				77A1C4602F368ED800D1FE6A /* UpdateCheckService.swift */,
 				77A1C4612F368ED800D1FE6A /* WindowTargeting.swift */,
 				77A1C4622F368ED800D1FE6A /* ZoneVisualizationService.swift */,
+				7A7844B6B3BB98B841022947 /* ActivationComponentService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -689,6 +692,7 @@
 				D37249979159DF938C105417 /* BuiltInSettingsCategories.swift in Sources */,
 				231D4D12905AE874B7331D1A /* ActivationMapper.swift in Sources */,
 				BA98418F85ECA410558094B0 /* ActivationComponents.swift in Sources */,
+				212E4EB8A4F446405206B88D /* ActivationComponentService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
