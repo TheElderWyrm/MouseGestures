@@ -287,10 +287,10 @@ class MouseButtonDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         
         guard let config = context?.configuration else { return }
         
+        // Use ActivationMapper to determine which gestures use mouse buttons
         let enabledGestures = config.gestures.filter { g in
             g.isEnabled && g.mouseButtonTrigger != nil &&
-            (g.activationType == .mouseButton || g.activationType == .gestureMouseButton ||
-             g.activationType == .keyboardMouseButton || g.activationType == .all)
+            ActivationMapper.shared.activationTypes(for: g).contains(.mouseButton)
         }
         
         for gesture in enabledGestures {
@@ -350,10 +350,10 @@ class MouseButtonDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     private func logActiveButtonTriggers() {
         guard let config = context?.configuration else { return }
         
+        // Use ActivationMapper to count mouse button gestures
         let clickCount = config.gestures.filter {
             $0.mouseButtonTrigger != nil && $0.isEnabled &&
-            ($0.activationType == .mouseButton || $0.activationType == .gestureMouseButton ||
-             $0.activationType == .keyboardMouseButton || $0.activationType == .all)
+            ActivationMapper.shared.activationTypes(for: $0).contains(.mouseButton)
         }.count
         
         let dragCount = config.gestures.filter {

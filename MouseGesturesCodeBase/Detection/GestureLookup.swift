@@ -84,11 +84,9 @@ class GestureLookup {
     
     /// Determines if a gesture should be included in the lookup table
     private func shouldIncludeGesture(_ gesture: Gesture) -> Bool {
-        // Include gestures that can be triggered by zone/drag/modifier combinations
-        return gesture.activationType == .gesture ||
-               gesture.activationType == .both ||
-               gesture.activationType == .gestureMouseButton ||
-               gesture.activationType == .all
+        // Use ActivationMapper to determine if gesture uses zones
+        // (single source of truth for gesture→activation mapping)
+        return ActivationMapper.shared.activationTypes(for: gesture).contains(.screenZone)
     }
     
     /// Creates a lookup key for the given parameters

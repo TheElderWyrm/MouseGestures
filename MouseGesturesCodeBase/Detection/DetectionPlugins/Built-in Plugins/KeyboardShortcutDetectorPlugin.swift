@@ -227,13 +227,11 @@ class KeyboardShortcutDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         }
         
         // Then check regular gesture keyboard shortcuts
+        // Use ActivationMapper to determine which gestures use keyboard shortcuts
         let enabledKeyboardGestures = config.gestures.filter {
             $0.isEnabled &&
             $0.keyboardTrigger != nil &&
-            ($0.activationType == .keyboard ||
-             $0.activationType == .both ||
-             $0.activationType == .keyboardMouseButton ||
-             $0.activationType == .all)
+            ActivationMapper.shared.activationTypes(for: $0).contains(.keyboardShortcut)
         }
         
         // Skip if no keyboard shortcuts are configured
@@ -298,9 +296,8 @@ class KeyboardShortcutDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         if context?.logger.isDebugEnabled ?? false {
             for gesture in config.gestures {
                 if let trigger = gesture.keyboardTrigger,
-                   (gesture.activationType == .keyboard || gesture.activationType == .both ||
-                    gesture.activationType == .keyboardMouseButton || gesture.activationType == .all),
-                   gesture.isEnabled {
+                   gesture.isEnabled,
+                   ActivationMapper.shared.activationTypes(for: gesture).contains(.keyboardShortcut) {
                     context?.logger.log("  - \(trigger.displayString) -> \(gesture.actionIdentifier)", file: #file, function: #function, line: #line)
                 }
             }
