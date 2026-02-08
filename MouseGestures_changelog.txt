@@ -1,5 +1,23 @@
 ## 2026-02-08
 
+### Feature: Zone Highlights Preview Button
+- **Added "Preview Zone Highlights" button in Detection Plugin Settings**:
+  * New button appears in the Detection category alongside zone size settings
+  * Clicking the button shows all screen zones with labels for 5 seconds
+  * Provides immediate visual feedback when adjusting zone dimensions
+  * Works independently of modifier keys — shows all zones immediately
+- **Implementation**:
+  * Added button setting to ScreenZoneDetectorPlugin's settingsDefinitions
+  * New `showPreview(duration:)` method in ZoneHighlightManager
+  * Preview displays all 8 zones (corners + edges) in semi-transparent overlay
+  * Auto-hides after specified duration (default 5 seconds)
+  * Zone names displayed as labels during preview
+- **User Experience**:
+  * Helps users visualize zone sizes before committing changes
+  * Makes it easy to test different Edge Threshold, Corner Size, and Corner Buffer values
+  * No need to hold modifier keys or set up gestures to see zones
+  * Clean, temporary preview that doesn't persist settings
+
 ### Refactor: Removed Gesture-Awareness from Detection Plugins
 - **Problem**: Detection plugins were violating single responsibility by understanding
   gesture structure through `gestureUsesActivation()` method. Plugins had to inspect
