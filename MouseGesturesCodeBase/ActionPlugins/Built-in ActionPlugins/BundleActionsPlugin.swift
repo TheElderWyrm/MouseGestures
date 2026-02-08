@@ -2,6 +2,61 @@ import Cocoa
 import Foundation
 import SwiftUI
 
+// MARK: - Plugin-Specific Types
+
+/// Structure to store bundled actions for sequential execution
+struct BundledAction: Codable, Equatable {
+    var id: UUID = UUID()
+    var actionIdentifier: String
+    var parameters: [String: AnyCodable]
+    var delayAfter: TimeInterval?
+    var conditionData: Data?
+
+    init(actionIdentifier: String, parameters: [String: AnyCodable] = [:], delayAfter: TimeInterval? = 0.2, conditionData: Data? = nil) {
+        self.actionIdentifier = actionIdentifier
+        self.parameters = parameters
+        self.delayAfter = delayAfter
+        self.conditionData = conditionData
+    }
+
+    // Computed property for easier condition access
+    var condition: BundleConditionGroup? {
+        get {
+            guard let data = conditionData else { return nil }
+            return try? JSONDecoder().decode(BundleConditionGroup.self, from: data)
+        }
+        set {
+            if let newValue = newValue {
+                conditionData = try? JSONEncoder().encode(newValue)
+            } else {
+                conditionData = nil
+            }
+        }
+    }
+
+    // Check if this action should execute based on its condition
+    func shouldExecute() -> Bool {
+        guard let condition = condition else { return true } // No condition = always execute
+        return condition.evaluate()
+    }
+
+    var displayName: String {
+        var name: String
+        if let (_, action) = PluginManager.shared.getAction(identifier: actionIdentifier) {
+            name = action.name
+        } else {
+            name = actionIdentifier
+        }
+
+        // Add condition indicator if present
+        if let condition = condition, !condition.conditions.isEmpty {
+            name = "[IF] " + name
+        }
+
+        return name
+    }
+}
+
 // MARK: - Bundle Actions Plugin with Integrated UI
 
 /// Built-in plugin providing bundle action execution with integrated UI components

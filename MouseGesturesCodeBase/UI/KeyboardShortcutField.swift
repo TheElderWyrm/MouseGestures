@@ -1,4 +1,22 @@
 import Cocoa
+import Carbon
+
+// MARK: - Keyboard Shortcut Capture Type
+
+/// Structure to store keyboard shortcut info (for UI capture)
+struct KeyboardShortcut: Codable, Equatable {
+    var keyCode: CGKeyCode
+    var modifiers: CGEventFlags
+    var displayString: String // For display in UI
+
+    init(keyCode: CGKeyCode, modifiers: CGEventFlags, displayString: String) {
+        self.keyCode = keyCode
+        self.modifiers = modifiers
+        self.displayString = displayString
+    }
+}
+
+// MARK: - Keyboard Shortcut Field
 
 // Custom text field for capturing keyboard shortcuts
 class KeyboardShortcutField: NSTextField {

@@ -1,6 +1,27 @@
 import Cocoa
 import Carbon
 
+// MARK: - Plugin-Specific Types
+
+/// Keyboard trigger configuration (owned by this plugin)
+struct KeyboardTrigger: Codable, Equatable {
+    var keyCode: CGKeyCode
+    var modifiers: NSEvent.ModifierFlags
+    var displayString: String // For display in UI
+
+    init(keyCode: CGKeyCode, modifiers: NSEvent.ModifierFlags, displayString: String) {
+        self.keyCode = keyCode
+        self.modifiers = modifiers
+        self.displayString = displayString
+    }
+    
+    /// Helper to create display string from key code and modifiers
+    static func createDisplayString(keyCode: CGKeyCode, modifiers: NSEvent.ModifierFlags) -> String {
+        let modStr = modifiers.symbolString
+        return "\(modStr)\(keyCode.displayString)"
+    }
+}
+
 // MARK: - Keyboard Shortcut Detector Plugin
 
 /// Plugin that detects keyboard shortcuts

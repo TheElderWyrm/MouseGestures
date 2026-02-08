@@ -1,6 +1,111 @@
 import Cocoa
 import Carbon
 
+// MARK: - Plugin-Specific Types
+
+/// Structure for window layouts
+struct WindowLayout: Codable, Equatable {
+    struct WindowInfo: Codable, Equatable {
+        var appBundleIdentifier: String
+        var appName: String
+        var windowTitle: String?
+        var position: CGPoint
+        var size: CGSize
+        var isMinimized: Bool
+        var spaceNumber: Int?
+    }
+
+    var name: String
+    var windows: [WindowInfo]
+    var dateCreated: Date
+
+    init(name: String, windows: [WindowInfo] = []) {
+        self.name = name
+        self.windows = windows
+        self.dateCreated = Date()
+    }
+}
+
+/// Structure for window size parameters
+struct WindowSizeParameters: Codable, Equatable {
+    var width: Int?
+    var height: Int?
+    var widthPercent: Int?  // Percentage of screen width
+    var heightPercent: Int? // Percentage of screen height
+    var maintainAspectRatio: Bool
+
+    init(width: Int? = nil, height: Int? = nil, widthPercent: Int? = nil, heightPercent: Int? = nil, maintainAspectRatio: Bool = false) {
+        self.width = width
+        self.height = height
+        self.widthPercent = widthPercent
+        self.heightPercent = heightPercent
+        self.maintainAspectRatio = maintainAspectRatio
+    }
+
+    var displayString: String {
+        var parts: [String] = []
+        if let w = width { parts.append("W: \(w)px") }
+        if let h = height { parts.append("H: \(h)px") }
+        if let wp = widthPercent { parts.append("W: \(wp)%") }
+        if let hp = heightPercent { parts.append("H: \(hp)%") }
+        if maintainAspectRatio { parts.append("(Keep Ratio)") }
+        return parts.joined(separator: ", ")
+    }
+}
+
+/// Structure for window position parameters
+struct WindowPositionParameters: Codable, Equatable {
+    enum PositionType: String, Codable, CaseIterable {
+        case absolute = "Absolute Position"
+        case relative = "Relative to Current"
+        case screenPercentage = "Screen Percentage"
+        case preset = "Preset Position"
+    }
+
+    enum PresetPosition: String, Codable, CaseIterable {
+        case topLeft = "Top Left"
+        case topCenter = "Top Center"
+        case topRight = "Top Right"
+        case middleLeft = "Middle Left"
+        case center = "Center"
+        case middleRight = "Middle Right"
+        case bottomLeft = "Bottom Left"
+        case bottomCenter = "Bottom Center"
+        case bottomRight = "Bottom Right"
+    }
+
+    var positionType: PositionType
+    var x: Int?
+    var y: Int?
+    var xPercent: Int? // Percentage of screen width
+    var yPercent: Int? // Percentage of screen height
+    var preset: PresetPosition?
+
+    init(positionType: PositionType = .absolute, x: Int? = nil, y: Int? = nil, xPercent: Int? = nil, yPercent: Int? = nil, preset: PresetPosition? = nil) {
+        self.positionType = positionType
+        self.x = x
+        self.y = y
+        self.xPercent = xPercent
+        self.yPercent = yPercent
+        self.preset = preset
+    }
+
+    var displayString: String {
+        switch positionType {
+        case .absolute:
+            return "X: \(x ?? 0), Y: \(y ?? 0)"
+        case .relative:
+            let xStr = x ?? 0 > 0 ? "+\(x ?? 0)" : "\(x ?? 0)"
+            let yStr = y ?? 0 > 0 ? "+\(y ?? 0)" : "\(y ?? 0)"
+            return "X: \(xStr), Y: \(yStr)"
+        case .screenPercentage:
+            return "X: \(xPercent ?? 0)%, Y: \(yPercent ?? 0)%"
+        case .preset:
+            return preset?.rawValue ?? "Unknown"
+        }
+    }
+}
+
 // MARK: - Internal UI Components for Window Management
 
 // Window Layout Editor - integrated into plugin

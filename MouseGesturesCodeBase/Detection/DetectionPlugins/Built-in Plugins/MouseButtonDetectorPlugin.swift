@@ -1,5 +1,35 @@
 import Cocoa
 
+// MARK: - Plugin-Specific Types
+
+/// Mouse button trigger configuration (owned by this plugin)
+struct MouseButtonTrigger: Codable, Equatable {
+    enum MouseButton: String, Codable, CaseIterable {
+        case none = "None"
+        case any = "Any Button"
+        case left = "Left Click"
+        case right = "Right Click"
+        case middle = "Middle Click"
+        case button4 = "Button 4"
+        case button5 = "Button 5"
+    }
+
+    var button: MouseButton
+    var modifiers: NSEvent.ModifierFlags
+    var displayString: String // For display in UI (e.g., "⌘+Left Click")
+
+    init(button: MouseButton = .none, modifiers: NSEvent.ModifierFlags = []) {
+        self.button = button
+        self.modifiers = modifiers
+        self.displayString = MouseButtonTrigger.createDisplayString(button: button, modifiers: modifiers)
+    }
+
+    static func createDisplayString(button: MouseButton, modifiers: NSEvent.ModifierFlags) -> String {
+        let modStr = modifiers.symbolString
+        return modStr.isEmpty ? button.rawValue : "\(modStr)+\(button.rawValue)"
+    }
+}
+
 // MARK: - Mouse Button Detector Plugin
 
 /// Plugin that detects mouse button clicks and tracks button hold state.

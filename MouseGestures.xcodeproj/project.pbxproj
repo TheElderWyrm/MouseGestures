@@ -91,7 +91,6 @@
 		77A1C4D82F368ED800D1FE6A /* UIPluginManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4802F368ED800D1FE6A /* UIPluginManager.swift */; };
 		77A1C4D92F368ED800D1FE6A /* SavedActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4272F368ED800D1FE6A /* SavedActions.swift */; };
 		77A1C4DA2F368ED800D1FE6A /* AccessibilityPermissionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C44C2F368ED800D1FE6A /* AccessibilityPermissionManager.swift */; };
-		77A1C4DB2F368ED800D1FE6A /* DataStructures.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C42A2F368ED800D1FE6A /* DataStructures.swift */; };
 		77A1C4DC2F368ED800D1FE6A /* KeyboardShortcutField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4702F368ED800D1FE6A /* KeyboardShortcutField.swift */; };
 		77A1C4DD2F368ED800D1FE6A /* ZoneVisualizationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4622F368ED800D1FE6A /* ZoneVisualizationService.swift */; };
 		77A1C4DE2F368ED800D1FE6A /* AppConfigurationDetectorPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C42D2F368ED800D1FE6A /* AppConfigurationDetectorPlugin.swift */; };
@@ -132,7 +131,6 @@
 		77A1C4262F368ED800D1FE6A /* DefaultProfiles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DefaultProfiles.swift; sourceTree = "<group>"; };
 		77A1C4272F368ED800D1FE6A /* SavedActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedActions.swift; sourceTree = "<group>"; };
 		77A1C4292F368ED800D1FE6A /* BundleConditions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BundleConditions.swift; sourceTree = "<group>"; };
-		77A1C42A2F368ED800D1FE6A /* DataStructures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataStructures.swift; sourceTree = "<group>"; };
 		77A1C42B2F368ED800D1FE6A /* Gesture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Gesture.swift; sourceTree = "<group>"; };
 		77A1C42D2F368ED800D1FE6A /* AppConfigurationDetectorPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfigurationDetectorPlugin.swift; sourceTree = "<group>"; };
 		77A1C42E2F368ED800D1FE6A /* KeyboardShortcutDetectorPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardShortcutDetectorPlugin.swift; sourceTree = "<group>"; };
@@ -214,16 +212,6 @@
 		F50141A48E3DD816B8942DA8 /* BuiltInSettingsCategories.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BuiltInSettingsCategories.swift; path = MouseGesturesCodeBase/UI/Settings/BuiltInSettingsCategories.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
-/* Begin PBXFrameworksBuildPhase section */
-		A1234567890123456789014C /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXFrameworksBuildPhase section */
-
 /* Begin PBXGroup section */
 		77A1C4142F368ED800D1FE6A /* Action Execution */ = {
 			isa = PBXGroup;
@@ -289,7 +277,6 @@
 			isa = PBXGroup;
 			children = (
 				77A1C4292F368ED800D1FE6A /* BundleConditions.swift */,
-				77A1C42A2F368ED800D1FE6A /* DataStructures.swift */,
 				77A1C42B2F368ED800D1FE6A /* Gesture.swift */,
 			);
 			path = Core;
@@ -533,7 +520,6 @@
 			buildConfigurationList = A1234567890123456789015B /* Build configuration list for PBXNativeTarget "MouseGestures" */;
 			buildPhases = (
 				A1234567890123456789015C /* Sources */,
-				A1234567890123456789014C /* Frameworks */,
 				A1234567890123456789015D /* Resources */,
 			);
 			buildRules = (
@@ -675,7 +661,6 @@
 				77A1C4D82F368ED800D1FE6A /* UIPluginManager.swift in Sources */,
 				77A1C4D92F368ED800D1FE6A /* SavedActions.swift in Sources */,
 				77A1C4DA2F368ED800D1FE6A /* AccessibilityPermissionManager.swift in Sources */,
-				77A1C4DB2F368ED800D1FE6A /* DataStructures.swift in Sources */,
 				77A1C4DC2F368ED800D1FE6A /* KeyboardShortcutField.swift in Sources */,
 				77A1C4DD2F368ED800D1FE6A /* ZoneVisualizationService.swift in Sources */,
 				77A1C4DE2F368ED800D1FE6A /* AppConfigurationDetectorPlugin.swift in Sources */,

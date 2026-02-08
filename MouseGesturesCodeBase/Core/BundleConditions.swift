@@ -1,6 +1,34 @@
 import Foundation
 import Cocoa
 
+// MARK: - Script Configuration for Conditions
+
+/// Structure to store script info for conditional execution
+struct ScriptInfo: Codable, Equatable {
+    enum ScriptType: String, Codable, CaseIterable {
+        case shellScript = "Shell Script (sh/bash/zsh)"
+        case appleScript = "AppleScript"
+        case pythonScript = "Python Script"
+        case jsScript = "JavaScript for Automation"
+    }
+
+    var scriptType: ScriptType
+    var scriptPath: String? // Path to external script file
+    var scriptContent: String? // Inline script content
+    var isFile: Bool // true if using external file, false if inline
+    var displayName: String // For display in UI
+    var pythonInterpreter: String? // Path to Python interpreter (for Python scripts)
+
+    init(scriptType: ScriptType, scriptPath: String? = nil, scriptContent: String? = nil, isFile: Bool, displayName: String, pythonInterpreter: String? = nil) {
+        self.scriptType = scriptType
+        self.scriptPath = scriptPath
+        self.scriptContent = scriptContent
+        self.isFile = isFile
+        self.displayName = displayName
+        self.pythonInterpreter = pythonInterpreter ?? "/usr/bin/python3" // Default to python3
+    }
+}
+
 // MARK: - Conditional Logic for Bundle Actions
 
 /// Represents a condition that can be evaluated
