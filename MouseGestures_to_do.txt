@@ -1,9 +1,7 @@
-- Work to reduce CPU/Memory Usage
 - Reduce duplicate code, unify architecture whenever possible
 
 General:
-- Show zone highlights preview button when editing zone sizes (Possibly do automatically) [DONE]
-
+- 
 
 Actions (fix later):
 - Not all actions work.
@@ -17,17 +15,17 @@ Actions (fix later):
 	-Using Accessibility to click the full screen button doesn't work when buttons aren't shown (common when in full screen) 
 - Window Actions targeting multiple windows does not work
 - May just start from scratch and rewrite actions.
+- Conditional gesture bundle logic?
 
 Improve UI
 - App selection UI (Maybe just select apps from finder)
 - Improved gesture editing screen. Current trigger selection UI needs improvement
 - Better gesture information (Base off current bundle actions selection.)
 - Action selection needs better indication of what is currently selected/add a select button to confirm selection (To prevent accidental overriding of previously selected action)
-- Improve appearance of Show Zone Highlights
-- Add searchbar to settings [DONE]
+- Improve appearance of Show Zone Highlights (currently labels down't stay within highlights).
 - Pre-render UI to increase performance
 - Unify UI Styles throughout the app
 - Better Zone Configuration
 	- More visual menu
 	- More configuration options
-- Installing plugins should be in developer mode (currently in Developer Settings > Plugin Management)
+- Installing plugins should be unified in developer mode
