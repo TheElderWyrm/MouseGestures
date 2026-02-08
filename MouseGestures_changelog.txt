@@ -31,6 +31,12 @@
   installing monitors) are still fine — that's implementation detail, not architectural
   responsibility violation. The key improvement is that plugins no longer need to
   understand *what makes a gesture use their activation type*.
+- **Follow-up Fix**: Discovered and fixed additional gesture structure inspection:
+  * GestureLookup was checking `gesture.activationType` — now uses ActivationMapper
+  * KeyboardShortcutDetectorPlugin was filtering by `gesture.activationType` — now uses ActivationMapper
+  * MouseButtonDetectorPlugin was filtering by `gesture.activationType` — now uses ActivationMapper
+  * ActivationMapper is now the **single source of truth** for all gesture→activation mapping
+  * ZERO direct `gesture.activationType` checks remain in detection layer
 
 ## 2026-02-07
 
