@@ -74,21 +74,13 @@ protocol ActivationProvider: AnyObject {
     /// Whether this type provides infrastructure (runs unconditionally, e.g. app detection)
     func isInfrastructure(for type: ActivationType) -> Bool
     
-    /// Whether a gesture uses this plugin's activation type.
-    /// This is the single source of truth — it should match the same logic the plugin
-    /// uses when actually detecting/triggering gestures (unifying the activation map).
-    func gestureUsesActivation(_ gesture: Gesture, for type: ActivationType) -> Bool
+    // REMOVED: gestureUsesActivation - moved to ActivationMapper
+    // Detection plugins no longer need to understand gesture structure
     
-    /// Validate whether the current gate state justifies enabling a dependent type.
-    /// Called when this provider's activation type is a gate for a dependent type.
-    /// `dependentType`: the type that wants to be enabled
-    /// `gestures`: enabled gestures that use the dependent type
-    /// Returns true if the current engaged state actually warrants enabling the dependent.
-    ///
-    /// Default implementation: returns true if engaged (simple gate check).
-    /// Plugins can override for precision gating (e.g., checking if held modifiers
-    /// match any gesture that actually needs the dependent type).
-    func validateGate(for dependentType: ActivationType, gestures: [Gesture]) -> Bool
+    /// Optional: Provide custom metadata for gate validation.
+    /// Plugins can return current state details (e.g., which modifiers are held)
+    /// that the ActivationMapper can use for precision gating.
+    func getGateValidationMetadata() -> [String: Any]
 }
 
 // MARK: - Default Implementations
@@ -98,10 +90,9 @@ extension ActivationProvider {
     func isAlwaysActive(for type: ActivationType) -> Bool { return efficiencyScore(for: type) >= 70 }
     func isInfrastructure(for type: ActivationType) -> Bool { return false }
     
-    func validateGate(for dependentType: ActivationType, gestures: [Gesture]) -> Bool {
-        // Default: gate is satisfied if this provider is engaged
-        // (The coordinator checks engagement before calling this)
-        return true
+    func getGateValidationMetadata() -> [String: Any] {
+        // Default: no additional metadata
+        return [:]
     }
 }
 
@@ -276,16 +267,9 @@ class ActivationCoordinator {
         return getProvider(for: type)?.isInfrastructure(for: type) ?? false
     }
     
-    /// Ask providers which activation types a gesture uses
+    /// Get activation types a gesture uses (via central mapper)
     private func queryActivationTypes(for gesture: Gesture) -> Set<ActivationType> {
-        var types = Set<ActivationType>()
-        for (type, weakRef) in providers {
-            guard let obj = weakRef.value, let provider = obj as? ActivationProvider else { continue }
-            if provider.gestureUsesActivation(gesture, for: type) {
-                types.insert(type)
-            }
-        }
-        return types
+        return ActivationMapper.shared.activationTypes(for: gesture)
     }
     
     // MARK: - Dependency Management
@@ -396,15 +380,48 @@ class ActivationCoordinator {
     }
     
     /// Check if a gate is satisfied for a dependent type.
-    /// Delegates precision validation to the gate's provider — no plugin-specific logic here.
+    /// Uses ActivationMapper for precision validation instead of asking plugins.
     private func isGateSatisfied(_ gate: ActivationType, for dependent: ActivationType) -> Bool {
         guard isEngaged(gate) else { return false }
         
-        // Ask the gate provider to validate whether its current state
-        // actually warrants enabling the dependent type
+        // Use mapper for precision validation based on gate type
         guard let provider = getProvider(for: gate) else { return true }
+        let metadata = provider.getGateValidationMetadata()
         let dependentGestures = gesturesPerType[dependent] ?? []
-        return provider.validateGate(for: dependent, gestures: dependentGestures)
+        
+        // Mapper handles the gesture inspection logic
+        return validateGateWithMapper(gate: gate, dependent: dependent, 
+                                     metadata: metadata, gestures: dependentGestures)
+    }
+    
+    /// Perform precision gate validation using ActivationMapper
+    private func validateGateWithMapper(gate: ActivationType, dependent: ActivationType,
+                                       metadata: [String: Any], gestures: [Gesture]) -> Bool {
+        switch gate {
+        case .modifierKey:
+            // Check if held modifiers match any gesture requiring the dependent type
+            if let modifierFlags = metadata["modifiers"] as? UInt,
+               dependent == .screenZone {
+                let mods = NSEvent.ModifierFlags(rawValue: modifierFlags)
+                return ActivationMapper.shared.heldModifiersMatchGestures(mods, 
+                    dependentType: dependent, gestures: gestures)
+            }
+            return true
+            
+        case .mouseButton:
+            // Check if held button matches any gesture requiring the dependent type
+            if let buttonRaw = metadata["heldButton"] as? String,
+               let button = MouseButtonTrigger.MouseButton(rawValue: buttonRaw),
+               dependent == .screenZone {
+                return ActivationMapper.shared.heldButtonMatchesGestures(button, 
+                    gestures: gestures)
+            }
+            return true
+            
+        default:
+            // Other gate types don't need precision validation
+            return true
+        }
     }
     
     /// Get all activation types used in enabled gestures (queried from providers)

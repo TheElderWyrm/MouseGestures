@@ -120,12 +120,8 @@ class KeyboardShortcutDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         return false
     }
     
-    /// A gesture uses keyboard shortcut activation when it has a keyboard trigger
-    /// and its activation type includes keyboard.
-    func gestureUsesActivation(_ gesture: Gesture, for type: ActivationType) -> Bool {
-        guard type == .keyboardShortcut else { return false }
-        return gesture.activation.hasKeyboard && gesture.keyboardTrigger != nil
-    }
+    // REMOVED: gestureUsesActivation - moved to ActivationMapper
+    // Plugin no longer needs to understand gesture structure
     
     // MARK: - Plugin Lifecycle
     

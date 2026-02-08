@@ -76,32 +76,13 @@ class ModifierKeyDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         return false
     }
     
-    /// Determines whether a gesture uses modifier key activation.
-    /// A gesture uses modifiers when it has gesture-type activation with non-empty modifiers.
-    /// This matches the same logic used in gesture detection/lookup.
-    func gestureUsesActivation(_ gesture: Gesture, for type: ActivationType) -> Bool {
-        guard type == .modifierKey else { return false }
-        return gesture.activation.hasGesture && !gesture.modifiers.isEmpty
-    }
+    // REMOVED: gestureUsesActivation - moved to ActivationMapper
+    // Plugin no longer needs to understand gesture structure
     
-    /// Precision gate validation: checks if the currently held modifiers match
-    /// at least one gesture that uses the dependent type (e.g., screen zones).
-    /// This prevents enabling expensive detectors when the wrong modifiers are held.
-    func validateGate(for dependentType: ActivationType, gestures: [Gesture]) -> Bool {
-        // If any dependent gesture has no modifier requirements, any modifier state suffices
-        if gestures.contains(where: { $0.modifiers.isEmpty }) {
-            return true
-        }
-        
-        // Check if current modifiers match any of the dependent gestures
-        let currentMods = currentModifiers
-        for gesture in gestures {
-            if currentMods.contains(gesture.modifiers) {
-                return true
-            }
-        }
-        
-        return false
+    /// Provide current modifier state for precision gate validation.
+    /// The ActivationMapper will use this to check gesture requirements.
+    func getGateValidationMetadata() -> [String: Any] {
+        return ["modifiers": currentModifiers.rawValue]
     }
     
     // MARK: - Plugin Lifecycle

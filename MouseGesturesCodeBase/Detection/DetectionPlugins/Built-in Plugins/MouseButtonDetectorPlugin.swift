@@ -140,37 +140,18 @@ class MouseButtonDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         return false
     }
     
-    /// A gesture uses mouse button activation when it has either:
-    /// - A mouseButtonTrigger (click-based gesture), OR
-    /// - A dragModifier != .none (requires a button to be held for zone detection)
-    func gestureUsesActivation(_ gesture: Gesture, for type: ActivationType) -> Bool {
-        guard type == .mouseButton else { return false }
-        if gesture.activation.hasMouseButton && gesture.mouseButtonTrigger != nil { return true }
-        if gesture.activation.hasGesture && gesture.dragModifier != .none { return true }
-        return false
-    }
+    // REMOVED: gestureUsesActivation - moved to ActivationMapper
+    // Plugin no longer needs to understand gesture structure
     
-    /// Precision gate validation for dependent types (e.g., screen zones).
-    /// Checks if the currently held button matches any dependent gesture's dragModifier.
-    /// This prevents screen zones from activating during drags when no matching drag gesture exists.
-    func validateGate(for dependentType: ActivationType, gestures: [Gesture]) -> Bool {
-        guard dependentType == .screenZone else { return true }
-        guard let held = heldButton else { return false }
-        let heldDrag = DragModifier.from(mouseButton: held)
-        
-        // Only enable screen zones if:
-        // 1. A gesture requires this specific drag modifier, OR
-        // 2. A gesture requires no drag (dragModifier == .none)
-        for gesture in gestures {
-            if gesture.dragModifier == heldDrag { return true }
-            if gesture.dragModifier == .none { return true }
+    /// Provide current button state for precision gate validation.
+    /// The ActivationMapper will use this to check gesture requirements.
+    func getGateValidationMetadata() -> [String: Any] {
+        var meta: [String: Any] = [:]
+        if let held = heldButton {
+            meta["heldButton"] = held.rawValue
+            meta["heldDragModifier"] = DragModifier.from(mouseButton: held).rawValue
         }
-        
-        // No matching drag gestures found - don't enable screen zones
-        if context?.logger.isDebugEnabled ?? false {
-            context?.logger.log("Gate validation FAILED: held button \(held.rawValue) doesn't match any screen zone gesture requirements", file: #file, function: #function, line: #line)
-        }
-        return false
+        return meta
     }
     
     // MARK: - Plugin Lifecycle

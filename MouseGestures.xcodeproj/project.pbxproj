@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		231D4D12905AE874B7331D1A /* ActivationMapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08B54313B0ED9B193F3749C6 /* ActivationMapper.swift */; };
 		776CFCB32F37AE1300664D2F /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = 776CFCB22F37AE1300664D2F /* AppIcon.icns */; };
 		77A1C48A2F368ED800D1FE6A /* PluginProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4162F368ED800D1FE6A /* PluginProtocol.swift */; };
 		77A1C48B2F368ED800D1FE6A /* PerformanceMonitorService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C45B2F368ED800D1FE6A /* PerformanceMonitorService.swift */; };
@@ -108,6 +109,7 @@
 
 /* Begin PBXFileReference section */
 		08AA45A28A2516DB23980BC2 /* SettingsCategoryProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SettingsCategoryProvider.swift; path = MouseGesturesCodeBase/UI/Settings/SettingsCategoryProvider.swift; sourceTree = SOURCE_ROOT; };
+		08B54313B0ED9B193F3749C6 /* ActivationMapper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActivationMapper.swift; path = MouseGesturesCodeBase/Detection/DetectionPlugins/Core/ActivationMapper.swift; sourceTree = SOURCE_ROOT; };
 		773428682E6E20FD003AB7F1 /* MouseGestures.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MouseGestures.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		776CFCB22F37AE1300664D2F /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
 		77A1C4132F368ED800D1FE6A /* ActionExecutionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionExecutionManager.swift; sourceTree = "<group>"; };
@@ -308,6 +310,7 @@
 				77A1C4342F368ED800D1FE6A /* DetectionPlugin.swift */,
 				77A1C4352F368ED800D1FE6A /* DetectionPluginManager.swift */,
 				77A1C4362F368ED800D1FE6A /* PluginSettings.swift */,
+				08B54313B0ED9B193F3749C6 /* ActivationMapper.swift */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -681,6 +684,7 @@
 				77A1C4E72F368ED800D1FE6A /* ServicePluginProtocol.swift in Sources */,
 				BD884DE9B9DBAF4A53E6123D /* SettingsCategoryProvider.swift in Sources */,
 				D37249979159DF938C105417 /* BuiltInSettingsCategories.swift in Sources */,
+				231D4D12905AE874B7331D1A /* ActivationMapper.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -134,11 +134,8 @@ class AppConfigurationDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         return true // Provides system-level app tracking, always runs
     }
     
-    /// App change detection is infrastructure — it doesn't correspond to
-    /// individual gesture activation, so no gesture "uses" it directly.
-    func gestureUsesActivation(_ gesture: Gesture, for type: ActivationType) -> Bool {
-        return false
-    }
+    // REMOVED: gestureUsesActivation - moved to ActivationMapper
+    // Plugin no longer needs to understand gesture structure
     
     // MARK: - Public Interface
     

@@ -234,11 +234,8 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         return false
     }
     
-    /// A gesture uses screen zone detection when it has gesture-type activation.
-    func gestureUsesActivation(_ gesture: Gesture, for type: ActivationType) -> Bool {
-        guard type == .screenZone else { return false }
-        return gesture.activation.hasGesture
-    }
+    // REMOVED: gestureUsesActivation - moved to ActivationMapper
+    // Plugin no longer needs to understand gesture structure
     
     func enableDetection(for type: ActivationType) {
         guard type == .screenZone else { return }
