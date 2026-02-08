@@ -2,7 +2,8 @@
 - Reduce duplicate code, unify architecture whenever possible
 
 General:
-- 
+- Show zone highlights preview button when editing zone sizes (Possibly do automatically)
+
 
 Actions (fix later):
 - Not all actions work.

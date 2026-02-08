@@ -73,6 +73,17 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
                 validation: .init(rule: .range(min: 0, max: 100), errorMessage: "Corner buffer must be between 0 and 100 pixels")
             ),
             PluginSettingDefinition(
+                key: "previewZoneHighlights",
+                displayName: "Preview Zone Highlights",
+                description: "Temporarily show zone highlights to preview your size settings",
+                category: .detection,
+                type: .button(title: "Preview Zones", style: .primary, action: { [weak self] in
+                    self?.previewZoneHighlights()
+                }),
+                defaultValue: false,
+                isAdvanced: false
+            ),
+            PluginSettingDefinition(
                 key: SettingKeys.showZoneHighlights,
                 displayName: "Show Zone Highlights",
                 description: "Display visual overlay showing detection zones",
@@ -720,5 +731,15 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
                 "inCooldown": isInCooldownPeriod
             ]
         )
+    }
+    
+    // MARK: - Zone Preview
+    
+    /// Temporarily shows zone highlights for preview (called from button action)
+    private func previewZoneHighlights() {
+        context?.logger.log("Zone preview started", file: #file, function: #function, line: #line)
+        
+        // Show zones in preview mode for 5 seconds
+        ZoneHighlightManager.shared.showPreview(duration: 5.0)
     }
 }

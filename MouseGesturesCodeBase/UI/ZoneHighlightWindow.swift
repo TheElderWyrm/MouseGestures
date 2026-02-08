@@ -196,6 +196,46 @@ class ZoneHighlightManager {
     
     // MARK: - Public Interface
     
+    /// Show zone highlights in preview mode (all zones visible regardless of gestures)
+    func showPreview(duration: TimeInterval = 5.0) {
+        guard let screen = NSScreen.main else { return }
+        
+        // Cancel any pending hide
+        hideTimer?.invalidate()
+        hideTimer = nil
+        isHiding = false
+        
+        // Show all zones in inactive state (no gesture matching)
+        for zone in ScreenZone.allCases {
+            let frame = frameForZone(zone, screen: screen)
+            
+            // Create window on demand
+            if zoneWindows[zone] == nil {
+                zoneWindows[zone] = ZoneWindow(zone: zone, frame: frame)
+            }
+            
+            guard let window = zoneWindows[zone] else { continue }
+            
+            // Update frame if screen changed
+            if window.frame != frame {
+                window.setFrame(frame, display: true)
+            }
+            
+            // Show zone name as label
+            window.updateState(isActive: false, label: zone.rawValue)
+            window.animations = [:]
+            window.alphaValue = 1.0
+            window.orderFront(nil)
+        }
+        
+        // Auto-hide after duration
+        if duration > 0 {
+            hideTimer = Timer.scheduledTimer(withTimeInterval: duration, repeats: false) { [weak self] _ in
+                self?.hideZones()
+            }
+        }
+    }
+    
     func startHighlighting() {
         guard Configuration.shared.showZoneHighlights else { return }
         
