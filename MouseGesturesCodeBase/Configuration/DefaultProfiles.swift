@@ -1,6 +1,24 @@
 import Foundation
 
 // DefaultProfiles.swift - Pre-configured profiles for common use cases
+//
+// NOTE: All gestures in default profiles use the new GenericActivation system.
+// The Gesture convenience initializer automatically creates GenericActivation
+// internally, so no explicit migration is needed. These zone-based gestures
+// don't require keyboard or mouse button triggers.
+//
+// The gestures below create GenericActivation with empty detectionConfigs
+// since they only use zone + modifiers (no additional detection plugins).
+//
+// EXAMPLE: If you wanted to add keyboard/mouse triggers:
+// let gesture = Gesture(
+//     zone: .topRight,
+//     modifiers: [.command],
+//     actionIdentifier: "com.mousegestures.core.close_window",
+//     keyboardTrigger: KeyboardTrigger(keyCode: 17, modifiers: [.command], displayString: "⌘T"),
+//     mouseButtonTrigger: MouseButtonTrigger(button: .middle, modifiers: [])
+// )
+// This automatically creates GenericActivation and stores triggers in detectionConfigs.
 struct DefaultProfiles {
     
     // Window Management Profile - Focused on window control actions
