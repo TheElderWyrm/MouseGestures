@@ -32,6 +32,7 @@ enum DragModifier: String, Codable, CaseIterable {
     /// Create a DragModifier from a held mouse button.
     static func from(mouseButton: MouseButtonTrigger.MouseButton) -> DragModifier {
         switch mouseButton {
+        case .none, .any: return .none
         case .left: return .leftDrag
         case .right: return .rightDrag
         case .middle: return .middleDrag

@@ -96,6 +96,18 @@ extension ActivationProvider {
     }
 }
 
+// MARK: - Component UI Provider Extension
+
+/// Extension to support dynamic UI generation for activation components
+extension ActivationProvider {
+    /// Get UI metadata for components this plugin provides
+    /// Plugins can override to provide custom UI configuration
+    func getComponentUIMetadata() -> [ActivationComponentUIMetadata] {
+        // Default: no UI metadata
+        return []
+    }
+}
+
 // MARK: - Activation Dependency
 
 /// Represents a dependency between activation types

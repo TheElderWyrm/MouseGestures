@@ -115,6 +115,9 @@ struct Gesture: Codable, Equatable {
     var timing: TimingSettings
     var parameters: [String: AnyCodable]  // Generic parameters for the plugin
     
+    // New modular component system (optional during transition)
+    var components: GestureActivationComponents?
+    
     // Long press variant
     var longPressActionIdentifier: String?
     var longPressParameters: [String: AnyCodable]?
@@ -161,6 +164,7 @@ struct Gesture: Codable, Equatable {
          activation: ActivationSettings = ActivationSettings(),
          timing: TimingSettings = TimingSettings(),
          parameters: [String: AnyCodable] = [:],
+         components: GestureActivationComponents? = nil,
          longPressActionIdentifier: String? = nil,
          longPressParameters: [String: AnyCodable]? = nil) {
         self.trigger = trigger
@@ -168,6 +172,7 @@ struct Gesture: Codable, Equatable {
         self.activation = activation
         self.timing = timing
         self.parameters = parameters
+        self.components = components
         self.longPressActionIdentifier = longPressActionIdentifier
         self.longPressParameters = longPressParameters
     }
@@ -209,8 +214,91 @@ struct Gesture: Codable, Equatable {
         )
         
         self.parameters = parameters
+        self.components = nil // Will be populated by migration if needed
         self.longPressActionIdentifier = longPressActionIdentifier
         self.longPressParameters = longPressParameters
+    }
+    
+    // New initializer using modular components
+    init(components: GestureActivationComponents,
+         actionIdentifier: String,
+         timing: TimingSettings = TimingSettings(),
+         parameters: [String: AnyCodable] = [:],
+         longPressActionIdentifier: String? = nil,
+         longPressParameters: [String: AnyCodable]? = nil) {
+        
+        // Convert components to legacy trigger structure for backward compatibility
+        let zone = components.screenZone?.zone ?? .topRight
+        let modifiers = components.modifierKey?.modifiers ?? []
+        let drag = components.dragType?.dragType ?? .none
+        self.trigger = GestureTrigger(zone: zone, modifiers: modifiers, dragModifier: drag)
+        
+        // Convert to legacy activation settings
+        let activationType = components.toLegacyActivationType()
+        let mouseBtn = (components.mouseButton?.button != MouseButtonTrigger.MouseButton.none && components.mouseButton?.button != nil) ? 
+            MouseButtonTrigger(button: components.mouseButton!.button, modifiers: []) : nil
+        let kbd = components.keyboardShortcut?.keyboardTrigger
+        
+        self.activation = ActivationSettings(
+            activationType: activationType,
+            keyboardTrigger: kbd,
+            mouseButtonTrigger: mouseBtn,
+            isEnabled: components.isValid
+        )
+        
+        self.actionIdentifier = actionIdentifier
+        self.timing = timing
+        self.parameters = parameters
+        self.components = components
+        self.longPressActionIdentifier = longPressActionIdentifier
+        self.longPressParameters = longPressParameters
+    }
+    
+    // MARK: - Component System Helpers
+    
+    /// Get or create components from legacy structure
+    mutating func getComponents() -> GestureActivationComponents {
+        if let existing = components {
+            return existing
+        }
+        // Migrate from legacy structure
+        let migrated = GestureActivationComponents(fromLegacyGesture: self)
+        self.components = migrated
+        return migrated
+    }
+    
+    /// Create a new gesture with updated components
+    func updatingComponents(_ newComponents: GestureActivationComponents) -> Gesture {
+        // Create new trigger from components
+        let zone = newComponents.screenZone?.zone ?? trigger.zone
+        let modifiers = newComponents.modifierKey?.modifiers ?? trigger.modifiers
+        let drag = newComponents.dragType?.dragType ?? trigger.dragModifier
+        let newTrigger = GestureTrigger(zone: zone, modifiers: modifiers, dragModifier: drag)
+        
+        // Create new activation settings
+        let activationType = newComponents.toLegacyActivationType()
+        let mouseBtn = (newComponents.mouseButton?.button != MouseButtonTrigger.MouseButton.none && newComponents.mouseButton?.button != nil) ?
+            MouseButtonTrigger(button: newComponents.mouseButton!.button, modifiers: []) : activation.mouseButtonTrigger
+        let kbd = newComponents.keyboardShortcut?.keyboardTrigger ?? activation.keyboardTrigger
+        
+        let newActivation = ActivationSettings(
+            activationType: activationType,
+            keyboardTrigger: kbd,
+            mouseButtonTrigger: mouseBtn,
+            isEnabled: newComponents.isValid
+        )
+        
+        // Create new gesture with updated values
+        return Gesture(
+            trigger: newTrigger,
+            actionIdentifier: actionIdentifier,
+            activation: newActivation,
+            timing: timing,
+            parameters: parameters,
+            components: newComponents,
+            longPressActionIdentifier: longPressActionIdentifier,
+            longPressParameters: longPressParameters
+        )
     }
     
     // MARK: - Computed Properties for convenience

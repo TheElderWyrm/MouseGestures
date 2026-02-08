@@ -1,7 +1,8 @@
 - Reduce duplicate code, unify architecture whenever possible
 
 General:
-- 
+- Separate activation types to be modular (Example, modifiers should be its own activation type, not part of zones)
+- Add 'any' and 'none' to the mouse button plugin. None should be the default. (Or when the mouse button activation is not selected.)
 
 Actions (fix later):
 - Not all actions work.

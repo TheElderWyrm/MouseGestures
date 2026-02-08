@@ -103,11 +103,13 @@
 		77A1C4E52F368ED800D1FE6A /* UpdateCheckService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4602F368ED800D1FE6A /* UpdateCheckService.swift */; };
 		77A1C4E62F368ED800D1FE6A /* ZoneHighlightWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4752F368ED800D1FE6A /* ZoneHighlightWindow.swift */; };
 		77A1C4E72F368ED800D1FE6A /* ServicePluginProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4492F368ED800D1FE6A /* ServicePluginProtocol.swift */; };
+		BA98418F85ECA410558094B0 /* ActivationComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 046848D79A549E69C644FFD7 /* ActivationComponents.swift */; };
 		BD884DE9B9DBAF4A53E6123D /* SettingsCategoryProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08AA45A28A2516DB23980BC2 /* SettingsCategoryProvider.swift */; };
 		D37249979159DF938C105417 /* BuiltInSettingsCategories.swift in Sources */ = {isa = PBXBuildFile; fileRef = F50141A48E3DD816B8942DA8 /* BuiltInSettingsCategories.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		046848D79A549E69C644FFD7 /* ActivationComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActivationComponents.swift; path = MouseGesturesCodeBase/Detection/ActivationComponents.swift; sourceTree = SOURCE_ROOT; };
 		08AA45A28A2516DB23980BC2 /* SettingsCategoryProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SettingsCategoryProvider.swift; path = MouseGesturesCodeBase/UI/Settings/SettingsCategoryProvider.swift; sourceTree = SOURCE_ROOT; };
 		08B54313B0ED9B193F3749C6 /* ActivationMapper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActivationMapper.swift; path = MouseGesturesCodeBase/Detection/DetectionPlugins/Core/ActivationMapper.swift; sourceTree = SOURCE_ROOT; };
 		773428682E6E20FD003AB7F1 /* MouseGestures.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MouseGestures.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -331,6 +333,7 @@
 				77A1C4392F368ED800D1FE6A /* DragModifier.swift */,
 				77A1C43A2F368ED800D1FE6A /* GestureLookup.swift */,
 				77A1C43B2F368ED800D1FE6A /* ScreenZone.swift */,
+				046848D79A549E69C644FFD7 /* ActivationComponents.swift */,
 			);
 			path = Detection;
 			sourceTree = "<group>";
@@ -685,6 +688,7 @@
 				BD884DE9B9DBAF4A53E6123D /* SettingsCategoryProvider.swift in Sources */,
 				D37249979159DF938C105417 /* BuiltInSettingsCategories.swift in Sources */,
 				231D4D12905AE874B7331D1A /* ActivationMapper.swift in Sources */,
+				BA98418F85ECA410558094B0 /* ActivationComponents.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -283,6 +283,8 @@ struct WindowPositionParameters: Codable, Equatable {
 // Structure for mouse button trigger (modifier + mouse button)
 struct MouseButtonTrigger: Codable, Equatable {
     enum MouseButton: String, Codable, CaseIterable {
+        case none = "None"
+        case any = "Any Button"
         case left = "Left Click"
         case right = "Right Click"
         case middle = "Middle Click"
@@ -294,7 +296,7 @@ struct MouseButtonTrigger: Codable, Equatable {
     var modifiers: NSEvent.ModifierFlags
     var displayString: String // For display in UI (e.g., "⌘+Left Click")
 
-    init(button: MouseButton, modifiers: NSEvent.ModifierFlags) {
+    init(button: MouseButton = .none, modifiers: NSEvent.ModifierFlags = []) {
         self.button = button
         self.modifiers = modifiers
         self.displayString = MouseButtonTrigger.createDisplayString(button: button, modifiers: modifiers)
