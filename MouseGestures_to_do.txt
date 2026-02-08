@@ -19,7 +19,6 @@ Actions (fix later):
 
 Improve UI
 - App selection UI (Maybe just select apps from finder)
-- Improved gesture editing screen. Current trigger selection UI needs improvement
 - Better gesture information (Base off current bundle actions selection.)
 - Action selection needs better indication of what is currently selected/add a select button to confirm selection (To prevent accidental overriding of previously selected action)
 - Improve appearance of Show Zone Highlights (currently labels down't stay within highlights).

@@ -1,5 +1,45 @@
 ## 2026-02-08
 
+### UI Improvement: Enhanced Add/Edit Gesture UI - Better Activation Method Selection
+
+**Redesigned activation method selection for improved usability**
+- Replaced confusing dropdown menu with intuitive toggle-based selection
+- Users now select individual trigger types (Gesture, Keyboard, Mouse Button) via switches
+- Activation type is automatically computed from enabled combinations
+- Each trigger method has its own card with:
+  * Clear icon and title (hand.draw, keyboard, computermouse)
+  * Descriptive text explaining what the method does
+  * Visual highlight when enabled (blue border + background tint)
+  * Toggle switch for easy enable/disable
+
+**Improved visual organization**
+- Prominent preview card at top showing complete gesture configuration
+- "Trigger Methods" section with visual cards for each type
+- "Trigger Configuration" section dynamically shows only relevant fields
+- Smooth animations when toggling trigger types on/off
+- Better spacing and visual hierarchy throughout
+
+**Enhanced trigger configuration**
+- Each trigger type has its own styled card with colored icon
+- Configuration fields are left-aligned and well-spaced
+- Required field validation with visual warnings
+- Empty state message when no trigger methods are selected
+
+**Moved Enabled toggle**
+- Relocated from "Activation Method" section to header
+- Now appears as a switch next to the Cancel button
+- More prominent and easier to access
+
+**Better footer**
+- Removed preview text (now in prominent card at top)
+- Cleaner two-button layout: Cancel and Save/Add
+- Save button is styled as prominent with proper disabled state
+
+**Window sizing**
+- Increased width to 750px (from 700px)
+- Increased height to 680px (from 650px)
+- More breathing room for the enhanced UI
+
 ### Feature: Zone Highlights Preview Button
 - **Added "Preview Zone Highlights" button in Detection Plugin Settings**:
   * New button appears in the Detection category alongside zone size settings
@@ -186,7 +226,7 @@
 
 **Unified detection plugin settings into the same system**
 - `DetectionPluginSettingsProvider` bridges all detection plugin `PluginSettingDefinition`
-  arrays into `SettingsEntry` items. Each definition’s `SettingCategory` (.detection,
+  arrays into `SettingsEntry` items. Each definition's `SettingCategory` (.detection,
   .appearance, .performance, etc.) maps to a `SettingsSubcategoryDescriptor`.
 - One entry per subcategory group, with a `DetectionSubcategoryView` that renders
   `PluginSettingRow` views with shared `visibilityTrigger` for dependency tracking.
