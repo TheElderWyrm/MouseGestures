@@ -1,3 +1,37 @@
+## 2026-02-08
+
+### Refactor: Removed Gesture-Awareness from Detection Plugins
+- **Problem**: Detection plugins were violating single responsibility by understanding
+  gesture structure through `gestureUsesActivation()` method. Plugins had to inspect
+  gesture fields (modifiers, dragModifier, activation types) to determine if they
+  were needed, creating tight coupling between detection layer and gesture configuration.
+- **Solution**: Introduced **ActivationMapper** — a central service that understands
+  gesture structure and maps gesture properties to activation types.
+- **Changes**:
+  * New file: ActivationMapper.swift containing all gesture→activation mapping logic
+  * ActivationCoordinator now uses ActivationMapper instead of asking plugins about gestures
+  * Removed `gestureUsesActivation()` from ActivationProvider protocol
+  * Removed `validateGate()` from ActivationProvider protocol
+  * Added `getGateValidationMetadata()` to ActivationProvider protocol
+  * Plugins now only provide detection metadata, not gesture interpretation
+  * Precision gate validation moved to coordinator using mapper
+- **Refactored Plugins**:
+  * ModifierKeyDetectorPlugin: Removed gesture inspection, provides modifier state metadata
+  * MouseButtonDetectorPlugin: Removed gesture inspection, provides button state metadata
+  * ScreenZoneDetectorPlugin: Removed gesture inspection
+  * KeyboardShortcutDetectorPlugin: Removed gesture inspection
+  * AppConfigurationDetectorPlugin: Removed gesture inspection
+- **Benefits**:
+  * True separation of concerns: plugins detect, mapper interprets
+  * Reduced coupling: plugins don't depend on Gesture structure
+  * Better testability: clear boundaries for unit tests
+  * Easier maintenance: all gesture interpretation in one place (ActivationMapper)
+  * Changes to Gesture fields only affect mapper, not all plugins
+- **Note**: Internal plugin optimizations (like checking if drag gestures exist before
+  installing monitors) are still fine — that's implementation detail, not architectural
+  responsibility violation. The key improvement is that plugins no longer need to
+  understand *what makes a gesture use their activation type*.
+
 ## 2026-02-07
 
 ### Fix: Remaining Console Warnings - TabManager Variadic View Access
