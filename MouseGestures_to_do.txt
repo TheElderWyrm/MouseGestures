@@ -17,6 +17,7 @@ Actions (fix later):
 - Conditional gesture bundle logic?
 
 Improve UI
+- Improve trigger configuration
 - App selection UI (Maybe just select apps from finder)
 - Better gesture information (Base off current bundle actions selection.)
 - Action selection needs better indication of what is currently selected/add a select button to confirm selection (To prevent accidental overriding of previously selected action)
