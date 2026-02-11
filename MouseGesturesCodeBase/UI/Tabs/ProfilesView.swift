@@ -7,13 +7,11 @@ struct ProfilesView: View {
     @State private var selectedProfileId: UUID?
     enum ActiveSheet: Identifiable {
         case addProfile
-        case editProfile(ConfigurationProfile)
         case importTemplates
         
         var id: String {
             switch self {
             case .addProfile: return "add"
-            case .editProfile(let p): return "edit-\(p.id)"
             case .importTemplates: return "import"
             }
         }
@@ -64,7 +62,7 @@ struct ProfilesView: View {
                 .buttonStyle(.borderless)
                 
                 Button(action: { activeSheet = .addProfile }) {
-                    Label("Add", systemImage: "plus")
+                    Label("New Profile", systemImage: "plus")
                 }
             }
             
@@ -72,15 +70,22 @@ struct ProfilesView: View {
             
             HSplitView {
                 profileListView
-                    .frame(minWidth: MGStyle.Layout.listMinWidth, idealWidth: MGStyle.Layout.listIdealWidth)
+                    .frame(minWidth: MGStyle.Layout.sidebarMinWidth, idealWidth: 280, maxWidth: 350)
                 
                 if let profile = selectedProfile {
-                    profileDetailView(profile: profile)
-                        .frame(minWidth: 400)
+                    ProfileDetailEditor(
+                        profile: profile,
+                        isActive: profile.id == uiServices.activeProfileId,
+                        onActivate: { setActiveProfile(profile.id) },
+                        onDuplicate: { duplicateProfile(profile.id) },
+                        onExport: { exportSingleProfile(profile.id) },
+                        onDelete: { showingDeleteConfirmation = true }
+                    )
+                    .frame(minWidth: 450)
                 } else {
-                    MGEmptyState(icon: "person.2.square.stack", title: "Select a profile", description: "Choose a profile from the list to view its details")
+                    MGEmptyState(icon: "person.2.square.stack", title: "Select a profile", description: "Choose a profile from the list to view and edit its settings")
                         .background(MGStyle.Colors.contentBackground)
-                        .frame(minWidth: 400)
+                        .frame(minWidth: 450)
                 }
             }
         }
@@ -90,10 +95,6 @@ struct ProfilesView: View {
             case .addProfile:
                 AddEditProfileSheet(mode: .add) { newProfile in
                     selectedProfileId = newProfile.id
-                }
-            case .editProfile(let profile):
-                AddEditProfileSheet(mode: .edit(profile)) { _ in
-                    uiServices.loadData()
                 }
             case .importTemplates:
                 ImportTemplatesSheet()
@@ -124,10 +125,8 @@ struct ProfilesView: View {
     
     private var profileListView: some View {
         VStack(alignment: .leading, spacing: 0) {
-            MGListSectionHeader("Available Profiles")
-            
             ScrollView {
-                VStack(spacing: 1) {
+                VStack(spacing: MGStyle.Spacing.sm) {
                     ForEach(filteredProfiles) { profile in
                         ProfileListRow(
                             profile: profile,
@@ -135,10 +134,6 @@ struct ProfilesView: View {
                             isSelected: profile.id == selectedProfileId,
                             onSelect: { selectedProfileId = profile.id },
                             onSetActive: { setActiveProfile(profile.id) },
-                            onEdit: { 
-                                selectedProfileId = profile.id
-                                activeSheet = .editProfile(profile)
-                            },
                             onDuplicate: { duplicateProfile(profile.id) },
                             onDelete: {
                                 selectedProfileId = profile.id
@@ -150,121 +145,15 @@ struct ProfilesView: View {
                     if filteredProfiles.isEmpty {
                         MGEmptyState(
                             icon: searchText.isEmpty ? "folder" : "magnifyingglass",
-                            title: searchText.isEmpty ? "No profiles configured" : "No matching profiles",
-                            actionLabel: searchText.isEmpty ? "Create Your First Profile" : nil,
+                            title: searchText.isEmpty ? "No profiles" : "No matching profiles",
+                            actionLabel: searchText.isEmpty ? "Create Profile" : nil,
                             action: searchText.isEmpty ? { activeSheet = .addProfile } : nil
                         )
                         .padding(.vertical, 40)
                     }
                 }
+                .padding(MGStyle.Spacing.lg)
             }
-        }
-        .background(MGStyle.Colors.contentBackground)
-    }
-    
-    // MARK: - Profile Detail View
-    
-    private func profileDetailView(profile: ConfigurationProfile) -> some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
-                // Title bar
-                HStack {
-                    VStack(alignment: .leading, spacing: MGStyle.Spacing.sm) {
-                        Text(profile.name)
-                            .font(.title3)
-                            .fontWeight(.semibold)
-                        
-                        HStack(spacing: MGStyle.Spacing.md) {
-                            if profile.id == uiServices.activeProfileId {
-                                MGBadge("Active", color: .green, icon: "checkmark.circle")
-                            }
-                            if profile.isDefault { MGBadge("Default") }
-                            
-                            Text("Modified: \(profile.modifiedDate, formatter: dateFormatter)")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                    
-                    Spacer()
-                    
-                    HStack(spacing: MGStyle.Spacing.md) {
-                        if profile.id != uiServices.activeProfileId {
-                            Button(action: { setActiveProfile(profile.id) }) {
-                                Label("Set Active", systemImage: "checkmark.circle")
-                            }
-                        }
-                        Button(action: { activeSheet = .editProfile(profile) }) {
-                            Label("Edit", systemImage: "pencil")
-                        }
-                        
-                        Menu {
-                            Button(action: { duplicateProfile(profile.id) }) {
-                                Label("Duplicate", systemImage: "plus.square.on.square")
-                            }
-                            Button(action: { exportSingleProfile(profile.id) }) {
-                                Label("Export", systemImage: "square.and.arrow.up")
-                            }
-                            if profile.id != uiServices.activeProfileId && !profile.isDefault {
-                                Divider()
-                                Button(action: {
-                                    selectedProfileId = profile.id
-                                    showingDeleteConfirmation = true
-                                }) {
-                                    Label("Delete", systemImage: "trash")
-                                }
-                            }
-                        } label: {
-                            Image(systemName: "ellipsis.circle")
-                                .font(.system(size: 14))
-                        }
-                        .menuStyle(.borderlessButton)
-                        .frame(width: 24)
-                    }
-                }
-                .padding(.bottom, MGStyle.Spacing.sm)
-                
-                // Statistics
-                MGDetailSection("Overview", icon: "chart.bar") {
-                    MGDetailRow("Total Gestures", value: "\(profile.gestures.count)", icon: "hand.tap")
-                    MGDetailRow("Enabled", value: "\(profile.gestures.filter { $0.isEnabled }.count)", icon: "checkmark.circle")
-                    MGDetailRow("Haptic Feedback", value: profile.hapticFeedbackEnabled ? "On" : "Off", icon: "waveform")
-                    if let shortcut = profile.keyboardShortcut {
-                        MGDetailRow("Quick Switch", value: shortcut.displayString, icon: "keyboard")
-                    }
-                }
-                
-                // Zone Settings
-                MGDetailSection("Zone Settings", icon: "square.grid.3x3") {
-                    MGDetailRow("Edge Threshold", value: "\(Int(profile.edgeThreshold)) px", icon: "arrow.left.and.right")
-                    MGDetailRow("Corner Size", value: "\(Int(profile.cornerSize)) px", icon: "square.dashed")
-                    MGDetailRow("Corner Buffer", value: "\(Int(profile.cornerBuffer)) px", icon: "arrow.up.and.down")
-                }
-                
-                // Gesture Summary
-                if !profile.gestures.isEmpty {
-                    MGDetailSection("Gestures", icon: "list.bullet") {
-                        ForEach(Array(profile.gestures.prefix(8)), id: \.id) { gesture in
-                            HStack(spacing: MGStyle.Spacing.md) {
-                                Image(systemName: gesture.isEnabled ? "checkmark.circle.fill" : "circle")
-                                    .foregroundColor(gesture.isEnabled ? .green : .gray)
-                                    .font(.system(size: 11))
-                                Text(gesture.displayDescription)
-                                    .font(.system(size: MGStyle.FontSize.caption))
-                                    .lineLimit(1)
-                                Spacer()
-                            }
-                        }
-                        if profile.gestures.count > 8 {
-                            Text("and \(profile.gestures.count - 8) more...")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                                .padding(.leading, 22)
-                        }
-                    }
-                }
-            }
-            .padding(MGStyle.Spacing.xl)
         }
         .background(MGStyle.Colors.contentBackground)
     }
@@ -364,13 +253,6 @@ struct ProfilesView: View {
             }
         }
     }
-    
-    private var dateFormatter: DateFormatter {
-        let f = DateFormatter()
-        f.dateStyle = .medium
-        f.timeStyle = .short
-        return f
-    }
 }
 
 // MARK: - Profile List Row
@@ -381,25 +263,24 @@ struct ProfileListRow: View {
     let isSelected: Bool
     let onSelect: () -> Void
     let onSetActive: () -> Void
-    let onEdit: () -> Void
     let onDuplicate: () -> Void
     let onDelete: () -> Void
     
     @State private var isHovered = false
     
     var body: some View {
-        HStack {
+        HStack(spacing: MGStyle.Spacing.lg) {
+            // Active indicator dot
+            Circle()
+                .fill(isActive ? Color.green : Color.clear)
+                .frame(width: 6, height: 6)
+            
             VStack(alignment: .leading, spacing: MGStyle.Spacing.sm) {
-                HStack {
+                HStack(spacing: MGStyle.Spacing.md) {
                     Text(profile.name)
-                        .font(.system(size: MGStyle.FontSize.body, weight: .medium))
+                        .font(.system(size: MGStyle.FontSize.body, weight: isActive ? .semibold : .medium))
                         .lineLimit(1)
                     
-                    if isActive {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: MGStyle.FontSize.badge))
-                            .foregroundColor(.green)
-                    }
                     if profile.isDefault { MGBadge("Default") }
                 }
                 
@@ -422,37 +303,341 @@ struct ProfileListRow: View {
             }
             
             Spacer()
-            
-            if isHovered {
-                HStack(spacing: MGStyle.Spacing.md) {
-                    if !isActive {
-                        Button(action: onSetActive) {
-                            Image(systemName: "checkmark")
-                                .font(.system(size: MGStyle.IconSize.inline))
-                        }
-                        .buttonStyle(.plain)
-                        .help("Set as active profile")
-                    }
-                    
-                    Menu {
-                        Button(action: onEdit) { Label("Edit", systemImage: "pencil") }
-                        Button(action: onDuplicate) { Label("Duplicate", systemImage: "plus.square.on.square") }
-                        if !isActive && !profile.isDefault {
-                            Divider()
-                            Button(action: onDelete) { Label("Delete", systemImage: "trash") }
-                        }
-                    } label: {
-                        Image(systemName: "ellipsis.circle")
-                            .font(.system(size: MGStyle.IconSize.inline))
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
         }
         .mgListRow(isSelected: isSelected, isHovered: isHovered)
         .onHover { hovering in isHovered = hovering }
         .onTapGesture { onSelect() }
-        .onTapGesture(count: 2) { onEdit() }
+        .contextMenu {
+            if !isActive {
+                Button(action: onSetActive) { Label("Set as Active", systemImage: "checkmark.circle") }
+                Divider()
+            }
+            Button(action: onDuplicate) { Label("Duplicate", systemImage: "plus.square.on.square") }
+            if !isActive && !profile.isDefault {
+                Divider()
+                Button(role: .destructive, action: onDelete) { Label("Delete", systemImage: "trash") }
+            }
+        }
+    }
+}
+
+// MARK: - Profile Detail Editor (Inline Editing)
+
+struct ProfileDetailEditor: View {
+    let profile: ConfigurationProfile
+    let isActive: Bool
+    let onActivate: () -> Void
+    let onDuplicate: () -> Void
+    let onExport: () -> Void
+    let onDelete: () -> Void
+    
+    @StateObject private var uiServices = UIServices.shared
+    
+    // Editable state
+    @State private var editingName = false
+    @State private var nameText = ""
+    @State private var hapticEnabled: Bool = true
+    @State private var edgeThreshold: CGFloat = 30
+    @State private var cornerSize: CGFloat = 100
+    @State private var cornerBuffer: CGFloat = 50
+    @State private var showNameError = false
+    
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.xl) {
+                // Header with inline name editing
+                profileHeader
+                
+                // Quick actions bar
+                actionBar
+                
+                // Editable zone settings
+                zoneSettingsCard
+                
+                // Gesture overview
+                gestureOverviewCard
+            }
+            .padding(MGStyle.Spacing.xl)
+        }
+        .background(MGStyle.Colors.contentBackground)
+        .onAppear { loadProfileData() }
+        .onChange(of: profile.id) { _ in loadProfileData() }
+        .alert("Invalid Name", isPresented: $showNameError) { Button("OK") {} } message: {
+            Text("A profile with this name already exists.")
+        }
+    }
+    
+    // MARK: - Profile Header
+    
+    private var profileHeader: some View {
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
+                // Editable name
+                if editingName {
+                    HStack(spacing: MGStyle.Spacing.md) {
+                        TextField("Profile name", text: $nameText, onCommit: commitNameEdit)
+                            .textFieldStyle(.roundedBorder)
+                            .font(.title3)
+                            .frame(maxWidth: 300)
+                        
+                        Button(action: commitNameEdit) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(.green)
+                        }
+                        .buttonStyle(.plain)
+                        
+                        Button(action: { editingName = false }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundColor(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                } else {
+                    HStack(spacing: MGStyle.Spacing.md) {
+                        Text(profile.name)
+                            .font(.title3)
+                            .fontWeight(.semibold)
+                        
+                        Button(action: {
+                            nameText = profile.name
+                            editingName = true
+                        }) {
+                            Image(systemName: "pencil")
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                        .help("Rename profile")
+                    }
+                }
+                
+                HStack(spacing: MGStyle.Spacing.md) {
+                    if isActive {
+                        MGBadge("Active", color: .green, icon: "checkmark.circle")
+                    }
+                    if profile.isDefault { MGBadge("Default") }
+                    
+                    Text("Modified: \(profile.modifiedDate, formatter: dateFormatter)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            
+            Spacer()
+            
+            if !isActive {
+                Button(action: onActivate) {
+                    Label("Set Active", systemImage: "checkmark.circle")
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+            }
+        }
+    }
+    
+    // MARK: - Quick Actions
+    
+    private var actionBar: some View {
+        HStack(spacing: MGStyle.Spacing.lg) {
+            Button(action: onDuplicate) {
+                Label("Duplicate", systemImage: "plus.square.on.square")
+            }
+            .controlSize(.small)
+            
+            Button(action: onExport) {
+                Label("Export", systemImage: "square.and.arrow.up")
+            }
+            .controlSize(.small)
+            
+            Spacer()
+            
+            if !isActive && !profile.isDefault {
+                Button(role: .destructive, action: onDelete) {
+                    Label("Delete", systemImage: "trash")
+                }
+                .controlSize(.small)
+            }
+        }
+        .padding(MGStyle.Spacing.lg)
+        .background(
+            RoundedRectangle(cornerRadius: MGStyle.Corner.md)
+                .fill(MGStyle.Colors.cardBackground.opacity(0.5))
+        )
+    }
+    
+    // MARK: - Zone Settings (Inline Editable)
+    
+    private var zoneSettingsCard: some View {
+        MGDetailSection("Zone Detection", icon: "square.grid.3x3") {
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
+                // Edge Threshold
+                HStack {
+                    Text("Edge Threshold")
+                        .font(.system(size: MGStyle.FontSize.body))
+                        .frame(width: 120, alignment: .leading)
+                    Slider(value: $edgeThreshold, in: 10...100, step: 5) { _ in saveZoneSettings() }
+                    Text("\(Int(edgeThreshold)) px")
+                        .font(.system(size: MGStyle.FontSize.caption, design: .monospaced))
+                        .foregroundColor(.secondary)
+                        .frame(width: 45, alignment: .trailing)
+                }
+                
+                // Corner Size
+                HStack {
+                    Text("Corner Size")
+                        .font(.system(size: MGStyle.FontSize.body))
+                        .frame(width: 120, alignment: .leading)
+                    Slider(value: $cornerSize, in: 50...200, step: 10) { _ in saveZoneSettings() }
+                    Text("\(Int(cornerSize)) px")
+                        .font(.system(size: MGStyle.FontSize.caption, design: .monospaced))
+                        .foregroundColor(.secondary)
+                        .frame(width: 45, alignment: .trailing)
+                }
+                
+                // Corner Buffer
+                HStack {
+                    Text("Corner Buffer")
+                        .font(.system(size: MGStyle.FontSize.body))
+                        .frame(width: 120, alignment: .leading)
+                    Slider(value: $cornerBuffer, in: 20...100, step: 5) { _ in saveZoneSettings() }
+                    Text("\(Int(cornerBuffer)) px")
+                        .font(.system(size: MGStyle.FontSize.caption, design: .monospaced))
+                        .foregroundColor(.secondary)
+                        .frame(width: 45, alignment: .trailing)
+                }
+                
+                Divider()
+                
+                // Haptic Feedback Toggle
+                Toggle(isOn: $hapticEnabled) {
+                    HStack(spacing: MGStyle.Spacing.md) {
+                        Image(systemName: "waveform")
+                            .foregroundColor(.secondary)
+                        Text("Haptic Feedback")
+                            .font(.system(size: MGStyle.FontSize.body))
+                    }
+                }
+                .toggleStyle(.switch)
+                .controlSize(.small)
+                .onChange(of: hapticEnabled) { _ in saveZoneSettings() }
+            }
+        }
+    }
+    
+    // MARK: - Gesture Overview
+    
+    private var gestureOverviewCard: some View {
+        MGDetailSection("Gestures", icon: "hand.tap") {
+            // Stats row
+            HStack(spacing: MGStyle.Spacing.xxl) {
+                statBubble("\(profile.gestures.count)", label: "Total")
+                statBubble("\(profile.gestures.filter { $0.isEnabled }.count)", label: "Active", color: .green)
+                statBubble("\(profile.gestures.filter { !$0.isEnabled }.count)", label: "Disabled", color: .gray)
+            }
+            
+            if !profile.gestures.isEmpty {
+                Divider()
+                
+                // Compact gesture list
+                VStack(spacing: MGStyle.Spacing.sm) {
+                    ForEach(profile.gestures, id: \.id) { gesture in
+                        HStack(spacing: MGStyle.Spacing.md) {
+                            MGZoneIndicator(zone: gesture.zone)
+                            
+                            Circle()
+                                .fill(gesture.isEnabled ? Color.green : Color.gray)
+                                .frame(width: 6, height: 6)
+                            
+                            Text(gesture.displayDescription)
+                                .font(.system(size: MGStyle.FontSize.caption))
+                                .lineLimit(1)
+                                .opacity(gesture.isEnabled ? 1 : 0.5)
+                            
+                            Spacer()
+                            
+                            if let def = UIServices.shared.getActionDefinition(for: gesture.actionIdentifier) {
+                                Text(def.name)
+                                    .font(.system(size: MGStyle.FontSize.badge))
+                                    .foregroundColor(.secondary)
+                                    .lineLimit(1)
+                            }
+                        }
+                        .padding(.vertical, MGStyle.Spacing.xs)
+                    }
+                }
+            }
+            
+            if profile.keyboardShortcut != nil {
+                Divider()
+                HStack(spacing: MGStyle.Spacing.md) {
+                    Image(systemName: "keyboard")
+                        .foregroundColor(.secondary)
+                    Text("Quick Switch: \(profile.keyboardShortcut!.displayString)")
+                        .font(.system(size: MGStyle.FontSize.caption))
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+    }
+    
+    private func statBubble(_ value: String, label: String, color: Color = .accentColor) -> some View {
+        VStack(spacing: MGStyle.Spacing.xs) {
+            Text(value)
+                .font(.system(size: 18, weight: .bold, design: .rounded))
+                .foregroundColor(color)
+            Text(label)
+                .font(.system(size: MGStyle.FontSize.badge))
+                .foregroundColor(.secondary)
+        }
+        .frame(minWidth: 60)
+        .padding(MGStyle.Spacing.md)
+        .background(
+            RoundedRectangle(cornerRadius: MGStyle.Corner.md)
+                .fill(color.opacity(0.08))
+        )
+    }
+    
+    // MARK: - Helpers
+    
+    private func loadProfileData() {
+        nameText = profile.name
+        hapticEnabled = profile.hapticFeedbackEnabled
+        edgeThreshold = profile.edgeThreshold
+        cornerSize = profile.cornerSize
+        cornerBuffer = profile.cornerBuffer
+    }
+    
+    private func commitNameEdit() {
+        let trimmed = nameText.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { editingName = false; return }
+        
+        if trimmed != profile.name {
+            if uiServices.profiles.contains(where: { $0.name == trimmed && $0.id != profile.id }) {
+                showNameError = true
+                return
+            }
+            _ = uiServices.renameProfile(profile.id, to: trimmed)
+        }
+        editingName = false
+    }
+    
+    private func saveZoneSettings() {
+        // Zone settings are stored per-profile; save through the config system
+        // For now, this uses the configuration directly since UIServices doesn't
+        // expose per-profile zone setting updates
+        if isActive {
+            uiServices.setEdgeThreshold(edgeThreshold)
+            uiServices.setCornerSize(cornerSize)
+            uiServices.setCornerBuffer(cornerBuffer)
+            uiServices.setHapticFeedbackEnabled(hapticEnabled)
+        }
+    }
+    
+    private var dateFormatter: DateFormatter {
+        let f = DateFormatter()
+        f.dateStyle = .medium
+        f.timeStyle = .short
+        return f
     }
 }
 
@@ -499,64 +684,55 @@ struct AddEditProfileSheet: View {
             
             ScrollView {
                 VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {
-                    GroupBox("Basic Settings") {
-                        VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
-                            LabeledContent("Name:") {
-                                TextField("Profile name", text: $profileName).frame(width: 250)
-                            }
-                            if case .add = mode {
-                                LabeledContent("Based on:") {
-                                    Picker("", selection: $basedOnProfileId) {
-                                        Text("Empty Profile").tag(nil as UUID?)
-                                        ForEach(uiServices.profiles.sorted { $0.name < $1.name }) { profile in
-                                            Text(profile.name).tag(profile.id as UUID?)
-                                        }
+                    MGDetailSection("Basics", icon: "pencil") {
+                        LabeledContent("Name:") {
+                            TextField("Profile name", text: $profileName).frame(width: 250)
+                        }
+                        if case .add = mode {
+                            LabeledContent("Based on:") {
+                                Picker("", selection: $basedOnProfileId) {
+                                    Text("Empty Profile").tag(nil as UUID?)
+                                    ForEach(uiServices.profiles.sorted { $0.name < $1.name }) { profile in
+                                        Text(profile.name).tag(profile.id as UUID?)
                                     }
-                                    .pickerStyle(.menu).frame(width: 250)
                                 }
+                                .pickerStyle(.menu).frame(width: 250)
                             }
-                            Toggle("Haptic Feedback", isOn: $hapticFeedbackEnabled)
                         }
-                        .padding(.vertical, MGStyle.Spacing.md)
+                        Toggle("Haptic Feedback", isOn: $hapticFeedbackEnabled)
                     }
                     
-                    GroupBox("Zone Detection Settings") {
-                        VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
-                            LabeledContent("Edge Threshold:") {
-                                HStack {
-                                    Slider(value: $edgeThreshold, in: 10...100, step: 5).frame(width: 150)
-                                    Text("\(Int(edgeThreshold)) px").frame(width: 50, alignment: .trailing)
-                                }
-                            }
-                            LabeledContent("Corner Size:") {
-                                HStack {
-                                    Slider(value: $cornerSize, in: 50...200, step: 10).frame(width: 150)
-                                    Text("\(Int(cornerSize)) px").frame(width: 50, alignment: .trailing)
-                                }
-                            }
-                            LabeledContent("Corner Buffer:") {
-                                HStack {
-                                    Slider(value: $cornerBuffer, in: 20...100, step: 5).frame(width: 150)
-                                    Text("\(Int(cornerBuffer)) px").frame(width: 50, alignment: .trailing)
-                                }
+                    MGDetailSection("Zone Detection", icon: "square.grid.3x3") {
+                        LabeledContent("Edge Threshold:") {
+                            HStack {
+                                Slider(value: $edgeThreshold, in: 10...100, step: 5).frame(width: 150)
+                                Text("\(Int(edgeThreshold)) px").frame(width: 50, alignment: .trailing)
                             }
                         }
-                        .padding(.vertical, MGStyle.Spacing.md)
+                        LabeledContent("Corner Size:") {
+                            HStack {
+                                Slider(value: $cornerSize, in: 50...200, step: 10).frame(width: 150)
+                                Text("\(Int(cornerSize)) px").frame(width: 50, alignment: .trailing)
+                            }
+                        }
+                        LabeledContent("Corner Buffer:") {
+                            HStack {
+                                Slider(value: $cornerBuffer, in: 20...100, step: 5).frame(width: 150)
+                                Text("\(Int(cornerBuffer)) px").frame(width: 50, alignment: .trailing)
+                            }
+                        }
                     }
                     
-                    GroupBox("Quick Switch (Optional)") {
-                        VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
-                            Text("Set a keyboard shortcut to quickly switch to this profile")
-                                .font(.caption).foregroundColor(.secondary)
-                            LabeledContent("Keyboard Shortcut:") {
-                                KeyboardShortcutFieldView(shortcut: $keyboardShortcut)
-                                    .frame(width: 200, height: 24)
-                            }
-                            if keyboardShortcut != nil {
-                                Button("Clear Shortcut") { keyboardShortcut = nil }.buttonStyle(.link)
-                            }
+                    MGDetailSection("Quick Switch", icon: "keyboard") {
+                        Text("Set a keyboard shortcut to quickly switch to this profile")
+                            .font(.caption).foregroundColor(.secondary)
+                        LabeledContent("Keyboard Shortcut:") {
+                            KeyboardShortcutFieldView(shortcut: $keyboardShortcut)
+                                .frame(width: 200, height: 24)
                         }
-                        .padding(.vertical, MGStyle.Spacing.md)
+                        if keyboardShortcut != nil {
+                            Button("Clear Shortcut") { keyboardShortcut = nil }.buttonStyle(.link)
+                        }
                     }
                 }
                 .padding(MGStyle.Spacing.xl)
@@ -564,7 +740,7 @@ struct AddEditProfileSheet: View {
             
             MGSheetFooter(mode.buttonTitle, disabled: profileName.isEmpty) { saveProfile() }
         }
-        .frame(width: 550, height: 500)
+        .frame(width: 550, height: 520)
         .alert("Invalid Name", isPresented: $showingNameError) { Button("OK") {} } message: {
             Text("A profile with this name already exists. Please choose a different name.")
         }

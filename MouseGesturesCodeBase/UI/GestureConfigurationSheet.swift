@@ -88,25 +88,74 @@ struct GestureConfigurationSheet: View {
     // MARK: - Preview Card
     
     private var gesturePreviewCard: some View {
-        GroupBox {
-            VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
-                HStack {
-                    Image(systemName: "sparkles")
-                        .foregroundColor(.blue)
-                    Text("Preview")
-                        .font(.headline)
-                    Spacer()
-                }
-                
-                Text(components.previewString + actionPreview)
-                    .font(.system(.body, design: .monospaced))
-                    .padding(MGStyle.Spacing.md)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(MGStyle.Colors.contentBackground)
-                    .cornerRadius(MGStyle.Corner.md)
+        HStack(spacing: MGStyle.Spacing.xl) {
+            // Zone indicator (if zone is enabled)
+            if components.screenZone?.isEnabled == true {
+                MGZoneIndicator(zone: components.screenZone?.zone ?? .topRight)
+                    .scaleEffect(2.0)
+                    .frame(width: 40)
+            } else {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 16))
+                    .foregroundColor(.blue)
+                    .frame(width: 40)
             }
-            .padding(.vertical, MGStyle.Spacing.sm)
+            
+            // Preview pills
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
+                Text("Gesture Preview")
+                    .font(.system(size: MGStyle.FontSize.caption, weight: .semibold))
+                    .foregroundColor(.secondary)
+                    .textCase(.uppercase)
+                
+                HStack(spacing: MGStyle.Spacing.sm) {
+                    // Active trigger pills
+                    if components.screenZone?.isEnabled == true {
+                        MGTriggerPill(components.screenZone?.zone.displayName ?? "Zone", icon: "square.grid.3x3", color: .blue)
+                    }
+                    if components.modifierKey?.isEnabled == true {
+                        let mods = components.modifierKey?.modifiers ?? []
+                        let modStr = mods.symbolString.isEmpty ? "Mods" : mods.symbolString
+                        MGTriggerPill(modStr, icon: "command", color: .purple)
+                    }
+                    if components.dragType?.isEnabled == true {
+                        MGTriggerPill(components.dragType?.dragType.displayName ?? "Drag", icon: "hand.draw", color: .orange)
+                    }
+                    if components.mouseButton?.isEnabled == true {
+                        MGTriggerPill(components.mouseButton?.button.rawValue ?? "Click", icon: "computermouse", color: .teal)
+                    }
+                    if components.keyboardShortcut?.isEnabled == true {
+                        MGTriggerPill(components.keyboardShortcut?.keyboardTrigger?.displayString ?? "Key", icon: "keyboard", color: .green)
+                    }
+                    
+                    Image(systemName: "arrow.right")
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                    
+                    // Action pill
+                    if let action = PluginManager.shared.getAction(identifier: selectedActionId)?.action {
+                        MGTriggerPill(action.name, icon: action.icon ?? "bolt", color: .accentColor)
+                    } else if !selectedActionId.isEmpty {
+                        MGTriggerPill(selectedActionId, icon: "bolt", color: .secondary)
+                    } else {
+                        Text("Select an action")
+                            .font(.system(size: MGStyle.FontSize.caption))
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            
+            Spacer()
         }
+        .padding(MGStyle.Spacing.xl)
+        .background(
+            RoundedRectangle(cornerRadius: MGStyle.Corner.lg)
+                .fill(MGStyle.Colors.cardBackground)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: MGStyle.Corner.lg)
+                .stroke(Color.accentColor.opacity(0.2), lineWidth: 1)
+        )
     }
     
     private var actionPreview: String {
@@ -275,28 +324,34 @@ struct GestureConfigurationSheet: View {
     
     private var modifierKeyConfigView: some View {
         VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
-            HStack {
-                Text("Modifiers:")
-                    .frame(width: 100, alignment: .trailing)
-                HStack(spacing: MGStyle.Spacing.lg) {
-                    ModifierToggle(label: "⌘", flag: .command, modifiers: Binding(
-                        get: { components.modifierKey?.modifiers ?? [] },
-                        set: { components.modifierKey?.modifiers = $0 }
-                    ))
-                    ModifierToggle(label: "⌃", flag: .control, modifiers: Binding(
-                        get: { components.modifierKey?.modifiers ?? [] },
-                        set: { components.modifierKey?.modifiers = $0 }
-                    ))
-                    ModifierToggle(label: "⌥", flag: .option, modifiers: Binding(
-                        get: { components.modifierKey?.modifiers ?? [] },
-                        set: { components.modifierKey?.modifiers = $0 }
-                    ))
-                    ModifierToggle(label: "⇧", flag: .shift, modifiers: Binding(
-                        get: { components.modifierKey?.modifiers ?? [] },
-                        set: { components.modifierKey?.modifiers = $0 }
-                    ))
-                }
-                Spacer()
+            Text("Select modifier keys:")
+                .font(.system(size: MGStyle.FontSize.caption))
+                .foregroundColor(.secondary)
+            
+            HStack(spacing: MGStyle.Spacing.lg) {
+                ModifierToggle(label: "⌘", name: "Command", flag: .command, modifiers: Binding(
+                    get: { components.modifierKey?.modifiers ?? [] },
+                    set: { components.modifierKey?.modifiers = $0 }
+                ))
+                ModifierToggle(label: "⌃", name: "Control", flag: .control, modifiers: Binding(
+                    get: { components.modifierKey?.modifiers ?? [] },
+                    set: { components.modifierKey?.modifiers = $0 }
+                ))
+                ModifierToggle(label: "⌥", name: "Option", flag: .option, modifiers: Binding(
+                    get: { components.modifierKey?.modifiers ?? [] },
+                    set: { components.modifierKey?.modifiers = $0 }
+                ))
+                ModifierToggle(label: "⇧", name: "Shift", flag: .shift, modifiers: Binding(
+                    get: { components.modifierKey?.modifiers ?? [] },
+                    set: { components.modifierKey?.modifiers = $0 }
+                ))
+            }
+            
+            let mods = components.modifierKey?.modifiers ?? []
+            if !mods.isEmpty {
+                Text("Active: \(mods.symbolString)")
+                    .font(.system(size: MGStyle.FontSize.caption, weight: .medium))
+                    .foregroundColor(.accentColor)
             }
         }
         .padding(.leading, MGStyle.Spacing.xxl)
@@ -306,10 +361,28 @@ struct GestureConfigurationSheet: View {
     }
     
     private var screenZoneConfigView: some View {
-        VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
-            HStack {
-                Text("Zone:")
-                    .frame(width: 100, alignment: .trailing)
+        HStack(alignment: .top, spacing: MGStyle.Spacing.xxl) {
+            // Visual zone picker
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
+                Text("Click a zone:")
+                    .font(.system(size: MGStyle.FontSize.caption))
+                    .foregroundColor(.secondary)
+                MGZonePicker(selected: Binding(
+                    get: { components.screenZone?.zone ?? .topRight },
+                    set: { components.screenZone?.zone = $0 }
+                ))
+            }
+            
+            // Selected zone label
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.sm) {
+                Text("Selected Zone")
+                    .font(.system(size: MGStyle.FontSize.caption, weight: .medium))
+                    .foregroundColor(.secondary)
+                Text(components.screenZone?.zone.displayName ?? "Top Right Corner")
+                    .font(.system(size: MGStyle.FontSize.heading, weight: .semibold))
+                    .foregroundColor(.accentColor)
+                
+                // Also keep dropdown as alternative
                 Picker("", selection: Binding(
                     get: { components.screenZone?.zone ?? .topRight },
                     set: { components.screenZone?.zone = $0 }
@@ -320,8 +393,11 @@ struct GestureConfigurationSheet: View {
                 }
                 .pickerStyle(.menu)
                 .frame(width: 180)
-                Spacer()
+                .labelsHidden()
             }
+            .padding(.top, MGStyle.Spacing.lg)
+            
+            Spacer()
         }
         .padding(.leading, MGStyle.Spacing.xxl)
         .padding(MGStyle.Spacing.lg)
@@ -512,19 +588,44 @@ struct GestureConfigurationSheet: View {
     
     struct ModifierToggle: View {
         let label: String
+        let name: String
         let flag: NSEvent.ModifierFlags
         @Binding var modifiers: NSEvent.ModifierFlags
         
+        init(label: String, name: String = "", flag: NSEvent.ModifierFlags, modifiers: Binding<NSEvent.ModifierFlags>) {
+            self.label = label
+            self.name = name
+            self.flag = flag
+            self._modifiers = modifiers
+        }
+        
+        private var isActive: Bool { modifiers.contains(flag) }
+        
         var body: some View {
-            Toggle(isOn: Binding(
-                get: { modifiers.contains(flag) },
-                set: { if $0 { modifiers.insert(flag) } else { modifiers.remove(flag) } }
-            )) {
-                Text(label)
-                    .font(.system(size: 16, weight: .medium))
-                    .frame(width: 24)
+            Button(action: {
+                if isActive { modifiers.remove(flag) } else { modifiers.insert(flag) }
+            }) {
+                VStack(spacing: 2) {
+                    Text(label)
+                        .font(.system(size: 18, weight: .semibold))
+                    if !name.isEmpty {
+                        Text(name)
+                            .font(.system(size: 9))
+                    }
+                }
+                .frame(width: 64, height: 44)
+                .background(
+                    RoundedRectangle(cornerRadius: MGStyle.Corner.md)
+                        .fill(isActive ? Color.accentColor : Color(NSColor.controlBackgroundColor))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: MGStyle.Corner.md)
+                        .stroke(isActive ? Color.accentColor : MGStyle.Colors.separator, lineWidth: isActive ? 1.5 : 0.5)
+                )
+                .foregroundColor(isActive ? .white : .primary)
             }
-            .toggleStyle(.button)
+            .buttonStyle(.plain)
+            .help(name)
         }
     }
     

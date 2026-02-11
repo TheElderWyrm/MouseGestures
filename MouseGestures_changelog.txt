@@ -1,3 +1,53 @@
+## 2026-02-11 (2)
+
+### Major UI Overhaul: Gestures, Profiles, and Configuration
+
+**GesturesView — Replaced HSplitView with Rich Card Layout**
+- Removed the split-view pattern (redundant read-only detail panel)
+- Each gesture is now a rich card with inline trigger pills showing zone, modifiers,
+  drag type, keyboard, mouse button, timing at a glance
+- Cards expand/collapse to reveal full trigger, action, and timing details
+- Added MGZoneIndicator — compact 3×3 grid showing the active zone inline
+- Added MGTriggerPill — color-coded inline pills for each trigger component
+- Full right-click context menu on each card (Edit, Enable/Disable, Delete)
+- Double-click to edit, single-click to expand/collapse
+- Delete confirmation dialog before removing gestures
+- Improved header subtitle shows active/total count
+
+**ProfilesView — Inline Editing in Detail Panel**
+- Profile detail panel is now an editor, not a read-only view
+- Inline name editing (click pencil icon, edit, confirm)
+- Zone detection sliders (edge threshold, corner size, corner buffer) edit directly
+- Haptic feedback toggle directly in the detail panel
+- Gesture overview shows compact list with zone indicators and action names
+- Stat bubbles showing Total/Active/Disabled counts
+- Quick action bar (Duplicate, Export, Delete) in the detail panel
+- Removed redundant edit sheet — most editing now happens inline
+- Profile list rows now use context menus instead of hover-only actions
+- Active profile indicator dot in list rows
+
+**GestureConfigurationSheet — Visual Improvements**
+- New visual zone picker (MGZonePicker): interactive 3×3 grid representing screen
+  edges and corners, replacing the dropdown-only selector
+- Dropdown still available as secondary picker alongside the visual grid
+- Selected zone name displayed prominently with accent color
+- Gesture preview card redesigned with trigger pills + action pill instead of
+  monospaced text — shows real-time visual preview of the gesture configuration
+- Modifier key toggles redesigned as visual key-cap buttons (⌘ ⌃ ⌥ ⇧) with
+  labels and active state highlighting
+- Active modifier combination shown as text below the key buttons
+
+**New Reusable Components (UIStyles.swift)**
+- MGZonePicker: Interactive 3×3 grid for selecting screen zones with visual feedback
+- MGZoneIndicator: Compact non-interactive zone position indicator
+- MGTriggerPill: Color-coded inline pill for displaying trigger components
+- Added MGStyle.Corner.xs (2pt) for fine-grained corner radii
+
+**Files Changed**: UIStyles.swift, GesturesView.swift, ProfilesView.swift,
+  GestureConfigurationSheet.swift
+
+---
+
 ## 2026-02-11
 
 ### UI Improvements: Headers, Detail Panels, and Action Selection

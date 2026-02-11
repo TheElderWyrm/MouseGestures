@@ -25,8 +25,11 @@ Improve UI
 - When creating a profile add a button to import from template
 - Improve appearance of Show Zone Highlights (currently labels don't stay within highlights).
 - Pre-render UI to increase performance
-- Better Zone Configuration
-	- More visual menu
-	- More configuration options
 - Installing plugins should be unified in developer mode
-- Improve resetting organization
+- Improve settings organization
+Improve split screens/sidebar
+	- If we are fully splitting into a sidebar we should provide editing capability not just information (example: profiles sidebar should have a section at the top for editing the profile configurations and then list the full gesture view (with edit capabilities) below.
+Gestures Tab:
+	- Add a delete button next to the edit button for gestures.
+	- Primary Icon should not just be the zone (not all gestures have a zone). Use the action symbol as the main icon.
+	- Improve the 

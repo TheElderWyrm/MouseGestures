@@ -19,6 +19,7 @@ enum MGStyle {
     
     // MARK: Corner Radii
     enum Corner {
+        static let xs: CGFloat = 2
         static let sm: CGFloat = 4
         static let md: CGFloat = 6
         static let lg: CGFloat = 8
@@ -533,6 +534,165 @@ struct MGHeaderDivider: View {
     var body: some View {
         Divider()
             .frame(height: 20)
+    }
+}
+
+// MARK: - Visual Screen Zone Picker
+
+/// Interactive 3×3-style grid representing screen zones.
+/// Zones map to edges and corners of the screen.
+struct MGZonePicker: View {
+    @Binding var selected: ScreenZone
+    
+    private let rows = 3
+    private let cols = 3
+    
+    // Map grid positions to zones (row, col) — center cell is nil (no zone)
+    private func zone(row: Int, col: Int) -> ScreenZone? {
+        switch (row, col) {
+        case (0, 0): return .topLeft
+        case (0, 1): return .top
+        case (0, 2): return .topRight
+        case (1, 0): return .left
+        case (1, 1): return nil  // center of screen — no zone
+        case (1, 2): return .right
+        case (2, 0): return .bottomLeft
+        case (2, 1): return .bottom
+        case (2, 2): return .bottomRight
+        default: return nil
+        }
+    }
+    
+    private func isCorner(row: Int, col: Int) -> Bool {
+        (row == 0 || row == 2) && (col == 0 || col == 2)
+    }
+    
+    var body: some View {
+        VStack(spacing: 2) {
+            ForEach(0..<rows, id: \.self) { row in
+                HStack(spacing: 2) {
+                    ForEach(0..<cols, id: \.self) { col in
+                        zoneCell(row: row, col: col)
+                    }
+                }
+            }
+        }
+        .padding(MGStyle.Spacing.sm)
+        .background(
+            RoundedRectangle(cornerRadius: MGStyle.Corner.lg)
+                .fill(Color.black.opacity(0.05))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: MGStyle.Corner.lg)
+                .stroke(MGStyle.Colors.separator, lineWidth: 1)
+        )
+    }
+    
+    @ViewBuilder
+    private func zoneCell(row: Int, col: Int) -> some View {
+        let z = zone(row: row, col: col)
+        let isSel = z == selected
+        let corner = isCorner(row: row, col: col)
+        let isCenter = row == 1 && col == 1
+        
+        let w: CGFloat = col == 1 ? 64 : (corner ? 36 : 36)
+        let h: CGFloat = row == 1 ? 40 : (corner ? 28 : 28)
+        
+        if let z = z {
+            Button(action: { withAnimation(.easeInOut(duration: 0.15)) { selected = z } }) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: corner ? MGStyle.Corner.sm : MGStyle.Corner.xs)
+                        .fill(isSel ? Color.accentColor : Color(NSColor.controlBackgroundColor))
+                    
+                    RoundedRectangle(cornerRadius: corner ? MGStyle.Corner.sm : MGStyle.Corner.xs)
+                        .stroke(isSel ? Color.accentColor : MGStyle.Colors.separator.opacity(0.6), lineWidth: isSel ? 1.5 : 0.5)
+                    
+                    if isSel {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundColor(.white)
+                    }
+                }
+                .frame(width: w, height: h)
+            }
+            .buttonStyle(.plain)
+            .help(z.displayName)
+        } else {
+            // Center cell — represents the screen interior
+            ZStack {
+                RoundedRectangle(cornerRadius: MGStyle.Corner.xs)
+                    .fill(Color(NSColor.controlBackgroundColor).opacity(0.3))
+                    .frame(width: w, height: h)
+                Image(systemName: "display")
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary.opacity(0.4))
+            }
+        }
+    }
+}
+
+/// Compact inline zone indicator (non-interactive)
+struct MGZoneIndicator: View {
+    let zone: ScreenZone
+    
+    private func pos() -> (row: Int, col: Int) {
+        switch zone {
+        case .topLeft: return (0, 0)
+        case .top: return (0, 1)
+        case .topRight: return (0, 2)
+        case .left: return (1, 0)
+        case .right: return (1, 2)
+        case .bottomLeft: return (2, 0)
+        case .bottom: return (2, 1)
+        case .bottomRight: return (2, 2)
+        }
+    }
+    
+    var body: some View {
+        let p = pos()
+        VStack(spacing: 1) {
+            ForEach(0..<3, id: \.self) { row in
+                HStack(spacing: 1) {
+                    ForEach(0..<3, id: \.self) { col in
+                        let active = row == p.row && col == p.col
+                        let isCenter = row == 1 && col == 1
+                        RoundedRectangle(cornerRadius: 1)
+                            .fill(active ? Color.accentColor : (isCenter ? Color.clear : Color.secondary.opacity(0.2)))
+                            .frame(width: col == 1 ? 8 : 5, height: row == 1 ? 6 : 4)
+                    }
+                }
+            }
+        }
+        .padding(2)
+    }
+}
+
+// MARK: - Trigger Pill
+
+/// Small inline pill showing a trigger component.
+struct MGTriggerPill: View {
+    let icon: String
+    let text: String
+    let color: Color
+    
+    init(_ text: String, icon: String, color: Color = .secondary) {
+        self.text = text
+        self.icon = icon
+        self.color = color
+    }
+    
+    var body: some View {
+        HStack(spacing: MGStyle.Spacing.xs) {
+            Image(systemName: icon)
+                .font(.system(size: 9, weight: .medium))
+            Text(text)
+                .font(.system(size: 10, weight: .medium))
+        }
+        .padding(.horizontal, MGStyle.Spacing.md)
+        .padding(.vertical, 3)
+        .background(color.opacity(0.1))
+        .foregroundColor(color)
+        .cornerRadius(MGStyle.Corner.sm)
     }
 }
 

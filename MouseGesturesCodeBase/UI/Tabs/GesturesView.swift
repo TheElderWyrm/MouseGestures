@@ -4,7 +4,6 @@ import AppKit
 // MARK: - Gestures Tab
 struct GesturesView: View {
     @StateObject private var uiServices = UIServices.shared
-    @State private var selectedGesture: Gesture?
     enum ActiveSheet: Identifiable {
         case addGesture
         case editGesture(Gesture)
@@ -22,6 +21,7 @@ struct GesturesView: View {
     @State private var showingResetConfirmation = false
     @State private var searchText = ""
     @State private var showSearch = false
+    @State private var expandedGesture: String?
     
     private var filteredGestures: [Gesture] {
         if searchText.isEmpty { return uiServices.gestures }
@@ -32,12 +32,16 @@ struct GesturesView: View {
         uiServices.getActiveProfile()?.name ?? "None"
     }
     
+    private var enabledCount: Int {
+        uiServices.gestures.filter { $0.isEnabled }.count
+    }
+    
     var body: some View {
         VStack(spacing: 0) {
             // Header
             MGCompactHeader(
                 "Gestures",
-                subtitle: "Profile: \(activeProfileName) · \(uiServices.gestures.count) gesture\(uiServices.gestures.count == 1 ? "" : "s")",
+                subtitle: "Profile: \(activeProfileName) · \(enabledCount)/\(uiServices.gestures.count) active",
                 menuItems: [
                     MGMenuItem("Change Profile", icon: "person.2") { activeSheet = .profilePicker },
                     .divider,
@@ -61,24 +65,36 @@ struct GesturesView: View {
                 .help("Search gestures")
                 
                 Button(action: { activeSheet = .addGesture }) {
-                    Label("Add", systemImage: "plus")
+                    Label("Add Gesture", systemImage: "plus")
                 }
             }
             
             Divider()
             
             // Main Content
-            HSplitView {
-                gestureListView
-                    .frame(minWidth: MGStyle.Layout.listMinWidth, idealWidth: MGStyle.Layout.listIdealWidth)
-                
-                if let gesture = selectedGesture {
-                    gestureDetailView(gesture: gesture)
-                        .frame(minWidth: MGStyle.Layout.detailMinWidth)
-                } else {
-                    MGEmptyState(icon: "hand.tap", title: "Select a gesture", description: "Choose a gesture from the list to view its details")
-                        .background(MGStyle.Colors.contentBackground)
-                        .frame(minWidth: MGStyle.Layout.detailMinWidth)
+            if filteredGestures.isEmpty {
+                MGEmptyState(
+                    icon: searchText.isEmpty ? "hand.draw" : "magnifyingglass",
+                    title: searchText.isEmpty ? "No gestures configured" : "No matching gestures",
+                    description: searchText.isEmpty ? "Add gestures to trigger actions with mouse zones, modifier keys, and more." : nil,
+                    actionLabel: searchText.isEmpty ? "Add Your First Gesture" : nil,
+                    action: searchText.isEmpty ? { activeSheet = .addGesture } : nil
+                )
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: MGStyle.Spacing.md) {
+                        ForEach(filteredGestures, id: \.id) { gesture in
+                            GestureCardView(
+                                gesture: gesture,
+                                isExpanded: expandedGesture == gesture.id,
+                                onToggleExpand: { toggleExpand(gesture) },
+                                onEdit: { activeSheet = .editGesture(gesture) },
+                                onDelete: { deleteGesture(gesture) },
+                                onToggleEnabled: { enabled in toggleGestureEnabled(gesture, enabled: enabled) }
+                            )
+                        }
+                    }
+                    .padding(MGStyle.Spacing.xl)
                 }
             }
         }
@@ -102,253 +118,303 @@ struct GesturesView: View {
         .onAppear { uiServices.loadData() }
     }
     
-    // MARK: - Gesture List View
+    // MARK: - Helpers
     
-    private var gestureListView: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            MGListSectionHeader(
-                "Configured Gestures",
-                count: filteredGestures.count
-            )
-            
-            ScrollView {
-                VStack(spacing: 1) {
-                    ForEach(filteredGestures, id: \.id) { gesture in
-                        GestureRowView(
-                            gesture: gesture,
-                            isSelected: selectedGesture?.id == gesture.id,
-                            onSelect: { selectedGesture = gesture },
-                            onDelete: { deleteGesture(gesture) },
-                            onEdit: { 
-                                selectedGesture = gesture
-                                activeSheet = .editGesture(gesture)
-                            },
-                            onToggleEnabled: { isEnabled in
-                                toggleGestureEnabled(gesture, enabled: isEnabled)
-                            }
-                        )
-                    }
-                    
-                    if filteredGestures.isEmpty {
-                        MGEmptyState(
-                            icon: searchText.isEmpty ? "hand.draw" : "magnifyingglass",
-                            title: searchText.isEmpty ? "No gestures configured" : "No matching gestures",
-                            actionLabel: searchText.isEmpty ? "Add Your First Gesture" : nil,
-                            action: searchText.isEmpty ? { activeSheet = .addGesture } : nil
-                        )
-                        .padding(.vertical, 40)
-                    }
-                }
-            }
+    private func toggleExpand(_ gesture: Gesture) {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            expandedGesture = expandedGesture == gesture.id ? nil : gesture.id
         }
-        .background(MGStyle.Colors.contentBackground)
     }
-    
-    // MARK: - Gesture Detail View
-    
-    private func gestureDetailView(gesture: Gesture) -> some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
-                // Title bar
-                HStack {
-                    VStack(alignment: .leading, spacing: MGStyle.Spacing.sm) {
-                        Text(gesture.displayDescription)
-                            .font(.title3)
-                            .fontWeight(.semibold)
-                        
-                        HStack(spacing: MGStyle.Spacing.md) {
-                            MGBadge(
-                                gesture.isEnabled ? "Enabled" : "Disabled",
-                                color: gesture.isEnabled ? .green : .gray,
-                                icon: gesture.isEnabled ? "checkmark.circle" : "minus.circle"
-                            )
-                            
-                            if let actionDef = UIServices.shared.getActionDefinition(for: gesture.actionIdentifier) {
-                                MGBadge(actionDef.name, color: .accentColor, icon: actionDef.icon ?? "bolt")
-                            }
-                        }
-                    }
-                    
-                    Spacer()
-                    
-                    HStack(spacing: MGStyle.Spacing.md) {
-                        Button(action: { activeSheet = .editGesture(gesture) }) {
-                            Label("Edit", systemImage: "pencil")
-                        }
-                        
-                        Button(action: { deleteGesture(gesture) }) {
-                            Image(systemName: "trash")
-                                .foregroundColor(.red)
-                        }
-                        .buttonStyle(.borderless)
-                    }
-                }
-                .padding(.bottom, MGStyle.Spacing.sm)
-                
-                // Trigger Section
-                MGDetailSection("Trigger", icon: "hand.tap") {
-                    MGDetailRow("Zone", value: gesture.zone.rawValue, icon: "square.grid.3x3")
-                    
-                    let modsText = modifiersDescription(gesture.modifiers)
-                    if !modsText.isEmpty && modsText != "None" {
-                        MGDetailRow("Modifiers", value: modsText, icon: "command")
-                    }
-                    
-                    if gesture.dragModifier != .none {
-                        MGDetailRow("Drag", value: gesture.dragModifier.displayName, icon: "hand.draw")
-                    }
-                    
-                    if let keyboard = gesture.activation.keyboardTrigger {
-                        MGDetailRow("Keyboard", value: keyboard.displayString, icon: "keyboard")
-                    }
-                    
-                    if let mouse = gesture.activation.mouseButtonTrigger {
-                        MGDetailRow("Mouse", value: mouse.displayString, icon: "computermouse")
-                    }
-                    
-                    MGDetailRow("Activation", value: gesture.activation.activationType.rawValue, icon: "bolt.circle")
-                }
-                
-                // Action Section
-                MGDetailSection("Action", icon: "bolt") {
-                    if let actionDef = UIServices.shared.getActionDefinition(for: gesture.actionIdentifier) {
-                        MGDetailRow("Name", value: actionDef.name, icon: "tag")
-                        
-                        Text(actionDef.description)
-                            .font(.system(size: MGStyle.FontSize.caption))
-                            .foregroundColor(.secondary)
-                            .padding(.leading, 14)
-                        
-                        let plugin = gesture.actionIdentifier.split(separator: ".").first.map(String.init) ?? "Unknown"
-                        MGDetailRow("Plugin", value: plugin, icon: "puzzlepiece.extension")
-                    } else {
-                        MGDetailRow("Identifier", value: gesture.actionIdentifier, icon: "tag")
-                    }
-                    
-                    // Show parameters if any
-                    if !gesture.parameters.isEmpty {
-                        Divider()
-                        ForEach(Array(gesture.parameters.keys.sorted()), id: \.self) { key in
-                            if let val = gesture.parameters[key] {
-                                MGDetailRow(key.capitalized, value: "\(val.value ?? "—")", icon: "slider.horizontal.3")
-                            }
-                        }
-                    }
-                }
-                
-                // Timing Section (only if configured)
-                if gesture.timing.repeatOnHold || gesture.timing.longPressEnabled {
-                    MGDetailSection("Timing", icon: "timer") {
-                        if gesture.timing.repeatOnHold {
-                            MGDetailRow("Repeat", value: "On Hold", icon: "repeat", valueColor: .blue)
-                            MGDetailRow("Initial Delay", value: String(format: "%.1fs", gesture.timing.repeatInitialDelay))
-                            MGDetailRow("Interval", value: String(format: "%.1fs", gesture.timing.repeatInterval))
-                        }
-                        if gesture.timing.longPressEnabled {
-                            MGDetailRow("Long Press", value: "Enabled", icon: "hand.tap", valueColor: .blue)
-                            MGDetailRow("Threshold", value: String(format: "%.1fs", gesture.timing.longPressThreshold))
-                            if let longPressAction = gesture.longPressActionIdentifier {
-                                MGDetailRow("Action", value: longPressAction, icon: "bolt")
-                            }
-                        }
-                    }
-                }
-            }
-            .padding(MGStyle.Spacing.xl)
-        }
-        .background(MGStyle.Colors.contentBackground)
-    }
-    
-    // MARK: - Helper Methods
     
     private func deleteGesture(_ gesture: Gesture) {
-        if uiServices.removeGesture(gesture) {
-            if selectedGesture?.id == gesture.id { selectedGesture = nil }
-        }
+        _ = uiServices.removeGesture(gesture)
     }
     
     private func clearAllGestures() {
         uiServices.clearAllGestures()
-        selectedGesture = nil
     }
     
     private func toggleGestureEnabled(_ gesture: Gesture, enabled: Bool) {
-        var updatedGesture = gesture
-        updatedGesture.activation.isEnabled = enabled
-        _ = uiServices.updateGesture(oldGesture: gesture, newGesture: updatedGesture)
-    }
-    
-    private func modifiersDescription(_ modifiers: NSEvent.ModifierFlags) -> String {
-        return uiServices.getModifiersDescription(modifiers)
+        var updated = gesture
+        updated.activation.isEnabled = enabled
+        _ = uiServices.updateGesture(oldGesture: gesture, newGesture: updated)
     }
 }
 
-// MARK: - Gesture Row View
+// MARK: - Gesture Card View
 
-struct GestureRowView: View {
+struct GestureCardView: View {
     let gesture: Gesture
-    let isSelected: Bool
-    let onSelect: () -> Void
-    let onDelete: () -> Void
+    let isExpanded: Bool
+    let onToggleExpand: () -> Void
     let onEdit: () -> Void
+    let onDelete: () -> Void
     let onToggleEnabled: (Bool) -> Void
     
     @State private var isHovered = false
     @State private var isEnabled: Bool
+    @State private var showDeleteConfirm = false
     
-    init(gesture: Gesture, isSelected: Bool, onSelect: @escaping () -> Void,
-         onDelete: @escaping () -> Void, onEdit: @escaping () -> Void,
-         onToggleEnabled: @escaping (Bool) -> Void) {
+    init(gesture: Gesture, isExpanded: Bool,
+         onToggleExpand: @escaping () -> Void, onEdit: @escaping () -> Void,
+         onDelete: @escaping () -> Void, onToggleEnabled: @escaping (Bool) -> Void) {
         self.gesture = gesture
-        self.isSelected = isSelected
-        self.onSelect = onSelect
-        self.onDelete = onDelete
+        self.isExpanded = isExpanded
+        self.onToggleExpand = onToggleExpand
         self.onEdit = onEdit
+        self.onDelete = onDelete
         self.onToggleEnabled = onToggleEnabled
         self._isEnabled = State(initialValue: gesture.isEnabled)
     }
     
+    private var actionDef: PluginAction? {
+        UIServices.shared.getActionDefinition(for: gesture.actionIdentifier)
+    }
+    
+    private var modifiersText: String {
+        UIServices.shared.getModifiersDescription(gesture.modifiers)
+    }
+    
     var body: some View {
-        HStack {
-            Toggle("", isOn: $isEnabled)
-                .toggleStyle(CheckboxToggleStyle())
-                .onChange(of: isEnabled) { newValue in onToggleEnabled(newValue) }
-                .help(isEnabled ? "Gesture is enabled" : "Gesture is disabled")
-            
-            VStack(alignment: .leading, spacing: MGStyle.Spacing.sm) {
-                Text(gesture.displayDescription)
-                    .font(.system(size: MGStyle.FontSize.body, weight: .medium))
-                    .lineLimit(1)
-                    .opacity(isEnabled ? 1.0 : 0.5)
+        VStack(alignment: .leading, spacing: 0) {
+            // Main row
+            HStack(spacing: MGStyle.Spacing.lg) {
+                // Zone indicator
+                MGZoneIndicator(zone: gesture.zone)
+                    .opacity(isEnabled ? 1 : 0.4)
                 
-                if let actionDef = UIServices.shared.getActionDefinition(for: gesture.actionIdentifier) {
-                    Text(actionDef.name)
-                        .font(.system(size: MGStyle.FontSize.caption))
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
-                        .opacity(isEnabled ? 1.0 : 0.5)
-                } else {
-                    Text(gesture.actionIdentifier)
-                        .font(.system(size: MGStyle.FontSize.caption))
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
-                        .opacity(isEnabled ? 1.0 : 0.5)
+                // Enable toggle
+                Toggle("", isOn: $isEnabled)
+                    .toggleStyle(.switch)
+                    .controlSize(.mini)
+                    .labelsHidden()
+                    .onChange(of: isEnabled) { v in onToggleEnabled(v) }
+                
+                // Info block
+                VStack(alignment: .leading, spacing: MGStyle.Spacing.sm) {
+                    // Action name
+                    HStack(spacing: MGStyle.Spacing.md) {
+                        if let def = actionDef, let icon = def.icon {
+                            Image(systemName: icon)
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(isEnabled ? .accentColor : .secondary)
+                        }
+                        Text(actionDef?.name ?? gesture.actionIdentifier)
+                            .font(.system(size: MGStyle.FontSize.body, weight: .semibold))
+                            .lineLimit(1)
+                            .opacity(isEnabled ? 1 : 0.5)
+                    }
+                    
+                    // Trigger pills
+                    HStack(spacing: MGStyle.Spacing.sm) {
+                        MGTriggerPill(gesture.zone.displayName, icon: "square.grid.3x3", color: .blue)
+                        
+                        if !modifiersText.isEmpty && modifiersText != "None" {
+                            MGTriggerPill(modifiersText, icon: "command", color: .purple)
+                        }
+                        
+                        if gesture.dragModifier != .none {
+                            MGTriggerPill(gesture.dragModifier.displayName, icon: "hand.draw", color: .orange)
+                        }
+                        
+                        if gesture.activation.keyboardTrigger != nil {
+                            MGTriggerPill("Keyboard", icon: "keyboard", color: .green)
+                        }
+                        
+                        if gesture.activation.mouseButtonTrigger != nil {
+                            MGTriggerPill("Mouse", icon: "computermouse", color: .teal)
+                        }
+                        
+                        if gesture.timing.repeatOnHold {
+                            MGTriggerPill("Repeat", icon: "repeat", color: .indigo)
+                        }
+                        
+                        if gesture.timing.longPressEnabled {
+                            MGTriggerPill("Long Press", icon: "timer", color: .pink)
+                        }
+                    }
+                    .opacity(isEnabled ? 1 : 0.4)
                 }
+                
+                Spacer()
+                
+                // Hover actions
+                if isHovered {
+                    HStack(spacing: MGStyle.Spacing.md) {
+                        Button(action: onEdit) {
+                            Image(systemName: "pencil")
+                                .font(.system(size: MGStyle.IconSize.row))
+                                .foregroundColor(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                        .help("Edit gesture")
+                        
+                        Button(action: { showDeleteConfirm = true }) {
+                            Image(systemName: "trash")
+                                .font(.system(size: MGStyle.IconSize.row))
+                                .foregroundColor(.red.opacity(0.7))
+                        }
+                        .buttonStyle(.plain)
+                        .help("Delete gesture")
+                    }
+                    .transition(.opacity)
+                }
+                
+                // Expand chevron
+                Button(action: onToggleExpand) {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(.secondary)
+                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, MGStyle.Spacing.xl)
+            .padding(.vertical, MGStyle.Spacing.lg)
+            
+            // Expanded detail area
+            if isExpanded {
+                Divider()
+                    .padding(.horizontal, MGStyle.Spacing.xl)
+                
+                expandedContent
+                    .padding(.horizontal, MGStyle.Spacing.xl)
+                    .padding(.vertical, MGStyle.Spacing.lg)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .background(
+            RoundedRectangle(cornerRadius: MGStyle.Corner.lg)
+                .fill(isHovered ? MGStyle.Colors.cardBackground : MGStyle.Colors.cardBackground.opacity(0.7))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: MGStyle.Corner.lg)
+                .stroke(isExpanded ? Color.accentColor.opacity(0.3) : MGStyle.Colors.separator.opacity(0.4), lineWidth: isExpanded ? 1 : 0.5)
+        )
+        .contentShape(Rectangle())
+        .onHover { h in withAnimation(.easeInOut(duration: 0.1)) { isHovered = h } }
+        .onTapGesture(count: 2) { onEdit() }
+        .onTapGesture { onToggleExpand() }
+        .contextMenu {
+            Button(action: onEdit) { Label("Edit", systemImage: "pencil") }
+            Divider()
+            Button(action: { isEnabled.toggle(); onToggleEnabled(isEnabled) }) {
+                Label(isEnabled ? "Disable" : "Enable", systemImage: isEnabled ? "pause.circle" : "play.circle")
+            }
+            Divider()
+            Button(role: .destructive, action: onDelete) { Label("Delete", systemImage: "trash") }
+        }
+        .confirmationDialog("Delete Gesture?", isPresented: $showDeleteConfirm, titleVisibility: .visible) {
+            Button("Delete", role: .destructive) { onDelete() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This will permanently remove this gesture.")
+        }
+    }
+    
+    // MARK: - Expanded Content
+    
+    private var expandedContent: some View {
+        HStack(alignment: .top, spacing: MGStyle.Spacing.xxl) {
+            // Trigger details
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
+                Text("Trigger")
+                    .font(.system(size: MGStyle.FontSize.caption, weight: .semibold))
+                    .foregroundColor(.secondary)
+                    .textCase(.uppercase)
+                
+                detailLine("Zone", gesture.zone.displayName)
+                
+                if !modifiersText.isEmpty && modifiersText != "None" {
+                    detailLine("Modifiers", modifiersText)
+                }
+                if gesture.dragModifier != .none {
+                    detailLine("Drag", gesture.dragModifier.displayName)
+                }
+                if let kb = gesture.activation.keyboardTrigger {
+                    detailLine("Keyboard", kb.displayString)
+                }
+                if let mb = gesture.activation.mouseButtonTrigger {
+                    detailLine("Mouse", mb.displayString)
+                }
+                detailLine("Mode", gesture.activation.activationType.rawValue)
+            }
+            .frame(minWidth: 180, alignment: .leading)
+            
+            Divider()
+                .frame(height: 80)
+            
+            // Action details
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
+                Text("Action")
+                    .font(.system(size: MGStyle.FontSize.caption, weight: .semibold))
+                    .foregroundColor(.secondary)
+                    .textCase(.uppercase)
+                
+                if let def = actionDef {
+                    detailLine("Name", def.name)
+                    if !def.description.isEmpty {
+                        Text(def.description)
+                            .font(.system(size: MGStyle.FontSize.caption))
+                            .foregroundColor(.secondary)
+                            .lineLimit(2)
+                    }
+                } else {
+                    detailLine("ID", gesture.actionIdentifier)
+                }
+                
+                if !gesture.parameters.isEmpty {
+                    ForEach(Array(gesture.parameters.keys.sorted()), id: \.self) { key in
+                        if let val = gesture.parameters[key] {
+                            detailLine(key.capitalized, "\(val.value ?? "—")")
+                        }
+                    }
+                }
+            }
+            .frame(minWidth: 180, alignment: .leading)
+            
+            // Timing (if applicable)
+            if gesture.timing.repeatOnHold || gesture.timing.longPressEnabled {
+                Divider()
+                    .frame(height: 80)
+                
+                VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
+                    Text("Timing")
+                        .font(.system(size: MGStyle.FontSize.caption, weight: .semibold))
+                        .foregroundColor(.secondary)
+                        .textCase(.uppercase)
+                    
+                    if gesture.timing.repeatOnHold {
+                        detailLine("Repeat", "On Hold")
+                        detailLine("Delay", String(format: "%.1fs", gesture.timing.repeatInitialDelay))
+                        detailLine("Interval", String(format: "%.1fs", gesture.timing.repeatInterval))
+                    }
+                    if gesture.timing.longPressEnabled {
+                        detailLine("Long Press", String(format: "%.1fs", gesture.timing.longPressThreshold))
+                    }
+                }
+                .frame(minWidth: 120, alignment: .leading)
             }
             
             Spacer()
             
-            if isHovered {
-                MGRowActions(actions: [
-                    .init("pencil") { onEdit() },
-                    .init("trash", destructive: true) { onDelete() }
-                ])
+            // Edit button in expanded view
+            Button(action: onEdit) {
+                Label("Edit", systemImage: "pencil")
             }
+            .controlSize(.small)
         }
-        .mgListRow(isSelected: isSelected, isHovered: isHovered)
-        .onHover { hovering in isHovered = hovering }
-        .onTapGesture { onSelect() }
-        .onTapGesture(count: 2) { onEdit() }
+    }
+    
+    private func detailLine(_ label: String, _ value: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: MGStyle.Spacing.md) {
+            Text(label)
+                .font(.system(size: MGStyle.FontSize.caption))
+                .foregroundColor(.secondary)
+                .frame(minWidth: 60, alignment: .leading)
+            Text(value)
+                .font(.system(size: MGStyle.FontSize.caption, weight: .medium))
+        }
     }
 }
 
