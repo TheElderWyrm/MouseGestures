@@ -535,3 +535,238 @@ struct MGHeaderDivider: View {
             .frame(height: 20)
     }
 }
+
+// MARK: - Unified Detail Section
+
+/// Modern detail section replacing GroupBox for detail panels.
+struct MGDetailSection<Content: View>: View {
+    let title: String
+    let icon: String?
+    let content: () -> Content
+    
+    init(_ title: String, icon: String? = nil, @ViewBuilder content: @escaping () -> Content) {
+        self.title = title
+        self.icon = icon
+        self.content = content
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
+            HStack(spacing: MGStyle.Spacing.md) {
+                if let icon {
+                    Image(systemName: icon)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(.accentColor)
+                }
+                Text(title)
+                    .font(.system(size: MGStyle.FontSize.heading, weight: .semibold))
+                    .foregroundColor(.primary)
+            }
+            
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
+                content()
+            }
+        }
+        .padding(MGStyle.Spacing.xl)
+        .background(
+            RoundedRectangle(cornerRadius: MGStyle.Corner.lg)
+                .fill(MGStyle.Colors.cardBackground)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: MGStyle.Corner.lg)
+                .stroke(MGStyle.Colors.separator.opacity(0.5), lineWidth: 0.5)
+        )
+    }
+}
+
+// MARK: - Unified Detail Row
+
+/// Key-value row for detail panels with consistent styling.
+struct MGDetailRow: View {
+    let label: String
+    let value: String
+    let icon: String?
+    let valueColor: Color
+    
+    init(_ label: String, value: String, icon: String? = nil, valueColor: Color = .primary) {
+        self.label = label
+        self.value = value
+        self.icon = icon
+        self.valueColor = valueColor
+    }
+    
+    var body: some View {
+        HStack(alignment: .firstTextBaseline) {
+            if let icon {
+                Image(systemName: icon)
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
+                    .frame(width: 14)
+            }
+            Text(label)
+                .font(.system(size: MGStyle.FontSize.body))
+                .foregroundColor(.secondary)
+                .frame(minWidth: 100, alignment: .leading)
+            Text(value)
+                .font(.system(size: MGStyle.FontSize.body, weight: .medium))
+                .foregroundColor(valueColor)
+        }
+    }
+}
+
+// MARK: - Unified Selection Banner
+
+/// Shows the currently selected item prominently.
+struct MGSelectionBanner: View {
+    let icon: String
+    let title: String
+    let subtitle: String?
+    let accentColor: Color
+    
+    init(icon: String, title: String, subtitle: String? = nil, accentColor: Color = .accentColor) {
+        self.icon = icon
+        self.title = title
+        self.subtitle = subtitle
+        self.accentColor = accentColor
+    }
+    
+    var body: some View {
+        HStack(spacing: MGStyle.Spacing.md) {
+            Image(systemName: icon)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(accentColor)
+            
+            VStack(alignment: .leading, spacing: 1) {
+                Text(title)
+                    .font(.system(size: MGStyle.FontSize.body, weight: .semibold))
+                    .lineLimit(1)
+                
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.system(size: MGStyle.FontSize.caption))
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
+            }
+            
+            Spacer()
+            
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 14))
+                .foregroundColor(accentColor)
+        }
+        .padding(.horizontal, MGStyle.Spacing.lg)
+        .padding(.vertical, MGStyle.Spacing.md)
+        .background(
+            RoundedRectangle(cornerRadius: MGStyle.Corner.md)
+                .fill(accentColor.opacity(0.1))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: MGStyle.Corner.md)
+                .stroke(accentColor.opacity(0.3), lineWidth: 1)
+        )
+    }
+}
+
+// MARK: - Unified Toolbar (Compact Header)
+
+/// Compact toolbar for tab headers. Primary actions on the left, secondary in overflow menu.
+struct MGCompactHeader<Leading: View>: View {
+    let title: String
+    let subtitle: String?
+    @ViewBuilder let leading: () -> Leading
+    let menuItems: [MGMenuItem]
+    
+    init(
+        _ title: String,
+        subtitle: String? = nil,
+        menuItems: [MGMenuItem] = [],
+        @ViewBuilder leading: @escaping () -> Leading = { EmptyView() }
+    ) {
+        self.title = title
+        self.subtitle = subtitle
+        self.menuItems = menuItems
+        self.leading = leading
+    }
+    
+    var body: some View {
+        HStack(spacing: MGStyle.Spacing.lg) {
+            // Title area
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
+                Text(title)
+                    .font(.title2)
+                    .fontWeight(.bold)
+                
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+            }
+            
+            Spacer()
+            
+            // Primary actions
+            HStack(spacing: MGStyle.Spacing.md) {
+                leading()
+            }
+            
+            // Overflow menu (secondary actions)
+            if !menuItems.isEmpty {
+                Menu {
+                    ForEach(menuItems) { item in
+                        if item.isDivider {
+                            Divider()
+                        } else {
+                            Button(action: item.action ?? {}) {
+                                Label(item.label, systemImage: item.icon)
+                            }
+                            .disabled(item.isDisabled)
+                        }
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                        .font(.system(size: 16))
+                        .foregroundColor(.secondary)
+                }
+                .menuStyle(.borderlessButton)
+                .frame(width: 28)
+            }
+        }
+        .padding(.horizontal, MGStyle.Spacing.xl)
+        .padding(.vertical, MGStyle.Spacing.lg)
+    }
+}
+
+/// Menu item for MGCompactHeader's overflow menu.
+struct MGMenuItem: Identifiable {
+    let id = UUID()
+    let label: String
+    let icon: String
+    let action: (() -> Void)?
+    let isDisabled: Bool
+    let isDivider: Bool
+    let isDestructive: Bool
+    
+    init(_ label: String, icon: String, disabled: Bool = false, destructive: Bool = false, action: @escaping () -> Void) {
+        self.label = label
+        self.icon = icon
+        self.action = action
+        self.isDisabled = disabled
+        self.isDivider = false
+        self.isDestructive = destructive
+    }
+    
+    static var divider: MGMenuItem {
+        MGMenuItem(isDivider: true)
+    }
+    
+    private init(isDivider: Bool) {
+        self.label = ""
+        self.icon = ""
+        self.action = nil
+        self.isDisabled = false
+        self.isDivider = true
+        self.isDestructive = false
+    }
+}

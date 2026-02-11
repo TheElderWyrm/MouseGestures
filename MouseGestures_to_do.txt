@@ -1,6 +1,9 @@
 - Reduce duplicate code, unify architecture whenever possible
 
 General:
+- Add right click functionality throughout app
+- Double clicking should edit
+- 'Default' profile doesn't do anything and can be removed.
 
 Actions (fix later):
 - Not all actions work.
@@ -18,13 +21,12 @@ Actions (fix later):
 
 Improve UI
 - Improve trigger configuration
-- App selection UI (Maybe just select apps from finder)
-- Better gesture information (Base off current bundle actions selection.)
-- Action selection needs better indication of what is currently selected/add a select button to confirm selection (To prevent accidental overriding of previously selected action)
-- Improve appearance of Show Zone Highlights (currently labels down't stay within highlights).
+- App selection UI- Add a button to select apps from finder
+- When creating a profile add a button to import from template
+- Improve appearance of Show Zone Highlights (currently labels don't stay within highlights).
 - Pre-render UI to increase performance
-- Unify UI Styles throughout the app ✓
 - Better Zone Configuration
 	- More visual menu
 	- More configuration options
 - Installing plugins should be unified in developer mode
+- Improve resetting organization

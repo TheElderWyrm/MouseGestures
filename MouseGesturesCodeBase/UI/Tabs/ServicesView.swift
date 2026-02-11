@@ -73,21 +73,19 @@ struct ServicesView: View {
     private var servicesContent: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {
-                HStack {
+                HStack(spacing: MGStyle.Spacing.lg) {
                     MGSectionHeader("Services", icon: "gearshape.2")
                     
                     Spacer()
                     
                     MGSearchField("Search services...", text: $searchText)
-                        .frame(width: MGStyle.Layout.searchFieldWidth)
-                    
-                    Button(action: { activeSheet = .install }) {
-                        Label("Install Plugin", systemImage: "plus.circle")
-                    }
+                        .frame(width: 180)
                     
                     Button(action: loadServicePlugins) {
                         Image(systemName: "arrow.clockwise")
+                            .font(.system(size: 13))
                     }
+                    .buttonStyle(.borderless)
                 }
                 
                 if filteredPlugins.isEmpty {

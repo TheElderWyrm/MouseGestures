@@ -1,3 +1,65 @@
+## 2026-02-11
+
+### UI Improvements: Headers, Detail Panels, and Action Selection
+- **New shared components added to UIStyles.swift**:
+  * `MGDetailSection` — modern card-style detail section replacing GroupBox in detail panels
+  * `MGDetailRow` — consistent key-value row with optional icon for detail panels
+  * `MGSelectionBanner` — prominent banner showing currently selected item with checkmark
+  * `MGCompactHeader` — unified tab header with title/subtitle, primary actions, and overflow menu
+  * `MGMenuItem` — menu item model for MGCompactHeader's overflow menu
+- **Tab header redesign (decluttered, consistent)**:
+  * GesturesView: Profile info moved to subtitle, reset/clear in overflow menu, search toggleable
+  * ProfilesView: Import/export/templates moved to overflow menu, search toggleable
+  * SavedActionsView: Edit/remove/import/export in overflow menu, search toggleable
+  * AppProfilesView: Switched to MGCompactHeader for consistency
+  * ServicesView: Cleaned up content header, removed redundant install button
+- **Gesture detail panel modernized**:
+  * Replaced GroupBox with MGDetailSection for Trigger, Action, and Timing sections
+  * Uses MGDetailRow for consistent key-value display with icons
+  * Added inline action badges (enabled status, action name) in title area
+  * Edit/delete actions moved to inline title bar buttons
+  * Shows parameters when configured
+- **Profile detail panel modernized**:
+  * Replaced GroupBox with MGDetailSection for Overview, Zone Settings, Gestures
+  * Uses MGDetailRow with icons throughout
+  * Consolidated action buttons into title bar with overflow menu
+  * Shows up to 8 gestures in summary (was 5)
+- **Action selection improved**:
+  * Added MGSelectionBanner showing selected action name + description prominently
+  * Covers plugin actions, saved actions, and unknown actions with different colors
+- **Double-click to edit**: Added to gesture rows and profile rows
+- **Search toggle**: Search bars hidden by default on Gestures, Profiles, SavedActions tabs;
+  revealed via magnifying glass button to reduce visual clutter
+- **Resolved to-do items**: Different UI styles, better gesture info, action selection indicator,
+  reduce header crowding, consistent headers, search bar cleanup
+
+### Unified UI Styles Throughout Application
+
+**Extended MGSidebar with header/footer slots** - Added optional `header` and `footer` ViewBuilder parameters to MGSidebar, enabling views like Settings to embed search fields and toggles within the sidebar while using the shared component.
+
+**Structural consistency across sidebar views:**
+- SettingsView sidebar now uses MGSidebar instead of manual layout
+- ServicesView refactored from redundant MGPageHeader+sidebar to sidebar+MGSectionHeader pattern (matching DeveloperView)
+- All three sidebar-based views (Settings, Services, Developer) now follow the same layout pattern
+
+**Replaced hardcoded values throughout:**
+- Padding values (5, 10, 14, etc.) → MGStyle.Spacing constants
+- Font sizes (9, 10, 12, 13) → MGStyle.FontSize constants  
+- Colors (Color.gray.opacity(0.3), inline Color.accentColor.opacity(0.1)) → MGStyle.Colors constants
+- Manual "Advanced" badge styling → MGBadge component
+- Manual empty state placeholders → MGEmptyState component
+
+**Consistent headers:**
+- Detail view headers in GesturesView and ProfilesView now use MGSectionHeader
+- PluginSettingsView header uses MGSectionHeader
+- TabManager views (PluginTabManagerSettings, PluginManagerView) use MGSectionHeader
+
+**Fixed MGContentCard** internal spacing from hardcoded `15` to `MGStyle.Spacing.xl`.
+
+**Files changed:** UIStyles.swift, SettingsView.swift, ServicesView.swift, DeveloperView.swift, GesturesView.swift, ProfilesView.swift, PluginSettingsView.swift, TabManager.swift
+
+---
+
 ## 2026-02-08
 
 ### Major Refactor: Modular Activation Component System

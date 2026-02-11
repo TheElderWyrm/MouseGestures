@@ -7,6 +7,7 @@ struct SavedActionsView: View {
     @StateObject private var uiServices = UIServices.shared
     @State private var selectedActions = Set<UUID>()
     @State private var searchText = ""
+    @State private var showSearch = false
     enum ActiveSheet: Identifiable {
         case addAction
         case editAction(SavedAction)
@@ -31,7 +32,7 @@ struct SavedActionsView: View {
             
             Divider()
             
-            if filteredAndSortedActions.isEmpty {
+            if filteredAndSortedActions.isEmpty && searchText.isEmpty {
                 MGEmptyState(
                     icon: "star.square.on.square",
                     title: "No Saved Actions",
@@ -97,42 +98,41 @@ struct SavedActionsView: View {
     // MARK: - View Components
     
     private var headerView: some View {
-        MGPageHeader("Saved Actions") {
-            Picker("Sort by", selection: $sortOrder) {
+        MGCompactHeader(
+            "Saved Actions",
+            subtitle: uiServices.savedActions.isEmpty ? nil : "\(uiServices.savedActions.count) action\(uiServices.savedActions.count == 1 ? "" : "s")",
+            menuItems: [
+                MGMenuItem("Edit Selected", icon: "pencil", disabled: selectedActions.count != 1) { editSelectedAction() },
+                MGMenuItem("Remove Selected", icon: "minus.circle", disabled: selectedActions.isEmpty) { confirmDeleteSelectedActions() },
+                .divider,
+                MGMenuItem("Import", icon: "square.and.arrow.down") { showingImportPanel = true },
+                MGMenuItem("Export Selected", icon: "square.and.arrow.up", disabled: selectedActions.isEmpty) { showingExportPanel = true }
+            ]
+        ) {
+            // Sort picker
+            Picker("", selection: $sortOrder) {
                 ForEach(SavedActionsSortService.SortOrder.allCases, id: \.self) { order in
                     Text(order.rawValue).tag(order)
                 }
             }
             .pickerStyle(.menu)
-            .frame(width: 150)
+            .frame(width: 140)
             
-            MGSearchField("Search saved actions...", text: $searchText)
-                .frame(width: MGStyle.Layout.searchFieldWidth)
+            if showSearch {
+                MGSearchField("Search...", text: $searchText)
+                    .frame(width: 180)
+                    .transition(.opacity.combined(with: .move(edge: .trailing)))
+            }
             
-            MGHeaderDivider()
+            Button(action: { withAnimation(.easeInOut(duration: 0.2)) { showSearch.toggle() } }) {
+                Image(systemName: showSearch ? "xmark" : "magnifyingglass")
+                    .font(.system(size: 13))
+            }
+            .buttonStyle(.borderless)
             
             Button(action: { activeSheet = .addAction }) {
                 Label("Add", systemImage: "plus")
             }
-            Button(action: editSelectedAction) {
-                Label("Edit", systemImage: "pencil")
-            }
-            .disabled(selectedActions.count != 1)
-            
-            Button(action: confirmDeleteSelectedActions) {
-                Label("Remove", systemImage: "minus")
-            }
-            .disabled(selectedActions.isEmpty)
-            
-            MGHeaderDivider()
-            
-            Button(action: { showingImportPanel = true }) {
-                Label("Import", systemImage: "square.and.arrow.down")
-            }
-            Button(action: { showingExportPanel = true }) {
-                Label("Export", systemImage: "square.and.arrow.up")
-            }
-            .disabled(selectedActions.isEmpty)
         }
     }
     
@@ -149,6 +149,15 @@ struct SavedActionsView: View {
                         onDoubleClick: { editAction(action) }
                     )
                 }
+                
+                if filteredAndSortedActions.isEmpty && !searchText.isEmpty {
+                    MGEmptyState(
+                        icon: "magnifyingglass",
+                        title: "No matching actions",
+                        description: "Try a different search term"
+                    )
+                    .padding(.vertical, 40)
+                }
             }
             .padding(MGStyle.Spacing.xl)
         }
@@ -163,23 +172,16 @@ struct SavedActionsView: View {
     }
     
     private func toggleSelection(for action: SavedAction) {
-        if selectedActions.contains(action.id) {
-            selectedActions.remove(action.id)
-        } else {
-            selectedActions.insert(action.id)
-        }
+        if selectedActions.contains(action.id) { selectedActions.remove(action.id) }
+        else { selectedActions.insert(action.id) }
     }
     
     private func editSelectedAction() {
         if let id = selectedActions.first,
-           let action = uiServices.getSavedAction(byId: id) {
-            editAction(action)
-        }
+           let action = uiServices.getSavedAction(byId: id) { editAction(action) }
     }
     
-    private func editAction(_ action: SavedAction) {
-        activeSheet = .editAction(action)
-    }
+    private func editAction(_ action: SavedAction) { activeSheet = .editAction(action) }
     
     private func confirmDeleteAction(_ action: SavedAction) {
         actionsToDelete = [action]
@@ -187,9 +189,7 @@ struct SavedActionsView: View {
     }
     
     private func confirmDeleteSelectedActions() {
-        actionsToDelete = selectedActions.compactMap { id in
-            uiServices.getSavedAction(byId: id)
-        }
+        actionsToDelete = selectedActions.compactMap { id in uiServices.getSavedAction(byId: id) }
         showingDeleteConfirmation = true
     }
     
@@ -227,40 +227,32 @@ struct SavedActionRow: View {
     
     var body: some View {
         HStack(spacing: MGStyle.Spacing.lg) {
-            // Selection Checkbox
             Image(systemName: isSelected ? "checkmark.square.fill" : "square")
                 .foregroundColor(isSelected ? .accentColor : .secondary)
                 .imageScale(.large)
                 .contentShape(Rectangle())
                 .onTapGesture { onToggleSelection() }
             
-            // Action Icon
             Image(systemName: getActionIcon())
                 .font(.title2)
                 .foregroundColor(.accentColor)
                 .frame(width: 30)
             
-            // Action Details
             VStack(alignment: .leading, spacing: MGStyle.Spacing.sm) {
                 Text(action.name)
                     .font(.system(.body, weight: .semibold))
                 
                 HStack {
                     MGBadge(action.typeDisplayName)
-                    
                     Text(action.description)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
+                        .font(.caption).foregroundColor(.secondary).lineLimit(1)
                 }
             }
             
             Spacer()
             
-            // Date Modified
             Text(formatDate(action.dateModified))
-                .font(.caption)
-                .foregroundColor(.secondary)
+                .font(.caption).foregroundColor(.secondary)
             
             if isHovered {
                 MGRowActions(actions: [
@@ -290,10 +282,10 @@ struct SavedActionRow: View {
     }
     
     private func formatDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .short
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
+        let f = DateFormatter()
+        f.dateStyle = .short
+        f.timeStyle = .short
+        return f.string(from: date)
     }
 }
 
@@ -304,14 +296,10 @@ struct SavedActionsDocument: FileDocument {
     
     let actions: [SavedAction]
     
-    init(actions: [SavedAction]) {
-        self.actions = actions
-    }
+    init(actions: [SavedAction]) { self.actions = actions }
     
     init(configuration: ReadConfiguration) throws {
-        guard let data = configuration.file.regularFileContents else {
-            throw CocoaError(.fileReadCorruptFile)
-        }
+        guard let data = configuration.file.regularFileContents else { throw CocoaError(.fileReadCorruptFile) }
         actions = try JSONDecoder().decode([SavedAction].self, from: data)
     }
     

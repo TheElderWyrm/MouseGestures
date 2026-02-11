@@ -42,14 +42,15 @@ struct AppProfilesView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            MGPageHeader("App Profiles", subtitle: "Configure profile rules for specific applications") {
+            MGCompactHeader(
+                "App Profiles",
+                subtitle: "Configure profile rules for specific applications"
+            ) {
                 MGSearchField("Search applications...", text: $searchText)
                     .frame(width: MGStyle.Layout.searchFieldWidth)
                 
-                MGHeaderDivider()
-                
                 Button(action: { activeSheet = .addRule }) {
-                    Label("Add Rule", systemImage: "plus.circle.fill")
+                    Label("Add Rule", systemImage: "plus")
                 }
             }
             

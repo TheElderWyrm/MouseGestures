@@ -72,29 +72,28 @@ struct ActionSelectionView: View {
                     }
                 }
                 
-                // Selected action description
+                // Selected action banner
                 if let action = selectedAction {
-                    HStack(spacing: MGStyle.Spacing.md) {
-                        if let iconName = action.icon {
-                            Image(systemName: iconName)
-                                .foregroundColor(.accentColor)
-                                .font(.system(size: 12))
-                        }
-                        Text(action.description)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    .padding(.top, MGStyle.Spacing.xs)
+                    MGSelectionBanner(
+                        icon: action.icon ?? "bolt.circle.fill",
+                        title: action.name,
+                        subtitle: action.description,
+                        accentColor: .accentColor
+                    )
                 } else if let saved = selectedSavedAction {
-                    HStack(spacing: MGStyle.Spacing.md) {
-                        Image(systemName: "bookmark.fill")
-                            .foregroundColor(.orange)
-                            .font(.system(size: 12))
-                        Text("Saved action: \(saved.name)")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    .padding(.top, MGStyle.Spacing.xs)
+                    MGSelectionBanner(
+                        icon: "bookmark.fill",
+                        title: saved.name,
+                        subtitle: "Saved action",
+                        accentColor: .orange
+                    )
+                } else if !selectedActionId.isEmpty {
+                    MGSelectionBanner(
+                        icon: "questionmark.circle",
+                        title: selectedActionId,
+                        subtitle: "Unknown action",
+                        accentColor: .secondary
+                    )
                 }
             }
             .padding(.vertical, MGStyle.Spacing.md)
