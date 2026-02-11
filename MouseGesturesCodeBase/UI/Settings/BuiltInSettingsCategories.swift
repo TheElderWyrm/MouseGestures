@@ -47,6 +47,36 @@ struct BuiltInSettingsProvider: SettingsProvider {
                 viewBuilder: { _ in AnyView(EnableGesturesSettingView()) }
             ),
             
+            // Launch at Login
+            SettingsEntry(
+                category: SettingsCategories.general,
+                order: 10,
+                searchableItems: [
+                    SearchableSettingItem(title: "Launch at Login", description: "Automatically start MouseGestures when you log in", keywords: ["launch", "login", "startup", "boot", "auto", "start"])
+                ],
+                viewBuilder: { _ in AnyView(LaunchAtLoginSettingView()) }
+            ),
+            
+            // Menu Bar Icon
+            SettingsEntry(
+                category: SettingsCategories.general,
+                order: 20,
+                searchableItems: [
+                    SearchableSettingItem(title: "Hide Menu Bar Icon", description: "Hide the MouseGestures icon from the menu bar", keywords: ["menu", "bar", "icon", "hide", "show", "tray", "status"])
+                ],
+                viewBuilder: { _ in AnyView(MenuBarIconSettingView()) }
+            ),
+            
+            // Haptic Feedback
+            SettingsEntry(
+                category: SettingsCategories.general,
+                order: 30,
+                searchableItems: [
+                    SearchableSettingItem(title: "Haptic Feedback", description: "Provide tactile feedback when gestures are triggered", keywords: ["haptic", "feedback", "vibration", "tactile", "touch"])
+                ],
+                viewBuilder: { _ in AnyView(HapticFeedbackSettingView()) }
+            ),
+            
             // Developer Mode toggle (advanced, but always shown when enabled)
             SettingsEntry(
                 category: SettingsCategories.general,
@@ -172,6 +202,45 @@ private struct EnableGesturesSettingView: View {
             description: "Master switch to enable or disable all gesture recognition"
         ) { UIServices.shared.setGesturesEnabled($0) }
         .onAppear { gesturesEnabled = UIServices.shared.isGesturesEnabled() }
+    }
+}
+
+private struct LaunchAtLoginSettingView: View {
+    @State private var launchAtLogin = false
+    
+    var body: some View {
+        settingsToggle(
+            isOn: $launchAtLogin,
+            title: "Launch at Login",
+            description: "Automatically start MouseGestures when you log in"
+        ) { UIServices.shared.setLaunchAtLoginEnabled($0) }
+        .onAppear { launchAtLogin = UIServices.shared.isLaunchAtLoginEnabled() }
+    }
+}
+
+private struct MenuBarIconSettingView: View {
+    @State private var hideMenuBarIcon = false
+    
+    var body: some View {
+        settingsToggle(
+            isOn: $hideMenuBarIcon,
+            title: "Hide Menu Bar Icon",
+            description: "Hide the MouseGestures icon from the menu bar. Use the app window to re-enable."
+        ) { UIServices.shared.setMenuBarIconHidden($0) }
+        .onAppear { hideMenuBarIcon = UIServices.shared.isMenuBarIconHidden() }
+    }
+}
+
+private struct HapticFeedbackSettingView: View {
+    @State private var hapticEnabled = true
+    
+    var body: some View {
+        settingsToggle(
+            isOn: $hapticEnabled,
+            title: "Haptic Feedback",
+            description: "Provide tactile feedback when gestures are triggered"
+        ) { UIServices.shared.setHapticFeedbackEnabled($0) }
+        .onAppear { hapticEnabled = UIServices.shared.isHapticFeedbackEnabled() }
     }
 }
 

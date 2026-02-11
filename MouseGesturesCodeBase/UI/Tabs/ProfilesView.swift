@@ -386,9 +386,9 @@ struct ProfileDetailEditor: View {
     // MARK: - Profile Header
     
     private var profileHeader: some View {
-        HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
-                // Editable name
+        VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
+            // Name row
+            HStack(alignment: .center) {
                 if editingName {
                     HStack(spacing: MGStyle.Spacing.md) {
                         TextField("Profile name", text: $nameText, onCommit: commitNameEdit)
@@ -427,31 +427,51 @@ struct ProfileDetailEditor: View {
                     }
                 }
                 
-                // Simple text info instead of badges
-                HStack(spacing: MGStyle.Spacing.lg) {
-                    if isActive {
-                        HStack(spacing: MGStyle.Spacing.sm) {
-                            Circle().fill(Color.green).frame(width: 6, height: 6)
-                            Text("Active")
-                                .font(.system(size: MGStyle.FontSize.caption))
-                                .foregroundColor(.secondary)
-                        }
+                Spacer()
+                
+                if !isActive {
+                    Button(action: onActivate) {
+                        Label("Set Active", systemImage: "checkmark.circle")
                     }
-                    
-                    Text("Modified \(profile.modifiedDate, formatter: dateFormatter)")
-                        .font(.system(size: MGStyle.FontSize.caption))
-                        .foregroundColor(.secondary)
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
                 }
             }
             
-            Spacer()
-            
-            if !isActive {
-                Button(action: onActivate) {
-                    Label("Set Active", systemImage: "checkmark.circle")
+            // Info summary row
+            HStack(spacing: MGStyle.Spacing.xl) {
+                if isActive {
+                    HStack(spacing: MGStyle.Spacing.sm) {
+                        Circle().fill(Color.green).frame(width: 6, height: 6)
+                        Text("Active")
+                            .font(.system(size: MGStyle.FontSize.caption))
+                            .foregroundColor(.green)
+                    }
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.small)
+                
+                HStack(spacing: MGStyle.Spacing.sm) {
+                    Image(systemName: "hand.draw")
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                    Text("\(profile.gestures.count) gestures · \(profile.gestures.filter { $0.isEnabled }.count) active")
+                        .font(.system(size: MGStyle.FontSize.caption))
+                        .foregroundColor(.secondary)
+                }
+                
+                if let shortcut = profile.keyboardShortcut {
+                    HStack(spacing: MGStyle.Spacing.sm) {
+                        Image(systemName: "keyboard")
+                            .font(.system(size: 10))
+                            .foregroundColor(.secondary)
+                        Text(shortcut.displayString)
+                            .font(.system(size: MGStyle.FontSize.caption, design: .monospaced))
+                            .foregroundColor(.secondary)
+                    }
+                }
+                
+                Text("Modified \(profile.modifiedDate, formatter: dateFormatter)")
+                    .font(.system(size: MGStyle.FontSize.caption))
+                    .foregroundColor(.secondary.opacity(0.6))
             }
         }
     }
@@ -547,19 +567,17 @@ struct ProfileDetailEditor: View {
     
     private var gestureOverviewCard: some View {
         MGDetailSection("Gestures", icon: "hand.tap") {
-            // Simple text stats
-            Text("\(profile.gestures.count) total · \(profile.gestures.filter { $0.isEnabled }.count) active · \(profile.gestures.filter { !$0.isEnabled }.count) disabled")
-                .font(.system(size: MGStyle.FontSize.caption))
-                .foregroundColor(.secondary)
-            
-            if !profile.gestures.isEmpty {
-                Divider()
-                
+            if profile.gestures.isEmpty {
+                Text("No gestures configured")
+                    .font(.system(size: MGStyle.FontSize.caption))
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, MGStyle.Spacing.md)
+            } else {
                 // Compact gesture list
                 VStack(spacing: MGStyle.Spacing.sm) {
                     ForEach(profile.gestures, id: \.id) { gesture in
                         HStack(spacing: MGStyle.Spacing.md) {
-                            // Use action icon instead of zone indicator
                             if let def = UIServices.shared.getActionDefinition(for: gesture.actionIdentifier) {
                                 Image(systemName: def.icon ?? "bolt")
                                     .font(.system(size: 10))
@@ -592,17 +610,6 @@ struct ProfileDetailEditor: View {
                         }
                         .padding(.vertical, MGStyle.Spacing.xs)
                     }
-                }
-            }
-            
-            if profile.keyboardShortcut != nil {
-                Divider()
-                HStack(spacing: MGStyle.Spacing.md) {
-                    Image(systemName: "keyboard")
-                        .foregroundColor(.secondary)
-                    Text("Quick Switch: \(profile.keyboardShortcut!.displayString)")
-                        .font(.system(size: MGStyle.FontSize.caption))
-                        .foregroundColor(.secondary)
                 }
             }
         }

@@ -78,18 +78,33 @@ class ZoneView: NSView {
         
         // Draw label if present
         if let label = label, Configuration.shared.showZoneLabels {
+            // Use smaller font for narrow zones
+            let isNarrow = min(bounds.width, bounds.height) < 50
+            let fontSize: CGFloat = isNarrow ? 9 : 11
+            let font = NSFont.systemFont(ofSize: fontSize, weight: .medium)
+            
             let attrs: [NSAttributedString.Key: Any] = [
-                .font: NSFont.systemFont(ofSize: 11, weight: .medium),
-                .foregroundColor: NSColor.white,
-                .strokeColor: NSColor.black,
-                .strokeWidth: -2.0
+                .font: font,
+                .foregroundColor: NSColor.white
             ]
             let size = label.size(withAttributes: attrs)
-            let point = NSPoint(
-                x: (bounds.width - size.width) / 2,
-                y: (bounds.height - size.height) / 2
-            )
-            label.draw(at: point, withAttributes: attrs)
+            
+            // Clamp label position within bounds with padding
+            let pad: CGFloat = 3
+            let labelW = min(size.width, bounds.width - pad * 2)
+            let labelH = size.height
+            let x = max(pad, min((bounds.width - labelW) / 2, bounds.width - labelW - pad))
+            let y = max(pad, min((bounds.height - labelH) / 2, bounds.height - labelH - pad))
+            
+            // Draw background pill for readability
+            let pillRect = NSRect(x: x - 3, y: y - 1, width: labelW + 6, height: labelH + 2)
+            let pill = NSBezierPath(roundedRect: pillRect, xRadius: 3, yRadius: 3)
+            NSColor.black.withAlphaComponent(0.5).setFill()
+            pill.fill()
+            
+            // Draw text clipped to zone
+            let drawRect = NSRect(x: x, y: y, width: labelW, height: labelH)
+            label.draw(with: drawRect, options: [.usesLineFragmentOrigin, .truncatesLastVisibleLine], attributes: attrs, context: nil)
         }
     }
 }
