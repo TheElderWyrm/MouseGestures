@@ -54,7 +54,7 @@ struct GestureConfigurationSheet: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            MGSheetHeader(mode.title, onCancel: { dismiss() })
+            MGSheetHeader(mode.title)
             
             ScrollView {
                 VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {
@@ -75,6 +75,8 @@ struct GestureConfigurationSheet: View {
             
             MGSheetFooter(mode.buttonTitle, disabled: !isValid) {
                 saveGesture()
+            } leading: {
+                Button("Cancel") { dismiss() }
             }
         }
         .frame(width: 750, height: 680)

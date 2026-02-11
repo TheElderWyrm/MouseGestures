@@ -37,6 +37,7 @@ struct AppProfilesView: View {
     }
     @State private var activeSheet: ActiveSheet?
     @State private var searchText = ""
+    @State private var showSearch = false
     @State private var showDeleteConfirmation = false
     @State private var itemToDelete: String?
     
@@ -46,8 +47,18 @@ struct AppProfilesView: View {
                 "App Profiles",
                 subtitle: "Configure profile rules for specific applications"
             ) {
-                MGSearchField("Search applications...", text: $searchText)
-                    .frame(width: MGStyle.Layout.searchFieldWidth)
+                if showSearch {
+                    MGSearchField("Search applications...", text: $searchText)
+                        .frame(width: MGStyle.Layout.searchFieldWidth)
+                        .transition(.opacity.combined(with: .move(edge: .trailing)))
+                }
+                
+                Button(action: { withAnimation(.easeInOut(duration: 0.2)) { showSearch.toggle() } }) {
+                    Image(systemName: showSearch ? "xmark" : "magnifyingglass")
+                        .font(.system(size: 13))
+                }
+                .buttonStyle(.borderless)
+                .help("Search applications")
                 
                 Button(action: { activeSheet = .addRule }) {
                     Label("Add Rule", systemImage: "plus")

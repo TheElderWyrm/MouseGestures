@@ -10,6 +10,10 @@ struct SettingsView: View {
     @State private var searchText: String = ""
     @State private var selectedSubcategoryIds: [String: String] = [:]
     
+    private var isDeveloperModeEnabled: Bool {
+        UIServices.shared.isDeveloperModeEnabled()
+    }
+    
     private var filteredCategories: [ResolvedCategory] {
         let cats = registry.categories
         if searchText.isEmpty { return cats }
@@ -88,6 +92,8 @@ struct SettingsView: View {
                     }
                     .toggleStyle(.switch)
                     .controlSize(.small)
+                    
+                    Spacer()
                 }
                 .padding(.horizontal, MGStyle.Spacing.xxl)
                 .padding(.bottom, MGStyle.Spacing.xl)

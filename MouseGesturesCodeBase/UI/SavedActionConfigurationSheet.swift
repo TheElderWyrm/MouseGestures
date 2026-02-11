@@ -41,7 +41,7 @@ struct SavedActionConfigurationSheet: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            MGSheetHeader(mode.title, onCancel: { dismiss() })
+            MGSheetHeader(mode.title)
             
             ScrollView {
                 VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {
@@ -62,12 +62,16 @@ struct SavedActionConfigurationSheet: View {
             MGSheetFooter(mode.buttonTitle, disabled: !isValid) {
                 saveAction()
             } leading: {
-                if !actionName.isEmpty && !selectedActionId.isEmpty {
-                    VStack(alignment: .leading) {
-                        Text("Preview:").font(.caption).foregroundColor(.secondary)
-                        Text(actionName).font(.system(.body)).bold()
+                HStack(spacing: MGStyle.Spacing.lg) {
+                    Button("Cancel") { dismiss() }
+                    
+                    if !actionName.isEmpty && !selectedActionId.isEmpty {
+                        Divider().frame(height: 16)
                         if let action = PluginManager.shared.getAction(identifier: selectedActionId)?.action {
-                            Text(action.name).font(.caption).foregroundColor(.secondary)
+                            Text("\(actionName) → \(action.name)")
+                                .font(.system(size: MGStyle.FontSize.caption))
+                                .foregroundColor(.secondary)
+                                .lineLimit(1)
                         }
                     }
                 }

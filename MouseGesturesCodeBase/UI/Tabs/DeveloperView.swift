@@ -78,7 +78,7 @@ struct DeveloperView: View {
                     )
                 }
             }
-            .frame(minWidth: MGStyle.Layout.sidebarMinWidth, idealWidth: 220, maxWidth: 250)
+            .frame(minWidth: MGStyle.Layout.sidebarMinWidth, idealWidth: 230, maxWidth: 260)
             
             ScrollView {
                 VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {

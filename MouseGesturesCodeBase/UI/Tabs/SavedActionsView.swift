@@ -103,21 +103,14 @@ struct SavedActionsView: View {
             subtitle: uiServices.savedActions.isEmpty ? nil : "\(uiServices.savedActions.count) action\(uiServices.savedActions.count == 1 ? "" : "s")",
             menuItems: [
                 MGMenuItem("Edit Selected", icon: "pencil", disabled: selectedActions.count != 1) { editSelectedAction() },
+                MGMenuItem("Duplicate Selected", icon: "plus.square.on.square", disabled: selectedActions.count != 1) { duplicateSelectedAction() },
                 MGMenuItem("Remove Selected", icon: "minus.circle", disabled: selectedActions.isEmpty) { confirmDeleteSelectedActions() },
                 .divider,
                 MGMenuItem("Import", icon: "square.and.arrow.down") { showingImportPanel = true },
                 MGMenuItem("Export Selected", icon: "square.and.arrow.up", disabled: selectedActions.isEmpty) { showingExportPanel = true }
             ]
         ) {
-            // Sort picker
-            Picker("", selection: $sortOrder) {
-                ForEach(SavedActionsSortService.SortOrder.allCases, id: \.self) { order in
-                    Text(order.rawValue).tag(order)
-                }
-            }
-            .pickerStyle(.menu)
-            .frame(width: 140)
-            
+            // Search (left of sort)
             if showSearch {
                 MGSearchField("Search...", text: $searchText)
                     .frame(width: 180)
@@ -130,6 +123,15 @@ struct SavedActionsView: View {
             }
             .buttonStyle(.borderless)
             
+            // Sort picker (right of search)
+            Picker("", selection: $sortOrder) {
+                ForEach(SavedActionsSortService.SortOrder.allCases, id: \.self) { order in
+                    Text(order.rawValue).tag(order)
+                }
+            }
+            .pickerStyle(.menu)
+            .frame(width: 140)
+            
             Button(action: { activeSheet = .addAction }) {
                 Label("Add", systemImage: "plus")
             }
@@ -138,7 +140,7 @@ struct SavedActionsView: View {
     
     private var actionListView: some View {
         ScrollView {
-            LazyVStack(spacing: MGStyle.Spacing.md) {
+            LazyVStack(spacing: MGStyle.Spacing.sm) {
                 ForEach(filteredAndSortedActions) { action in
                     SavedActionRow(
                         action: action,
@@ -146,6 +148,7 @@ struct SavedActionsView: View {
                         onToggleSelection: { toggleSelection(for: action) },
                         onEdit: { editAction(action) },
                         onDelete: { confirmDeleteAction(action) },
+                        onDuplicate: { duplicateAction(action) },
                         onDoubleClick: { editAction(action) }
                     )
                 }
@@ -201,6 +204,29 @@ struct SavedActionsView: View {
         actionsToDelete = []
     }
     
+    private func duplicateSelectedAction() {
+        if let id = selectedActions.first,
+           let action = uiServices.getSavedAction(byId: id) {
+            duplicateAction(action)
+        }
+    }
+    
+    private func duplicateAction(_ action: SavedAction) {
+        var dupName = "\(action.name) Copy"
+        var counter = 2
+        let existing = uiServices.getSavedActions()
+        while existing.contains(where: { $0.name == dupName }) {
+            dupName = "\(action.name) Copy \(counter)"
+            counter += 1
+        }
+        let dup = SavedAction(
+            name: dupName,
+            actionIdentifier: action.actionIdentifier,
+            parameters: action.parameters
+        )
+        uiServices.addSavedAction(dup)
+    }
+    
     private func importActions(from url: URL) {
         guard url.startAccessingSecurityScopedResource() else { return }
         defer { url.stopAccessingSecurityScopedResource() }
@@ -221,41 +247,54 @@ struct SavedActionRow: View {
     let onToggleSelection: () -> Void
     let onEdit: () -> Void
     let onDelete: () -> Void
+    let onDuplicate: () -> Void
     let onDoubleClick: () -> Void
     
     @State private var isHovered = false
     
     var body: some View {
         HStack(spacing: MGStyle.Spacing.lg) {
-            Image(systemName: isSelected ? "checkmark.square.fill" : "square")
-                .foregroundColor(isSelected ? .accentColor : .secondary)
-                .imageScale(.large)
-                .contentShape(Rectangle())
-                .onTapGesture { onToggleSelection() }
+            // Selection toggle (switch-style visual using checkmark)
+            Button(action: onToggleSelection) {
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .foregroundColor(isSelected ? .accentColor : .secondary.opacity(0.4))
+                    .font(.system(size: 16))
+            }
+            .buttonStyle(.plain)
             
             Image(systemName: getActionIcon())
-                .font(.title2)
+                .font(.system(size: 14))
                 .foregroundColor(.accentColor)
-                .frame(width: 30)
+                .frame(width: 24)
             
-            VStack(alignment: .leading, spacing: MGStyle.Spacing.sm) {
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
                 Text(action.name)
-                    .font(.system(.body, weight: .semibold))
+                    .font(.system(size: MGStyle.FontSize.body, weight: .medium))
                 
-                HStack {
-                    MGBadge(action.typeDisplayName)
-                    Text(action.description)
-                        .font(.caption).foregroundColor(.secondary).lineLimit(1)
+                HStack(spacing: MGStyle.Spacing.md) {
+                    Text(action.typeDisplayName)
+                        .font(.system(size: MGStyle.FontSize.caption))
+                        .foregroundColor(.secondary)
+                    if !action.description.isEmpty {
+                        Text("·")
+                            .foregroundColor(.secondary.opacity(0.4))
+                        Text(action.description)
+                            .font(.system(size: MGStyle.FontSize.caption))
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                    }
                 }
             }
             
             Spacer()
             
             Text(formatDate(action.dateModified))
-                .font(.caption).foregroundColor(.secondary)
+                .font(.system(size: MGStyle.FontSize.badge))
+                .foregroundColor(.secondary.opacity(0.6))
             
             if isHovered {
                 MGRowActions(actions: [
+                    .init("plus.square.on.square") { onDuplicate() },
                     .init("pencil") { onEdit() },
                     .init("trash", destructive: true) { onDelete() }
                 ])
@@ -265,16 +304,22 @@ struct SavedActionRow: View {
         .padding(.vertical, MGStyle.Spacing.md)
         .background(
             RoundedRectangle(cornerRadius: MGStyle.Corner.lg)
-                .fill(isSelected ? Color.accentColor.opacity(0.1) : 
+                .fill(isSelected ? Color.accentColor.opacity(0.06) : 
                       (isHovered ? MGStyle.Colors.cardBackground : Color.clear))
         )
         .overlay(
             RoundedRectangle(cornerRadius: MGStyle.Corner.lg)
-                .stroke(isSelected ? Color.accentColor.opacity(0.3) : Color.clear, lineWidth: 1)
+                .stroke(isSelected ? Color.accentColor.opacity(0.2) : Color.clear, lineWidth: 0.5)
         )
         .onHover { hovering in isHovered = hovering }
         .contentShape(Rectangle())
         .onTapGesture(count: 2) { onDoubleClick() }
+        .contextMenu {
+            Button(action: onEdit) { Label("Edit", systemImage: "pencil") }
+            Button(action: onDuplicate) { Label("Duplicate", systemImage: "plus.square.on.square") }
+            Divider()
+            Button(role: .destructive, action: onDelete) { Label("Delete", systemImage: "trash") }
+        }
     }
     
     private func getActionIcon() -> String {

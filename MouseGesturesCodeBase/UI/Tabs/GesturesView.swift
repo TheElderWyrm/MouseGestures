@@ -7,13 +7,11 @@ struct GesturesView: View {
     enum ActiveSheet: Identifiable {
         case addGesture
         case editGesture(Gesture)
-        case profilePicker
         
         var id: String {
             switch self {
             case .addGesture: return "add"
             case .editGesture(let g): return "edit-\(g.id)"
-            case .profilePicker: return "profile"
             }
         }
     }
@@ -22,6 +20,7 @@ struct GesturesView: View {
     @State private var searchText = ""
     @State private var showSearch = false
     @State private var expandedGesture: String?
+    @State private var showProfilePicker = false
     
     private var filteredGestures: [Gesture] {
         if searchText.isEmpty { return uiServices.gestures }
@@ -41,16 +40,16 @@ struct GesturesView: View {
             // Header
             MGCompactHeader(
                 "Gestures",
-                subtitle: "Profile: \(activeProfileName) · \(enabledCount)/\(uiServices.gestures.count) active",
                 menuItems: [
-                    MGMenuItem("Change Profile", icon: "person.2") { activeSheet = .profilePicker },
-                    .divider,
                     MGMenuItem("Reset to Defaults", icon: "arrow.counterclockwise", destructive: true) {
                         showingResetConfirmation = true
                     },
                     MGMenuItem("Clear All Gestures", icon: "trash", destructive: true) { clearAllGestures() }
                 ]
             ) {
+                // Inline profile switcher
+                profileSwitcher
+                
                 if showSearch {
                     MGSearchField("Search gestures...", text: $searchText)
                         .frame(width: MGStyle.Layout.searchFieldWidth)
@@ -71,6 +70,16 @@ struct GesturesView: View {
             
             Divider()
             
+            // Subtitle bar
+            HStack {
+                Text("\(enabledCount) of \(uiServices.gestures.count) active")
+                    .font(.system(size: MGStyle.FontSize.caption))
+                    .foregroundColor(.secondary)
+                Spacer()
+            }
+            .padding(.horizontal, MGStyle.Spacing.xl)
+            .padding(.vertical, MGStyle.Spacing.sm)
+            
             // Main Content
             if filteredGestures.isEmpty {
                 MGEmptyState(
@@ -82,7 +91,7 @@ struct GesturesView: View {
                 )
             } else {
                 ScrollView {
-                    LazyVStack(spacing: MGStyle.Spacing.md) {
+                    LazyVStack(spacing: MGStyle.Spacing.sm) {
                         ForEach(filteredGestures, id: \.id) { gesture in
                             GestureCardView(
                                 gesture: gesture,
@@ -105,8 +114,6 @@ struct GesturesView: View {
                 AddGestureSheet()
             case .editGesture(let gesture):
                 EditGestureSheet(gesture: gesture)
-            case .profilePicker:
-                ProfilePickerSheet()
             }
         }
         .alert("Reset Gestures", isPresented: $showingResetConfirmation) {
@@ -116,6 +123,47 @@ struct GesturesView: View {
             Text("This will reset all profiles and gestures to factory defaults. This action cannot be undone.")
         }
         .onAppear { uiServices.loadData() }
+    }
+    
+    // MARK: - Inline Profile Switcher
+    
+    private var profileSwitcher: some View {
+        Menu {
+            ForEach(uiServices.profiles.sorted(by: { $0.name < $1.name })) { profile in
+                Button(action: { uiServices.switchToProfile(profile.id) }) {
+                    HStack {
+                        Text(profile.name)
+                        if profile.id == uiServices.activeProfileId {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: MGStyle.Spacing.sm) {
+                Image(systemName: "person.crop.circle")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                Text(activeProfileName)
+                    .font(.system(size: MGStyle.FontSize.caption))
+                    .foregroundColor(.secondary)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.system(size: 8))
+                    .foregroundColor(.secondary)
+            }
+            .padding(.horizontal, MGStyle.Spacing.md)
+            .padding(.vertical, MGStyle.Spacing.sm)
+            .background(
+                RoundedRectangle(cornerRadius: MGStyle.Corner.sm)
+                    .fill(MGStyle.Colors.cardBackground)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: MGStyle.Corner.sm)
+                    .stroke(MGStyle.Colors.separator.opacity(0.5), lineWidth: 0.5)
+            )
+        }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
     }
     
     // MARK: - Helpers
@@ -175,13 +223,45 @@ struct GestureCardView: View {
         UIServices.shared.getModifiersDescription(gesture.modifiers)
     }
     
+    /// Build a concise trigger summary string
+    private var triggerSummary: String {
+        var parts: [String] = []
+        
+        parts.append(gesture.zone.displayName)
+        
+        if !modifiersText.isEmpty && modifiersText != "None" {
+            parts.append(modifiersText)
+        }
+        
+        if gesture.dragModifier != .none {
+            parts.append(gesture.dragModifier.displayName)
+        }
+        
+        if let kb = gesture.activation.keyboardTrigger {
+            parts.append(kb.displayString)
+        }
+        
+        if let mb = gesture.activation.mouseButtonTrigger {
+            parts.append("\(mb.displayString) click")
+        }
+        
+        return parts.joined(separator: " + ")
+    }
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             // Main row
             HStack(spacing: MGStyle.Spacing.lg) {
-                // Zone indicator
-                MGZoneIndicator(zone: gesture.zone)
-                    .opacity(isEnabled ? 1 : 0.4)
+                // Action icon as primary
+                ZStack {
+                    RoundedRectangle(cornerRadius: MGStyle.Corner.md)
+                        .fill(isEnabled ? Color.accentColor.opacity(0.1) : Color.secondary.opacity(0.06))
+                        .frame(width: 32, height: 32)
+                    
+                    Image(systemName: actionDef?.icon ?? "bolt")
+                        .font(.system(size: 14))
+                        .foregroundColor(isEnabled ? .accentColor : .secondary)
+                }
                 
                 // Enable toggle
                 Toggle("", isOn: $isEnabled)
@@ -191,54 +271,40 @@ struct GestureCardView: View {
                     .onChange(of: isEnabled) { v in onToggleEnabled(v) }
                 
                 // Info block
-                VStack(alignment: .leading, spacing: MGStyle.Spacing.sm) {
+                VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
                     // Action name
-                    HStack(spacing: MGStyle.Spacing.md) {
-                        if let def = actionDef, let icon = def.icon {
-                            Image(systemName: icon)
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(isEnabled ? .accentColor : .secondary)
-                        }
-                        Text(actionDef?.name ?? gesture.actionIdentifier)
-                            .font(.system(size: MGStyle.FontSize.body, weight: .semibold))
-                            .lineLimit(1)
-                            .opacity(isEnabled ? 1 : 0.5)
-                    }
+                    Text(actionDef?.name ?? gesture.actionIdentifier)
+                        .font(.system(size: MGStyle.FontSize.body, weight: .medium))
+                        .lineLimit(1)
+                        .opacity(isEnabled ? 1 : 0.5)
                     
-                    // Trigger pills
-                    HStack(spacing: MGStyle.Spacing.sm) {
-                        MGTriggerPill(gesture.zone.displayName, icon: "square.grid.3x3", color: .blue)
-                        
-                        if !modifiersText.isEmpty && modifiersText != "None" {
-                            MGTriggerPill(modifiersText, icon: "command", color: .purple)
-                        }
-                        
-                        if gesture.dragModifier != .none {
-                            MGTriggerPill(gesture.dragModifier.displayName, icon: "hand.draw", color: .orange)
-                        }
-                        
-                        if gesture.activation.keyboardTrigger != nil {
-                            MGTriggerPill("Keyboard", icon: "keyboard", color: .green)
-                        }
-                        
-                        if gesture.activation.mouseButtonTrigger != nil {
-                            MGTriggerPill("Mouse", icon: "computermouse", color: .teal)
-                        }
-                        
-                        if gesture.timing.repeatOnHold {
-                            MGTriggerPill("Repeat", icon: "repeat", color: .indigo)
-                        }
-                        
-                        if gesture.timing.longPressEnabled {
-                            MGTriggerPill("Long Press", icon: "timer", color: .pink)
-                        }
-                    }
-                    .opacity(isEnabled ? 1 : 0.4)
+                    // Trigger summary as single line
+                    Text(triggerSummary)
+                        .font(.system(size: MGStyle.FontSize.caption))
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                        .opacity(isEnabled ? 0.8 : 0.4)
                 }
                 
                 Spacer()
                 
-                // Hover actions
+                // Timing indicators (subtle)
+                HStack(spacing: MGStyle.Spacing.sm) {
+                    if gesture.timing.repeatOnHold {
+                        Image(systemName: "repeat")
+                            .font(.system(size: 9))
+                            .foregroundColor(.secondary.opacity(0.6))
+                            .help("Repeats on hold")
+                    }
+                    if gesture.timing.longPressEnabled {
+                        Image(systemName: "timer")
+                            .font(.system(size: 9))
+                            .foregroundColor(.secondary.opacity(0.6))
+                            .help("Long press")
+                    }
+                }
+                
+                // Hover actions: edit + delete
                 if isHovered {
                     HStack(spacing: MGStyle.Spacing.md) {
                         Button(action: onEdit) {
@@ -363,10 +429,11 @@ struct GestureCardView: View {
                     detailLine("ID", gesture.actionIdentifier)
                 }
                 
+                // Display parameters with friendly formatting
                 if !gesture.parameters.isEmpty {
                     ForEach(Array(gesture.parameters.keys.sorted()), id: \.self) { key in
                         if let val = gesture.parameters[key] {
-                            detailLine(key.capitalized, "\(val.value ?? "—")")
+                            detailLine(formatParameterKey(key), formatParameterValue(val))
                         }
                     }
                 }
@@ -416,9 +483,38 @@ struct GestureCardView: View {
                 .font(.system(size: MGStyle.FontSize.caption, weight: .medium))
         }
     }
+    
+    /// Format a parameter key into a readable label
+    private func formatParameterKey(_ key: String) -> String {
+        // Convert camelCase/snake_case to Title Case
+        let spaced = key.replacingOccurrences(of: "_", with: " ")
+        let words = spaced.unicodeScalars.reduce("") { result, scalar in
+            if CharacterSet.uppercaseLetters.contains(scalar) && !result.isEmpty {
+                return result + " " + String(scalar)
+            }
+            return result + String(scalar)
+        }
+        return words.prefix(1).uppercased() + words.dropFirst()
+    }
+    
+    /// Format a parameter value for display, avoiding raw data dumps
+    private func formatParameterValue(_ value: AnyCodable) -> String {
+        if let str = value.value as? String {
+            // Truncate very long strings
+            return str.count > 60 ? String(str.prefix(57)) + "..." : str
+        } else if let num = value.value as? NSNumber {
+            return num.stringValue
+        } else if let bool = value.value as? Bool {
+            return bool ? "Yes" : "No"
+        } else if value.value is NSNull {
+            return "—"
+        } else {
+            return "Configured"
+        }
+    }
 }
 
-// MARK: - Profile Picker Sheet
+// MARK: - Profile Picker Sheet (kept for potential reuse)
 
 struct ProfilePickerSheet: View {
     @Environment(\.dismiss) private var dismiss

@@ -84,7 +84,6 @@ struct ProfilesView: View {
                     .frame(minWidth: 450)
                 } else {
                     MGEmptyState(icon: "person.2.square.stack", title: "Select a profile", description: "Choose a profile from the list to view and edit its settings")
-                        .background(MGStyle.Colors.contentBackground)
                         .frame(minWidth: 450)
                 }
             }
@@ -155,7 +154,7 @@ struct ProfilesView: View {
                 .padding(MGStyle.Spacing.lg)
             }
         }
-        .background(MGStyle.Colors.contentBackground)
+        .background(MGStyle.Colors.windowBackground)
     }
     
     // MARK: - Helper Methods
@@ -275,34 +274,29 @@ struct ProfileListRow: View {
                 .fill(isActive ? Color.green : Color.clear)
                 .frame(width: 6, height: 6)
             
-            VStack(alignment: .leading, spacing: MGStyle.Spacing.sm) {
-                HStack(spacing: MGStyle.Spacing.md) {
-                    Text(profile.name)
-                        .font(.system(size: MGStyle.FontSize.body, weight: isActive ? .semibold : .medium))
-                        .lineLimit(1)
-                    
-                    if profile.isDefault { MGBadge("Default") }
-                }
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
+                Text(profile.name)
+                    .font(.system(size: MGStyle.FontSize.body, weight: isActive ? .semibold : .medium))
+                    .lineLimit(1)
                 
-                HStack(spacing: MGStyle.Spacing.lg) {
-                    Text("\(profile.gestures.count) gestures")
-                        .font(.system(size: MGStyle.FontSize.caption))
-                        .foregroundColor(.secondary)
-                    
-                    if profile.hapticFeedbackEnabled {
-                        Image(systemName: "waveform")
-                            .font(.system(size: MGStyle.FontSize.badge))
-                            .foregroundColor(.secondary)
-                    }
-                    if profile.keyboardShortcut != nil {
-                        Image(systemName: "keyboard")
-                            .font(.system(size: MGStyle.FontSize.badge))
-                            .foregroundColor(.secondary)
-                    }
-                }
+                // Simple text info instead of badges
+                Text("\(profile.gestures.count) gestures · \(profile.gestures.filter { $0.isEnabled }.count) active")
+                    .font(.system(size: MGStyle.FontSize.badge))
+                    .foregroundColor(.secondary)
             }
             
             Spacer()
+            
+            // Quick actions on hover
+            if isHovered && !isActive {
+                Button(action: onSetActive) {
+                    Image(systemName: "checkmark.circle")
+                        .font(.system(size: MGStyle.IconSize.row))
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
+                .help("Set as active")
+            }
         }
         .mgListRow(isSelected: isSelected, isHovered: isHovered)
         .onHover { hovering in isHovered = hovering }
@@ -313,10 +307,8 @@ struct ProfileListRow: View {
                 Divider()
             }
             Button(action: onDuplicate) { Label("Duplicate", systemImage: "plus.square.on.square") }
-            if !isActive && !profile.isDefault {
-                Divider()
-                Button(role: .destructive, action: onDelete) { Label("Delete", systemImage: "trash") }
-            }
+            Divider()
+            Button(role: .destructive, action: onDelete) { Label("Delete", systemImage: "trash") }
         }
     }
 }
@@ -359,7 +351,6 @@ struct ProfileDetailEditor: View {
             }
             .padding(MGStyle.Spacing.xl)
         }
-        .background(MGStyle.Colors.contentBackground)
         .onAppear { loadProfileData() }
         .onChange(of: profile.id) { _ in loadProfileData() }
         .alert("Invalid Name", isPresented: $showNameError) { Button("OK") {} } message: {
@@ -411,14 +402,19 @@ struct ProfileDetailEditor: View {
                     }
                 }
                 
-                HStack(spacing: MGStyle.Spacing.md) {
+                // Simple text info instead of badges
+                HStack(spacing: MGStyle.Spacing.lg) {
                     if isActive {
-                        MGBadge("Active", color: .green, icon: "checkmark.circle")
+                        HStack(spacing: MGStyle.Spacing.sm) {
+                            Circle().fill(Color.green).frame(width: 6, height: 6)
+                            Text("Active")
+                                .font(.system(size: MGStyle.FontSize.caption))
+                                .foregroundColor(.secondary)
+                        }
                     }
-                    if profile.isDefault { MGBadge("Default") }
                     
-                    Text("Modified: \(profile.modifiedDate, formatter: dateFormatter)")
-                        .font(.caption)
+                    Text("Modified \(profile.modifiedDate, formatter: dateFormatter)")
+                        .font(.system(size: MGStyle.FontSize.caption))
                         .foregroundColor(.secondary)
                 }
             }
@@ -451,12 +447,10 @@ struct ProfileDetailEditor: View {
             
             Spacer()
             
-            if !isActive && !profile.isDefault {
-                Button(role: .destructive, action: onDelete) {
-                    Label("Delete", systemImage: "trash")
-                }
-                .controlSize(.small)
+            Button(role: .destructive, action: onDelete) {
+                Label("Delete", systemImage: "trash")
             }
+            .controlSize(.small)
         }
         .padding(MGStyle.Spacing.lg)
         .background(
@@ -528,12 +522,10 @@ struct ProfileDetailEditor: View {
     
     private var gestureOverviewCard: some View {
         MGDetailSection("Gestures", icon: "hand.tap") {
-            // Stats row
-            HStack(spacing: MGStyle.Spacing.xxl) {
-                statBubble("\(profile.gestures.count)", label: "Total")
-                statBubble("\(profile.gestures.filter { $0.isEnabled }.count)", label: "Active", color: .green)
-                statBubble("\(profile.gestures.filter { !$0.isEnabled }.count)", label: "Disabled", color: .gray)
-            }
+            // Simple text stats
+            Text("\(profile.gestures.count) total · \(profile.gestures.filter { $0.isEnabled }.count) active · \(profile.gestures.filter { !$0.isEnabled }.count) disabled")
+                .font(.system(size: MGStyle.FontSize.caption))
+                .foregroundColor(.secondary)
             
             if !profile.gestures.isEmpty {
                 Divider()
@@ -542,11 +534,22 @@ struct ProfileDetailEditor: View {
                 VStack(spacing: MGStyle.Spacing.sm) {
                     ForEach(profile.gestures, id: \.id) { gesture in
                         HStack(spacing: MGStyle.Spacing.md) {
-                            MGZoneIndicator(zone: gesture.zone)
+                            // Use action icon instead of zone indicator
+                            if let def = UIServices.shared.getActionDefinition(for: gesture.actionIdentifier) {
+                                Image(systemName: def.icon ?? "bolt")
+                                    .font(.system(size: 10))
+                                    .foregroundColor(gesture.isEnabled ? .accentColor : .secondary)
+                                    .frame(width: 16)
+                            } else {
+                                Image(systemName: "bolt")
+                                    .font(.system(size: 10))
+                                    .foregroundColor(.secondary)
+                                    .frame(width: 16)
+                            }
                             
                             Circle()
                                 .fill(gesture.isEnabled ? Color.green : Color.gray)
-                                .frame(width: 6, height: 6)
+                                .frame(width: 5, height: 5)
                             
                             Text(gesture.displayDescription)
                                 .font(.system(size: MGStyle.FontSize.caption))
@@ -580,23 +583,6 @@ struct ProfileDetailEditor: View {
         }
     }
     
-    private func statBubble(_ value: String, label: String, color: Color = .accentColor) -> some View {
-        VStack(spacing: MGStyle.Spacing.xs) {
-            Text(value)
-                .font(.system(size: 18, weight: .bold, design: .rounded))
-                .foregroundColor(color)
-            Text(label)
-                .font(.system(size: MGStyle.FontSize.badge))
-                .foregroundColor(.secondary)
-        }
-        .frame(minWidth: 60)
-        .padding(MGStyle.Spacing.md)
-        .background(
-            RoundedRectangle(cornerRadius: MGStyle.Corner.md)
-                .fill(color.opacity(0.08))
-        )
-    }
-    
     // MARK: - Helpers
     
     private func loadProfileData() {
@@ -622,9 +608,6 @@ struct ProfileDetailEditor: View {
     }
     
     private func saveZoneSettings() {
-        // Zone settings are stored per-profile; save through the config system
-        // For now, this uses the configuration directly since UIServices doesn't
-        // expose per-profile zone setting updates
         if isActive {
             uiServices.setEdgeThreshold(edgeThreshold)
             uiServices.setCornerSize(cornerSize)
@@ -680,7 +663,7 @@ struct AddEditProfileSheet: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            MGSheetHeader(mode.title, onCancel: { dismiss() })
+            MGSheetHeader(mode.title)
             
             ScrollView {
                 VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {
@@ -738,7 +721,9 @@ struct AddEditProfileSheet: View {
                 .padding(MGStyle.Spacing.xl)
             }
             
-            MGSheetFooter(mode.buttonTitle, disabled: profileName.isEmpty) { saveProfile() }
+            MGSheetFooter(mode.buttonTitle, disabled: profileName.isEmpty) { saveProfile() } leading: {
+                Button("Cancel") { dismiss() }
+            }
         }
         .frame(width: 550, height: 520)
         .alert("Invalid Name", isPresented: $showingNameError) { Button("OK") {} } message: {
@@ -784,7 +769,7 @@ struct ImportTemplatesSheet: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            MGSheetHeader("Import Template Profiles", subtitle: "Choose pre-configured profile templates to import", onCancel: { dismiss() })
+            MGSheetHeader("Import Template Profiles", subtitle: "Choose pre-configured profile templates to import")
             
             HStack {
                 Button(selectedTypes.count == DefaultProfileType.allCases.count ? "Deselect All" : "Select All") {
@@ -816,11 +801,14 @@ struct ImportTemplatesSheet: View {
             MGSheetFooter("Import Selected", disabled: selectedTypes.isEmpty || isImporting) {
                 importSelectedTemplates()
             } leading: {
-                if !selectedTypes.isEmpty {
-                    Text("\(selectedTypes.count) template\(selectedTypes.count == 1 ? "" : "s") selected")
-                        .font(.caption).foregroundColor(.secondary)
+                HStack(spacing: MGStyle.Spacing.lg) {
+                    Button("Cancel") { dismiss() }
+                    if !selectedTypes.isEmpty {
+                        Text("\(selectedTypes.count) template\(selectedTypes.count == 1 ? "" : "s") selected")
+                            .font(.caption).foregroundColor(.secondary)
+                    }
+                    if isImporting { ProgressView().scaleEffect(0.8).padding(.horizontal, MGStyle.Spacing.md) }
                 }
-                if isImporting { ProgressView().scaleEffect(0.8).padding(.horizontal, MGStyle.Spacing.md) }
             }
         }
         .frame(width: 600, height: 500)
@@ -856,28 +844,30 @@ struct TemplateProfileCard: View {
     var body: some View {
         HStack(spacing: MGStyle.Spacing.xl) {
             Image(systemName: type.iconName)
-                .font(.system(size: 32))
+                .font(.system(size: 24))
                 .foregroundColor(.accentColor)
-                .frame(width: 50)
+                .frame(width: 40)
             
             VStack(alignment: .leading, spacing: MGStyle.Spacing.sm) {
-                Text(type.rawValue).font(.headline)
+                Text(type.rawValue).font(.system(size: MGStyle.FontSize.heading, weight: .medium))
                 Text(type.description).font(.caption).foregroundColor(.secondary).lineLimit(2)
             }
             
             Spacer()
             
             if isSelected {
-                Image(systemName: "checkmark.circle.fill").foregroundColor(.accentColor)
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundColor(.accentColor)
+                    .font(.system(size: 16))
             }
         }
         .padding(MGStyle.Spacing.xl)
         .background(
             RoundedRectangle(cornerRadius: MGStyle.Corner.lg)
-                .fill(isSelected ? Color.accentColor.opacity(0.1) : MGStyle.Colors.cardBackground)
+                .fill(isSelected ? Color.accentColor.opacity(0.06) : MGStyle.Colors.cardBackground)
                 .overlay(
                     RoundedRectangle(cornerRadius: MGStyle.Corner.lg)
-                        .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
+                        .stroke(isSelected ? Color.accentColor.opacity(0.3) : MGStyle.Colors.separator.opacity(0.3), lineWidth: isSelected ? 1 : 0.5)
                 )
         )
         .contentShape(Rectangle())
@@ -904,7 +894,7 @@ struct ImportResultsSheet: View {
                         HStack(spacing: MGStyle.Spacing.lg) {
                             Image(systemName: result.success ? "checkmark.circle.fill" : "xmark.circle.fill")
                                 .foregroundColor(result.success ? .green : .red)
-                                .font(.system(size: 20))
+                                .font(.system(size: 16))
                             VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
                                 Text(result.type.rawValue)
                                     .font(.system(size: MGStyle.FontSize.heading, weight: .medium))
@@ -913,10 +903,6 @@ struct ImportResultsSheet: View {
                             Spacer()
                         }
                         .padding(MGStyle.Spacing.lg)
-                        .background(
-                            RoundedRectangle(cornerRadius: MGStyle.Corner.lg)
-                                .fill(result.success ? Color.green.opacity(0.1) : Color.red.opacity(0.1))
-                        )
                     }
                 }
                 .padding(MGStyle.Spacing.xl)

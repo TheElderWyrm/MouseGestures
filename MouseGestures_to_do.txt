@@ -4,6 +4,7 @@ General:
 - Add right click functionality throughout app
 - Double clicking should edit
 - 'Default' profile doesn't do anything and can be removed.
+- Quick profile switch doesn't work.
 
 Actions (fix later):
 - Not all actions work.
@@ -20,16 +21,41 @@ Actions (fix later):
 - Conditional gesture bundle logic?
 
 Improve UI
-- Improve trigger configuration
-- App selection UI- Add a button to select apps from finder
-- When creating a profile add a button to import from template
 - Improve appearance of Show Zone Highlights (currently labels don't stay within highlights).
 - Pre-render UI to increase performance
-- Installing plugins should be unified in developer mode
-- Improve settings organization
-Improve split screens/sidebar
-	- If we are fully splitting into a sidebar we should provide editing capability not just information (example: profiles sidebar should have a section at the top for editing the profile configurations and then list the full gesture view (with edit capabilities) below.
+- General: UI Should be relatively simple and should not use lots of colors or accents. 
+- Most tabs are displaying a list of objects, but they are all doing it with slightly different styles. Unify.
+- Add/edit sheets should have the cancel button directly next to the save (or equivalent) button.
+
 Gestures Tab:
 	- Add a delete button next to the edit button for gestures.
-	- Primary Icon should not just be the zone (not all gestures have a zone). Use the action symbol as the main icon.
-	- Improve the 
+	- Moved selected profile dropdown under the 'Gestures' text.
+	- Add/edit Gesture screen:
+		- Show gesture preview: [Trigger] -> [Action] at the bottom bar of the add/edit gesture screen.
+		- Triggers customization is very large
+		- UI Bugs with mouse button (Text overlap on button/any button. Also add: none selection)
+
+Saved Actions Tab:
+	- Use a square check box
+	- Hover buttons seem to have a delay between clicking and activation.
+
+Profiles:
+	- Duplicate, delete from profile list without entering profile (Hover menu).
+	- Allow deletion of active profile, should switch to next profile or create a profile (Base off minimal by default) if no other profiles.
+	- Allow selection of multiple profiles at once (for deletion, export, import, duplication, or creating a merged profile.)
+	- move the information on the number gestures to top information section
+	- Make the gesture list editable (Use a version of the 'gestures' tab
+	- Create new profile: Add an import from template button to the bottom bar.
+	- Display quick profile switch shortcut
+
+App Profiles:
+	- Add: Add a button to select application from finder
+	- Remove the separate selected profile section, move it inline with the use specific profile (Use specific profile: [profile dropdown])
+	- Remove edit sheet, instead make the selected profile a dropdown with changing the profile or disabling
+
+Settings:
+	- Improve settings organization
+Developer:
+	- Improve developer mode organization
+	- Unify styles between plugin management and service management
+

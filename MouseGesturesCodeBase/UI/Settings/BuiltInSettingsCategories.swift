@@ -47,11 +47,11 @@ struct BuiltInSettingsProvider: SettingsProvider {
                 viewBuilder: { _ in AnyView(EnableGesturesSettingView()) }
             ),
             
-            // Developer Mode toggle (advanced)
+            // Developer Mode toggle (advanced, but always shown when enabled)
             SettingsEntry(
                 category: SettingsCategories.general,
                 order: 900,
-                isAdvanced: true,
+                isAdvanced: !UIServices.shared.isDeveloperModeEnabled(),
                 searchableItems: [
                     SearchableSettingItem(title: "Developer Mode", description: "Show Developer tab with logging, plugins, performance, services, and diagnostics", keywords: ["developer", "debug", "advanced", "dev"])
                 ],
