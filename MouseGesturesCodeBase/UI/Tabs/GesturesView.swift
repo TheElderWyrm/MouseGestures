@@ -5,7 +5,6 @@ import AppKit
 struct GesturesView: View {
     @StateObject private var uiServices = UIServices.shared
     @State private var selectedGesture: Gesture?
-    // Sheet presentation - using single enum to avoid multiple .sheet modifier bug
     enum ActiveSheet: Identifiable {
         case addGesture
         case editGesture(Gesture)
@@ -33,25 +32,55 @@ struct GesturesView: View {
     var body: some View {
         VStack(spacing: 0) {
             // Header
-            headerView
-                .padding()
-                .background(Color(NSColor.controlBackgroundColor))
+            MGPageHeader("Gestures") {
+                if let profile = uiServices.getActiveProfile() {
+                    HStack {
+                        Text("Active Profile:")
+                            .foregroundColor(.secondary)
+                        Text(profile.name)
+                            .fontWeight(.medium)
+                        Button(action: { activeSheet = .profilePicker }) {
+                            Image(systemName: "chevron.down.circle")
+                                .foregroundColor(.accentColor)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .font(.subheadline)
+                }
+                
+                MGSearchField("Search gestures...", text: $searchText)
+                    .frame(width: MGStyle.Layout.searchFieldWidth)
+                
+                MGHeaderDivider()
+                
+                Button(action: { activeSheet = .addGesture }) {
+                    Label("Add Gesture", systemImage: "plus")
+                }
+                
+                Button(action: { activeSheet = .profilePicker }) {
+                    Label("Change Profile", systemImage: "person.2")
+                }
+                
+                Button(action: { showingResetConfirmation = true }) {
+                    Label("Reset", systemImage: "arrow.counterclockwise")
+                        .foregroundColor(.red)
+                }
+            }
             
             Divider()
             
             // Main Content
             HSplitView {
-                // Gesture List
                 gestureListView
-                    .frame(minWidth: 300, idealWidth: 400)
+                    .frame(minWidth: MGStyle.Layout.listMinWidth, idealWidth: MGStyle.Layout.listIdealWidth)
                 
-                // Detail View
                 if let gesture = selectedGesture {
                     gestureDetailView(gesture: gesture)
-                        .frame(minWidth: 300)
+                        .frame(minWidth: MGStyle.Layout.detailMinWidth)
                 } else {
-                    emptyDetailView
-                        .frame(minWidth: 300)
+                    MGEmptyState(icon: "hand.tap", title: "Select a gesture to view details")
+                        .background(MGStyle.Colors.contentBackground)
+                        .frame(minWidth: MGStyle.Layout.detailMinWidth)
                 }
             }
         }
@@ -79,94 +108,22 @@ struct GesturesView: View {
         }
     }
     
-    // MARK: - Header View
-    
-    private var headerView: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Gestures")
-                    .font(.largeTitle)
-                    .bold()
-                
-                if let profile = uiServices.getActiveProfile() {
-                    HStack {
-                        Text("Active Profile:")
-                            .foregroundColor(.secondary)
-                        Text(profile.name)
-                            .fontWeight(.medium)
-                        
-                        Button(action: { activeSheet = .profilePicker }) {
-                            Image(systemName: "chevron.down.circle")
-                                .foregroundColor(.accentColor)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    .font(.subheadline)
-                }
-            }
-            
-            Spacer()
-            
-            // Actions
-            HStack(spacing: 12) {
-                // Search Field
-                HStack {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundColor(.secondary)
-                    TextField("Search gestures...", text: $searchText)
-                        .textFieldStyle(.plain)
-                }
-                .padding(6)
-                .background(Color(NSColor.controlBackgroundColor))
-                .cornerRadius(6)
-                .frame(width: 200)
-                
-                Divider()
-                    .frame(height: 20)
-                
-                // Add Gesture
-                Button(action: { activeSheet = .addGesture }) {
-                    Label("Add Gesture", systemImage: "plus")
-                }
-                
-                // Change Profile
-                Button(action: { activeSheet = .profilePicker }) {
-                    Label("Change Profile", systemImage: "person.2")
-                }
-                
-                // Reset Button
-                Button(action: { showingResetConfirmation = true }) {
-                    Label("Reset", systemImage: "arrow.counterclockwise")
-                        .foregroundColor(.red)
-                }
-            }
-        }
-    }
-    
     // MARK: - Gesture List View
     
     private var gestureListView: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // List Header
-            HStack {
-                Text("Configured Gestures (\(filteredGestures.count))")
-                    .font(.headline)
-                    .foregroundColor(.secondary)
-                
-                Spacer()
-                
-                if !filteredGestures.isEmpty {
+            MGListSectionHeader(
+                "Configured Gestures",
+                count: filteredGestures.count,
+                trailing: !filteredGestures.isEmpty ? AnyView(
                     Button(action: clearAllGestures) {
                         Text("Clear All")
                             .font(.caption)
                             .foregroundColor(.red)
                     }
                     .buttonStyle(.plain)
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-            .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
+                ) : nil
+            )
             
             ScrollView {
                 VStack(spacing: 1) {
@@ -187,40 +144,29 @@ struct GesturesView: View {
                     }
                     
                     if filteredGestures.isEmpty {
-                        VStack(spacing: 16) {
-                            Image(systemName: searchText.isEmpty ? "hand.draw" : "magnifyingglass")
-                                .font(.system(size: 48))
-                                .foregroundColor(.secondary.opacity(0.5))
-                            
-                            Text(searchText.isEmpty ? "No gestures configured" : "No matching gestures")
-                                .font(.headline)
-                                .foregroundColor(.secondary)
-                            
-                            if searchText.isEmpty {
-                                Button(action: { activeSheet = .addGesture }) {
-                                    Label("Add Your First Gesture", systemImage: "plus.circle")
-                                }
-                            }
-                        }
-                        .frame(maxWidth: .infinity)
+                        MGEmptyState(
+                            icon: searchText.isEmpty ? "hand.draw" : "magnifyingglass",
+                            title: searchText.isEmpty ? "No gestures configured" : "No matching gestures",
+                            actionLabel: searchText.isEmpty ? "Add Your First Gesture" : nil,
+                            action: searchText.isEmpty ? { activeSheet = .addGesture } : nil
+                        )
                         .padding(.vertical, 40)
                     }
                 }
             }
         }
-        .background(Color(NSColor.textBackgroundColor))
+        .background(MGStyle.Colors.contentBackground)
     }
     
     // MARK: - Gesture Detail View
     
     private func gestureDetailView(gesture: Gesture) -> some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                // Header
-                VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {
+                VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
                     Text("Gesture Details")
                         .font(.title2)
-                        .bold()
+                        .fontWeight(.bold)
                     
                     Text(gesture.displayDescription)
                         .font(.headline)
@@ -231,41 +177,32 @@ struct GesturesView: View {
                 
                 // Trigger Information
                 GroupBox("Trigger") {
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
                         LabeledContent("Zone:") {
-                            Text(gesture.zone.rawValue)
-                                .fontWeight(.medium)
+                            Text(gesture.zone.rawValue).fontWeight(.medium)
                         }
-                        
                         LabeledContent("Modifiers:") {
-                            Text(modifiersDescription(gesture.modifiers))
-                                .fontWeight(.medium)
+                            Text(modifiersDescription(gesture.modifiers)).fontWeight(.medium)
                         }
-                        
                         if gesture.dragModifier != .none {
                             LabeledContent("Drag Modifier:") {
-                                Text(gesture.dragModifier.displayName)
-                                    .fontWeight(.medium)
+                                Text(gesture.dragModifier.displayName).fontWeight(.medium)
                             }
                         }
                     }
-                    .padding(.vertical, 4)
+                    .padding(.vertical, MGStyle.Spacing.sm)
                 }
                 
                 // Action Information
                 GroupBox("Action") {
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
                         if let actionDef = UIServices.shared.getActionDefinition(for: gesture.actionIdentifier) {
                             LabeledContent("Name:") {
-                                Text(actionDef.name)
-                                    .fontWeight(.medium)
+                                Text(actionDef.name).fontWeight(.medium)
                             }
-                            
                             LabeledContent("Description:") {
-                                Text(actionDef.description)
-                                    .foregroundColor(.secondary)
+                                Text(actionDef.description).foregroundColor(.secondary)
                             }
-                            
                             LabeledContent("Plugin:") {
                                 Text(gesture.actionIdentifier.split(separator: ".").first.map(String.init) ?? "Unknown")
                                     .fontWeight(.medium)
@@ -275,75 +212,57 @@ struct GesturesView: View {
                                 .foregroundColor(.secondary)
                         }
                     }
-                    .padding(.vertical, 4)
+                    .padding(.vertical, MGStyle.Spacing.sm)
                 }
                 
                 // Activation Settings
                 GroupBox("Activation") {
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
                         LabeledContent("Type:") {
-                            Text(gesture.activation.activationType.rawValue)
-                                .fontWeight(.medium)
+                            Text(gesture.activation.activationType.rawValue).fontWeight(.medium)
                         }
-                        
                         Toggle("Enabled", isOn: .constant(gesture.activation.isEnabled))
                             .disabled(true)
-                        
                         if let keyboard = gesture.activation.keyboardTrigger {
                             LabeledContent("Keyboard:") {
-                                Text(keyboard.displayString)
-                                    .fontWeight(.medium)
+                                Text(keyboard.displayString).fontWeight(.medium)
                             }
                         }
-                        
                         if let mouse = gesture.activation.mouseButtonTrigger {
                             LabeledContent("Mouse Button:") {
-                                Text(mouse.displayString)
-                                    .fontWeight(.medium)
+                                Text(mouse.displayString).fontWeight(.medium)
                             }
                         }
                     }
-                    .padding(.vertical, 4)
+                    .padding(.vertical, MGStyle.Spacing.sm)
                 }
                 
                 // Timing Settings
                 if gesture.timing.repeatOnHold || gesture.timing.longPressEnabled {
                     GroupBox("Timing") {
-                        VStack(alignment: .leading, spacing: 8) {
+                        VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
                             if gesture.timing.repeatOnHold {
-                                Toggle("Repeat on Hold", isOn: .constant(true))
-                                    .disabled(true)
-                                
+                                Toggle("Repeat on Hold", isOn: .constant(true)).disabled(true)
                                 LabeledContent("Initial Delay:") {
-                                    Text("\(gesture.timing.repeatInitialDelay, specifier: "%.1f")s")
-                                        .fontWeight(.medium)
+                                    Text("\(gesture.timing.repeatInitialDelay, specifier: "%.1f")s").fontWeight(.medium)
                                 }
-                                
                                 LabeledContent("Repeat Interval:") {
-                                    Text("\(gesture.timing.repeatInterval, specifier: "%.1f")s")
-                                        .fontWeight(.medium)
+                                    Text("\(gesture.timing.repeatInterval, specifier: "%.1f")s").fontWeight(.medium)
                                 }
                             }
-                            
                             if gesture.timing.longPressEnabled {
-                                Toggle("Long Press", isOn: .constant(true))
-                                    .disabled(true)
-                                
+                                Toggle("Long Press", isOn: .constant(true)).disabled(true)
                                 LabeledContent("Threshold:") {
-                                    Text("\(gesture.timing.longPressThreshold, specifier: "%.1f")s")
-                                        .fontWeight(.medium)
+                                    Text("\(gesture.timing.longPressThreshold, specifier: "%.1f")s").fontWeight(.medium)
                                 }
-                                
                                 if let longPressAction = gesture.longPressActionIdentifier {
                                     LabeledContent("Long Press Action:") {
-                                        Text(longPressAction)
-                                            .fontWeight(.medium)
-                                            .lineLimit(1)
+                                        Text(longPressAction).fontWeight(.medium).lineLimit(1)
                                     }
                                 }
                             }
                         }
-                        .padding(.vertical, 4)
+                        .padding(.vertical, MGStyle.Spacing.sm)
                     }
                 }
                 
@@ -365,25 +284,9 @@ struct GesturesView: View {
                 }
                 .padding(.top)
             }
-            .padding()
+            .padding(MGStyle.Spacing.xl)
         }
-        .background(Color(NSColor.textBackgroundColor))
-    }
-    
-    // MARK: - Empty Detail View
-    
-    private var emptyDetailView: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "hand.tap")
-                .font(.system(size: 48))
-                .foregroundColor(.secondary.opacity(0.5))
-            
-            Text("Select a gesture to view details")
-                .font(.headline)
-                .foregroundColor(.secondary)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(NSColor.textBackgroundColor))
+        .background(MGStyle.Colors.contentBackground)
     }
     
     // MARK: - Helper Methods
@@ -439,7 +342,6 @@ struct GestureRowView: View {
     
     var body: some View {
         HStack {
-            // Checkbox to enable/disable
             Toggle("", isOn: $isEnabled)
                 .toggleStyle(CheckboxToggleStyle())
                 .onChange(of: isEnabled) { newValue in
@@ -447,21 +349,21 @@ struct GestureRowView: View {
                 }
                 .help(isEnabled ? "Gesture is enabled" : "Gesture is disabled")
             
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.sm) {
                 Text(gesture.displayDescription)
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: MGStyle.FontSize.body, weight: .medium))
                     .lineLimit(1)
                     .opacity(isEnabled ? 1.0 : 0.5)
                 
                 if let actionDef = UIServices.shared.getActionDefinition(for: gesture.actionIdentifier) {
                     Text(actionDef.name)
-                        .font(.system(size: 11))
+                        .font(.system(size: MGStyle.FontSize.caption))
                         .foregroundColor(.secondary)
                         .lineLimit(1)
                         .opacity(isEnabled ? 1.0 : 0.5)
                 } else {
                     Text(gesture.actionIdentifier)
-                        .font(.system(size: 11))
+                        .font(.system(size: MGStyle.FontSize.caption))
                         .foregroundColor(.secondary)
                         .lineLimit(1)
                         .opacity(isEnabled ? 1.0 : 0.5)
@@ -471,37 +373,15 @@ struct GestureRowView: View {
             Spacer()
             
             if isHovered {
-                HStack(spacing: 8) {
-                    Button(action: onEdit) {
-                        Image(systemName: "pencil")
-                            .font(.system(size: 11))
-                    }
-                    .buttonStyle(.plain)
-                    
-                    Button(action: onDelete) {
-                        Image(systemName: "trash")
-                            .font(.system(size: 11))
-                            .foregroundColor(.red)
-                    }
-                    .buttonStyle(.plain)
-                }
+                MGRowActions(actions: [
+                    .init("pencil") { onEdit() },
+                    .init("trash", destructive: true) { onDelete() }
+                ])
             }
-
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
-        .background(
-            RoundedRectangle(cornerRadius: 4)
-                .fill(isSelected ? Color.accentColor.opacity(0.2) : 
-                      (isHovered ? Color(NSColor.controlBackgroundColor) : Color.clear))
-        )
-        .onHover { hovering in
-            isHovered = hovering
-        }
-        .contentShape(Rectangle())
-        .onTapGesture {
-            onSelect()
-        }
+        .mgListRow(isSelected: isSelected, isHovered: isHovered)
+        .onHover { hovering in isHovered = hovering }
+        .onTapGesture { onSelect() }
     }
 }
 
@@ -514,62 +394,34 @@ struct ProfilePickerSheet: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // Header
-            HStack {
-                Text("Select Profile")
-                    .font(.title2)
-                    .bold()
-                
-                Spacer()
-                
-                Button("Cancel") {
-                    dismiss()
-                }
-            }
-            .padding()
+            MGSheetHeader("Select Profile", onCancel: { dismiss() })
             
-            Divider()
-            
-            // Profile List
             ScrollView {
-                VStack(spacing: 8) {
+                VStack(spacing: MGStyle.Spacing.md) {
                     ForEach(uiServices.profiles.sorted(by: { $0.name < $1.name })) { profile in
                         ProfileRow(
                             profile: profile,
                             isActive: profile.id == uiServices.activeProfileId,
                             isSelected: profile.id == selectedProfileId,
-                            onSelect: {
-                                selectedProfileId = profile.id
-                            }
+                            onSelect: { selectedProfileId = profile.id }
                         )
                     }
                 }
-                .padding()
+                .padding(MGStyle.Spacing.xl)
             }
             
-            Divider()
-            
-            // Footer
-            HStack {
+            MGSheetFooter("Select", disabled: selectedProfileId == nil) {
+                if let profileId = selectedProfileId {
+                    uiServices.switchToProfile(profileId)
+                    dismiss()
+                }
+            } leading: {
                 Button("New Profile...") {
-                    // Handle new profile creation
                     if let newProfile = uiServices.createProfile(name: "New Profile") {
                         selectedProfileId = newProfile.id
                     }
                 }
-                
-                Spacer()
-                
-                Button("Select") {
-                    if let profileId = selectedProfileId {
-                        uiServices.switchToProfile(profileId)
-                        dismiss()
-                    }
-                }
-                .keyboardShortcut(.return)
-                .disabled(selectedProfileId == nil)
             }
-            .padding()
         }
         .frame(width: 500, height: 400)
         .onAppear {
@@ -586,24 +438,17 @@ struct ProfileRow: View {
     
     var body: some View {
         HStack {
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.sm) {
                 HStack {
                     Text(profile.name)
                         .fontWeight(isActive ? .bold : .regular)
                     
                     if isActive {
-                        Text("(Active)")
-                            .font(.caption)
-                            .foregroundColor(.green)
+                        MGBadge("Active", color: .green)
                     }
                     
                     if profile.isDefault {
-                        Text("Default")
-                            .font(.caption)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Color.accentColor.opacity(0.2))
-                            .cornerRadius(4)
+                        MGBadge("Default")
                     }
                 }
                 
@@ -614,15 +459,7 @@ struct ProfileRow: View {
             
             Spacer()
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(
-            RoundedRectangle(cornerRadius: 6)
-                .fill(isSelected ? Color.accentColor.opacity(0.2) : Color(NSColor.controlBackgroundColor))
-        )
-        .contentShape(Rectangle())
-        .onTapGesture {
-            onSelect()
-        }
+        .mgListRow(isSelected: isSelected, isHovered: false)
+        .onTapGesture { onSelect() }
     }
 }

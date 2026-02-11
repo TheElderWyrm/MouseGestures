@@ -1,0 +1,519 @@
+import SwiftUI
+import AppKit
+
+// MARK: - Unified Style Constants
+
+/// Central namespace for all UI style constants used throughout the app.
+/// All views should reference these values instead of using hardcoded numbers.
+enum MGStyle {
+    
+    // MARK: Spacing
+    enum Spacing {
+        static let xs: CGFloat = 2
+        static let sm: CGFloat = 4
+        static let md: CGFloat = 8
+        static let lg: CGFloat = 12
+        static let xl: CGFloat = 16
+        static let xxl: CGFloat = 20
+    }
+    
+    // MARK: Corner Radii
+    enum Corner {
+        static let sm: CGFloat = 4
+        static let md: CGFloat = 6
+        static let lg: CGFloat = 8
+        static let xl: CGFloat = 10
+    }
+    
+    // MARK: Font Sizes
+    enum FontSize {
+        static let badge: CGFloat = 10
+        static let caption: CGFloat = 11
+        static let body: CGFloat = 13
+        static let heading: CGFloat = 14
+    }
+    
+    // MARK: Icon Sizes
+    enum IconSize {
+        static let inline: CGFloat = 11
+        static let row: CGFloat = 13
+        static let emptyState: CGFloat = 48
+    }
+    
+    // MARK: Colors
+    enum Colors {
+        static var cardBackground: Color { Color(NSColor.controlBackgroundColor) }
+        static var contentBackground: Color { Color(NSColor.textBackgroundColor) }
+        static var windowBackground: Color { Color(NSColor.windowBackgroundColor) }
+        static var separator: Color { Color(NSColor.separatorColor) }
+        static var selectedRow: Color { Color.accentColor.opacity(0.2) }
+        static var hoveredRow: Color { Color(NSColor.controlBackgroundColor) }
+        static var subtleOverlay: Color { Color(NSColor.controlBackgroundColor).opacity(0.5) }
+    }
+    
+    // MARK: Layout
+    enum Layout {
+        static let searchFieldWidth: CGFloat = 200
+        static let sidebarMinWidth: CGFloat = 200
+        static let sidebarIdealWidth: CGFloat = 250
+        static let sidebarMaxWidth: CGFloat = 300
+        static let listMinWidth: CGFloat = 300
+        static let listIdealWidth: CGFloat = 400
+        static let detailMinWidth: CGFloat = 300
+    }
+}
+
+// MARK: - Unified Search Field
+
+/// Consistent search field used across all views.
+struct MGSearchField: View {
+    let placeholder: String
+    @Binding var text: String
+    
+    init(_ placeholder: String = "Search...", text: Binding<String>) {
+        self.placeholder = placeholder
+        self._text = text
+    }
+    
+    var body: some View {
+        HStack(spacing: MGStyle.Spacing.md) {
+            Image(systemName: "magnifyingglass")
+                .foregroundColor(.secondary)
+                .font(.system(size: 12))
+            TextField(placeholder, text: $text)
+                .textFieldStyle(.plain)
+                .font(.system(size: MGStyle.FontSize.body))
+            if !text.isEmpty {
+                Button(action: { text = "" }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.secondary)
+                        .font(.system(size: MGStyle.IconSize.inline))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(MGStyle.Spacing.md)
+        .background(MGStyle.Colors.cardBackground)
+        .cornerRadius(MGStyle.Corner.md)
+        .overlay(
+            RoundedRectangle(cornerRadius: MGStyle.Corner.md)
+                .stroke(MGStyle.Colors.separator, lineWidth: 0.5)
+        )
+    }
+}
+
+// MARK: - Unified Page Header
+
+/// Consistent page header for top-level tab views.
+struct MGPageHeader<Actions: View>: View {
+    let title: String
+    let subtitle: String?
+    @ViewBuilder let actions: () -> Actions
+    
+    init(_ title: String, subtitle: String? = nil, @ViewBuilder actions: @escaping () -> Actions) {
+        self.title = title
+        self.subtitle = subtitle
+        self.actions = actions
+    }
+    
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.sm) {
+                Text(title)
+                    .font(.title2)
+                    .fontWeight(.bold)
+                
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+            }
+            
+            Spacer()
+            
+            HStack(spacing: MGStyle.Spacing.lg) {
+                actions()
+            }
+        }
+        .padding(MGStyle.Spacing.xl)
+    }
+}
+
+// MARK: - Unified Sheet Header
+
+/// Consistent header for sheet/modal views.
+struct MGSheetHeader: View {
+    let title: String
+    let subtitle: String?
+    let onCancel: (() -> Void)?
+    
+    init(_ title: String, subtitle: String? = nil, onCancel: (() -> Void)? = nil) {
+        self.title = title
+        self.subtitle = subtitle
+        self.onCancel = onCancel
+    }
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                VStack(alignment: .leading, spacing: MGStyle.Spacing.sm) {
+                    Text(title)
+                        .font(.title2)
+                        .fontWeight(.bold)
+                    
+                    if let subtitle {
+                        Text(subtitle)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                
+                Spacer()
+                
+                if let onCancel {
+                    Button("Cancel", action: onCancel)
+                }
+            }
+            .padding(MGStyle.Spacing.xl)
+            
+            Divider()
+        }
+    }
+}
+
+// MARK: - Unified Sheet Footer
+
+/// Consistent footer for sheet/modal views.
+struct MGSheetFooter<LeadingContent: View>: View {
+    let primaryLabel: String
+    let primaryAction: () -> Void
+    let primaryDisabled: Bool
+    @ViewBuilder let leading: () -> LeadingContent
+    
+    init(
+        _ primaryLabel: String,
+        disabled: Bool = false,
+        action: @escaping () -> Void,
+        @ViewBuilder leading: @escaping () -> LeadingContent = { EmptyView() }
+    ) {
+        self.primaryLabel = primaryLabel
+        self.primaryAction = action
+        self.primaryDisabled = disabled
+        self.leading = leading
+    }
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            Divider()
+            
+            HStack {
+                leading()
+                
+                Spacer()
+                
+                Button(primaryLabel, action: primaryAction)
+                    .keyboardShortcut(.return)
+                    .disabled(primaryDisabled)
+            }
+            .padding(MGStyle.Spacing.xl)
+        }
+    }
+}
+
+// MARK: - Unified Content Card
+
+/// Consistent card background used for content sections.
+struct MGContentCard<Content: View>: View {
+    let content: () -> Content
+    
+    init(@ViewBuilder content: @escaping () -> Content) {
+        self.content = content
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 15) {
+            content()
+        }
+        .padding(MGStyle.Spacing.xl)
+        .background(
+            RoundedRectangle(cornerRadius: MGStyle.Corner.lg)
+                .fill(MGStyle.Colors.cardBackground)
+        )
+    }
+}
+
+// MARK: - Unified Badge
+
+/// Consistent badge/tag used for status indicators, labels, etc.
+struct MGBadge: View {
+    let text: String
+    let color: Color
+    let icon: String?
+    
+    init(_ text: String, color: Color = .accentColor, icon: String? = nil) {
+        self.text = text
+        self.color = color
+        self.icon = icon
+    }
+    
+    var body: some View {
+        HStack(spacing: MGStyle.Spacing.sm) {
+            if let icon {
+                Image(systemName: icon)
+                    .font(.system(size: MGStyle.FontSize.badge))
+            }
+            Text(text)
+                .font(.system(size: MGStyle.FontSize.badge))
+        }
+        .padding(.horizontal, MGStyle.Spacing.md)
+        .padding(.vertical, MGStyle.Spacing.xs)
+        .background(color.opacity(0.15))
+        .foregroundColor(color)
+        .cornerRadius(MGStyle.Corner.sm)
+    }
+}
+
+// MARK: - Unified Empty State
+
+/// Consistent empty state placeholder view.
+struct MGEmptyState: View {
+    let icon: String
+    let title: String
+    let description: String?
+    let actionLabel: String?
+    let action: (() -> Void)?
+    
+    init(icon: String, title: String, description: String? = nil, actionLabel: String? = nil, action: (() -> Void)? = nil) {
+        self.icon = icon
+        self.title = title
+        self.description = description
+        self.actionLabel = actionLabel
+        self.action = action
+    }
+    
+    var body: some View {
+        VStack(spacing: MGStyle.Spacing.xl) {
+            Image(systemName: icon)
+                .font(.system(size: MGStyle.IconSize.emptyState))
+                .foregroundColor(.secondary.opacity(0.5))
+            
+            Text(title)
+                .font(.headline)
+                .foregroundColor(.secondary)
+            
+            if let description {
+                Text(description)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: 400)
+            }
+            
+            if let actionLabel, let action {
+                Button(action: action) {
+                    Label(actionLabel, systemImage: "plus.circle")
+                }
+                .buttonStyle(.borderedProminent)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(MGStyle.Spacing.xxl)
+    }
+}
+
+// MARK: - Unified List Section Header
+
+/// Consistent section header for list areas.
+struct MGListSectionHeader: View {
+    let title: String
+    let count: Int?
+    let trailing: AnyView?
+    
+    init(_ title: String, count: Int? = nil, trailing: AnyView? = nil) {
+        self.title = title
+        self.count = count
+        self.trailing = trailing
+    }
+    
+    var body: some View {
+        HStack {
+            HStack(spacing: MGStyle.Spacing.md) {
+                Text(title)
+                    .font(.headline)
+                    .foregroundColor(.secondary)
+                
+                if let count {
+                    Text("(\(count))")
+                        .font(.headline)
+                        .foregroundColor(.secondary)
+                }
+            }
+            
+            Spacer()
+            
+            if let trailing {
+                trailing
+            }
+        }
+        .padding(.horizontal, MGStyle.Spacing.xl)
+        .padding(.vertical, MGStyle.Spacing.md)
+        .background(MGStyle.Colors.subtleOverlay)
+    }
+}
+
+// MARK: - Unified Sidebar
+
+/// Consistent sidebar item for views using sidebar navigation.
+struct MGSidebarItem: View {
+    let title: String
+    let icon: String
+    let isSelected: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: MGStyle.Spacing.md) {
+                Image(systemName: icon)
+                    .frame(width: 20)
+                    .foregroundColor(isSelected ? .white : .secondary)
+                Text(title)
+                    .fontWeight(isSelected ? .medium : .regular)
+                    .foregroundColor(isSelected ? .white : .primary)
+                Spacer()
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(
+                RoundedRectangle(cornerRadius: MGStyle.Corner.md)
+                    .fill(isSelected ? Color.accentColor : Color.clear)
+            )
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+/// Consistent sidebar container layout.
+struct MGSidebar<Content: View>: View {
+    let title: String
+    @ViewBuilder let content: () -> Content
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(title)
+                .font(.title2)
+                .fontWeight(.semibold)
+                .padding(.horizontal, MGStyle.Spacing.xxl)
+                .padding(.top, MGStyle.Spacing.xxl)
+                .padding(.bottom, 10)
+            
+            Divider()
+                .padding(.horizontal, MGStyle.Spacing.xxl)
+                .padding(.bottom, MGStyle.Spacing.md)
+            
+            ScrollView {
+                VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
+                    content()
+                }
+                .padding(.horizontal, 10)
+            }
+            
+            Spacer()
+        }
+        .background(MGStyle.Colors.cardBackground)
+    }
+}
+
+// MARK: - Unified List Row Modifiers
+
+/// Consistent interactive list row styling with selection and hover.
+struct MGListRowModifier: ViewModifier {
+    let isSelected: Bool
+    let isHovered: Bool
+    
+    func body(content: Content) -> some View {
+        content
+            .padding(.horizontal, MGStyle.Spacing.xl)
+            .padding(.vertical, MGStyle.Spacing.md)
+            .background(
+                RoundedRectangle(cornerRadius: MGStyle.Corner.md)
+                    .fill(isSelected ? MGStyle.Colors.selectedRow :
+                          (isHovered ? MGStyle.Colors.hoveredRow : Color.clear))
+            )
+            .contentShape(Rectangle())
+    }
+}
+
+extension View {
+    /// Apply consistent list row styling with selection and hover states.
+    func mgListRow(isSelected: Bool, isHovered: Bool) -> some View {
+        modifier(MGListRowModifier(isSelected: isSelected, isHovered: isHovered))
+    }
+}
+
+// MARK: - Unified Hover Row Actions
+
+/// Consistent inline action buttons shown on row hover.
+struct MGRowActions: View {
+    struct Action {
+        let icon: String
+        let isDestructive: Bool
+        let handler: () -> Void
+        
+        init(_ icon: String, destructive: Bool = false, action: @escaping () -> Void) {
+            self.icon = icon
+            self.isDestructive = destructive
+            self.handler = action
+        }
+    }
+    
+    let actions: [Action]
+    
+    var body: some View {
+        HStack(spacing: MGStyle.Spacing.md) {
+            ForEach(actions.indices, id: \.self) { i in
+                Button(action: actions[i].handler) {
+                    Image(systemName: actions[i].icon)
+                        .font(.system(size: MGStyle.IconSize.inline))
+                        .foregroundColor(actions[i].isDestructive ? .red : .secondary)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+}
+
+// MARK: - Unified Section Header (Content Area)
+
+/// Consistent section header for content area sections (not sidebar).
+struct MGSectionHeader: View {
+    let title: String
+    let icon: String?
+    
+    init(_ title: String, icon: String? = nil) {
+        self.title = title
+        self.icon = icon
+    }
+    
+    var body: some View {
+        HStack(spacing: MGStyle.Spacing.md) {
+            if let icon {
+                Image(systemName: icon)
+                    .foregroundColor(.accentColor)
+            }
+            Text(title)
+                .font(.title2)
+                .fontWeight(.semibold)
+        }
+    }
+}
+
+// MARK: - Unified Divider with Spacing
+
+struct MGHeaderDivider: View {
+    var body: some View {
+        Divider()
+            .frame(height: 20)
+    }
+}

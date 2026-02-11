@@ -7,7 +7,6 @@ struct SavedActionsView: View {
     @StateObject private var uiServices = UIServices.shared
     @State private var selectedActions = Set<UUID>()
     @State private var searchText = ""
-    // Sheet presentation - using single enum to avoid multiple .sheet modifier bug
     enum ActiveSheet: Identifiable {
         case addAction
         case editAction(SavedAction)
@@ -28,14 +27,18 @@ struct SavedActionsView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // Header
             headerView
             
             Divider()
             
-            // Content
             if filteredAndSortedActions.isEmpty {
-                emptyStateView
+                MGEmptyState(
+                    icon: "star.square.on.square",
+                    title: "No Saved Actions",
+                    description: "Saved actions are reusable action configurations that can be quickly applied to gestures.",
+                    actionLabel: "Add Your First Saved Action",
+                    action: { activeSheet = .addAction }
+                )
             } else {
                 actionListView
             }
@@ -54,9 +57,7 @@ struct SavedActionsView: View {
             isPresented: $showingDeleteConfirmation,
             titleVisibility: .visible
         ) {
-            Button("Delete", role: .destructive) {
-                deleteSelectedActions()
-            }
+            Button("Delete", role: .destructive) { deleteSelectedActions() }
             Button("Cancel", role: .cancel) {}
         } message: {
             let count = actionsToDelete.count
@@ -75,10 +76,8 @@ struct SavedActionsView: View {
             defaultFilename: "SavedActions.json"
         ) { result in
             switch result {
-            case .success(let url):
-                log.log("Exported saved actions to: \(url.path)")
-            case .failure(let error):
-                log.log("Failed to export saved actions: \(error)")
+            case .success(let url): log.log("Exported saved actions to: \(url.path)")
+            case .failure(let error): log.log("Failed to export saved actions: \(error)")
             }
         }
         .fileImporter(
@@ -88,9 +87,7 @@ struct SavedActionsView: View {
         ) { result in
             switch result {
             case .success(let urls):
-                if let url = urls.first {
-                    importActions(from: url)
-                }
+                if let url = urls.first { importActions(from: url) }
             case .failure(let error):
                 log.log("Failed to import saved actions: \(error)")
             }
@@ -100,97 +97,48 @@ struct SavedActionsView: View {
     // MARK: - View Components
     
     private var headerView: some View {
-        VStack(spacing: 12) {
-            HStack {
-                Text("Saved Actions")
-                    .font(.title2)
-                    .bold()
-                
-                Spacer()
-                
-                // Sort Options
-                Picker("Sort by", selection: $sortOrder) {
-                    ForEach(SavedActionsSortService.SortOrder.allCases, id: \.self) { order in
-                        Text(order.rawValue).tag(order)
-                    }
-                }
-                .pickerStyle(.menu)
-                .frame(width: 150)
-            }
-            
-            HStack(spacing: 12) {
-                // Search Field
-                HStack {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundColor(.secondary)
-                    TextField("Search saved actions...", text: $searchText)
-                        .textFieldStyle(.plain)
-                }
-                .padding(8)
-                .background(Color(NSColor.controlBackgroundColor))
-                .cornerRadius(8)
-                
-                Spacer()
-                
-                // Action Buttons
-                HStack(spacing: 8) {
-                    Button(action: { activeSheet = .addAction }) {
-                        Label("Add", systemImage: "plus")
-                    }
-                    
-                    Button(action: editSelectedAction) {
-                        Label("Edit", systemImage: "pencil")
-                    }
-                    .disabled(selectedActions.count != 1)
-                    
-                    Button(action: confirmDeleteSelectedActions) {
-                        Label("Remove", systemImage: "minus")
-                    }
-                    .disabled(selectedActions.isEmpty)
-                    
-                    Divider()
-                        .frame(height: 20)
-                    
-                    Button(action: { showingImportPanel = true }) {
-                        Label("Import", systemImage: "square.and.arrow.down")
-                    }
-                    
-                    Button(action: { showingExportPanel = true }) {
-                        Label("Export", systemImage: "square.and.arrow.up")
-                    }
-                    .disabled(selectedActions.isEmpty)
+        MGPageHeader("Saved Actions") {
+            Picker("Sort by", selection: $sortOrder) {
+                ForEach(SavedActionsSortService.SortOrder.allCases, id: \.self) { order in
+                    Text(order.rawValue).tag(order)
                 }
             }
-        }
-        .padding()
-    }
-    
-    private var emptyStateView: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "star.square.on.square")
-                .font(.system(size: 60))
-                .foregroundColor(.secondary)
+            .pickerStyle(.menu)
+            .frame(width: 150)
             
-            Text("No Saved Actions")
-                .font(.title2)
-                .bold()
+            MGSearchField("Search saved actions...", text: $searchText)
+                .frame(width: MGStyle.Layout.searchFieldWidth)
             
-            Text("Saved actions are reusable action configurations that can be quickly applied to gestures.")
-                .multilineTextAlignment(.center)
-                .foregroundColor(.secondary)
-                .frame(maxWidth: 400)
+            MGHeaderDivider()
             
             Button(action: { activeSheet = .addAction }) {
-                Label("Add Your First Saved Action", systemImage: "plus.circle.fill")
+                Label("Add", systemImage: "plus")
             }
-            .buttonStyle(.borderedProminent)
+            Button(action: editSelectedAction) {
+                Label("Edit", systemImage: "pencil")
+            }
+            .disabled(selectedActions.count != 1)
+            
+            Button(action: confirmDeleteSelectedActions) {
+                Label("Remove", systemImage: "minus")
+            }
+            .disabled(selectedActions.isEmpty)
+            
+            MGHeaderDivider()
+            
+            Button(action: { showingImportPanel = true }) {
+                Label("Import", systemImage: "square.and.arrow.down")
+            }
+            Button(action: { showingExportPanel = true }) {
+                Label("Export", systemImage: "square.and.arrow.up")
+            }
+            .disabled(selectedActions.isEmpty)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
     
     private var actionListView: some View {
         ScrollView {
-            LazyVStack(spacing: 8) {
+            LazyVStack(spacing: MGStyle.Spacing.md) {
                 ForEach(filteredAndSortedActions) { action in
                     SavedActionRow(
                         action: action,
@@ -202,7 +150,7 @@ struct SavedActionsView: View {
                     )
                 }
             }
-            .padding()
+            .padding(MGStyle.Spacing.xl)
         }
     }
     
@@ -256,7 +204,6 @@ struct SavedActionsView: View {
     private func importActions(from url: URL) {
         guard url.startAccessingSecurityScopedResource() else { return }
         defer { url.stopAccessingSecurityScopedResource() }
-        
         do {
             let data = try Data(contentsOf: url)
             _ = uiServices.importSavedActions(from: data, replaceExisting: false)
@@ -279,15 +226,13 @@ struct SavedActionRow: View {
     @State private var isHovered = false
     
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: MGStyle.Spacing.lg) {
             // Selection Checkbox
             Image(systemName: isSelected ? "checkmark.square.fill" : "square")
                 .foregroundColor(isSelected ? .accentColor : .secondary)
                 .imageScale(.large)
                 .contentShape(Rectangle())
-                .onTapGesture {
-                    onToggleSelection()
-                }
+                .onTapGesture { onToggleSelection() }
             
             // Action Icon
             Image(systemName: getActionIcon())
@@ -296,17 +241,12 @@ struct SavedActionRow: View {
                 .frame(width: 30)
             
             // Action Details
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.sm) {
                 Text(action.name)
                     .font(.system(.body, weight: .semibold))
                 
                 HStack {
-                    Text(action.typeDisplayName)
-                        .font(.caption)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Color.accentColor.opacity(0.1))
-                        .cornerRadius(4)
+                    MGBadge(action.typeDisplayName)
                     
                     Text(action.description)
                         .font(.caption)
@@ -322,42 +262,27 @@ struct SavedActionRow: View {
                 .font(.caption)
                 .foregroundColor(.secondary)
             
-            // Action Buttons (shown on hover)
             if isHovered {
-                HStack(spacing: 8) {
-                    Button(action: onEdit) {
-                        Image(systemName: "pencil")
-                            .imageScale(.small)
-                    }
-                    .buttonStyle(.plain)
-                    
-                    Button(action: onDelete) {
-                        Image(systemName: "trash")
-                            .imageScale(.small)
-                            .foregroundColor(.red)
-                    }
-                    .buttonStyle(.plain)
-                }
+                MGRowActions(actions: [
+                    .init("pencil") { onEdit() },
+                    .init("trash", destructive: true) { onDelete() }
+                ])
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.horizontal, MGStyle.Spacing.lg)
+        .padding(.vertical, MGStyle.Spacing.md)
         .background(
-            RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: MGStyle.Corner.lg)
                 .fill(isSelected ? Color.accentColor.opacity(0.1) : 
-                      (isHovered ? Color(NSColor.controlBackgroundColor) : Color.clear))
+                      (isHovered ? MGStyle.Colors.cardBackground : Color.clear))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: MGStyle.Corner.lg)
                 .stroke(isSelected ? Color.accentColor.opacity(0.3) : Color.clear, lineWidth: 1)
         )
-        .onHover { hovering in
-            isHovered = hovering
-        }
+        .onHover { hovering in isHovered = hovering }
         .contentShape(Rectangle())
-        .onTapGesture(count: 2) {
-            onDoubleClick()
-        }
+        .onTapGesture(count: 2) { onDoubleClick() }
     }
     
     private func getActionIcon() -> String {

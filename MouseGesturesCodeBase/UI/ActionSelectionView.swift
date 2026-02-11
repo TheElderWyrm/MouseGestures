@@ -28,35 +28,12 @@ struct ActionSelectionView: View {
     
     private var actionPickerSection: some View {
         GroupBox("Action") {
-            VStack(alignment: .leading, spacing: 10) {
-                // Search field
-                HStack(spacing: 6) {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundColor(.secondary)
-                        .font(.system(size: 12))
-                    TextField("Search actions...", text: $searchText)
-                        .textFieldStyle(.plain)
-                        .font(.system(size: 13))
-                    if !searchText.isEmpty {
-                        Button(action: { searchText = "" }) {
-                            Image(systemName: "xmark.circle.fill")
-                                .foregroundColor(.secondary)
-                                .font(.system(size: 11))
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                .padding(6)
-                .background(Color(NSColor.controlBackgroundColor))
-                .cornerRadius(6)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 6)
-                        .stroke(Color(NSColor.separatorColor), lineWidth: 0.5)
-                )
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
+                MGSearchField("Search actions...", text: $searchText)
                 
                 // Category chips
                 ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 6) {
+                    HStack(spacing: MGStyle.Spacing.md) {
                         categoryChip("All", icon: "square.grid.2x2", count: allActionEntries.count)
                         ForEach(usedCategories, id: \.self) { cat in
                             categoryChip(
@@ -69,7 +46,7 @@ struct ActionSelectionView: View {
                             categoryChip("Saved", icon: "bookmark.fill", count: savedActionEntries.count)
                         }
                     }
-                    .padding(.horizontal, 2)
+                    .padding(.horizontal, MGStyle.Spacing.xs)
                 }
                 
                 // Action list
@@ -97,7 +74,7 @@ struct ActionSelectionView: View {
                 
                 // Selected action description
                 if let action = selectedAction {
-                    HStack(spacing: 6) {
+                    HStack(spacing: MGStyle.Spacing.md) {
                         if let iconName = action.icon {
                             Image(systemName: iconName)
                                 .foregroundColor(.accentColor)
@@ -107,9 +84,9 @@ struct ActionSelectionView: View {
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
-                    .padding(.top, 2)
+                    .padding(.top, MGStyle.Spacing.xs)
                 } else if let saved = selectedSavedAction {
-                    HStack(spacing: 6) {
+                    HStack(spacing: MGStyle.Spacing.md) {
                         Image(systemName: "bookmark.fill")
                             .foregroundColor(.orange)
                             .font(.system(size: 12))
@@ -117,10 +94,10 @@ struct ActionSelectionView: View {
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
-                    .padding(.top, 2)
+                    .padding(.top, MGStyle.Spacing.xs)
                 }
             }
-            .padding(.vertical, 8)
+            .padding(.vertical, MGStyle.Spacing.md)
         }
     }
     
@@ -134,7 +111,7 @@ struct ActionSelectionView: View {
                 .foregroundColor(.secondary)
                 .font(.caption)
                 .frame(maxWidth: .infinity, alignment: .center)
-                .padding(.vertical, 8)
+                .padding(.vertical, MGStyle.Spacing.md)
         } else {
             ForEach(results, id: \.id) { entry in
                 actionRow(entry)
@@ -164,7 +141,7 @@ struct ActionSelectionView: View {
         ForEach(grouped, id: \.category) { group in
             Section(header:
                 Label(group.category, systemImage: group.icon)
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: MGStyle.FontSize.caption, weight: .semibold))
                     .foregroundColor(.secondary)
             ) {
                 ForEach(group.entries, id: \.id) { entry in
@@ -178,7 +155,7 @@ struct ActionSelectionView: View {
         if selectedCategory == "All" && !savedActionEntries.isEmpty {
             Section(header:
                 Label("Saved Actions", systemImage: "bookmark.fill")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: MGStyle.FontSize.caption, weight: .semibold))
                     .foregroundColor(.secondary)
             ) {
                 ForEach(savedActionEntries, id: \.id) { entry in
@@ -193,25 +170,25 @@ struct ActionSelectionView: View {
     // MARK: - Action Row
     
     private func actionRow(_ entry: ActionEntry) -> some View {
-        HStack(spacing: 8) {
+        HStack(spacing: MGStyle.Spacing.md) {
             if let iconName = entry.icon {
                 Image(systemName: iconName)
                     .foregroundColor(entry.isSaved ? .orange : .accentColor)
-                    .font(.system(size: 13))
+                    .font(.system(size: MGStyle.IconSize.row))
                     .frame(width: 20, alignment: .center)
             } else {
                 Image(systemName: entry.isSaved ? "bookmark.fill" : "circle.fill")
                     .foregroundColor(entry.isSaved ? .orange : .secondary.opacity(0.3))
-                    .font(.system(size: entry.isSaved ? 13 : 5))
+                    .font(.system(size: entry.isSaved ? MGStyle.IconSize.row : 5))
                     .frame(width: 20, alignment: .center)
             }
             VStack(alignment: .leading, spacing: 1) {
                 Text(entry.name)
-                    .font(.system(size: 13))
+                    .font(.system(size: MGStyle.FontSize.body))
                     .lineLimit(1)
                 if isSearching {
                     Text(entry.categoryLabel)
-                        .font(.system(size: 10))
+                        .font(.system(size: MGStyle.FontSize.badge))
                         .foregroundColor(.secondary)
                         .lineLimit(1)
                 }
@@ -225,26 +202,26 @@ struct ActionSelectionView: View {
     private func categoryChip(_ label: String, icon: String, count: Int) -> some View {
         let isSelected = selectedCategory == label
         return Button(action: { selectedCategory = label }) {
-            HStack(spacing: 4) {
+            HStack(spacing: MGStyle.Spacing.sm) {
                 Image(systemName: icon)
-                    .font(.system(size: 10))
+                    .font(.system(size: MGStyle.FontSize.badge))
                 Text(shortLabel(label))
-                    .font(.system(size: 11, weight: isSelected ? .semibold : .regular))
+                    .font(.system(size: MGStyle.FontSize.caption, weight: isSelected ? .semibold : .regular))
                 Text("\(count)")
                     .font(.system(size: 9, weight: .medium))
-                    .padding(.horizontal, 4)
+                    .padding(.horizontal, MGStyle.Spacing.sm)
                     .padding(.vertical, 1)
                     .background(isSelected ? Color.white.opacity(0.2) : Color.secondary.opacity(0.15))
-                    .cornerRadius(4)
+                    .cornerRadius(MGStyle.Corner.sm)
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(isSelected ? Color.accentColor : Color(NSColor.controlBackgroundColor))
+            .padding(.horizontal, MGStyle.Spacing.md)
+            .padding(.vertical, MGStyle.Spacing.sm)
+            .background(isSelected ? Color.accentColor : MGStyle.Colors.cardBackground)
             .foregroundColor(isSelected ? .white : .primary)
-            .cornerRadius(6)
+            .cornerRadius(MGStyle.Corner.md)
             .overlay(
-                RoundedRectangle(cornerRadius: 6)
-                    .stroke(isSelected ? Color.clear : Color(NSColor.separatorColor), lineWidth: 0.5)
+                RoundedRectangle(cornerRadius: MGStyle.Corner.md)
+                    .stroke(isSelected ? Color.clear : MGStyle.Colors.separator, lineWidth: 0.5)
                 )
         }
         .buttonStyle(.plain)
@@ -275,12 +252,12 @@ struct ActionSelectionView: View {
                 let simple = action.supportedParameters.filter { $0.type != .json }
                 if !simple.isEmpty {
                     GroupBox("Parameters") {
-                        VStack(alignment: .leading, spacing: 12) {
+                        VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
                             ForEach(simple, id: \.key) { p in
                                 paramField(for: p)
                             }
                         }
-                        .padding(.vertical, 8)
+                        .padding(.vertical, MGStyle.Spacing.md)
                     }
                 }
             }
@@ -290,9 +267,9 @@ struct ActionSelectionView: View {
     private func advancedConfigBox(for action: PluginAction) -> some View {
         GroupBox("Advanced Configuration") {
             HStack {
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: MGStyle.Spacing.sm) {
                     Text("This action requires advanced configuration.")
-                        .font(.system(size: 13))
+                        .font(.system(size: MGStyle.FontSize.body))
                     if advancedConfigCount > 0 {
                         Text("\(advancedConfigCount) item(s) configured")
                             .font(.caption)
@@ -306,7 +283,7 @@ struct ActionSelectionView: View {
                 Spacer()
                 Button("Configure...") { openAdvanced(for: action) }
             }
-            .padding(.vertical, 8)
+            .padding(.vertical, MGStyle.Spacing.md)
         }
     }
     
@@ -316,14 +293,14 @@ struct ActionSelectionView: View {
     private func paramField(for p: ParameterDefinition) -> some View {
         switch p.type {
         case .string, .path, .url:
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
                 Text(p.name)
                     .font(.system(size: 12, weight: .medium))
                 TextField(p.description, text: strBinding(p.key, def: p.defaultValue?.value as? String ?? ""))
                     .textFieldStyle(.roundedBorder)
             }
         case .number:
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
                 Text(p.name)
                     .font(.system(size: 12, weight: .medium))
                 TextField(p.description, text: numBinding(p.key, def: p.defaultValue?.value as? Double ?? 0))
@@ -334,7 +311,7 @@ struct ActionSelectionView: View {
             Toggle(p.name, isOn: boolBinding(p.key, def: p.defaultValue?.value as? Bool ?? false))
         case .selection:
             if let vals = p.validation?.allowedValues {
-                VStack(alignment: .leading, spacing: 3) {
+                VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
                     Text(p.name)
                         .font(.system(size: 12, weight: .medium))
                     Picker("", selection: strBinding(p.key, def: p.defaultValue?.value as? String ?? "")) {
@@ -347,7 +324,7 @@ struct ActionSelectionView: View {
                 }
             }
         case .application:
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
                 Text(p.name)
                     .font(.system(size: 12, weight: .medium))
                 Picker("", selection: strBinding(p.key, def: "")) {
@@ -360,17 +337,17 @@ struct ActionSelectionView: View {
                 .labelsHidden()
             }
         case .script:
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.sm) {
                 Text(p.name).font(.system(size: 12, weight: .medium))
                 Text(p.description).font(.caption).foregroundColor(.secondary)
                 TextEditor(text: strBinding(p.key, def: p.defaultValue?.value as? String ?? ""))
                     .font(.system(.body, design: .monospaced))
                     .frame(minHeight: 80, maxHeight: 150)
-                    .border(Color(NSColor.separatorColor), width: 1)
-                    .cornerRadius(4)
+                    .border(MGStyle.Colors.separator, width: 1)
+                    .cornerRadius(MGStyle.Corner.sm)
             }
         case .keyboardShortcut:
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
                 Text(p.name)
                     .font(.system(size: 12, weight: .medium))
                 Text("Configure via Activation settings")
@@ -379,7 +356,7 @@ struct ActionSelectionView: View {
         case .json:
             EmptyView()
         default:
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
                 Text(p.name)
                     .font(.system(size: 12, weight: .medium))
                 TextField(p.description, text: strBinding(p.key, def: p.defaultValue?.value as? String ?? ""))

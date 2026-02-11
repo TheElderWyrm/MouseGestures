@@ -41,22 +41,37 @@ struct SavedActionConfigurationSheet: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            headerView
-            Divider()
+            MGSheetHeader(mode.title, onCancel: { dismiss() })
             
             ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    nameSection
+                VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {
+                    GroupBox("Action Name") {
+                        TextField("Enter a descriptive name", text: $actionName)
+                            .textFieldStyle(.roundedBorder)
+                            .padding(.vertical, MGStyle.Spacing.md)
+                    }
+                    
                     ActionSelectionView(
                         selectedActionId: $selectedActionId,
                         actionParameters: $parameters
                     )
                 }
-                .padding()
+                .padding(MGStyle.Spacing.xl)
             }
             
-            Divider()
-            footerView
+            MGSheetFooter(mode.buttonTitle, disabled: !isValid) {
+                saveAction()
+            } leading: {
+                if !actionName.isEmpty && !selectedActionId.isEmpty {
+                    VStack(alignment: .leading) {
+                        Text("Preview:").font(.caption).foregroundColor(.secondary)
+                        Text(actionName).font(.system(.body)).bold()
+                        if let action = PluginManager.shared.getAction(identifier: selectedActionId)?.action {
+                            Text(action.name).font(.caption).foregroundColor(.secondary)
+                        }
+                    }
+                }
+            }
         }
         .frame(width: 600, height: 500)
         .alert("Duplicate Name", isPresented: $showingDuplicateNameAlert) {
@@ -64,44 +79,6 @@ struct SavedActionConfigurationSheet: View {
         } message: {
             Text("A saved action with this name already exists. Please choose a different name.")
         }
-    }
-    
-    // MARK: - Components
-    
-    private var headerView: some View {
-        HStack {
-            Text(mode.title).font(.title2).bold()
-            Spacer()
-            Button("Cancel") { dismiss() }
-        }
-        .padding()
-    }
-    
-    private var nameSection: some View {
-        GroupBox("Action Name") {
-            TextField("Enter a descriptive name", text: $actionName)
-                .textFieldStyle(.roundedBorder)
-                .padding(.vertical, 8)
-        }
-    }
-    
-    private var footerView: some View {
-        HStack {
-            if !actionName.isEmpty && !selectedActionId.isEmpty {
-                VStack(alignment: .leading) {
-                    Text("Preview:").font(.caption).foregroundColor(.secondary)
-                    Text(actionName).font(.system(.body)).bold()
-                    if let action = PluginManager.shared.getAction(identifier: selectedActionId)?.action {
-                        Text(action.name).font(.caption).foregroundColor(.secondary)
-                    }
-                }
-            }
-            Spacer()
-            Button(mode.buttonTitle) { saveAction() }
-                .keyboardShortcut(.return)
-                .disabled(!isValid)
-        }
-        .padding()
     }
     
     // MARK: - Helpers

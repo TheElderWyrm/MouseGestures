@@ -22,7 +22,6 @@ struct AppProfilesView: View {
     @State private var appMappings: [AppProfileMapping] = []
     @State private var disabledApps: [DisabledApp] = []
     @State private var selectedApp: String = ""
-    // Sheet presentation - using single enum to avoid multiple .sheet modifier bug
     enum ActiveSheet: Identifiable {
         case addRule
         case editMapping(AppProfileMapping)
@@ -43,43 +42,46 @@ struct AppProfilesView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // Header
-            headerView
+            MGPageHeader("App Profiles", subtitle: "Configure profile rules for specific applications") {
+                MGSearchField("Search applications...", text: $searchText)
+                    .frame(width: MGStyle.Layout.searchFieldWidth)
+                
+                MGHeaderDivider()
+                
+                Button(action: { activeSheet = .addRule }) {
+                    Label("Add Rule", systemImage: "plus.circle.fill")
+                }
+            }
             
             Divider()
             
-            // Search bar
-            searchBar
-                .padding(.horizontal)
-                .padding(.vertical, 10)
-            
-            // Content
             if appMappings.isEmpty && disabledApps.isEmpty {
-                emptyStateView
+                MGEmptyState(
+                    icon: "app.badge.checkmark",
+                    title: "No App Rules Configured",
+                    description: "Add rules to use specific profiles or disable gestures for certain applications",
+                    actionLabel: "Add First Rule",
+                    action: { activeSheet = .addRule }
+                )
             } else {
                 ScrollView {
-                    VStack(spacing: 16) {
-                        // Profile Mappings Section
+                    VStack(spacing: MGStyle.Spacing.xl) {
                         if !filteredMappings.isEmpty {
                             profileMappingsSection
                         }
                         
-                        // Disabled Apps Section
                         if !filteredDisabledApps.isEmpty {
                             disabledAppsSection
                         }
                     }
-                    .padding()
+                    .padding(MGStyle.Spacing.xl)
                 }
             }
             
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(NSColor.windowBackgroundColor))
-        .onAppear {
-            loadData()
-        }
+        .onAppear { loadData() }
         .sheet(item: $activeSheet) { sheet in
             switch sheet {
             case .addRule:
@@ -88,9 +90,7 @@ struct AppProfilesView: View {
                         addAppRule(bundleId: bundleId, appName: appName, ruleType: ruleType, profileId: profileId)
                         activeSheet = nil
                     },
-                    onCancel: {
-                        activeSheet = nil
-                    }
+                    onCancel: { activeSheet = nil }
                 )
             case .editMapping(let mapping):
                 EditAppRuleSheet(
@@ -99,15 +99,12 @@ struct AppProfilesView: View {
                         updateMapping(mapping: mapping, newProfileId: profileId)
                         activeSheet = nil
                     },
-                    onCancel: {
-                        activeSheet = nil
-                    }
+                    onCancel: { activeSheet = nil }
                 )
             case .editDisabledApp(let disabledApp):
                 EditDisabledAppSheet(
                     disabledApp: disabledApp,
                     onSave: {
-                        // Convert to profile mapping
                         if let profile = uiServices.profiles.first {
                             uiServices.removeDisabledApp(bundleId: disabledApp.appBundleIdentifier)
                             uiServices.addAppProfileMapping(
@@ -119,9 +116,7 @@ struct AppProfilesView: View {
                         }
                         activeSheet = nil
                     },
-                    onCancel: {
-                        activeSheet = nil
-                    }
+                    onCancel: { activeSheet = nil }
                 )
             }
         }
@@ -139,102 +134,19 @@ struct AppProfilesView: View {
     
     // MARK: - View Components
     
-    private var headerView: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("App Profiles")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
-                
-                Text("Configure profile rules for specific applications")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-            }
-            
-            Spacer()
-            
-            Button(action: { activeSheet = .addRule }) {
-                Label("Add Rule", systemImage: "plus.circle.fill")
-                    .font(.system(size: 14, weight: .medium))
-            }
-            .buttonStyle(.borderedProminent)
-        }
-        .padding()
-    }
-    
-    private var searchBar: some View {
-        HStack {
-            Image(systemName: "magnifyingglass")
-                .foregroundColor(.secondary)
-            
-            TextField("Search applications...", text: $searchText)
-                .textFieldStyle(.plain)
-            
-            if !searchText.isEmpty {
-                Button(action: { searchText = "" }) {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(.secondary)
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(8)
-        .background(Color(NSColor.controlBackgroundColor))
-        .cornerRadius(8)
-    }
-    
-    private var emptyStateView: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "app.badge.checkmark")
-                .font(.system(size: 64))
-                .foregroundColor(.secondary)
-            
-            Text("No App Rules Configured")
-                .font(.title2)
-                .fontWeight(.semibold)
-            
-            Text("Add rules to use specific profiles or disable gestures for certain applications")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-                .frame(maxWidth: 400)
-            
-            Button(action: { activeSheet = .addRule }) {
-                Label("Add First Rule", systemImage: "plus.circle")
-                    .font(.system(size: 14, weight: .medium))
-            }
-            .buttonStyle(.borderedProminent)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding()
-    }
-    
     private var profileMappingsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Label("Profile Mappings", systemImage: "square.stack.3d.up")
-                    .font(.headline)
-                    .foregroundColor(.primary)
-                
-                Spacer()
-                
-                Text("\(filteredMappings.count)")
-                    .font(.caption)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 2)
-                    .background(Color.blue.opacity(0.1))
-                    .foregroundColor(.blue)
-                    .cornerRadius(10)
-            }
+        VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
+            MGListSectionHeader(
+                "Profile Mappings",
+                count: filteredMappings.count
+            )
             
-            VStack(spacing: 8) {
+            VStack(spacing: MGStyle.Spacing.md) {
                 ForEach(filteredMappings, id: \.id) { mapping in
                     AppMappingRow(
                         mapping: mapping,
                         profileName: uiServices.profiles.first(where: { $0.id == mapping.profileId })?.name ?? "Unknown",
-                        onEdit: {
-                            activeSheet = .editMapping(mapping)
-                        },
+                        onEdit: { activeSheet = .editMapping(mapping) },
                         onDelete: {
                             itemToDelete = mapping.appBundleIdentifier
                             showDeleteConfirmation = true
@@ -243,36 +155,24 @@ struct AppProfilesView: View {
                 }
             }
         }
-        .padding()
-        .background(Color(NSColor.controlBackgroundColor))
-        .cornerRadius(10)
+        .background(
+            RoundedRectangle(cornerRadius: MGStyle.Corner.lg)
+                .fill(MGStyle.Colors.cardBackground)
+        )
     }
     
     private var disabledAppsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Label("Disabled Apps", systemImage: "nosign")
-                    .font(.headline)
-                    .foregroundColor(.primary)
-                
-                Spacer()
-                
-                Text("\(filteredDisabledApps.count)")
-                    .font(.caption)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 2)
-                    .background(Color.red.opacity(0.1))
-                    .foregroundColor(.red)
-                    .cornerRadius(10)
-            }
+        VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
+            MGListSectionHeader(
+                "Disabled Apps",
+                count: filteredDisabledApps.count
+            )
             
-            VStack(spacing: 8) {
+            VStack(spacing: MGStyle.Spacing.md) {
                 ForEach(filteredDisabledApps, id: \.id) { disabledApp in
                     DisabledAppRow(
                         disabledApp: disabledApp,
-                        onEdit: {
-                            activeSheet = .editDisabledApp(disabledApp)
-                        },
+                        onEdit: { activeSheet = .editDisabledApp(disabledApp) },
                         onDelete: {
                             itemToDelete = disabledApp.appBundleIdentifier
                             showDeleteConfirmation = true
@@ -281,17 +181,16 @@ struct AppProfilesView: View {
                 }
             }
         }
-        .padding()
-        .background(Color(NSColor.controlBackgroundColor))
-        .cornerRadius(10)
+        .background(
+            RoundedRectangle(cornerRadius: MGStyle.Corner.lg)
+                .fill(MGStyle.Colors.cardBackground)
+        )
     }
     
     // MARK: - Computed Properties
     
     private var filteredMappings: [AppProfileMapping] {
-        if searchText.isEmpty {
-            return appMappings
-        }
+        if searchText.isEmpty { return appMappings }
         return appMappings.filter { mapping in
             mapping.appName.localizedCaseInsensitiveContains(searchText) ||
             mapping.appBundleIdentifier.localizedCaseInsensitiveContains(searchText)
@@ -299,9 +198,7 @@ struct AppProfilesView: View {
     }
     
     private var filteredDisabledApps: [DisabledApp] {
-        if searchText.isEmpty {
-            return disabledApps
-        }
+        if searchText.isEmpty { return disabledApps }
         return disabledApps.filter { app in
             app.appName.localizedCaseInsensitiveContains(searchText) ||
             app.appBundleIdentifier.localizedCaseInsensitiveContains(searchText)
@@ -337,7 +234,6 @@ struct AppProfilesView: View {
     }
     
     private func deleteAppRule(bundleId: String) {
-        // Check if it's a mapping or disabled app
         if appMappings.contains(where: { $0.appBundleIdentifier == bundleId }) {
             uiServices.removeAppProfileMapping(bundleId: bundleId)
         } else if disabledApps.contains(where: { $0.appBundleIdentifier == bundleId }) {
@@ -354,9 +250,10 @@ struct AppMappingRow: View {
     let onEdit: () -> Void
     let onDelete: () -> Void
     
+    @State private var isHovered = false
+    
     var body: some View {
-        HStack(spacing: 12) {
-            // App icon
+        HStack(spacing: MGStyle.Spacing.lg) {
             if let app = NSWorkspace.shared.urlForApplication(withBundleIdentifier: mapping.appBundleIdentifier) {
                 Image(nsImage: NSWorkspace.shared.icon(forFile: app.path))
                     .resizable()
@@ -369,52 +266,34 @@ struct AppMappingRow: View {
                     .foregroundColor(.secondary)
             }
             
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
                 Text(mapping.appName)
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: MGStyle.FontSize.body, weight: .medium))
                 
                 Text(mapping.appBundleIdentifier)
-                    .font(.caption)
+                    .font(.system(size: MGStyle.FontSize.caption))
                     .foregroundColor(.secondary)
             }
             
             Spacer()
             
-            // Profile badge
-            HStack(spacing: 4) {
-                Image(systemName: "square.stack.3d.up.fill")
-                    .font(.caption)
-                Text(profileName)
-                    .font(.caption)
-            }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(Color.blue.opacity(0.1))
-            .foregroundColor(.blue)
-            .cornerRadius(6)
+            MGBadge(profileName, color: .blue, icon: "square.stack.3d.up.fill")
             
-            // Action buttons
-            HStack(spacing: 8) {
-                Button(action: onEdit) {
-                    Image(systemName: "pencil.circle")
-                        .font(.system(size: 16))
-                }
-                .buttonStyle(.plain)
-                .foregroundColor(.blue)
-                .help("Edit rule")
-                
-                Button(action: onDelete) {
-                    Image(systemName: "trash.circle")
-                        .font(.system(size: 16))
-                }
-                .buttonStyle(.plain)
-                .foregroundColor(.red)
-                .help("Delete rule")
+            if isHovered {
+                MGRowActions(actions: [
+                    .init("pencil") { onEdit() },
+                    .init("trash", destructive: true) { onDelete() }
+                ])
             }
         }
-        .padding(10)
-        .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
-        .cornerRadius(8)
+        .padding(.horizontal, MGStyle.Spacing.lg)
+        .padding(.vertical, MGStyle.Spacing.md)
+        .background(
+            RoundedRectangle(cornerRadius: MGStyle.Corner.lg)
+                .fill(isHovered ? MGStyle.Colors.hoveredRow : Color.clear)
+        )
+        .contentShape(Rectangle())
+        .onHover { hovering in isHovered = hovering }
     }
 }
 
@@ -424,9 +303,10 @@ struct DisabledAppRow: View {
     let onEdit: () -> Void
     let onDelete: () -> Void
     
+    @State private var isHovered = false
+    
     var body: some View {
-        HStack(spacing: 12) {
-            // App icon
+        HStack(spacing: MGStyle.Spacing.lg) {
             if let app = NSWorkspace.shared.urlForApplication(withBundleIdentifier: disabledApp.appBundleIdentifier) {
                 Image(nsImage: NSWorkspace.shared.icon(forFile: app.path))
                     .resizable()
@@ -439,52 +319,34 @@ struct DisabledAppRow: View {
                     .foregroundColor(.secondary)
             }
             
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
                 Text(disabledApp.appName)
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: MGStyle.FontSize.body, weight: .medium))
                 
                 Text(disabledApp.appBundleIdentifier)
-                    .font(.caption)
+                    .font(.system(size: MGStyle.FontSize.caption))
                     .foregroundColor(.secondary)
             }
             
             Spacer()
             
-            // Disabled badge
-            HStack(spacing: 4) {
-                Image(systemName: "nosign")
-                    .font(.caption)
-                Text("Disabled")
-                    .font(.caption)
-            }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(Color.red.opacity(0.1))
-            .foregroundColor(.red)
-            .cornerRadius(6)
+            MGBadge("Disabled", color: .red, icon: "nosign")
             
-            // Action buttons
-            HStack(spacing: 8) {
-                Button(action: onEdit) {
-                    Image(systemName: "pencil.circle")
-                        .font(.system(size: 16))
-                }
-                .buttonStyle(.plain)
-                .foregroundColor(.blue)
-                .help("Convert to profile mapping")
-                
-                Button(action: onDelete) {
-                    Image(systemName: "trash.circle")
-                        .font(.system(size: 16))
-                }
-                .buttonStyle(.plain)
-                .foregroundColor(.red)
-                .help("Delete rule")
+            if isHovered {
+                MGRowActions(actions: [
+                    .init("pencil") { onEdit() },
+                    .init("trash", destructive: true) { onDelete() }
+                ])
             }
         }
-        .padding(10)
-        .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
-        .cornerRadius(8)
+        .padding(.horizontal, MGStyle.Spacing.lg)
+        .padding(.vertical, MGStyle.Spacing.md)
+        .background(
+            RoundedRectangle(cornerRadius: MGStyle.Corner.lg)
+                .fill(isHovered ? MGStyle.Colors.hoveredRow : Color.clear)
+        )
+        .contentShape(Rectangle())
+        .onHover { hovering in isHovered = hovering }
     }
 }
 
@@ -503,139 +365,89 @@ struct AddAppRuleSheet: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // Header
-            HStack {
-                Text("Add App Rule")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                
-                Spacer()
-                
-                Button("Cancel") {
-                    onCancel()
-                }
-                .keyboardShortcut(.escape)
-            }
-            .padding()
+            MGSheetHeader("Add App Rule", onCancel: onCancel)
             
-            Divider()
-            
-            // Content
-            VStack(spacing: 20) {
-                // App selection
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Select Application")
-                        .font(.headline)
-                    
-                    // Search field
-                    HStack {
-                        Image(systemName: "magnifyingglass")
-                            .foregroundColor(.secondary)
-                        
-                        TextField("Search applications...", text: $searchText)
-                            .textFieldStyle(.plain)
-                        
-                        if !searchText.isEmpty {
-                            Button(action: { searchText = "" }) {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundColor(.secondary)
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                    .padding(8)
-                    .background(Color(NSColor.controlBackgroundColor))
-                    .cornerRadius(8)
-                    
-                    // App list
-                    if isLoadingApps {
-                        HStack {
-                            Spacer()
-                            ProgressView()
-                                .progressViewStyle(.circular)
-                                .scaleEffect(0.8)
-                            Spacer()
-                        }
-                        .frame(height: 200)
-                    } else {
-                        ScrollView {
-                            VStack(spacing: 4) {
-                                ForEach(filteredApps, id: \.bundleId) { app in
-                                    AppSelectionRow(
-                                        app: app,
-                                        isSelected: selectedApp?.bundleId == app.bundleId,
-                                        isDisabled: isAppAlreadyConfigured(bundleId: app.bundleId),
-                                        onSelect: {
-                                            if !isAppAlreadyConfigured(bundleId: app.bundleId) {
-                                                selectedApp = app
-                                            }
+            ScrollView {
+                VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {
+                    // App selection
+                    GroupBox("Select Application") {
+                        VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
+                            MGSearchField("Search applications...", text: $searchText)
+                            
+                            if isLoadingApps {
+                                HStack {
+                                    Spacer()
+                                    ProgressView()
+                                        .progressViewStyle(.circular)
+                                        .scaleEffect(0.8)
+                                    Spacer()
+                                }
+                                .frame(height: 200)
+                            } else {
+                                ScrollView {
+                                    VStack(spacing: MGStyle.Spacing.sm) {
+                                        ForEach(filteredApps, id: \.bundleId) { app in
+                                            AppSelectionRow(
+                                                app: app,
+                                                isSelected: selectedApp?.bundleId == app.bundleId,
+                                                isDisabled: isAppAlreadyConfigured(bundleId: app.bundleId),
+                                                onSelect: {
+                                                    if !isAppAlreadyConfigured(bundleId: app.bundleId) {
+                                                        selectedApp = app
+                                                    }
+                                                }
+                                            )
                                         }
-                                    )
+                                    }
+                                    .padding(MGStyle.Spacing.sm)
+                                }
+                                .frame(height: 200)
+                                .background(MGStyle.Colors.cardBackground)
+                                .cornerRadius(MGStyle.Corner.lg)
+                            }
+                        }
+                        .padding(.vertical, MGStyle.Spacing.md)
+                    }
+                    
+                    // Rule type selection
+                    GroupBox("Rule Type") {
+                        VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
+                            Picker("", selection: $ruleType) {
+                                ForEach(AppProfileRuleType.allCases, id: \.self) { type in
+                                    Text(type.rawValue).tag(type)
                                 }
                             }
-                            .padding(4)
+                            .pickerStyle(.radioGroup)
+                            
+                            Text(ruleType.description)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
                         }
-                        .frame(height: 200)
-                        .background(Color(NSColor.controlBackgroundColor))
-                        .cornerRadius(8)
+                        .padding(.vertical, MGStyle.Spacing.md)
                     }
-                }
-                
-                // Rule type selection
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Rule Type")
-                        .font(.headline)
                     
-                    Picker("", selection: $ruleType) {
-                        ForEach(AppProfileRuleType.allCases, id: \.self) { type in
-                            Text(type.rawValue).tag(type)
-                        }
-                    }
-                    .pickerStyle(.radioGroup)
-                    
-                    Text(ruleType.description)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                
-                // Profile selection (if applicable)
-                if ruleType == .useProfile {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Select Profile")
-                            .font(.headline)
-                        
-                        Picker("", selection: $selectedProfileId) {
-                            Text("Select a profile...").tag(nil as UUID?)
-                            ForEach(uiServices.profiles, id: \.id) { profile in
-                                Text(profile.name).tag(profile.id as UUID?)
+                    // Profile selection
+                    if ruleType == .useProfile {
+                        GroupBox("Select Profile") {
+                            Picker("", selection: $selectedProfileId) {
+                                Text("Select a profile...").tag(nil as UUID?)
+                                ForEach(uiServices.profiles, id: \.id) { profile in
+                                    Text(profile.name).tag(profile.id as UUID?)
+                                }
                             }
+                            .labelsHidden()
+                            .padding(.vertical, MGStyle.Spacing.md)
                         }
-                        .labelsHidden()
                     }
                 }
+                .padding(MGStyle.Spacing.xl)
             }
-            .padding()
             
-            Divider()
-            
-            // Footer
-            HStack {
-                Spacer()
-                
-                Button("Cancel") {
-                    onCancel()
+            MGSheetFooter("Add Rule", disabled: !canAddRule) {
+                if let app = selectedApp {
+                    onAdd(app.bundleId, app.name, ruleType, selectedProfileId)
                 }
-                .keyboardShortcut(.escape)
-                
-                Button("Add Rule") {
-                    if let app = selectedApp {
-                        onAdd(app.bundleId, app.name, ruleType, selectedProfileId)
-                    }
-                }
-                .keyboardShortcut(.return)
-                .disabled(!canAddRule)
             }
-            .padding()
         }
         .frame(width: 500, height: 600)
         .onAppear {
@@ -647,9 +459,7 @@ struct AddAppRuleSheet: View {
     }
     
     private var filteredApps: [(bundleId: String, name: String, icon: NSImage?)] {
-        if searchText.isEmpty {
-            return installedApps
-        }
+        if searchText.isEmpty { return installedApps }
         return installedApps.filter { app in
             app.name.localizedCaseInsensitiveContains(searchText) ||
             app.bundleId.localizedCaseInsensitiveContains(searchText)
@@ -687,7 +497,7 @@ struct AppSelectionRow: View {
     let onSelect: () -> Void
     
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: MGStyle.Spacing.md) {
             if let icon = app.icon {
                 Image(nsImage: icon)
                     .resizable()
@@ -702,11 +512,11 @@ struct AppSelectionRow: View {
             
             VStack(alignment: .leading, spacing: 0) {
                 Text(app.name)
-                    .font(.system(size: 12))
+                    .font(.system(size: MGStyle.FontSize.body))
                     .lineLimit(1)
                 
                 Text(app.bundleId)
-                    .font(.system(size: 10))
+                    .font(.system(size: MGStyle.FontSize.badge))
                     .foregroundColor(.secondary)
                     .lineLimit(1)
             }
@@ -719,15 +529,16 @@ struct AppSelectionRow: View {
                     .foregroundColor(.secondary)
             }
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(isSelected ? Color.accentColor.opacity(0.2) : (isDisabled ? Color.gray.opacity(0.1) : Color.clear))
-        .cornerRadius(4)
+        .padding(.horizontal, MGStyle.Spacing.md)
+        .padding(.vertical, MGStyle.Spacing.sm)
+        .background(
+            RoundedRectangle(cornerRadius: MGStyle.Corner.sm)
+                .fill(isSelected ? MGStyle.Colors.selectedRow :
+                      (isDisabled ? Color.gray.opacity(0.1) : Color.clear))
+        )
         .contentShape(Rectangle())
         .onTapGesture {
-            if !isDisabled {
-                onSelect()
-            }
+            if !isDisabled { onSelect() }
         }
         .opacity(isDisabled ? 0.6 : 1.0)
     }
@@ -751,27 +562,11 @@ struct EditAppRuleSheet: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // Header
-            HStack {
-                Text("Edit App Rule")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                
-                Spacer()
-                
-                Button("Cancel") {
-                    onCancel()
-                }
-                .keyboardShortcut(.escape)
-            }
-            .padding()
+            MGSheetHeader("Edit App Rule", onCancel: onCancel)
             
-            Divider()
-            
-            // Content
-            VStack(spacing: 20) {
-                // App info
-                HStack(spacing: 12) {
+            VStack(spacing: MGStyle.Spacing.xxl) {
+                // App info card
+                HStack(spacing: MGStyle.Spacing.lg) {
                     if let app = NSWorkspace.shared.urlForApplication(withBundleIdentifier: mapping.appBundleIdentifier) {
                         Image(nsImage: NSWorkspace.shared.icon(forFile: app.path))
                             .resizable()
@@ -784,10 +579,9 @@ struct EditAppRuleSheet: View {
                             .foregroundColor(.secondary)
                     }
                     
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: MGStyle.Spacing.sm) {
                         Text(mapping.appName)
                             .font(.headline)
-                        
                         Text(mapping.appBundleIdentifier)
                             .font(.caption)
                             .foregroundColor(.secondary)
@@ -795,15 +589,14 @@ struct EditAppRuleSheet: View {
                     
                     Spacer()
                 }
-                .padding()
-                .background(Color(NSColor.controlBackgroundColor))
-                .cornerRadius(8)
+                .padding(MGStyle.Spacing.xl)
+                .background(
+                    RoundedRectangle(cornerRadius: MGStyle.Corner.lg)
+                        .fill(MGStyle.Colors.cardBackground)
+                )
                 
                 // Profile selection
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Select Profile")
-                        .font(.headline)
-                    
+                GroupBox("Select Profile") {
                     Picker("", selection: $selectedProfileId) {
                         ForEach(uiServices.profiles, id: \.id) { profile in
                             Text(profile.name).tag(profile.id)
@@ -811,30 +604,16 @@ struct EditAppRuleSheet: View {
                     }
                     .labelsHidden()
                     .pickerStyle(.menu)
+                    .padding(.vertical, MGStyle.Spacing.md)
                 }
             }
-            .padding()
+            .padding(MGStyle.Spacing.xl)
             
             Spacer()
             
-            Divider()
-            
-            // Footer
-            HStack {
-                Spacer()
-                
-                Button("Cancel") {
-                    onCancel()
-                }
-                .keyboardShortcut(.escape)
-                
-                Button("Save") {
-                    onSave(selectedProfileId)
-                }
-                .keyboardShortcut(.return)
-                .disabled(selectedProfileId == mapping.profileId)
+            MGSheetFooter("Save", disabled: selectedProfileId == mapping.profileId) {
+                onSave(selectedProfileId)
             }
-            .padding()
         }
         .frame(width: 400, height: 300)
     }
@@ -848,27 +627,11 @@ struct EditDisabledAppSheet: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // Header
-            HStack {
-                Text("Convert to Profile Mapping")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                
-                Spacer()
-                
-                Button("Cancel") {
-                    onCancel()
-                }
-                .keyboardShortcut(.escape)
-            }
-            .padding()
+            MGSheetHeader("Convert to Profile Mapping", onCancel: onCancel)
             
-            Divider()
-            
-            // Content
-            VStack(spacing: 20) {
-                // App info
-                HStack(spacing: 12) {
+            VStack(spacing: MGStyle.Spacing.xxl) {
+                // App info card
+                HStack(spacing: MGStyle.Spacing.lg) {
                     if let app = NSWorkspace.shared.urlForApplication(withBundleIdentifier: disabledApp.appBundleIdentifier) {
                         Image(nsImage: NSWorkspace.shared.icon(forFile: app.path))
                             .resizable()
@@ -881,10 +644,9 @@ struct EditDisabledAppSheet: View {
                             .foregroundColor(.secondary)
                     }
                     
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: MGStyle.Spacing.sm) {
                         Text(disabledApp.appName)
                             .font(.headline)
-                        
                         Text(disabledApp.appBundleIdentifier)
                             .font(.caption)
                             .foregroundColor(.secondary)
@@ -892,36 +654,22 @@ struct EditDisabledAppSheet: View {
                     
                     Spacer()
                 }
-                .padding()
-                .background(Color(NSColor.controlBackgroundColor))
-                .cornerRadius(8)
+                .padding(MGStyle.Spacing.xl)
+                .background(
+                    RoundedRectangle(cornerRadius: MGStyle.Corner.lg)
+                        .fill(MGStyle.Colors.cardBackground)
+                )
                 
                 Text("This will convert the disabled app rule to use a specific profile instead.")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
             }
-            .padding()
+            .padding(MGStyle.Spacing.xl)
             
             Spacer()
             
-            Divider()
-            
-            // Footer
-            HStack {
-                Spacer()
-                
-                Button("Cancel") {
-                    onCancel()
-                }
-                .keyboardShortcut(.escape)
-                
-                Button("Convert") {
-                    onSave()
-                }
-                .keyboardShortcut(.return)
-            }
-            .padding()
+            MGSheetFooter("Convert") { onSave() }
         }
         .frame(width: 400, height: 250)
     }

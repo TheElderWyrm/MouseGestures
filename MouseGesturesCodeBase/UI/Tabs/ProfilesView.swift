@@ -5,7 +5,6 @@ import UniformTypeIdentifiers
 struct ProfilesView: View {
     @StateObject private var uiServices = UIServices.shared
     @State private var selectedProfileId: UUID?
-    // Sheet presentation - using single enum to avoid multiple .sheet modifier bug
     enum ActiveSheet: Identifiable {
         case addProfile
         case editProfile(ConfigurationProfile)
@@ -41,25 +40,57 @@ struct ProfilesView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // Header
-            headerView
-                .padding()
-                .background(Color(NSColor.controlBackgroundColor))
+            MGPageHeader("Profiles", subtitle: "\(uiServices.profiles.count) profile\(uiServices.profiles.count == 1 ? "" : "s") configured") {
+                MGSearchField("Search profiles...", text: $searchText)
+                    .frame(width: MGStyle.Layout.searchFieldWidth)
+                
+                MGHeaderDivider()
+                
+                Button(action: { activeSheet = .importTemplates }) {
+                    Label("Templates", systemImage: "square.grid.2x2")
+                }
+                
+                Button(action: { activeSheet = .addProfile }) {
+                    Label("Add Profile", systemImage: "plus")
+                }
+                
+                Menu {
+                    Button(action: exportProfile) {
+                        Label("Export Profile...", systemImage: "square.and.arrow.up")
+                    }
+                    .disabled(selectedProfile == nil)
+                    
+                    Button(action: exportAllProfiles) {
+                        Label("Export All Profiles...", systemImage: "square.and.arrow.up.on.square")
+                    }
+                    .disabled(uiServices.profiles.isEmpty)
+                    
+                    Divider()
+                    
+                    Button(action: importProfile) {
+                        Label("Import Profile...", systemImage: "square.and.arrow.down")
+                    }
+                    
+                    Button(action: importMultipleProfiles) {
+                        Label("Import Profile Bundle...", systemImage: "square.and.arrow.down.on.square")
+                    }
+                } label: {
+                    Label("Import/Export", systemImage: "arrow.up.arrow.down")
+                }
+            }
             
             Divider()
             
-            // Main Content
             HSplitView {
-                // Profile List
                 profileListView
-                    .frame(minWidth: 300, idealWidth: 400)
+                    .frame(minWidth: MGStyle.Layout.listMinWidth, idealWidth: MGStyle.Layout.listIdealWidth)
                 
-                // Detail View
                 if let profile = selectedProfile {
                     profileDetailView(profile: profile)
                         .frame(minWidth: 400)
                 } else {
-                    emptyDetailView
+                    MGEmptyState(icon: "person.2.square.stack", title: "Select a profile to view details")
+                        .background(MGStyle.Colors.contentBackground)
                         .frame(minWidth: 400)
                 }
             }
@@ -104,92 +135,11 @@ struct ProfilesView: View {
         }
     }
     
-    // MARK: - Header View
-    
-    private var headerView: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Profiles")
-                    .font(.largeTitle)
-                    .bold()
-                
-                Text("\(uiServices.profiles.count) profile\(uiServices.profiles.count == 1 ? "" : "s") configured")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-            }
-            
-            Spacer()
-            
-            // Actions
-            HStack(spacing: 12) {
-                // Search Field
-                HStack {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundColor(.secondary)
-                    TextField("Search profiles...", text: $searchText)
-                        .textFieldStyle(.plain)
-                }
-                .padding(6)
-                .background(Color(NSColor.controlBackgroundColor))
-                .cornerRadius(6)
-                .frame(width: 200)
-                
-                Divider()
-                    .frame(height: 20)
-                
-                // Import Templates
-                Button(action: { activeSheet = .importTemplates }) {
-                    Label("Templates", systemImage: "square.grid.2x2")
-                }
-                
-                // Add Profile
-                Button(action: { activeSheet = .addProfile }) {
-                    Label("Add Profile", systemImage: "plus")
-                }
-                
-                // Import/Export Menu
-                Menu {
-                    Button(action: exportProfile) {
-                        Label("Export Profile...", systemImage: "square.and.arrow.up")
-                    }
-                    .disabled(selectedProfile == nil)
-                    
-                    Button(action: exportAllProfiles) {
-                        Label("Export All Profiles...", systemImage: "square.and.arrow.up.on.square")
-                    }
-                    .disabled(uiServices.profiles.isEmpty)
-                    
-                    Divider()
-                    
-                    Button(action: importProfile) {
-                        Label("Import Profile...", systemImage: "square.and.arrow.down")
-                    }
-                    
-                    Button(action: importMultipleProfiles) {
-                        Label("Import Profile Bundle...", systemImage: "square.and.arrow.down.on.square")
-                    }
-                } label: {
-                    Label("Import/Export", systemImage: "arrow.up.arrow.down")
-                }
-            }
-        }
-    }
-    
     // MARK: - Profile List View
     
     private var profileListView: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // List Header
-            HStack {
-                Text("Available Profiles")
-                    .font(.headline)
-                    .foregroundColor(.secondary)
-                
-                Spacer()
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-            .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
+            MGListSectionHeader("Available Profiles")
             
             ScrollView {
                 VStack(spacing: 1) {
@@ -213,59 +163,38 @@ struct ProfilesView: View {
                     }
                     
                     if filteredProfiles.isEmpty {
-                        VStack(spacing: 16) {
-                            Image(systemName: searchText.isEmpty ? "folder" : "magnifyingglass")
-                                .font(.system(size: 48))
-                                .foregroundColor(.secondary.opacity(0.5))
-                            
-                            Text(searchText.isEmpty ? "No profiles configured" : "No matching profiles")
-                                .font(.headline)
-                                .foregroundColor(.secondary)
-                            
-                            if searchText.isEmpty {
-                                Button(action: { activeSheet = .addProfile }) {
-                                    Label("Create Your First Profile", systemImage: "plus.circle")
-                                }
-                            }
-                        }
-                        .frame(maxWidth: .infinity)
+                        MGEmptyState(
+                            icon: searchText.isEmpty ? "folder" : "magnifyingglass",
+                            title: searchText.isEmpty ? "No profiles configured" : "No matching profiles",
+                            actionLabel: searchText.isEmpty ? "Create Your First Profile" : nil,
+                            action: searchText.isEmpty ? { activeSheet = .addProfile } : nil
+                        )
                         .padding(.vertical, 40)
                     }
                 }
             }
         }
-        .background(Color(NSColor.textBackgroundColor))
+        .background(MGStyle.Colors.contentBackground)
     }
     
     // MARK: - Profile Detail View
     
     private func profileDetailView(profile: ConfigurationProfile) -> some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {
                 // Header
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
                     HStack {
                         Text(profile.name)
                             .font(.title2)
-                            .bold()
+                            .fontWeight(.bold)
                         
                         if profile.id == uiServices.activeProfileId {
-                            Text("Active")
-                                .font(.caption)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 2)
-                                .background(Color.green.opacity(0.2))
-                                .foregroundColor(.green)
-                                .cornerRadius(4)
+                            MGBadge("Active", color: .green)
                         }
                         
                         if profile.isDefault {
-                            Text("Default")
-                                .font(.caption)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 2)
-                                .background(Color.accentColor.opacity(0.2))
-                                .cornerRadius(4)
+                            MGBadge("Default")
                         }
                     }
                     
@@ -282,78 +211,63 @@ struct ProfilesView: View {
                 
                 // Statistics
                 GroupBox("Statistics") {
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
                         LabeledContent("Total Gestures:") {
-                            Text("\(profile.gestures.count)")
-                                .fontWeight(.medium)
+                            Text("\(profile.gestures.count)").fontWeight(.medium)
                         }
-                        
                         LabeledContent("Enabled Gestures:") {
-                            Text("\(profile.gestures.filter { $0.isEnabled }.count)")
-                                .fontWeight(.medium)
+                            Text("\(profile.gestures.filter { $0.isEnabled }.count)").fontWeight(.medium)
                         }
-                        
                         LabeledContent("Haptic Feedback:") {
-                            Text(profile.hapticFeedbackEnabled ? "Enabled" : "Disabled")
-                                .fontWeight(.medium)
+                            Text(profile.hapticFeedbackEnabled ? "Enabled" : "Disabled").fontWeight(.medium)
                         }
-                        
                         if let shortcut = profile.keyboardShortcut {
                             LabeledContent("Quick Switch:") {
-                                Text(shortcut.displayString)
-                                    .fontWeight(.medium)
+                                Text(shortcut.displayString).fontWeight(.medium)
                             }
                         }
                     }
-                    .padding(.vertical, 4)
+                    .padding(.vertical, MGStyle.Spacing.sm)
                 }
                 
                 // Settings
                 GroupBox("Zone Settings") {
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
                         LabeledContent("Edge Threshold:") {
-                            Text("\(Int(profile.edgeThreshold)) px")
-                                .fontWeight(.medium)
+                            Text("\(Int(profile.edgeThreshold)) px").fontWeight(.medium)
                         }
-                        
                         LabeledContent("Corner Size:") {
-                            Text("\(Int(profile.cornerSize)) px")
-                                .fontWeight(.medium)
+                            Text("\(Int(profile.cornerSize)) px").fontWeight(.medium)
                         }
-                        
                         LabeledContent("Corner Buffer:") {
-                            Text("\(Int(profile.cornerBuffer)) px")
-                                .fontWeight(.medium)
+                            Text("\(Int(profile.cornerBuffer)) px").fontWeight(.medium)
                         }
                     }
-                    .padding(.vertical, 4)
+                    .padding(.vertical, MGStyle.Spacing.sm)
                 }
                 
                 // Gesture Summary
                 if !profile.gestures.isEmpty {
                     GroupBox("Configured Gestures") {
-                        VStack(alignment: .leading, spacing: 8) {
+                        VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
                             ForEach(Array(profile.gestures.prefix(5)), id: \.id) { gesture in
                                 HStack {
                                     Image(systemName: gesture.isEnabled ? "checkmark.circle.fill" : "circle")
                                         .foregroundColor(gesture.isEnabled ? .green : .gray)
                                         .font(.caption)
-                                    
                                     Text(gesture.displayDescription)
                                         .font(.caption)
                                         .lineLimit(1)
-                                    
                                     Spacer()
                                 }
                             }
-                            
                             if profile.gestures.count > 5 {
                                 Text("... and \(profile.gestures.count - 5) more")
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                             }
                         }
-                        .padding(.vertical, 4)
+                        .padding(.vertical, MGStyle.Spacing.sm)
                     }
                 }
                 
@@ -364,22 +278,18 @@ struct ProfilesView: View {
                             Label("Set Active", systemImage: "checkmark.circle")
                         }
                     }
-                    
                     Button(action: { 
                         selectedProfileId = profile.id
                         activeSheet = .editProfile(profile)
                     }) {
                         Label("Edit", systemImage: "pencil")
                     }
-                    
                     Button(action: { duplicateProfile(profile.id) }) {
                         Label("Duplicate", systemImage: "plus.square.on.square")
                     }
-                    
                     Button(action: { exportSingleProfile(profile.id) }) {
                         Label("Export", systemImage: "square.and.arrow.up")
                     }
-                    
                     if profile.id != uiServices.activeProfileId && !profile.isDefault {
                         Button(action: { 
                             selectedProfileId = profile.id
@@ -389,30 +299,13 @@ struct ProfilesView: View {
                                 .foregroundColor(.red)
                         }
                     }
-                    
                     Spacer()
                 }
                 .padding(.top)
             }
-            .padding()
+            .padding(MGStyle.Spacing.xl)
         }
-        .background(Color(NSColor.textBackgroundColor))
-    }
-    
-    // MARK: - Empty Detail View
-    
-    private var emptyDetailView: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "person.2.square.stack")
-                .font(.system(size: 48))
-                .foregroundColor(.secondary.opacity(0.5))
-            
-            Text("Select a profile to view details")
-                .font(.headline)
-                .foregroundColor(.secondary)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(NSColor.textBackgroundColor))
+        .background(MGStyle.Colors.contentBackground)
     }
     
     // MARK: - Helper Methods
@@ -503,9 +396,7 @@ struct ProfilesView: View {
                 
                 var importedCount = 0
                 for var profile in bundle.profiles {
-                    profile.id = UUID() // Generate new ID
-                    
-                    // Check for name conflicts
+                    profile.id = UUID()
                     var importName = profile.name
                     var counter = 2
                     while uiServices.profiles.contains(where: { $0.name == importName }) {
@@ -513,8 +404,6 @@ struct ProfilesView: View {
                         counter += 1
                     }
                     profile.name = importName
-                    
-                    // Create the profile
                     if uiServices.createProfile(name: profile.name, basedOn: profile) != nil {
                         importedCount += 1
                     }
@@ -557,42 +446,37 @@ struct ProfileListRow: View {
     
     var body: some View {
         HStack {
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.sm) {
                 HStack {
                     Text(profile.name)
-                        .font(.system(size: 13, weight: .medium))
+                        .font(.system(size: MGStyle.FontSize.body, weight: .medium))
                         .lineLimit(1)
                     
                     if isActive {
                         Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 10))
+                            .font(.system(size: MGStyle.FontSize.badge))
                             .foregroundColor(.green)
                     }
                     
                     if profile.isDefault {
-                        Text("Default")
-                            .font(.system(size: 10))
-                            .padding(.horizontal, 4)
-                            .padding(.vertical, 1)
-                            .background(Color.accentColor.opacity(0.2))
-                            .cornerRadius(3)
+                        MGBadge("Default")
                     }
                 }
                 
-                HStack(spacing: 12) {
+                HStack(spacing: MGStyle.Spacing.lg) {
                     Text("\(profile.gestures.count) gestures")
-                        .font(.system(size: 11))
+                        .font(.system(size: MGStyle.FontSize.caption))
                         .foregroundColor(.secondary)
                     
                     if profile.hapticFeedbackEnabled {
                         Image(systemName: "waveform")
-                            .font(.system(size: 10))
+                            .font(.system(size: MGStyle.FontSize.badge))
                             .foregroundColor(.secondary)
                     }
                     
                     if profile.keyboardShortcut != nil {
                         Image(systemName: "keyboard")
-                            .font(.system(size: 10))
+                            .font(.system(size: MGStyle.FontSize.badge))
                             .foregroundColor(.secondary)
                     }
                 }
@@ -601,54 +485,34 @@ struct ProfileListRow: View {
             Spacer()
             
             if isHovered {
-                HStack(spacing: 8) {
+                HStack(spacing: MGStyle.Spacing.md) {
                     if !isActive {
                         Button(action: onSetActive) {
                             Image(systemName: "checkmark")
-                                .font(.system(size: 11))
+                                .font(.system(size: MGStyle.IconSize.inline))
                         }
                         .buttonStyle(.plain)
                         .help("Set as active profile")
                     }
                     
                     Menu {
-                        Button(action: onEdit) {
-                            Label("Edit", systemImage: "pencil")
-                        }
-                        
-                        Button(action: onDuplicate) {
-                            Label("Duplicate", systemImage: "plus.square.on.square")
-                        }
-                        
+                        Button(action: onEdit) { Label("Edit", systemImage: "pencil") }
+                        Button(action: onDuplicate) { Label("Duplicate", systemImage: "plus.square.on.square") }
                         if !isActive && !profile.isDefault {
                             Divider()
-                            
-                            Button(action: onDelete) {
-                                Label("Delete", systemImage: "trash")
-                            }
+                            Button(action: onDelete) { Label("Delete", systemImage: "trash") }
                         }
                     } label: {
                         Image(systemName: "ellipsis.circle")
-                            .font(.system(size: 11))
+                            .font(.system(size: MGStyle.IconSize.inline))
                     }
                     .buttonStyle(.plain)
                 }
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
-        .background(
-            RoundedRectangle(cornerRadius: 4)
-                .fill(isSelected ? Color.accentColor.opacity(0.2) : 
-                      (isHovered ? Color(NSColor.controlBackgroundColor) : Color.clear))
-        )
-        .onHover { hovering in
-            isHovered = hovering
-        }
-        .contentShape(Rectangle())
-        .onTapGesture {
-            onSelect()
-        }
+        .mgListRow(isSelected: isSelected, isHovered: isHovered)
+        .onHover { hovering in isHovered = hovering }
+        .onTapGesture { onSelect() }
     }
 }
 
@@ -693,7 +557,6 @@ struct AddEditProfileSheet: View {
         self.mode = mode
         self.onSave = onSave
         
-        // Initialize state from existing profile if editing
         if case .edit(let profile) = mode {
             _profileName = State(initialValue: profile.name)
             _hapticFeedbackEnabled = State(initialValue: profile.hapticFeedbackEnabled)
@@ -706,33 +569,16 @@ struct AddEditProfileSheet: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // Header
-            HStack {
-                Text(mode.title)
-                    .font(.title2)
-                    .bold()
-                
-                Spacer()
-                
-                Button("Cancel") {
-                    dismiss()
-                }
-            }
-            .padding()
+            MGSheetHeader(mode.title, onCancel: { dismiss() })
             
-            Divider()
-            
-            // Form
             ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    // Basic Settings
+                VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {
                     GroupBox("Basic Settings") {
-                        VStack(alignment: .leading, spacing: 12) {
+                        VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
                             LabeledContent("Name:") {
                                 TextField("Profile name", text: $profileName)
                                     .frame(width: 250)
                             }
-                            
                             if case .add = mode {
                                 LabeledContent("Based on:") {
                                     Picker("", selection: $basedOnProfileId) {
@@ -745,83 +591,58 @@ struct AddEditProfileSheet: View {
                                     .frame(width: 250)
                                 }
                             }
-                            
                             Toggle("Haptic Feedback", isOn: $hapticFeedbackEnabled)
                         }
-                        .padding(.vertical, 8)
+                        .padding(.vertical, MGStyle.Spacing.md)
                     }
                     
-                    // Zone Settings
                     GroupBox("Zone Detection Settings") {
-                        VStack(alignment: .leading, spacing: 12) {
+                        VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
                             LabeledContent("Edge Threshold:") {
                                 HStack {
-                                    Slider(value: $edgeThreshold, in: 10...100, step: 5)
-                                        .frame(width: 150)
-                                    Text("\(Int(edgeThreshold)) px")
-                                        .frame(width: 50, alignment: .trailing)
+                                    Slider(value: $edgeThreshold, in: 10...100, step: 5).frame(width: 150)
+                                    Text("\(Int(edgeThreshold)) px").frame(width: 50, alignment: .trailing)
                                 }
                             }
-                            
                             LabeledContent("Corner Size:") {
                                 HStack {
-                                    Slider(value: $cornerSize, in: 50...200, step: 10)
-                                        .frame(width: 150)
-                                    Text("\(Int(cornerSize)) px")
-                                        .frame(width: 50, alignment: .trailing)
+                                    Slider(value: $cornerSize, in: 50...200, step: 10).frame(width: 150)
+                                    Text("\(Int(cornerSize)) px").frame(width: 50, alignment: .trailing)
                                 }
                             }
-                            
                             LabeledContent("Corner Buffer:") {
                                 HStack {
-                                    Slider(value: $cornerBuffer, in: 20...100, step: 5)
-                                        .frame(width: 150)
-                                    Text("\(Int(cornerBuffer)) px")
-                                        .frame(width: 50, alignment: .trailing)
+                                    Slider(value: $cornerBuffer, in: 20...100, step: 5).frame(width: 150)
+                                    Text("\(Int(cornerBuffer)) px").frame(width: 50, alignment: .trailing)
                                 }
                             }
                         }
-                        .padding(.vertical, 8)
+                        .padding(.vertical, MGStyle.Spacing.md)
                     }
                     
-                    // Quick Switch
                     GroupBox("Quick Switch (Optional)") {
-                        VStack(alignment: .leading, spacing: 8) {
+                        VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
                             Text("Set a keyboard shortcut to quickly switch to this profile")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
-                            
                             LabeledContent("Keyboard Shortcut:") {
                                 KeyboardShortcutFieldView(shortcut: $keyboardShortcut)
                                     .frame(width: 200, height: 24)
                             }
-                            
                             if keyboardShortcut != nil {
-                                Button("Clear Shortcut") {
-                                    keyboardShortcut = nil
-                                }
-                                .buttonStyle(.link)
+                                Button("Clear Shortcut") { keyboardShortcut = nil }
+                                    .buttonStyle(.link)
                             }
                         }
-                        .padding(.vertical, 8)
+                        .padding(.vertical, MGStyle.Spacing.md)
                     }
                 }
-                .padding()
+                .padding(MGStyle.Spacing.xl)
             }
             
-            Divider()
-            
-            // Footer
-            HStack {
-                Spacer()
-                
-                Button(mode.buttonTitle) {
-                    saveProfile()
-                }
-                .keyboardShortcut(.return)
-                .disabled(profileName.isEmpty)
+            MGSheetFooter(mode.buttonTitle, disabled: profileName.isEmpty) {
+                saveProfile()
             }
-            .padding()
         }
         .frame(width: 550, height: 500)
         .alert("Invalid Name", isPresented: $showingNameError) {
@@ -832,39 +653,29 @@ struct AddEditProfileSheet: View {
     }
     
     private func saveProfile() {
-        // Check for name conflicts (except when editing the same profile)
         if case .edit(let existingProfile) = mode {
-            // When editing, only check if name changed
             if existingProfile.name != profileName {
                 if uiServices.profiles.contains(where: { $0.name == profileName }) {
                     showingNameError = true
                     return
                 }
             }
-            
-            // Update the existing profile
             if uiServices.renameProfile(existingProfile.id, to: profileName) {
-                // Update other properties if needed (would require extending UIServices)
                 onSave(existingProfile)
                 dismiss()
             }
         } else {
-            // Check for name conflicts when adding
             if uiServices.profiles.contains(where: { $0.name == profileName }) {
                 showingNameError = true
                 return
             }
-            
-            // Create new profile
             var newProfile: ConfigurationProfile?
-            
             if let baseId = basedOnProfileId,
                let baseProfile = uiServices.profiles.first(where: { $0.id == baseId }) {
                 newProfile = uiServices.createProfile(name: profileName, basedOn: baseProfile)
             } else {
                 newProfile = uiServices.createProfile(name: profileName)
             }
-            
             if let profile = newProfile {
                 onSave(profile)
                 dismiss()
@@ -885,29 +696,8 @@ struct ImportTemplatesSheet: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // Header
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Import Template Profiles")
-                        .font(.title2)
-                        .bold()
-                    
-                    Text("Choose pre-configured profile templates to import")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                
-                Spacer()
-                
-                Button("Cancel") {
-                    dismiss()
-                }
-            }
-            .padding()
+            MGSheetHeader("Import Template Profiles", subtitle: "Choose pre-configured profile templates to import", onCancel: { dismiss() })
             
-            Divider()
-            
-            // Selection controls
             HStack {
                 Button(selectedTypes.count == DefaultProfileType.allCases.count ? "Deselect All" : "Select All") {
                     if selectedTypes.count == DefaultProfileType.allCases.count {
@@ -917,15 +707,13 @@ struct ImportTemplatesSheet: View {
                     }
                 }
                 .buttonStyle(.link)
-                .padding(.horizontal)
-                
+                .padding(.horizontal, MGStyle.Spacing.xl)
                 Spacer()
             }
-            .padding(.vertical, 8)
+            .padding(.vertical, MGStyle.Spacing.md)
             
-            // Template List
             ScrollView {
-                VStack(spacing: 12) {
+                VStack(spacing: MGStyle.Spacing.lg) {
                     ForEach(DefaultProfileType.allCases, id: \.self) { type in
                         TemplateProfileCard(
                             type: type,
@@ -940,62 +728,42 @@ struct ImportTemplatesSheet: View {
                         )
                     }
                 }
-                .padding()
+                .padding(MGStyle.Spacing.xl)
             }
             
-            Divider()
-            
-            // Footer
-            HStack {
+            MGSheetFooter("Import Selected", disabled: selectedTypes.isEmpty || isImporting) {
+                importSelectedTemplates()
+            } leading: {
                 if !selectedTypes.isEmpty {
                     Text("\(selectedTypes.count) template\(selectedTypes.count == 1 ? "" : "s") selected")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
-                
-                Spacer()
-                
                 if isImporting {
-                    ProgressView()
-                        .scaleEffect(0.8)
-                        .padding(.horizontal, 8)
+                    ProgressView().scaleEffect(0.8).padding(.horizontal, MGStyle.Spacing.md)
                 }
-                
-                Button("Import Selected") {
-                    importSelectedTemplates()
-                }
-                .keyboardShortcut(.return)
-                .disabled(selectedTypes.isEmpty || isImporting)
             }
-            .padding()
         }
         .frame(width: 600, height: 500)
         .sheet(isPresented: $showingResults) {
-            ImportResultsSheet(results: importResults) {
-                dismiss()
-            }
+            ImportResultsSheet(results: importResults) { dismiss() }
         }
     }
     
     private func importSelectedTemplates() {
         isImporting = true
         importResults.removeAll()
-        
         DispatchQueue.global(qos: .userInitiated).async {
             for type in selectedTypes {
                 let success = UIServices.shared.importDefaultProfile(type: type)
                 let message = success ? "Successfully imported" : "Failed to import (name conflict or error)"
-                
                 DispatchQueue.main.async {
                     importResults.append((type: type, success: success, message: message))
                 }
             }
-            
             DispatchQueue.main.async {
                 isImporting = false
-                if !importResults.isEmpty {
-                    showingResults = true
-                }
+                if !importResults.isEmpty { showingResults = true }
             }
         }
     }
@@ -1009,16 +777,14 @@ struct TemplateProfileCard: View {
     let onSelect: () -> Void
     
     var body: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: MGStyle.Spacing.xl) {
             Image(systemName: type.iconName)
                 .font(.system(size: 32))
                 .foregroundColor(.accentColor)
                 .frame(width: 50)
             
-            VStack(alignment: .leading, spacing: 4) {
-                Text(type.rawValue)
-                    .font(.headline)
-                
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.sm) {
+                Text(type.rawValue).font(.headline)
                 Text(type.description)
                     .font(.caption)
                     .foregroundColor(.secondary)
@@ -1032,19 +798,17 @@ struct TemplateProfileCard: View {
                     .foregroundColor(.accentColor)
             }
         }
-        .padding()
+        .padding(MGStyle.Spacing.xl)
         .background(
-            RoundedRectangle(cornerRadius: 8)
-                .fill(isSelected ? Color.accentColor.opacity(0.1) : Color(NSColor.controlBackgroundColor))
+            RoundedRectangle(cornerRadius: MGStyle.Corner.lg)
+                .fill(isSelected ? Color.accentColor.opacity(0.1) : MGStyle.Colors.cardBackground)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 8)
+                    RoundedRectangle(cornerRadius: MGStyle.Corner.lg)
                         .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
                 )
         )
         .contentShape(Rectangle())
-        .onTapGesture {
-            onSelect()
-        }
+        .onTapGesture { onSelect() }
     }
 }
 
@@ -1056,66 +820,39 @@ struct ImportResultsSheet: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // Header
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Import Results")
-                        .font(.title2)
-                        .bold()
-                    
-                    Text("\(results.filter { $0.success }.count) of \(results.count) templates imported successfully")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                
-                Spacer()
-            }
-            .padding()
+            MGSheetHeader(
+                "Import Results",
+                subtitle: "\(results.filter { $0.success }.count) of \(results.count) templates imported successfully"
+            )
             
-            Divider()
-            
-            // Results List
             ScrollView {
-                VStack(spacing: 8) {
+                VStack(spacing: MGStyle.Spacing.md) {
                     ForEach(results, id: \.type) { result in
-                        HStack(spacing: 12) {
+                        HStack(spacing: MGStyle.Spacing.lg) {
                             Image(systemName: result.success ? "checkmark.circle.fill" : "xmark.circle.fill")
                                 .foregroundColor(result.success ? .green : .red)
                                 .font(.system(size: 20))
                             
-                            VStack(alignment: .leading, spacing: 2) {
+                            VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
                                 Text(result.type.rawValue)
-                                    .font(.system(size: 14, weight: .medium))
-                                
+                                    .font(.system(size: MGStyle.FontSize.heading, weight: .medium))
                                 Text(result.message)
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                             }
-                            
                             Spacer()
                         }
-                        .padding(12)
+                        .padding(MGStyle.Spacing.lg)
                         .background(
-                            RoundedRectangle(cornerRadius: 8)
+                            RoundedRectangle(cornerRadius: MGStyle.Corner.lg)
                                 .fill(result.success ? Color.green.opacity(0.1) : Color.red.opacity(0.1))
                         )
                     }
                 }
-                .padding()
+                .padding(MGStyle.Spacing.xl)
             }
             
-            Divider()
-            
-            // Footer
-            HStack {
-                Spacer()
-                
-                Button("Done") {
-                    onDone()
-                }
-                .keyboardShortcut(.return)
-            }
-            .padding()
+            MGSheetFooter("Done") { onDone() }
         }
         .frame(width: 450, height: 400)
     }

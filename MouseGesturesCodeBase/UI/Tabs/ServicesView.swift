@@ -1,14 +1,12 @@
 import SwiftUI
 
 // MARK: - Services View
-/// UI for managing service plugins
 struct ServicesView: View {
     @StateObject private var uiServices = UIServices.shared
     @State private var servicePlugins: [ServicePluginInfo] = []
     @State private var selectedCategory: ServiceCategory?
     @State private var searchText = ""
     
-    // Sheet presentation - using single enum to avoid multiple .sheet modifier bug
     enum ActiveSheet: Identifiable {
         case configure(ServicePluginInfo)
         case install
@@ -26,25 +24,19 @@ struct ServicesView: View {
     
     var body: some View {
         HSplitView {
-            // Categories sidebar
             categorySidebar
-                .frame(minWidth: 200, idealWidth: 250, maxWidth: 300)
+                .frame(minWidth: MGStyle.Layout.sidebarMinWidth, idealWidth: MGStyle.Layout.sidebarIdealWidth, maxWidth: MGStyle.Layout.sidebarMaxWidth)
             
-            // Services list
             servicesContent
                 .frame(minWidth: 400)
         }
-        .onAppear {
-            loadServicePlugins()
-        }
+        .onAppear { loadServicePlugins() }
         .sheet(item: $activeSheet) { sheet in
             switch sheet {
             case .configure(let plugin):
                 ServiceConfigurationSheet(plugin: plugin)
             case .install:
-                ServiceInstallSheet { url in
-                    installPlugin(from: url)
-                }
+                ServiceInstallSheet { url in installPlugin(from: url) }
             }
         }
     }
@@ -52,64 +44,27 @@ struct ServicesView: View {
     // MARK: - Category Sidebar
     
     private var categorySidebar: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text("Categories")
-                .font(.headline)
-                .padding()
+        MGSidebar(title: "Categories") {
+            MGSidebarItem(
+                title: "All Services",
+                icon: "square.grid.3x3",
+                isSelected: selectedCategory == nil,
+                action: { selectedCategory = nil }
+            )
             
-            ScrollView {
-                VStack(alignment: .leading, spacing: 2) {
-                    // All Services
-                    categoryRow(nil, title: "All Services", count: servicePlugins.count)
-                    
-                    Divider()
-                        .padding(.vertical, 4)
-                    
-                    // Individual categories
-                    ForEach(ServiceCategory.allCases, id: \.self) { category in
-                        let count = servicePlugins.filter { $0.category == category }.count
-                        if count > 0 {
-                            categoryRow(category, title: category.rawValue, count: count)
-                        }
-                    }
+            Divider().padding(.vertical, MGStyle.Spacing.sm)
+            
+            ForEach(ServiceCategory.allCases, id: \.self) { category in
+                let count = servicePlugins.filter { $0.category == category }.count
+                if count > 0 {
+                    MGSidebarItem(
+                        title: category.rawValue,
+                        icon: category.icon,
+                        isSelected: selectedCategory == category,
+                        action: { selectedCategory = category }
+                    )
                 }
-                .padding(.horizontal)
             }
-        }
-        .background(Color(NSColor.controlBackgroundColor))
-    }
-    
-    private func categoryRow(_ category: ServiceCategory?, title: String, count: Int) -> some View {
-        HStack {
-            if let category = category {
-                Image(systemName: category.icon)
-                    .frame(width: 20)
-            } else {
-                Image(systemName: "square.grid.3x3")
-                    .frame(width: 20)
-            }
-            
-            Text(title)
-                .font(.system(size: 13))
-            
-            Spacer()
-            
-            Text("\(count)")
-                .font(.system(size: 11))
-                .foregroundColor(.secondary)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 2)
-                .background(Color(NSColor.tertiaryLabelColor).opacity(0.2))
-                .cornerRadius(4)
-        }
-        .padding(.vertical, 4)
-        .padding(.horizontal, 8)
-        .background(selectedCategory == category && (category != nil || selectedCategory == nil) ? 
-                   Color.accentColor.opacity(0.2) : Color.clear)
-        .cornerRadius(6)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            selectedCategory = category
         }
     }
     
@@ -117,25 +72,9 @@ struct ServicesView: View {
     
     private var servicesContent: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Header
-            HStack {
-                Text("Services")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                
-                Spacer()
-                
-                // Search field
-                HStack {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundColor(.secondary)
-                    TextField("Search services...", text: $searchText)
-                        .textFieldStyle(PlainTextFieldStyle())
-                }
-                .padding(6)
-                .background(Color(NSColor.controlBackgroundColor))
-                .cornerRadius(6)
-                .frame(width: 200)
+            MGPageHeader("Services") {
+                MGSearchField("Search services...", text: $searchText)
+                    .frame(width: MGStyle.Layout.searchFieldWidth)
                 
                 Button(action: { activeSheet = .install }) {
                     Label("Install Plugin", systemImage: "plus.circle")
@@ -145,13 +84,11 @@ struct ServicesView: View {
                     Image(systemName: "arrow.clockwise")
                 }
             }
-            .padding()
             
             Divider()
             
-            // Services list
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: 8) {
+                LazyVStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
                     ForEach(filteredPlugins) { plugin in
                         ServiceRow(plugin: plugin) {
                             activeSheet = .configure(plugin)
@@ -160,7 +97,7 @@ struct ServicesView: View {
                         }
                     }
                 }
-                .padding()
+                .padding(MGStyle.Spacing.xl)
             }
         }
     }
@@ -169,13 +106,9 @@ struct ServicesView: View {
     
     private var filteredPlugins: [ServicePluginInfo] {
         var plugins = servicePlugins
-        
-        // Filter by category
         if let category = selectedCategory {
             plugins = plugins.filter { $0.category == category }
         }
-        
-        // Filter by search text
         if !searchText.isEmpty {
             plugins = plugins.filter { plugin in
                 plugin.name.localizedCaseInsensitiveContains(searchText) ||
@@ -183,7 +116,6 @@ struct ServicesView: View {
                 plugin.identifier.localizedCaseInsensitiveContains(searchText)
             }
         }
-        
         return plugins.sorted { $0.name < $1.name }
     }
     
@@ -205,7 +137,6 @@ struct ServicesView: View {
     private func installPlugin(from url: URL) {
         let result = pluginManager.installPlugin(from: url)
         if !result.success {
-            // Show error alert
             let alert = NSAlert()
             alert.messageText = "Failed to install plugin"
             alert.informativeText = result.error ?? "Unknown error"
@@ -223,26 +154,19 @@ struct ServiceRow: View {
     let onToggle: () -> Void
     
     var body: some View {
-        HStack(spacing: 12) {
-            // Icon
+        HStack(spacing: MGStyle.Spacing.lg) {
             Image(systemName: plugin.category.icon)
                 .font(.title2)
                 .foregroundColor(.accentColor)
                 .frame(width: 30)
             
-            // Info
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.sm) {
                 HStack {
                     Text(plugin.name)
-                        .font(.system(size: 14, weight: .medium))
+                        .font(.system(size: MGStyle.FontSize.heading, weight: .medium))
                     
                     if plugin.isBuiltIn {
-                        Text("Built-in")
-                            .font(.caption)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Color.blue.opacity(0.2))
-                            .cornerRadius(4)
+                        MGBadge("Built-in", color: .blue)
                     }
                     
                     Text("v\(plugin.version)")
@@ -255,7 +179,7 @@ struct ServiceRow: View {
                     .foregroundColor(.secondary)
                     .lineLimit(2)
                 
-                HStack(spacing: 12) {
+                HStack(spacing: MGStyle.Spacing.lg) {
                     Label(plugin.author, systemImage: "person")
                         .font(.caption)
                         .foregroundColor(Color.secondary.opacity(0.6))
@@ -274,8 +198,7 @@ struct ServiceRow: View {
             
             Spacer()
             
-            // Actions
-            HStack(spacing: 8) {
+            HStack(spacing: MGStyle.Spacing.md) {
                 Button(action: onConfigure) {
                     Image(systemName: "gearshape")
                 }
@@ -290,13 +213,15 @@ struct ServiceRow: View {
                 .help(plugin.isEnabled ? "Disable Service" : "Enable Service")
             }
         }
-        .padding()
-        .background(Color(NSColor.controlBackgroundColor))
-        .cornerRadius(8)
+        .padding(MGStyle.Spacing.xl)
+        .background(
+            RoundedRectangle(cornerRadius: MGStyle.Corner.lg)
+                .fill(MGStyle.Colors.cardBackground)
+        )
     }
     
     private var permissionsLabel: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: MGStyle.Spacing.sm) {
             Image(systemName: "lock.shield")
             Text(permissionsText)
         }
@@ -306,20 +231,10 @@ struct ServiceRow: View {
     
     private var permissionsText: String {
         var permissions: [String] = []
-        
-        if plugin.requiredPermissions.requiresAccessibility {
-            permissions.append("Accessibility")
-        }
-        if plugin.requiredPermissions.requiresFileAccess {
-            permissions.append("Files")
-        }
-        if plugin.requiredPermissions.requiresNetworkAccess {
-            permissions.append("Network")
-        }
-        if plugin.requiredPermissions.requiresScreenRecording {
-            permissions.append("Screen")
-        }
-        
+        if plugin.requiredPermissions.requiresAccessibility { permissions.append("Accessibility") }
+        if plugin.requiredPermissions.requiresFileAccess { permissions.append("Files") }
+        if plugin.requiredPermissions.requiresNetworkAccess { permissions.append("Network") }
+        if plugin.requiredPermissions.requiresScreenRecording { permissions.append("Screen") }
         return permissions.joined(separator: ", ")
     }
 }
@@ -334,70 +249,33 @@ struct ServiceConfigurationSheet: View {
     private let pluginManager = ServicePluginManager.shared
     
     var body: some View {
-        VStack(spacing: 20) {
-            // Header
-            HStack {
-                Image(systemName: plugin.category.icon)
-                    .font(.largeTitle)
-                    .foregroundColor(.accentColor)
-                
-                VStack(alignment: .leading) {
-                    Text(plugin.name)
-                        .font(.title2)
-                        .fontWeight(.semibold)
-                    Text(plugin.description)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                
-                Spacer()
-            }
+        VStack(spacing: 0) {
+            MGSheetHeader(
+                plugin.name,
+                subtitle: plugin.description,
+                onCancel: { dismiss() }
+            )
             
-            Divider()
-            
-            // Configuration options
             if configOptions.isEmpty {
-                VStack(spacing: 12) {
-                    Image(systemName: "gearshape.2")
-                        .font(.system(size: 48))
-                        .foregroundColor(.secondary)
-                    Text("No configuration options available")
-                        .foregroundColor(.secondary)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                MGEmptyState(icon: "gearshape.2", title: "No configuration options available")
             } else {
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 16) {
+                    VStack(alignment: .leading, spacing: MGStyle.Spacing.xl) {
                         ForEach(configOptions) { option in
                             ConfigOptionView(option: option, value: binding(for: option.key))
                         }
                     }
+                    .padding(MGStyle.Spacing.xxl)
                 }
             }
             
-            Divider()
-            
-            // Buttons
-            HStack {
-                Button("Cancel") {
-                    dismiss()
-                }
-                .keyboardShortcut(.escape)
-                
-                Spacer()
-                
-                Button("Apply") {
-                    applyConfiguration()
-                    dismiss()
-                }
-                .keyboardShortcut(.return)
+            MGSheetFooter("Apply") {
+                applyConfiguration()
+                dismiss()
             }
         }
-        .padding()
         .frame(width: 500, height: 400)
-        .onAppear {
-            loadConfiguration()
-        }
+        .onAppear { loadConfiguration() }
     }
     
     private func binding(for key: String) -> Binding<Any?> {
@@ -409,8 +287,6 @@ struct ServiceConfigurationSheet: View {
     
     private func loadConfiguration() {
         configOptions = pluginManager.getConfigurationOptions(for: plugin.identifier)
-        
-        // Initialize with default values
         for option in configOptions {
             configValues[option.key] = option.defaultValue
         }
@@ -427,9 +303,9 @@ struct ConfigOptionView: View {
     @Binding var value: Any?
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: MGStyle.Spacing.sm) {
             Text(option.label)
-                .font(.system(size: 13, weight: .medium))
+                .font(.system(size: MGStyle.FontSize.body, weight: .medium))
             
             if let description = option.description {
                 Text(description)
@@ -498,49 +374,38 @@ struct ServiceInstallSheet: View {
     @State private var selectedFile: URL?
     
     var body: some View {
-        VStack(spacing: 20) {
-            Text("Install Service Plugin")
-                .font(.title2)
-                .fontWeight(.semibold)
+        VStack(spacing: 0) {
+            MGSheetHeader("Install Service Plugin", subtitle: "Select a .serviceplugin file to install", onCancel: { dismiss() })
             
-            Text("Select a .serviceplugin file to install")
-                .foregroundColor(.secondary)
-            
-            Button("Choose File...") {
-                chooseFile()
-            }
-            
-            if let url = selectedFile {
-                HStack {
-                    Image(systemName: "doc.fill")
-                    Text(url.lastPathComponent)
-                        .lineLimit(1)
-                }
-                .padding()
-                .background(Color(NSColor.controlBackgroundColor))
-                .cornerRadius(8)
-            }
-            
-            HStack {
-                Button("Cancel") {
-                    dismiss()
-                }
-                .keyboardShortcut(.escape)
-                
+            VStack(spacing: MGStyle.Spacing.xl) {
                 Spacer()
                 
-                Button("Install") {
-                    if let url = selectedFile {
-                        onInstall(url)
-                        dismiss()
+                Button("Choose File...") { chooseFile() }
+                
+                if let url = selectedFile {
+                    HStack {
+                        Image(systemName: "doc.fill")
+                        Text(url.lastPathComponent).lineLimit(1)
                     }
+                    .padding(MGStyle.Spacing.xl)
+                    .background(
+                        RoundedRectangle(cornerRadius: MGStyle.Corner.lg)
+                            .fill(MGStyle.Colors.cardBackground)
+                    )
                 }
-                .disabled(selectedFile == nil)
-                .keyboardShortcut(.return)
+                
+                Spacer()
+            }
+            .padding(MGStyle.Spacing.xl)
+            
+            MGSheetFooter("Install", disabled: selectedFile == nil) {
+                if let url = selectedFile {
+                    onInstall(url)
+                    dismiss()
+                }
             }
         }
-        .padding()
-        .frame(width: 400, height: 200)
+        .frame(width: 400, height: 250)
     }
     
     private func chooseFile() {
@@ -549,9 +414,6 @@ struct ServiceInstallSheet: View {
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
         panel.message = "Select a service plugin file"
-        
-        if panel.runModal() == .OK {
-            selectedFile = panel.url
-        }
+        if panel.runModal() == .OK { selectedFile = panel.url }
     }
 }

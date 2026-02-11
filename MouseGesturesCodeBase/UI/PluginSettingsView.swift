@@ -43,10 +43,10 @@ struct PluginSettingsView: View {
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.vertical, 40)
                     .padding()
-                    .background(RoundedRectangle(cornerRadius: 8).fill(Color(NSColor.controlBackgroundColor)))
+                    .background(RoundedRectangle(cornerRadius: MGStyle.Corner.lg).fill(MGStyle.Colors.cardBackground))
             } else {
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 16) {
+                    VStack(alignment: .leading, spacing: MGStyle.Spacing.xl) {
                         ForEach(visibleItems, id: \.definition.key) { item in
                             PluginSettingRow(
                                 plugin: item.plugin,
@@ -56,8 +56,8 @@ struct PluginSettingsView: View {
                         }
                     }
                     .padding()
-                    .background(RoundedRectangle(cornerRadius: 8).fill(Color(NSColor.controlBackgroundColor)))
-                    .id(visibilityTrigger) // Only this content rebuilds on dependency changes
+                    .background(RoundedRectangle(cornerRadius: MGStyle.Corner.lg).fill(MGStyle.Colors.cardBackground))
+                    .id(visibilityTrigger)
                 }
             }
         }
@@ -332,11 +332,11 @@ struct PluginSettingRow: View {
                 if definition.isAdvanced {
                     Text("Advanced")
                         .font(.system(size: 9))
-                        .padding(.horizontal, 4)
-                        .padding(.vertical, 2)
+                        .padding(.horizontal, MGStyle.Spacing.sm)
+                        .padding(.vertical, MGStyle.Spacing.xs)
                         .background(Color.orange.opacity(0.2))
                         .foregroundColor(.orange)
-                        .cornerRadius(3)
+                        .cornerRadius(MGStyle.Corner.sm)
                 }
             }
             
@@ -382,21 +382,21 @@ private struct SliderSettingControl: View {
     @State private var isInitialized = false
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
             HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 4) {
+                VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
+                    HStack(spacing: MGStyle.Spacing.sm) {
                         Text(definition.displayName)
-                            .font(.system(size: 13, weight: .medium))
+                            .font(.system(size: MGStyle.FontSize.body, weight: .medium))
                         
                         if definition.isAdvanced {
                             Text("Advanced")
                                 .font(.system(size: 9))
-                                .padding(.horizontal, 4)
-                                .padding(.vertical, 2)
+                                .padding(.horizontal, MGStyle.Spacing.sm)
+                                .padding(.vertical, MGStyle.Spacing.xs)
                                 .background(Color.orange.opacity(0.2))
                                 .foregroundColor(.orange)
-                                .cornerRadius(3)
+                                .cornerRadius(MGStyle.Corner.sm)
                         }
                     }
                     

@@ -41,7 +41,6 @@ struct GestureConfigurationSheet: View {
             _timing = State(initialValue: g.timing)
             _isEnabled = State(initialValue: g.isEnabled)
         } else {
-            // Default: screen zone with modifiers
             var defaultComponents = GestureActivationComponents()
             defaultComponents.modifierKey = ModifierKeyConfig(isEnabled: true, modifiers: [.command, .control])
             defaultComponents.screenZone = ScreenZoneConfig(isEnabled: true, zone: .topRight)
@@ -55,21 +54,28 @@ struct GestureConfigurationSheet: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            configurationHeader
-            Divider()
+            MGSheetHeader(mode.title, onCancel: { dismiss() })
             
             ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {
+                    // Enable toggle
+                    HStack {
+                        Toggle("Enabled", isOn: $isEnabled)
+                            .toggleStyle(.switch)
+                        Spacer()
+                    }
+                    
                     gesturePreviewCard
                     activationComponentsSection
                     actionSection
                     timingSettingsSection
                 }
-                .padding()
+                .padding(MGStyle.Spacing.xl)
             }
             
-            Divider()
-            configurationFooter
+            MGSheetFooter(mode.buttonTitle, disabled: !isValid) {
+                saveGesture()
+            }
         }
         .frame(width: 750, height: 680)
         .alert("Gesture Conflict", isPresented: $showingConflictAlert) {
@@ -79,42 +85,11 @@ struct GestureConfigurationSheet: View {
         }
     }
     
-    // MARK: - Header / Footer
-    
-    private var configurationHeader: some View {
-        HStack {
-            Text(mode.title).font(.title2).bold()
-            Spacer()
-            Toggle("Enabled", isOn: $isEnabled)
-                .toggleStyle(.switch)
-            Button("Cancel") { dismiss() }
-        }
-        .padding()
-    }
-    
-    private var configurationFooter: some View {
-        HStack {
-            Spacer()
-            Button("Cancel") {
-                dismiss()
-            }
-            .keyboardShortcut(.cancelAction)
-            
-            Button(mode.buttonTitle) {
-                saveGesture()
-            }
-            .keyboardShortcut(.return)
-            .disabled(!isValid)
-            .buttonStyle(.borderedProminent)
-        }
-        .padding()
-    }
-    
     // MARK: - Preview Card
     
     private var gesturePreviewCard: some View {
         GroupBox {
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
                 HStack {
                     Image(systemName: "sparkles")
                         .foregroundColor(.blue)
@@ -125,12 +100,12 @@ struct GestureConfigurationSheet: View {
                 
                 Text(components.previewString + actionPreview)
                     .font(.system(.body, design: .monospaced))
-                    .padding(8)
+                    .padding(MGStyle.Spacing.md)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color(NSColor.textBackgroundColor))
-                    .cornerRadius(6)
+                    .background(MGStyle.Colors.contentBackground)
+                    .cornerRadius(MGStyle.Corner.md)
             }
-            .padding(.vertical, 4)
+            .padding(.vertical, MGStyle.Spacing.sm)
         }
     }
     
@@ -148,12 +123,12 @@ struct GestureConfigurationSheet: View {
     
     private var activationComponentsSection: some View {
         GroupBox("Trigger Configuration") {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.xl) {
                 Text("Configure which conditions must be met to activate this gesture:")
                     .font(.caption)
                     .foregroundColor(.secondary)
                 
-                VStack(spacing: 12) {
+                VStack(spacing: MGStyle.Spacing.lg) {
                     // Modifier Keys Component
                     ComponentToggleCard(
                         icon: "command.square",
@@ -289,21 +264,21 @@ struct GestureConfigurationSheet: View {
                             .font(.caption)
                             .foregroundColor(.orange)
                     }
-                    .padding(.top, 4)
+                    .padding(.top, MGStyle.Spacing.sm)
                 }
             }
-            .padding(.vertical, 8)
+            .padding(.vertical, MGStyle.Spacing.md)
         }
     }
     
     // MARK: - Component Configuration Views
     
     private var modifierKeyConfigView: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
             HStack {
                 Text("Modifiers:")
                     .frame(width: 100, alignment: .trailing)
-                HStack(spacing: 10) {
+                HStack(spacing: MGStyle.Spacing.lg) {
                     ModifierToggle(label: "⌘", flag: .command, modifiers: Binding(
                         get: { components.modifierKey?.modifiers ?? [] },
                         set: { components.modifierKey?.modifiers = $0 }
@@ -324,14 +299,14 @@ struct GestureConfigurationSheet: View {
                 Spacer()
             }
         }
-        .padding(.leading, 20)
-        .padding(12)
-        .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
-        .cornerRadius(8)
+        .padding(.leading, MGStyle.Spacing.xxl)
+        .padding(MGStyle.Spacing.lg)
+        .background(MGStyle.Colors.subtleOverlay)
+        .cornerRadius(MGStyle.Corner.lg)
     }
     
     private var screenZoneConfigView: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
             HStack {
                 Text("Zone:")
                     .frame(width: 100, alignment: .trailing)
@@ -348,14 +323,14 @@ struct GestureConfigurationSheet: View {
                 Spacer()
             }
         }
-        .padding(.leading, 20)
-        .padding(12)
-        .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
-        .cornerRadius(8)
+        .padding(.leading, MGStyle.Spacing.xxl)
+        .padding(MGStyle.Spacing.lg)
+        .background(MGStyle.Colors.subtleOverlay)
+        .cornerRadius(MGStyle.Corner.lg)
     }
     
     private var dragTypeConfigView: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
             HStack {
                 Text("Drag Type:")
                     .frame(width: 100, alignment: .trailing)
@@ -372,14 +347,14 @@ struct GestureConfigurationSheet: View {
                 Spacer()
             }
         }
-        .padding(.leading, 20)
-        .padding(12)
-        .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
-        .cornerRadius(8)
+        .padding(.leading, MGStyle.Spacing.xxl)
+        .padding(MGStyle.Spacing.lg)
+        .background(MGStyle.Colors.subtleOverlay)
+        .cornerRadius(MGStyle.Corner.lg)
     }
     
     private var mouseButtonConfigView: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
             HStack {
                 Text("Button:")
                     .frame(width: 100, alignment: .trailing)
@@ -396,14 +371,14 @@ struct GestureConfigurationSheet: View {
                 Spacer()
             }
         }
-        .padding(.leading, 20)
-        .padding(12)
-        .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
-        .cornerRadius(8)
+        .padding(.leading, MGStyle.Spacing.xxl)
+        .padding(MGStyle.Spacing.lg)
+        .background(MGStyle.Colors.subtleOverlay)
+        .cornerRadius(MGStyle.Corner.lg)
     }
     
     private var keyboardShortcutConfigView: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
             HStack {
                 Text("Shortcut:")
                     .frame(width: 100, alignment: .trailing)
@@ -414,7 +389,7 @@ struct GestureConfigurationSheet: View {
                 .frame(width: 220, height: 28)
                 Spacer()
             }
-            .padding(.leading, 20)
+            .padding(.leading, MGStyle.Spacing.xxl)
             
             if components.keyboardShortcut?.isEnabled == true && components.keyboardShortcut?.keyboardTrigger == nil {
                 HStack {
@@ -429,9 +404,9 @@ struct GestureConfigurationSheet: View {
                 }
             }
         }
-        .padding(12)
-        .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
-        .cornerRadius(8)
+        .padding(MGStyle.Spacing.lg)
+        .background(MGStyle.Colors.subtleOverlay)
+        .cornerRadius(MGStyle.Corner.lg)
     }
     
     // MARK: - Action Section
@@ -447,10 +422,10 @@ struct GestureConfigurationSheet: View {
     
     private var timingSettingsSection: some View {
         GroupBox("Timing Options") {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
                 Toggle("Repeat on Hold", isOn: $timing.repeatOnHold)
                 if timing.repeatOnHold {
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
                         HStack {
                             Text("Initial Delay:")
                                 .frame(width: 120, alignment: .leading)
@@ -460,7 +435,7 @@ struct GestureConfigurationSheet: View {
                                 .frame(width: 50, alignment: .trailing)
                                 .foregroundColor(.secondary)
                         }
-                        .padding(.leading, 20)
+                        .padding(.leading, MGStyle.Spacing.xxl)
                         
                         HStack {
                             Text("Repeat Interval:")
@@ -471,7 +446,7 @@ struct GestureConfigurationSheet: View {
                                 .frame(width: 50, alignment: .trailing)
                                 .foregroundColor(.secondary)
                         }
-                        .padding(.leading, 20)
+                        .padding(.leading, MGStyle.Spacing.xxl)
                     }
                 }
                 
@@ -488,10 +463,10 @@ struct GestureConfigurationSheet: View {
                             .frame(width: 50, alignment: .trailing)
                             .foregroundColor(.secondary)
                     }
-                    .padding(.leading, 20)
+                    .padding(.leading, MGStyle.Spacing.xxl)
                 }
             }
-            .padding(.vertical, 8)
+            .padding(.vertical, MGStyle.Spacing.md)
         }
     }
     
@@ -504,17 +479,17 @@ struct GestureConfigurationSheet: View {
         @Binding var isEnabled: Bool
         
         var body: some View {
-            HStack(spacing: 12) {
+            HStack(spacing: MGStyle.Spacing.lg) {
                 Toggle("", isOn: $isEnabled)
                     .toggleStyle(.switch)
                     .labelsHidden()
                 
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 6) {
+                VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
+                    HStack(spacing: MGStyle.Spacing.md) {
                         Image(systemName: icon)
                             .foregroundColor(isEnabled ? .blue : .secondary)
                         Text(title)
-                            .font(.system(size: 13, weight: .medium))
+                            .font(.system(size: MGStyle.FontSize.body, weight: .medium))
                             .foregroundColor(isEnabled ? .primary : .secondary)
                     }
                     
@@ -525,11 +500,11 @@ struct GestureConfigurationSheet: View {
                 
                 Spacer()
             }
-            .padding(10)
+            .padding(MGStyle.Spacing.lg)
             .background(isEnabled ? Color.blue.opacity(0.08) : Color.clear)
-            .cornerRadius(8)
+            .cornerRadius(MGStyle.Corner.lg)
             .overlay(
-                RoundedRectangle(cornerRadius: 8)
+                RoundedRectangle(cornerRadius: MGStyle.Corner.lg)
                     .stroke(isEnabled ? Color.blue.opacity(0.3) : Color.clear, lineWidth: 1)
             )
         }
@@ -558,17 +533,13 @@ struct GestureConfigurationSheet: View {
     private var isValid: Bool {
         guard components.isValid else { return false }
         guard !selectedActionId.isEmpty else { return false }
-        
-        // Check required fields for enabled components
         if components.keyboardShortcut?.isEnabled == true && components.keyboardShortcut?.keyboardTrigger == nil {
             return false
         }
-        
         return true
     }
     
     private func saveGesture() {
-        // Create gesture from components
         let gesture = Gesture(
             components: components,
             actionIdentifier: selectedActionId,
@@ -576,7 +547,6 @@ struct GestureConfigurationSheet: View {
             parameters: actionParameters
         )
         
-        // Check for conflicts (only if adding or changing trigger)
         if mode == .add || existingGesture?.triggerKey != gesture.triggerKey {
             if uiServices.isGestureConflicting(gesture) {
                 conflictMessage = "A gesture with this trigger combination already exists. Each trigger combination can only be assigned one action."

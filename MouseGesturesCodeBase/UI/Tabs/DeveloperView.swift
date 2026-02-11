@@ -5,7 +5,6 @@ import UniformTypeIdentifiers
 struct DeveloperView: View {
     @StateObject private var uiServices = UIServices.shared
     
-    // State
     @State private var selectedSection: DeveloperSection = .settings
     @State private var debugLoggingEnabled: Bool = false
     @State private var logFiles: [LogFileInfo] = []
@@ -13,23 +12,19 @@ struct DeveloperView: View {
     @State private var logContent: String = ""
     @State private var isLoadingLogContent = false
     
-    // Plugins
     @State private var plugins: [PluginInfo] = []
     @State private var selectedPlugin: PluginInfo?
     @State private var showingPluginDetails = false
     @State private var showingInstallPlugin = false
     
-    // Performance (driven by PerformanceMonitorService)
     private let perfMonitor = PerformanceMonitorService.shared
     @State private var memoryUsage: (resident: String, virtual: String) = ("", "")
     @State private var cpuUsage: Double = 0.0
     @State private var updateTimer: Timer?
     
-    // Debug Report
     @State private var debugReport: String = ""
     @State private var showingExportReport = false
     
-    // Services
     private let servicePluginManager = ServicePluginManager.shared
     @State private var servicePlugins: [ServicePluginInfo] = []
     @State private var serviceSearchText = ""
@@ -47,10 +42,7 @@ struct DeveloperView: View {
         }
     }
     
-    // Developer Settings
     @State private var developerModeEnabled: Bool = false
-    
-    // Messages
     @State private var successMessage: String?
     @State private var errorMessage: String?
     
@@ -76,29 +68,30 @@ struct DeveloperView: View {
     
     var body: some View {
         HSplitView {
-            // Sidebar
-            sidebarView
-                .frame(minWidth: 200, idealWidth: 220, maxWidth: 250)
+            MGSidebar(title: "Developer Tools") {
+                ForEach(DeveloperSection.allCases, id: \.self) { section in
+                    MGSidebarItem(
+                        title: section.rawValue,
+                        icon: section.icon,
+                        isSelected: selectedSection == section,
+                        action: { selectedSection = section }
+                    )
+                }
+            }
+            .frame(minWidth: MGStyle.Layout.sidebarMinWidth, idealWidth: 220, maxWidth: 250)
             
-            // Main content
             ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {
                     switch selectedSection {
-                    case .settings:
-                        developerSettingsSection
-                    case .logging:
-                        loggingSection
-                    case .plugins:
-                        pluginsSection
-                    case .services:
-                        servicesSection
-                    case .performance:
-                        performanceSection
-                    case .diagnostics:
-                        diagnosticsSection
+                    case .settings: developerSettingsSection
+                    case .logging: loggingSection
+                    case .plugins: pluginsSection
+                    case .services: servicesSection
+                    case .performance: performanceSection
+                    case .diagnostics: diagnosticsSection
                     }
                 }
-                .padding(20)
+                .padding(MGStyle.Spacing.xxl)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .frame(minWidth: 600)
@@ -108,101 +101,39 @@ struct DeveloperView: View {
             loadInitialData()
             startPerformanceMonitoring()
         }
-        .onDisappear {
-            stopPerformanceMonitoring()
-        }
+        .onDisappear { stopPerformanceMonitoring() }
         .fileImporter(
             isPresented: $showingInstallPlugin,
             allowedContentTypes: [UTType(filenameExtension: "plugin") ?? .item, .bundle],
             allowsMultipleSelection: false
-        ) { result in
-            handlePluginInstall(result: result)
-        }
+        ) { result in handlePluginInstall(result: result) }
         .fileExporter(
             isPresented: $showingExportReport,
             document: DebugReportDocument(content: debugReport),
             contentType: .plainText,
             defaultFilename: "MouseGestures_Debug_\(Date().formatted(date: .numeric, time: .omitted).replacingOccurrences(of: "/", with: "-")).txt"
-        ) { result in
-            handleReportExport(result: result)
-        }
+        ) { result in handleReportExport(result: result) }
         .sheet(item: $serviceActiveSheet) { sheet in
             switch sheet {
             case .configure(let plugin):
                 ServiceConfigurationSheet(plugin: plugin)
             case .install:
-                ServiceInstallSheet { url in
-                    installServicePlugin(from: url)
-                }
+                ServiceInstallSheet { url in installServicePlugin(from: url) }
             }
         }
-    }
-    
-    // MARK: - Sidebar
-    
-    private var sidebarView: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text("Developer Tools")
-                .font(.title2)
-                .fontWeight(.semibold)
-                .padding(.horizontal, 20)
-                .padding(.top, 20)
-                .padding(.bottom, 10)
-            
-            Divider()
-                .padding(.horizontal, 20)
-                .padding(.bottom, 10)
-            
-            VStack(alignment: .leading, spacing: 2) {
-                ForEach(DeveloperSection.allCases, id: \.self) { section in
-                    sidebarItem(for: section)
-                }
-            }
-            .padding(.horizontal, 10)
-            
-            Spacer()
-        }
-        .background(Color(NSColor.controlBackgroundColor))
-    }
-    
-    private func sidebarItem(for section: DeveloperSection) -> some View {
-        Button(action: {
-            selectedSection = section
-        }) {
-            HStack(spacing: 8) {
-                Image(systemName: section.icon)
-                    .frame(width: 20)
-                    .foregroundColor(selectedSection == section ? .white : .secondary)
-                
-                Text(section.rawValue)
-                    .fontWeight(selectedSection == section ? .medium : .regular)
-                    .foregroundColor(selectedSection == section ? .white : .primary)
-                
-                Spacer()
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(selectedSection == section ? Color.accentColor : Color.clear)
-            )
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(PlainButtonStyle())
     }
     
     // MARK: - Developer Settings Section
     
     private var developerSettingsSection: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            sectionHeader("Developer Settings")
+        VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {
+            MGSectionHeader("Developer Settings")
             
-            VStack(alignment: .leading, spacing: 15) {
-                // Developer Mode
+            MGContentCard {
                 Toggle(isOn: $developerModeEnabled) {
-                    VStack(alignment: .leading, spacing: 2) {
+                    VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
                         Text("Developer Mode")
-                            .font(.system(size: 13, weight: .medium))
+                            .font(.system(size: MGStyle.FontSize.body, weight: .medium))
                         Text("Enables this Developer tab and other advanced developer features")
                             .font(.caption)
                             .foregroundColor(.secondary)
@@ -214,11 +145,10 @@ struct DeveloperView: View {
                 
                 Divider()
                 
-                // Debug Logging
                 Toggle(isOn: $debugLoggingEnabled) {
-                    VStack(alignment: .leading, spacing: 2) {
+                    VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
                         Text("Debug Logging")
-                            .font(.system(size: 13, weight: .medium))
+                            .font(.system(size: MGStyle.FontSize.body, weight: .medium))
                         Text("Records detailed debug information to log files. Manage logs in the Logging section.")
                             .font(.caption)
                             .foregroundColor(.secondary)
@@ -227,13 +157,8 @@ struct DeveloperView: View {
                 .onChange(of: debugLoggingEnabled) { newValue in
                     uiServices.setDebugModeEnabled(newValue)
                 }
-                
-
             }
-            .padding()
-            .background(RoundedRectangle(cornerRadius: 8).fill(Color(NSColor.controlBackgroundColor)))
             
-            // Warning about disabling developer mode
             if !developerModeEnabled {
                 Label("Developer mode is disabled. This tab will be hidden when you navigate away.", systemImage: "exclamationmark.triangle")
                     .font(.caption)
@@ -245,105 +170,78 @@ struct DeveloperView: View {
     // MARK: - Logging Section
     
     private var loggingSection: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            sectionHeader("Debug Logging")
+        VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {
+            MGSectionHeader("Debug Logging")
             
-            VStack(alignment: .leading, spacing: 20) {
-                // Logging Controls
-                VStack(alignment: .leading, spacing: 15) {
-                    Toggle(isOn: $debugLoggingEnabled) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Enable Debug Logging")
-                                .font(.system(size: 13, weight: .medium))
-                            Text("Records detailed debug information to log files")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
+            MGContentCard {
+                Toggle(isOn: $debugLoggingEnabled) {
+                    VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
+                        Text("Enable Debug Logging")
+                            .font(.system(size: MGStyle.FontSize.body, weight: .medium))
+                        Text("Records detailed debug information to log files")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
                     }
-                    .onChange(of: debugLoggingEnabled) { newValue in
-                        uiServices.setDebugModeEnabled(newValue)
-                        if newValue {
-                            refreshLogFiles()
-                        }
-                    }
-                    
-                    if debugLoggingEnabled {
-                        HStack {
-                            Button("Open Logs Folder") {
-                                openLogsFolder()
-                            }
-                            
-                            Button("Refresh") {
-                                refreshLogFiles()
-                            }
-                            
-                            Spacer()
-                            
-                            if !logFiles.isEmpty {
-                                Button("Clear All Logs") {
-                                    clearAllLogs()
-                                }
+                }
+                .onChange(of: debugLoggingEnabled) { newValue in
+                    uiServices.setDebugModeEnabled(newValue)
+                    if newValue { refreshLogFiles() }
+                }
+                
+                if debugLoggingEnabled {
+                    HStack {
+                        Button("Open Logs Folder") { openLogsFolder() }
+                        Button("Refresh") { refreshLogFiles() }
+                        Spacer()
+                        if !logFiles.isEmpty {
+                            Button("Clear All Logs") { clearAllLogs() }
                                 .foregroundColor(.red)
-                            }
                         }
                     }
                 }
-                .padding()
-                .background(RoundedRectangle(cornerRadius: 8).fill(Color(NSColor.controlBackgroundColor)))
+            }
+            
+            if debugLoggingEnabled && !logFiles.isEmpty {
+                MGContentCard {
+                    Text("Log Files")
+                        .font(.system(size: MGStyle.FontSize.heading, weight: .semibold))
+                    
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 5) {
+                            ForEach(logFiles, id: \.url) { logFile in
+                                logFileRow(logFile)
+                            }
+                        }
+                    }
+                    .frame(maxHeight: 200)
+                    .background(RoundedRectangle(cornerRadius: MGStyle.Corner.md).stroke(Color.gray.opacity(0.3)))
+                }
                 
-                if debugLoggingEnabled && !logFiles.isEmpty {
-                    // Log Files List
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Log Files")
-                            .font(.system(size: 14, weight: .semibold))
+                if let selectedLog = selectedLogFile {
+                    MGContentCard {
+                        HStack {
+                            Text("Log Content: \(selectedLog.name)")
+                                .font(.system(size: MGStyle.FontSize.heading, weight: .semibold))
+                            Spacer()
+                            Button("Copy") {
+                                NSPasteboard.general.clearContents()
+                                NSPasteboard.general.setString(logContent, forType: .string)
+                            }
+                            Button("Export") { exportLogFile(selectedLog) }
+                        }
                         
                         ScrollView {
-                            VStack(alignment: .leading, spacing: 5) {
-                                ForEach(logFiles, id: \.url) { logFile in
-                                    logFileRow(logFile)
-                                }
-                            }
+                            Text(logContent.isEmpty ? "Loading..." : logContent)
+                                .font(.system(.caption, design: .monospaced))
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(10)
                         }
-                        .frame(maxHeight: 200)
-                        .background(RoundedRectangle(cornerRadius: 6).stroke(Color.gray.opacity(0.3)))
-                    }
-                    .padding()
-                    .background(RoundedRectangle(cornerRadius: 8).fill(Color(NSColor.controlBackgroundColor)))
-                    
-                    // Log Content Viewer
-                    if let selectedLog = selectedLogFile {
-                        VStack(alignment: .leading, spacing: 10) {
-                            HStack {
-                                Text("Log Content: \(selectedLog.name)")
-                                    .font(.system(size: 14, weight: .semibold))
-                                
-                                Spacer()
-                                
-                                Button("Copy") {
-                                    NSPasteboard.general.clearContents()
-                                    NSPasteboard.general.setString(logContent, forType: .string)
-                                }
-                                
-                                Button("Export") {
-                                    exportLogFile(selectedLog)
-                                }
-                            }
-                            
-                            ScrollView {
-                                Text(logContent.isEmpty ? "Loading..." : logContent)
-                                    .font(.system(.caption, design: .monospaced))
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(10)
-                            }
-                            .frame(height: 300)
-                            .background(RoundedRectangle(cornerRadius: 6).fill(Color(NSColor.textBackgroundColor)))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 6)
-                                    .stroke(Color.gray.opacity(0.3))
-                            )
-                        }
-                        .padding()
-                        .background(RoundedRectangle(cornerRadius: 8).fill(Color(NSColor.controlBackgroundColor)))
+                        .frame(height: 300)
+                        .background(RoundedRectangle(cornerRadius: MGStyle.Corner.md).fill(MGStyle.Colors.contentBackground))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: MGStyle.Corner.md)
+                                .stroke(Color.gray.opacity(0.3))
+                        )
                     }
                 }
             }
@@ -352,242 +250,161 @@ struct DeveloperView: View {
     
     private func logFileRow(_ logFile: LogFileInfo) -> some View {
         HStack {
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
                 Text(logFile.name)
                     .font(.system(size: 12, weight: selectedLogFile?.url == logFile.url ? .medium : .regular))
                     .foregroundColor(selectedLogFile?.url == logFile.url ? .accentColor : .primary)
-                
                 HStack(spacing: 10) {
-                    Text(logFile.size)
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                    
-                    Text(logFile.date)
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
+                    Text(logFile.size).font(.caption2).foregroundColor(.secondary)
+                    Text(logFile.date).font(.caption2).foregroundColor(.secondary)
                 }
             }
-            
             Spacer()
-            
-            Button(action: {
-                deleteLogFile(logFile)
-            }) {
-                Image(systemName: "trash")
-                    .foregroundColor(.red)
-                    .font(.caption)
+            Button(action: { deleteLogFile(logFile) }) {
+                Image(systemName: "trash").foregroundColor(.red).font(.caption)
             }
             .buttonStyle(PlainButtonStyle())
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
         .background(
-            RoundedRectangle(cornerRadius: 4)
+            RoundedRectangle(cornerRadius: MGStyle.Corner.sm)
                 .fill(selectedLogFile?.url == logFile.url ? Color.accentColor.opacity(0.1) : Color.clear)
         )
         .contentShape(Rectangle())
-        .onTapGesture {
-            selectLogFile(logFile)
-        }
+        .onTapGesture { selectLogFile(logFile) }
     }
     
     // MARK: - Plugins Section
     
     private var pluginsSection: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            sectionHeader("Plugin Management")
+        VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {
+            MGSectionHeader("Plugin Management")
             
-            VStack(alignment: .leading, spacing: 20) {
-                // Plugin Actions
+            MGContentCard {
                 HStack {
-                    Button(action: {
-                        showingInstallPlugin = true
-                    }) {
+                    Button(action: { showingInstallPlugin = true }) {
                         Label("Install Plugin", systemImage: "plus.circle")
                     }
                     .buttonStyle(.borderedProminent)
                     
-                    Button("Refresh") {
-                        refreshPlugins()
-                    }
-                    
+                    Button("Refresh") { refreshPlugins() }
                     Spacer()
-                    
                     Text("\(plugins.count) plugins loaded")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                        .font(.caption).foregroundColor(.secondary)
                 }
-                .padding()
-                .background(RoundedRectangle(cornerRadius: 8).fill(Color(NSColor.controlBackgroundColor)))
-                
-                // Plugins List
-                if !plugins.isEmpty {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Loaded Plugins")
-                            .font(.system(size: 14, weight: .semibold))
-                        
-                        ScrollView {
-                            VStack(alignment: .leading, spacing: 10) {
-                                ForEach(plugins, id: \.identifier) { plugin in
-                                    pluginRow(plugin)
-                                }
+            }
+            
+            if !plugins.isEmpty {
+                MGContentCard {
+                    Text("Loaded Plugins")
+                        .font(.system(size: MGStyle.FontSize.heading, weight: .semibold))
+                    
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 10) {
+                            ForEach(plugins, id: \.identifier) { plugin in
+                                pluginRow(plugin)
                             }
                         }
                     }
-                    .padding()
-                    .background(RoundedRectangle(cornerRadius: 8).fill(Color(NSColor.controlBackgroundColor)))
                 }
-                
-                // Plugin Details
-                if let plugin = selectedPlugin {
-                    pluginDetailsView(plugin)
-                }
+            }
+            
+            if let plugin = selectedPlugin {
+                pluginDetailsView(plugin)
             }
         }
     }
     
     private func pluginRow(_ plugin: PluginInfo) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
             HStack {
                 VStack(alignment: .leading, spacing: 3) {
                     HStack {
                         Text(plugin.name)
-                            .font(.system(size: 13, weight: .medium))
-                        
+                            .font(.system(size: MGStyle.FontSize.body, weight: .medium))
                         Text("v\(plugin.version)")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        
+                            .font(.caption).foregroundColor(.secondary)
                         if plugin.isBuiltIn {
-                            Text("BUILT-IN")
-                                .font(.caption2)
-                                .padding(.horizontal, 4)
-                                .padding(.vertical, 1)
-                                .background(RoundedRectangle(cornerRadius: 3).fill(Color.blue.opacity(0.2)))
-                                .foregroundColor(.blue)
+                            MGBadge("BUILT-IN", color: .blue)
                         }
                     }
-                    
                     Text(plugin.description)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .lineLimit(2)
-                    
+                        .font(.caption).foregroundColor(.secondary).lineLimit(2)
                     HStack(spacing: 10) {
                         Label("\(plugin.actionCount) actions", systemImage: "bolt.circle")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                        
+                            .font(.caption2).foregroundColor(.secondary)
                         Label(plugin.category.rawValue, systemImage: "tag")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                        
+                            .font(.caption2).foregroundColor(.secondary)
                         Text("by \(plugin.author)")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
+                            .font(.caption2).foregroundColor(.secondary)
                     }
                 }
-                
                 Spacer()
-                
                 VStack(spacing: 5) {
                     if !plugin.isBuiltIn {
-                        Button("Permissions") {
-                            showPluginPermissions(plugin)
-                        }
-                        .font(.caption)
-                        
-                        Button("Uninstall") {
-                            uninstallPlugin(plugin)
-                        }
-                        .font(.caption)
-                        .foregroundColor(.red)
+                        Button("Permissions") { showPluginPermissions(plugin) }.font(.caption)
+                        Button("Uninstall") { uninstallPlugin(plugin) }.font(.caption).foregroundColor(.red)
                     }
-                    
-                    Button("Reload") {
-                        reloadPlugin(plugin)
-                    }
-                    .font(.caption)
+                    Button("Reload") { reloadPlugin(plugin) }.font(.caption)
                 }
             }
-            
             Divider()
         }
         .padding(.vertical, 5)
         .contentShape(Rectangle())
-        .onTapGesture {
-            selectedPlugin = plugin
-        }
+        .onTapGesture { selectedPlugin = plugin }
     }
     
     private func pluginDetailsView(_ plugin: PluginInfo) -> some View {
-        VStack(alignment: .leading, spacing: 15) {
+        MGContentCard {
             Text("Plugin Details: \(plugin.name)")
-                .font(.system(size: 14, weight: .semibold))
+                .font(.system(size: MGStyle.FontSize.heading, weight: .semibold))
             
             Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 20, verticalSpacing: 8) {
                 GridRow {
-                    Text("Identifier:")
-                        .foregroundColor(.secondary)
-                    Text(plugin.identifier)
-                        .font(.system(.caption, design: .monospaced))
+                    Text("Identifier:").foregroundColor(.secondary)
+                    Text(plugin.identifier).font(.system(.caption, design: .monospaced))
                 }
-                
                 GridRow {
-                    Text("Permissions:")
-                        .foregroundColor(.secondary)
+                    Text("Permissions:").foregroundColor(.secondary)
                     Text(describePermissions(plugin.permissions))
                 }
-                
                 GridRow {
-                    Text("Status:")
-                        .foregroundColor(.secondary)
+                    Text("Status:").foregroundColor(.secondary)
                     HStack {
-                        Circle()
-                            .fill(plugin.isEnabled ? Color.green : Color.gray)
-                            .frame(width: 8, height: 8)
+                        Circle().fill(plugin.isEnabled ? Color.green : Color.gray).frame(width: 8, height: 8)
                         Text(plugin.isEnabled ? "Enabled" : "Disabled")
                     }
                 }
             }
             
-            // Plugin Actions List
             if plugin.actionCount > 0 {
                 VStack(alignment: .leading, spacing: 5) {
-                    Text("Provided Actions:")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    
+                    Text("Provided Actions:").font(.caption).foregroundColor(.secondary)
                     ScrollView {
                         VStack(alignment: .leading, spacing: 3) {
                             ForEach(uiServices.getPluginActions(plugin.identifier), id: \.id) { action in
                                 HStack {
-                                    Image(systemName: action.icon ?? "questionmark.circle")
-                                        .frame(width: 16)
-                                        .font(.caption)
-                                    Text(action.name)
-                                        .font(.caption)
+                                    Image(systemName: action.icon ?? "questionmark.circle").frame(width: 16).font(.caption)
+                                    Text(action.name).font(.caption)
                                 }
                             }
                         }
                     }
                     .frame(maxHeight: 100)
                     .padding(5)
-                    .background(RoundedRectangle(cornerRadius: 4).fill(Color(NSColor.textBackgroundColor)))
+                    .background(RoundedRectangle(cornerRadius: MGStyle.Corner.sm).fill(MGStyle.Colors.contentBackground))
                 }
             }
         }
-        .padding()
-        .background(RoundedRectangle(cornerRadius: 8).fill(Color(NSColor.controlBackgroundColor)))
     }
     
     // MARK: - Services Section
     
     private var filteredServicePlugins: [ServicePluginInfo] {
         var result = servicePlugins
-        if let cat = serviceCategory {
-            result = result.filter { $0.category == cat }
-        }
+        if let cat = serviceCategory { result = result.filter { $0.category == cat } }
         if !serviceSearchText.isEmpty {
             result = result.filter {
                 $0.name.localizedCaseInsensitiveContains(serviceSearchText) ||
@@ -598,20 +415,17 @@ struct DeveloperView: View {
         return result.sorted { $0.name < $1.name }
     }
     
-    /// Categories that actually have services loaded
     private var activeServiceCategories: [ServiceCategory] {
         let cats = Set(servicePlugins.map(\.category))
         return ServiceCategory.allCases.filter { cats.contains($0) }
     }
     
     private var servicesSection: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            sectionHeader("Services")
+        VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {
+            MGSectionHeader("Services")
             
-            // Toolbar: category filter, search, install, refresh
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 12) {
-                    // Category picker
+            MGContentCard {
+                HStack(spacing: MGStyle.Spacing.lg) {
                     Picker("Category:", selection: $serviceCategory) {
                         Text("All").tag(ServiceCategory?.none)
                         Divider()
@@ -621,49 +435,30 @@ struct DeveloperView: View {
                     }
                     .frame(width: 220)
                     
-                    // Search
-                    HStack {
-                        Image(systemName: "magnifyingglass")
-                            .foregroundColor(.secondary)
-                        TextField("Search services...", text: $serviceSearchText)
-                            .textFieldStyle(PlainTextFieldStyle())
-                    }
-                    .padding(6)
-                    .background(Color(NSColor.controlBackgroundColor))
-                    .cornerRadius(6)
-                    .frame(maxWidth: 220)
+                    MGSearchField("Search services...", text: $serviceSearchText)
+                        .frame(maxWidth: 220)
                     
                     Spacer()
                     
                     Button(action: { serviceActiveSheet = .install }) {
                         Label("Install", systemImage: "plus.circle")
                     }
-                    
                     Button(action: loadServicePlugins) {
                         Image(systemName: "arrow.clockwise")
                     }
                 }
                 
                 Text("\(filteredServicePlugins.count) service\(filteredServicePlugins.count == 1 ? "" : "s")")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                    .font(.caption).foregroundColor(.secondary)
             }
-            .padding()
-            .background(RoundedRectangle(cornerRadius: 8).fill(Color(NSColor.controlBackgroundColor)))
             
-            // Service list
             if filteredServicePlugins.isEmpty {
-                VStack(spacing: 12) {
-                    Image(systemName: "tray")
-                        .font(.system(size: 32))
-                        .foregroundColor(.secondary)
-                    Text(servicePlugins.isEmpty ? "No services loaded" : "No services match the current filter")
-                        .foregroundColor(.secondary)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 40)
+                MGEmptyState(
+                    icon: "tray",
+                    title: servicePlugins.isEmpty ? "No services loaded" : "No services match the current filter"
+                )
             } else {
-                LazyVStack(alignment: .leading, spacing: 8) {
+                LazyVStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
                     ForEach(filteredServicePlugins) { plugin in
                         ServiceRow(plugin: plugin) {
                             serviceActiveSheet = .configure(plugin)
@@ -679,131 +474,67 @@ struct DeveloperView: View {
     // MARK: - Performance Section
     
     private var performanceSection: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            sectionHeader("Performance Monitoring")
+        VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {
+            MGSectionHeader("Performance Monitoring")
             
-            VStack(alignment: .leading, spacing: 20) {
-                // System Permissions
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("System Permissions")
-                        .font(.system(size: 14, weight: .semibold))
-                    
-                    HStack(spacing: 10) {
-                        Text("Accessibility:")
-                            .foregroundColor(.secondary)
-                        
-                        if hasAccessibilityPermissions() {
-                            Label("Granted", systemImage: "checkmark.circle.fill")
-                                .foregroundColor(.green)
-                                .font(.caption)
-                        } else {
-                            Label("Not Granted", systemImage: "exclamationmark.triangle.fill")
-                                .foregroundColor(.orange)
-                                .font(.caption)
-                        }
-                        
-                        if !hasAccessibilityPermissions() {
-                            Button("Open System Settings") {
-                                openAccessibilityPreferences()
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .controlSize(.small)
-                        }
-                    }
-                    
-                    Text("Accessibility permissions are required for MouseGestures to detect and respond to mouse and keyboard events.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                .padding()
-                .background(RoundedRectangle(cornerRadius: 8).fill(Color(NSColor.controlBackgroundColor)))
+            MGContentCard {
+                Text("System Permissions")
+                    .font(.system(size: MGStyle.FontSize.heading, weight: .semibold))
                 
-                // Memory Usage
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Memory Usage")
-                        .font(.system(size: 14, weight: .semibold))
-                    
-                    Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 30, verticalSpacing: 8) {
-                        GridRow {
-                            Text("Resident Memory:")
-                                .foregroundColor(.secondary)
-                            Text(memoryUsage.resident)
-                                .font(.system(.body, design: .monospaced))
-                        }
-                        
-                        GridRow {
-                            Text("Virtual Memory:")
-                                .foregroundColor(.secondary)
-                            Text(memoryUsage.virtual)
-                                .font(.system(.body, design: .monospaced))
-                        }
-                        
-                        GridRow {
-                            Text("System Memory:")
-                                .foregroundColor(.secondary)
-                            Text(perfMonitor.getSystemMemory())
-                                .font(.system(.body, design: .monospaced))
-                        }
+                HStack(spacing: 10) {
+                    Text("Accessibility:").foregroundColor(.secondary)
+                    if hasAccessibilityPermissions() {
+                        Label("Granted", systemImage: "checkmark.circle.fill").foregroundColor(.green).font(.caption)
+                    } else {
+                        Label("Not Granted", systemImage: "exclamationmark.triangle.fill").foregroundColor(.orange).font(.caption)
+                        Button("Open System Settings") { openAccessibilityPreferences() }
+                            .buttonStyle(.borderedProminent).controlSize(.small)
                     }
                 }
-                .padding()
-                .background(RoundedRectangle(cornerRadius: 8).fill(Color(NSColor.controlBackgroundColor)))
-                
-                // CPU Usage
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("CPU Usage")
-                        .font(.system(size: 14, weight: .semibold))
-                    
-                    HStack {
-                        ProgressView(value: min(cpuUsage, 100), total: 100)
-                            .progressViewStyle(.linear)
-                        
-                        Text(String(format: "%.1f%%", cpuUsage))
-                            .font(.system(.body, design: .monospaced))
-                            .frame(width: 60)
+                Text("Accessibility permissions are required for MouseGestures to detect and respond to mouse and keyboard events.")
+                    .font(.caption).foregroundColor(.secondary)
+            }
+            
+            MGContentCard {
+                Text("Memory Usage")
+                    .font(.system(size: MGStyle.FontSize.heading, weight: .semibold))
+                Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 30, verticalSpacing: 8) {
+                    GridRow {
+                        Text("Resident Memory:").foregroundColor(.secondary)
+                        Text(memoryUsage.resident).font(.system(.body, design: .monospaced))
                     }
-                    
-                    Text("Processor: \(perfMonitor.getProcessorCount()) cores")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                .padding()
-                .background(RoundedRectangle(cornerRadius: 8).fill(Color(NSColor.controlBackgroundColor)))
-                
-                // System Info
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("System Information")
-                        .font(.system(size: 14, weight: .semibold))
-                    
-                    Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 30, verticalSpacing: 8) {
-                        GridRow {
-                            Text("macOS Version:")
-                                .foregroundColor(.secondary)
-                            Text(perfMonitor.getSystemVersion())
-                        }
-                        
-                        GridRow {
-                            Text("App Version:")
-                                .foregroundColor(.secondary)
-                            Text(perfMonitor.getAppVersion())
-                        }
-                        
-                        GridRow {
-                            Text("Process ID:")
-                                .foregroundColor(.secondary)
-                            Text("\(perfMonitor.getProcessID())")
-                                .font(.system(.body, design: .monospaced))
-                        }
-                        
-                        GridRow {
-                            Text("Uptime:")
-                                .foregroundColor(.secondary)
-                            Text(perfMonitor.getUptime())
-                        }
+                    GridRow {
+                        Text("Virtual Memory:").foregroundColor(.secondary)
+                        Text(memoryUsage.virtual).font(.system(.body, design: .monospaced))
+                    }
+                    GridRow {
+                        Text("System Memory:").foregroundColor(.secondary)
+                        Text(perfMonitor.getSystemMemory()).font(.system(.body, design: .monospaced))
                     }
                 }
-                .padding()
-                .background(RoundedRectangle(cornerRadius: 8).fill(Color(NSColor.controlBackgroundColor)))
+            }
+            
+            MGContentCard {
+                Text("CPU Usage")
+                    .font(.system(size: MGStyle.FontSize.heading, weight: .semibold))
+                HStack {
+                    ProgressView(value: min(cpuUsage, 100), total: 100).progressViewStyle(.linear)
+                    Text(String(format: "%.1f%%", cpuUsage))
+                        .font(.system(.body, design: .monospaced)).frame(width: 60)
+                }
+                Text("Processor: \(perfMonitor.getProcessorCount()) cores")
+                    .font(.caption).foregroundColor(.secondary)
+            }
+            
+            MGContentCard {
+                Text("System Information")
+                    .font(.system(size: MGStyle.FontSize.heading, weight: .semibold))
+                Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 30, verticalSpacing: 8) {
+                    GridRow { Text("macOS Version:").foregroundColor(.secondary); Text(perfMonitor.getSystemVersion()) }
+                    GridRow { Text("App Version:").foregroundColor(.secondary); Text(perfMonitor.getAppVersion()) }
+                    GridRow { Text("Process ID:").foregroundColor(.secondary); Text("\(perfMonitor.getProcessID())").font(.system(.body, design: .monospaced)) }
+                    GridRow { Text("Uptime:").foregroundColor(.secondary); Text(perfMonitor.getUptime()) }
+                }
             }
         }
     }
@@ -811,105 +542,59 @@ struct DeveloperView: View {
     // MARK: - Diagnostics Section
     
     private var diagnosticsSection: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            sectionHeader("System Diagnostics")
+        VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {
+            MGSectionHeader("System Diagnostics")
             
-            VStack(alignment: .leading, spacing: 20) {
-                // Debug Report
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Debug Report")
-                        .font(.system(size: 14, weight: .semibold))
-                    
-                    Text("Generate a comprehensive debug report containing system information, configuration, and diagnostics")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    
-                    HStack {
-                        Button("Generate Report") {
-                            generateDebugReport()
-                        }
-                        .buttonStyle(.borderedProminent)
-                        
-                        if !debugReport.isEmpty {
-                            Button("Copy to Clipboard") {
-                                NSPasteboard.general.clearContents()
-                                NSPasteboard.general.setString(debugReport, forType: .string)
-                                successMessage = "Report copied to clipboard"
-                            }
-                            
-                            Button("Export") {
-                                showingExportReport = true
-                            }
-                        }
-                    }
-                    
-                    if !debugReport.isEmpty {
-                        ScrollView {
-                            Text(debugReport)
-                                .font(.system(.caption, design: .monospaced))
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(10)
-                        }
-                        .frame(height: 300)
-                        .background(RoundedRectangle(cornerRadius: 6).fill(Color(NSColor.textBackgroundColor)))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 6)
-                                .stroke(Color.gray.opacity(0.3))
-                        )
-                    }
-                }
-                .padding()
-                .background(RoundedRectangle(cornerRadius: 8).fill(Color(NSColor.controlBackgroundColor)))
+            MGContentCard {
+                Text("Debug Report")
+                    .font(.system(size: MGStyle.FontSize.heading, weight: .semibold))
+                Text("Generate a comprehensive debug report containing system information, configuration, and diagnostics")
+                    .font(.caption).foregroundColor(.secondary)
                 
-                // Quick Actions
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Quick Actions")
-                        .font(.system(size: 14, weight: .semibold))
-                    
-                    VStack(alignment: .leading, spacing: 10) {
-                        Button("Reset All Preferences") {
-                            resetPreferences()
+                HStack {
+                    Button("Generate Report") { generateDebugReport() }.buttonStyle(.borderedProminent)
+                    if !debugReport.isEmpty {
+                        Button("Copy to Clipboard") {
+                            NSPasteboard.general.clearContents()
+                            NSPasteboard.general.setString(debugReport, forType: .string)
+                            successMessage = "Report copied to clipboard"
                         }
-                        .foregroundColor(.red)
-                        
-                        Button("Clear All Caches") {
-                            clearCaches()
-                        }
-                        
-                        Button("Reload All Plugins") {
-                            reloadAllPlugins()
-                        }
-                        
-                        Button("Export All Logs") {
-                            exportAllLogs()
-                        }
+                        Button("Export") { showingExportReport = true }
                     }
                 }
-                .padding()
-                .background(RoundedRectangle(cornerRadius: 8).fill(Color(NSColor.controlBackgroundColor)))
+                
+                if !debugReport.isEmpty {
+                    ScrollView {
+                        Text(debugReport)
+                            .font(.system(.caption, design: .monospaced))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(10)
+                    }
+                    .frame(height: 300)
+                    .background(RoundedRectangle(cornerRadius: MGStyle.Corner.md).fill(MGStyle.Colors.contentBackground))
+                    .overlay(RoundedRectangle(cornerRadius: MGStyle.Corner.md).stroke(Color.gray.opacity(0.3)))
+                }
             }
             
-            // Messages
+            MGContentCard {
+                Text("Quick Actions")
+                    .font(.system(size: MGStyle.FontSize.heading, weight: .semibold))
+                
+                VStack(alignment: .leading, spacing: 10) {
+                    Button("Reset All Preferences") { resetPreferences() }.foregroundColor(.red)
+                    Button("Clear All Caches") { clearCaches() }
+                    Button("Reload All Plugins") { reloadAllPlugins() }
+                    Button("Export All Logs") { exportAllLogs() }
+                }
+            }
+            
             if let message = successMessage {
-                Label(message, systemImage: "checkmark.circle.fill")
-                    .font(.caption)
-                    .foregroundColor(.green)
+                Label(message, systemImage: "checkmark.circle.fill").font(.caption).foregroundColor(.green)
             }
-            
             if let message = errorMessage {
-                Label(message, systemImage: "exclamationmark.triangle.fill")
-                    .font(.caption)
-                    .foregroundColor(.red)
+                Label(message, systemImage: "exclamationmark.triangle.fill").font(.caption).foregroundColor(.red)
             }
         }
-    }
-    
-    // MARK: - Helper Views
-    
-    private func sectionHeader(_ title: String) -> some View {
-        Text(title)
-            .font(.title2)
-            .fontWeight(.semibold)
     }
     
     // MARK: - Helper Functions
@@ -947,10 +632,8 @@ struct DeveloperView: View {
             let attributes = try? FileManager.default.attributesOfItem(atPath: url.path)
             let size = attributes?[.size] as? Int64 ?? 0
             let date = attributes?[.creationDate] as? Date ?? Date()
-            
             return LogFileInfo(
-                url: url,
-                name: url.lastPathComponent,
+                url: url, name: url.lastPathComponent,
                 size: ByteCountFormatter.string(fromByteCount: size, countStyle: .file),
                 date: date.formatted(date: .abbreviated, time: .shortened)
             )
@@ -960,19 +643,12 @@ struct DeveloperView: View {
     private func selectLogFile(_ logFile: LogFileInfo) {
         selectedLogFile = logFile
         isLoadingLogContent = true
-        
         DispatchQueue.global().async {
             do {
                 let content = try String(contentsOf: logFile.url, encoding: .utf8)
-                DispatchQueue.main.async {
-                    self.logContent = content
-                    self.isLoadingLogContent = false
-                }
+                DispatchQueue.main.async { self.logContent = content; self.isLoadingLogContent = false }
             } catch {
-                DispatchQueue.main.async {
-                    self.logContent = "Error loading log file: \(error.localizedDescription)"
-                    self.isLoadingLogContent = false
-                }
+                DispatchQueue.main.async { self.logContent = "Error loading log file: \(error.localizedDescription)"; self.isLoadingLogContent = false }
             }
         }
     }
@@ -980,20 +656,12 @@ struct DeveloperView: View {
     private func deleteLogFile(_ logFile: LogFileInfo) {
         if uiServices.deleteLogFile(logFile.url) {
             refreshLogFiles()
-            if selectedLogFile?.url == logFile.url {
-                selectedLogFile = nil
-                logContent = ""
-            }
+            if selectedLogFile?.url == logFile.url { selectedLogFile = nil; logContent = "" }
         }
     }
     
     private func clearAllLogs() {
-        if uiServices.clearAllLogs() {
-            refreshLogFiles()
-            selectedLogFile = nil
-            logContent = ""
-            successMessage = "All logs cleared"
-        }
+        if uiServices.clearAllLogs() { refreshLogFiles(); selectedLogFile = nil; logContent = ""; successMessage = "All logs cleared" }
     }
     
     private func openLogsFolder() {
@@ -1005,68 +673,49 @@ struct DeveloperView: View {
         let savePanel = NSSavePanel()
         savePanel.allowedContentTypes = [.log]
         savePanel.nameFieldStringValue = logFile.name
-        
         savePanel.begin { response in
             if response == .OK, let url = savePanel.url {
                 do {
                     try FileManager.default.copyItem(at: logFile.url, to: url)
                     successMessage = "Log exported successfully"
-                } catch {
-                    errorMessage = "Failed to export log: \(error.localizedDescription)"
-                }
+                } catch { errorMessage = "Failed to export log: \(error.localizedDescription)" }
             }
         }
     }
     
-    private func refreshPlugins() {
-        plugins = uiServices.getLoadedPlugins()
-    }
+    private func refreshPlugins() { plugins = uiServices.getLoadedPlugins() }
     
     private func handlePluginInstall(result: Result<[URL], Error>) {
         switch result {
         case .success(let urls):
             guard let url = urls.first else { return }
-            if uiServices.installPlugin(from: url) {
-                refreshPlugins()
-                successMessage = "Plugin installed successfully"
-            } else {
-                errorMessage = uiServices.errorMessage ?? "Failed to install plugin"
-            }
-        case .failure(let error):
-            errorMessage = "Install failed: \(error.localizedDescription)"
+            if uiServices.installPlugin(from: url) { refreshPlugins(); successMessage = "Plugin installed successfully" }
+            else { errorMessage = uiServices.errorMessage ?? "Failed to install plugin" }
+        case .failure(let error): errorMessage = "Install failed: \(error.localizedDescription)"
         }
     }
     
     private func uninstallPlugin(_ plugin: PluginInfo) {
         if uiServices.uninstallPlugin(plugin.identifier) {
             refreshPlugins()
-            if selectedPlugin?.identifier == plugin.identifier {
-                selectedPlugin = nil
-            }
+            if selectedPlugin?.identifier == plugin.identifier { selectedPlugin = nil }
             successMessage = "Plugin uninstalled"
         }
     }
     
     private func reloadPlugin(_ plugin: PluginInfo) {
-        if uiServices.reloadPlugin(plugin.identifier) {
-            refreshPlugins()
-            successMessage = "Plugin reloaded"
-        } else {
-            errorMessage = "Failed to reload plugin"
-        }
+        if uiServices.reloadPlugin(plugin.identifier) { refreshPlugins(); successMessage = "Plugin reloaded" }
+        else { errorMessage = "Failed to reload plugin" }
     }
     
     private func showPluginPermissions(_ plugin: PluginInfo) {
-        let perms = describePermissions(plugin.permissions)
-        successMessage = "Permissions: \(perms)"
+        successMessage = "Permissions: \(describePermissions(plugin.permissions))"
     }
     
     private func describePermissions(_ permissions: PluginPermissions) -> String {
-        if permissions == .builtIn {
-            return "Full Access (Built-in)"
-        } else if permissions == .restricted {
-            return "Restricted"
-        } else {
+        if permissions == .builtIn { return "Full Access (Built-in)" }
+        else if permissions == .restricted { return "Restricted" }
+        else {
             var perms: [String] = []
             if permissions.canAccessFileSystem { perms.append("Files") }
             if permissions.canAccessNetwork { perms.append("Network") }
@@ -1077,18 +726,11 @@ struct DeveloperView: View {
         }
     }
     
-    // MARK: - Service Helpers
-    
-    private func loadServicePlugins() {
-        servicePlugins = servicePluginManager.getAllPlugins()
-    }
+    private func loadServicePlugins() { servicePlugins = servicePluginManager.getAllPlugins() }
     
     private func toggleServicePlugin(_ plugin: ServicePluginInfo) {
-        if plugin.isEnabled {
-            _ = servicePluginManager.disablePlugin(identifier: plugin.identifier)
-        } else {
-            _ = servicePluginManager.enablePlugin(identifier: plugin.identifier)
-        }
+        if plugin.isEnabled { _ = servicePluginManager.disablePlugin(identifier: plugin.identifier) }
+        else { _ = servicePluginManager.enablePlugin(identifier: plugin.identifier) }
         loadServicePlugins()
     }
     
@@ -1104,58 +746,36 @@ struct DeveloperView: View {
         loadServicePlugins()
     }
     
-    // MARK: - General Helpers
-    
-    private func generateDebugReport() {
-        debugReport = uiServices.generateDebugReport()
-        successMessage = "Debug report generated"
-    }
+    private func generateDebugReport() { debugReport = uiServices.generateDebugReport(); successMessage = "Debug report generated" }
     
     private func handleReportExport(result: Result<URL, Error>) {
         switch result {
-        case .success:
-            successMessage = "Report exported successfully"
-        case .failure(let error):
-            errorMessage = "Export failed: \(error.localizedDescription)"
+        case .success: successMessage = "Report exported successfully"
+        case .failure(let error): errorMessage = "Export failed: \(error.localizedDescription)"
         }
     }
     
-    private func resetPreferences() {
-        uiServices.resetAppToDefaults()
-        successMessage = "Preferences reset to defaults"
-    }
-    
-    private func clearCaches() {
-        successMessage = "Caches cleared"
-    }
+    private func resetPreferences() { uiServices.resetAppToDefaults(); successMessage = "Preferences reset to defaults" }
+    private func clearCaches() { successMessage = "Caches cleared" }
     
     private func reloadAllPlugins() {
-        for plugin in plugins where !plugin.isBuiltIn {
-            _ = uiServices.reloadPlugin(plugin.identifier)
-        }
-        refreshPlugins()
-        successMessage = "All plugins reloaded"
+        for plugin in plugins where !plugin.isBuiltIn { _ = uiServices.reloadPlugin(plugin.identifier) }
+        refreshPlugins(); successMessage = "All plugins reloaded"
     }
     
     private func exportAllLogs() {
         let savePanel = NSSavePanel()
         savePanel.allowedContentTypes = [UTType(filenameExtension: "zip") ?? .item]
         savePanel.nameFieldStringValue = "MouseGestures_Logs_\(Date().formatted(date: .numeric, time: .omitted).replacingOccurrences(of: "/", with: "-")).zip"
-        
         savePanel.begin { response in
             if response == .OK, let url = savePanel.url {
-                if uiServices.exportLogs(to: url) {
-                    successMessage = "Logs exported successfully"
-                } else {
-                    errorMessage = uiServices.errorMessage ?? "Failed to export logs"
-                }
+                if uiServices.exportLogs(to: url) { successMessage = "Logs exported successfully" }
+                else { errorMessage = uiServices.errorMessage ?? "Failed to export logs" }
             }
         }
     }
     
-    private func hasAccessibilityPermissions() -> Bool {
-        return AXIsProcessTrusted()
-    }
+    private func hasAccessibilityPermissions() -> Bool { return AXIsProcessTrusted() }
     
     private func openAccessibilityPreferences() {
         NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
@@ -1173,23 +793,13 @@ struct LogFileInfo {
 
 struct DebugReportDocument: FileDocument {
     static var readableContentTypes: [UTType] { [.plainText] }
-    
     var content: String
-    
-    init(content: String) {
-        self.content = content
-    }
-    
+    init(content: String) { self.content = content }
     init(configuration: ReadConfiguration) throws {
-        guard let data = configuration.file.regularFileContents,
-              let string = String(data: data, encoding: .utf8) else {
-            throw CocoaError(.fileReadCorruptFile)
-        }
+        guard let data = configuration.file.regularFileContents, let string = String(data: data, encoding: .utf8) else { throw CocoaError(.fileReadCorruptFile) }
         content = string
     }
-    
     func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
-        let data = content.data(using: .utf8)!
-        return FileWrapper(regularFileWithContents: data)
+        return FileWrapper(regularFileWithContents: content.data(using: .utf8)!)
     }
 }

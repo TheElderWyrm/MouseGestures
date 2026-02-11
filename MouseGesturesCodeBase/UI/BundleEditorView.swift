@@ -53,7 +53,7 @@ struct BundleEditorView: View {
     // MARK: - Header
     
     private var headerBar: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: MGStyle.Spacing.md) {
             Image(systemName: "square.stack.3d.up")
                 .font(.system(size: 16, weight: .medium))
                 .foregroundColor(.accentColor)
@@ -63,14 +63,14 @@ struct BundleEditorView: View {
             Text("\(bundledActions.count) action\(bundledActions.count == 1 ? "" : "s")")
                 .font(.system(size: 12))
                 .foregroundColor(.secondary)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 3)
-                .background(Color(NSColor.controlBackgroundColor))
-                .cornerRadius(4)
+                .padding(.horizontal, MGStyle.Spacing.md)
+                .padding(.vertical, MGStyle.Spacing.xs)
+                .background(MGStyle.Colors.cardBackground)
+                .cornerRadius(MGStyle.Corner.sm)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .background(Color(NSColor.windowBackgroundColor))
+        .padding(.horizontal, MGStyle.Spacing.xl)
+        .padding(.vertical, MGStyle.Spacing.lg)
+        .background(MGStyle.Colors.windowBackground)
     }
     
     // MARK: - Action List Panel (Left)
@@ -83,23 +83,22 @@ struct BundleEditorView: View {
                     .foregroundColor(.secondary)
                     .textCase(.uppercase)
                 Spacer()
-                // New action button when editing
                 if isEditing {
                     Button(action: { selection = nil }) {
-                        HStack(spacing: 3) {
+                        HStack(spacing: MGStyle.Spacing.xs) {
                             Image(systemName: "plus")
-                                .font(.system(size: 10))
+                                .font(.system(size: MGStyle.FontSize.badge))
                             Text("New")
-                                .font(.system(size: 11))
+                                .font(.system(size: MGStyle.FontSize.caption))
                         }
                     }
                     .buttonStyle(.borderless)
                     .help("Deselect and add a new action")
                 }
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
+            .padding(.horizontal, MGStyle.Spacing.lg)
+            .padding(.vertical, MGStyle.Spacing.md)
+            .background(MGStyle.Colors.subtleOverlay)
             
             Divider()
             
@@ -111,20 +110,19 @@ struct BundleEditorView: View {
             
             Divider()
             
-            // Bundle settings
             bundleSettingsBar
         }
-        .background(Color(NSColor.controlBackgroundColor).opacity(0.3))
+        .background(MGStyle.Colors.cardBackground.opacity(0.3))
     }
     
     private var emptyListPlaceholder: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: MGStyle.Spacing.lg) {
             Spacer()
             Image(systemName: "tray")
                 .font(.system(size: 32))
                 .foregroundColor(.secondary.opacity(0.5))
             Text("No Actions")
-                .font(.system(size: 14, weight: .medium))
+                .font(.system(size: MGStyle.FontSize.heading, weight: .medium))
                 .foregroundColor(.secondary)
             Text("Select an action from the right panel\nand click \"Add to Bundle\"")
                 .font(.system(size: 12))
@@ -163,11 +161,11 @@ struct BundleEditorView: View {
     }
     
     private var bundleSettingsBar: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
             Toggle(isOn: $stopOnFailure) {
-                HStack(spacing: 4) {
+                HStack(spacing: MGStyle.Spacing.sm) {
                     Image(systemName: "exclamationmark.octagon")
-                        .font(.system(size: 10))
+                        .font(.system(size: MGStyle.FontSize.badge))
                         .foregroundColor(.secondary)
                     Text("Stop on failure")
                         .font(.system(size: 12))
@@ -176,9 +174,9 @@ struct BundleEditorView: View {
             .toggleStyle(.checkbox)
             
             Toggle(isOn: $parallelExecution) {
-                HStack(spacing: 4) {
+                HStack(spacing: MGStyle.Spacing.sm) {
                     Image(systemName: "arrow.triangle.branch")
-                        .font(.system(size: 10))
+                        .font(.system(size: MGStyle.FontSize.badge))
                         .foregroundColor(.secondary)
                     Text("Parallel execution")
                         .font(.system(size: 12))
@@ -186,21 +184,21 @@ struct BundleEditorView: View {
             }
             .toggleStyle(.checkbox)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.horizontal, MGStyle.Spacing.lg)
+        .padding(.vertical, MGStyle.Spacing.md)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
+        .background(MGStyle.Colors.subtleOverlay)
     }
     
     // MARK: - Right Panel (Add / Edit)
     
     private var rightPanel: some View {
         VStack(spacing: 0) {
-            // Panel header — changes based on mode
-            HStack(spacing: 6) {
+            // Panel header
+            HStack(spacing: MGStyle.Spacing.md) {
                 if isEditing, let idx = editingIndex {
                     Image(systemName: "pencil")
-                        .font(.system(size: 11, weight: .medium))
+                        .font(.system(size: MGStyle.FontSize.caption, weight: .medium))
                         .foregroundColor(.accentColor)
                     Text("Editing Action #\(idx + 1)")
                         .font(.system(size: 12, weight: .semibold))
@@ -208,7 +206,7 @@ struct BundleEditorView: View {
                         .textCase(.uppercase)
                 } else {
                     Image(systemName: "plus.circle")
-                        .font(.system(size: 11, weight: .medium))
+                        .font(.system(size: MGStyle.FontSize.caption, weight: .medium))
                         .foregroundColor(.accentColor)
                     Text("Add Action")
                         .font(.system(size: 12, weight: .semibold))
@@ -217,15 +215,15 @@ struct BundleEditorView: View {
                 }
                 Spacer()
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
+            .padding(.horizontal, MGStyle.Spacing.lg)
+            .padding(.vertical, MGStyle.Spacing.md)
+            .background(MGStyle.Colors.subtleOverlay)
             
             Divider()
             
             // Action selection + params
             ScrollView {
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
                     ActionSelectionView(
                         selectedActionId: $editorActionId,
                         actionParameters: $editorParams
@@ -233,7 +231,7 @@ struct BundleEditorView: View {
                     
                     // Delay field
                     GroupBox("Delay After") {
-                        HStack(spacing: 8) {
+                        HStack(spacing: MGStyle.Spacing.md) {
                             TextField("0.2", text: $editorDelay)
                                 .textFieldStyle(.roundedBorder)
                                 .frame(width: 70)
@@ -241,11 +239,11 @@ struct BundleEditorView: View {
                                 .font(.system(size: 12))
                                 .foregroundColor(.secondary)
                         }
-                        .padding(.vertical, 4)
+                        .padding(.vertical, MGStyle.Spacing.sm)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
-                .padding(12)
+                .padding(MGStyle.Spacing.lg)
             }
             
             Divider()
@@ -254,11 +252,11 @@ struct BundleEditorView: View {
             HStack {
                 if isEditing {
                     Button(action: { removeSelectedAction() }) {
-                        HStack(spacing: 4) {
+                        HStack(spacing: MGStyle.Spacing.sm) {
                             Image(systemName: "trash")
                                 .font(.system(size: 12))
                             Text("Remove")
-                                .font(.system(size: 13, weight: .medium))
+                                .font(.system(size: MGStyle.FontSize.body, weight: .medium))
                         }
                         .foregroundColor(.red)
                     }
@@ -269,31 +267,31 @@ struct BundleEditorView: View {
                 
                 if isEditing {
                     Button(action: applyEdits) {
-                        HStack(spacing: 4) {
+                        HStack(spacing: MGStyle.Spacing.sm) {
                             Image(systemName: "checkmark.circle.fill")
                                 .font(.system(size: 12))
                             Text("Update Action")
-                                .font(.system(size: 13, weight: .medium))
+                                .font(.system(size: MGStyle.FontSize.body, weight: .medium))
                         }
                     }
                     .controlSize(.large)
                     .disabled(editorActionId.isEmpty)
                 } else {
                     Button(action: addActionToBundle) {
-                        HStack(spacing: 4) {
+                        HStack(spacing: MGStyle.Spacing.sm) {
                             Image(systemName: "plus.circle.fill")
                                 .font(.system(size: 12))
                             Text("Add to Bundle")
-                                .font(.system(size: 13, weight: .medium))
+                                .font(.system(size: MGStyle.FontSize.body, weight: .medium))
                         }
                     }
                     .controlSize(.large)
                     .disabled(editorActionId.isEmpty)
                 }
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
+            .padding(.horizontal, MGStyle.Spacing.lg)
+            .padding(.vertical, MGStyle.Spacing.md)
+            .background(MGStyle.Colors.subtleOverlay)
         }
     }
     
@@ -308,9 +306,9 @@ struct BundleEditorView: View {
                 .keyboardShortcut(.return, modifiers: [])
                 .buttonStyle(.borderedProminent)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .background(Color(NSColor.windowBackgroundColor))
+        .padding(.horizontal, MGStyle.Spacing.xl)
+        .padding(.vertical, MGStyle.Spacing.lg)
+        .background(MGStyle.Colors.windowBackground)
     }
     
     // MARK: - Selection ↔ Editor Sync
@@ -327,7 +325,6 @@ struct BundleEditorView: View {
                 isLoadingSelection = false
             }
         } else {
-            // Switching to add mode — clear editor
             editorActionId = ""
             editorParams.removeAll()
             editorDelay = "0.2"
@@ -344,8 +341,6 @@ struct BundleEditorView: View {
             delayAfter: Double(editorDelay) ?? 0.2
         )
         bundledActions.append(action)
-        
-        // Deselect so the editor resets for adding the next action
         selection = nil
     }
     
@@ -418,7 +413,6 @@ struct BundleActionRow: View {
     let isLast: Bool
     @Binding var delay: TimeInterval
     
-    // Action closures from parent
     let onMoveUp: () -> Void
     let onMoveDown: () -> Void
     let onDuplicate: () -> Void
@@ -429,31 +423,31 @@ struct BundleActionRow: View {
     @State private var delayText: String = ""
     
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: MGStyle.Spacing.md) {
             // Order number
             Text("\(index + 1)")
-                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                .font(.system(size: MGStyle.FontSize.caption, weight: .medium, design: .monospaced))
                 .foregroundColor(.secondary)
                 .frame(width: 22, alignment: .center)
-                .padding(.vertical, 2)
-                .background(Color(NSColor.controlBackgroundColor))
-                .cornerRadius(4)
+                .padding(.vertical, MGStyle.Spacing.xs)
+                .background(MGStyle.Colors.cardBackground)
+                .cornerRadius(MGStyle.Corner.sm)
             
             // Condition indicator
             if action.condition != nil && !(action.condition?.conditions.isEmpty ?? true) {
                 Image(systemName: "questionmark.diamond.fill")
-                    .font(.system(size: 10))
+                    .font(.system(size: MGStyle.FontSize.badge))
                     .foregroundColor(.orange)
                     .help("Has condition: \(action.condition?.displayString ?? "")")
             }
             
             // Action icon + name
             VStack(alignment: .leading, spacing: 1) {
-                HStack(spacing: 4) {
+                HStack(spacing: MGStyle.Spacing.sm) {
                     if let (_, pluginAction) = PluginManager.shared.getAction(identifier: action.actionIdentifier),
                        let icon = pluginAction.icon {
                         Image(systemName: icon)
-                            .font(.system(size: 10))
+                            .font(.system(size: MGStyle.FontSize.badge))
                             .foregroundColor(.accentColor)
                     }
                     Text(actionDisplayName)
@@ -463,7 +457,7 @@ struct BundleActionRow: View {
                 
                 if !action.parameters.isEmpty {
                     Text(parameterSummary)
-                        .font(.system(size: 10))
+                        .font(.system(size: MGStyle.FontSize.badge))
                         .foregroundColor(.secondary)
                         .lineLimit(1)
                 }
@@ -473,7 +467,7 @@ struct BundleActionRow: View {
             
             // Inline control buttons (visible on hover)
             if isHovered {
-                HStack(spacing: 2) {
+                HStack(spacing: MGStyle.Spacing.xs) {
                     rowButton(icon: "chevron.up", help: "Move Up", disabled: isFirst, action: onMoveUp)
                     rowButton(icon: "chevron.down", help: "Move Down", disabled: isLast, action: onMoveDown)
                     rowButton(icon: "doc.on.doc", help: "Duplicate", action: onDuplicate)
@@ -482,7 +476,7 @@ struct BundleActionRow: View {
                 .transition(.opacity)
             } else {
                 // Delay (shown when not hovered)
-                HStack(spacing: 2) {
+                HStack(spacing: MGStyle.Spacing.xs) {
                     Image(systemName: "clock")
                         .font(.system(size: 9))
                         .foregroundColor(.secondary)
@@ -491,18 +485,18 @@ struct BundleActionRow: View {
                         TextField("", text: $delayText, onCommit: commitDelay)
                             .textFieldStyle(.roundedBorder)
                             .frame(width: 42)
-                            .font(.system(size: 11, design: .monospaced))
+                            .font(.system(size: MGStyle.FontSize.caption, design: .monospaced))
                             .onAppear { delayText = String(format: "%.1f", delay) }
                     } else {
                         Text(String(format: "%.1fs", delay))
-                            .font(.system(size: 11, design: .monospaced))
+                            .font(.system(size: MGStyle.FontSize.caption, design: .monospaced))
                             .foregroundColor(.secondary)
                             .onTapGesture { isEditingDelay = true }
                     }
                 }
             }
         }
-        .padding(.vertical, 3)
+        .padding(.vertical, MGStyle.Spacing.xs)
         .contentShape(Rectangle())
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.15)) {
@@ -527,7 +521,7 @@ struct BundleActionRow: View {
     private func rowButton(icon: String, help: String, disabled: Bool = false, isDestructive: Bool = false, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: icon)
-                .font(.system(size: 10))
+                .font(.system(size: MGStyle.FontSize.badge))
                 .foregroundColor(disabled ? .secondary.opacity(0.3) : (isDestructive ? .red : .secondary))
                 .frame(width: 18, height: 18)
         }

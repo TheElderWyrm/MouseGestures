@@ -144,9 +144,9 @@ struct DetectionSubcategoryView: View {
             Text("No settings available")
                 .foregroundColor(.secondary)
                 .frame(maxWidth: .infinity, alignment: .center)
-                .padding(.vertical, 20)
+                .padding(.vertical, MGStyle.Spacing.xxl)
         } else {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.xl) {
                 ForEach(visibleItems, id: \.definition.key) { item in
                     PluginSettingRow(
                         plugin: item.plugin,
@@ -181,16 +181,16 @@ private struct DeveloperModeSettingView: View {
     var body: some View {
         Toggle(isOn: $developerModeEnabled) {
             VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
+                HStack(spacing: MGStyle.Spacing.md) {
                     Text("Developer Mode")
-                        .font(.system(size: 13, weight: .medium))
+                        .font(.system(size: MGStyle.FontSize.body, weight: .medium))
                     Text("Advanced")
                         .font(.system(size: 9))
-                        .padding(.horizontal, 4)
-                        .padding(.vertical, 2)
+                        .padding(.horizontal, MGStyle.Spacing.sm)
+                        .padding(.vertical, MGStyle.Spacing.xs)
                         .background(Color.orange.opacity(0.2))
                         .foregroundColor(.orange)
-                        .cornerRadius(3)
+                        .cornerRadius(MGStyle.Corner.sm)
                 }
                 Text("Show Developer tab with logging, plugins, performance, services, and diagnostics")
                     .font(.caption)
@@ -219,16 +219,16 @@ struct DataManagementSettingsView: View {
     @State private var errorMessage: String?
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
                 Text("Settings Backup")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: MGStyle.FontSize.heading, weight: .semibold))
                 
                 Text("Export or import all application settings, including profiles, gestures, and preferences")
                     .font(.caption)
                     .foregroundColor(.secondary)
                 
-                HStack(spacing: 10) {
+                HStack(spacing: MGStyle.Spacing.lg) {
                     Button(action: { showingExportDialog = true }) {
                         Label("Export Settings", systemImage: "square.and.arrow.up")
                             .frame(maxWidth: .infinity)
@@ -254,9 +254,9 @@ struct DataManagementSettingsView: View {
             
             Divider()
             
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
                 Text("Reset Application")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: MGStyle.FontSize.heading, weight: .semibold))
                 Text("Reset all settings, profiles, and gestures to factory defaults")
                     .font(.caption).foregroundColor(.secondary)
                 
@@ -331,25 +331,25 @@ struct AboutSettingsView: View {
     @State private var updateMessage: String?
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            VStack(alignment: .leading, spacing: 10) {
-                Text("Version Information").font(.system(size: 14, weight: .semibold))
+        VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
+                Text("Version Information").font(.system(size: MGStyle.FontSize.heading, weight: .semibold))
                 HStack {
-                    Text("Current Version:").font(.system(size: 13))
+                    Text("Current Version:").font(.system(size: MGStyle.FontSize.body))
                     Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown")
-                        .font(.system(size: 13, weight: .medium))
+                        .font(.system(size: MGStyle.FontSize.body, weight: .medium))
                 }
                 HStack {
-                    Text("Build Number:").font(.system(size: 13))
+                    Text("Build Number:").font(.system(size: MGStyle.FontSize.body))
                     Text(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "Unknown")
-                        .font(.system(size: 13, weight: .medium))
+                        .font(.system(size: MGStyle.FontSize.body, weight: .medium))
                 }
             }
             
             Divider()
             
-            VStack(alignment: .leading, spacing: 10) {
-                Text("Check for Updates").font(.system(size: 14, weight: .semibold))
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
+                Text("Check for Updates").font(.system(size: MGStyle.FontSize.heading, weight: .semibold))
                 Text("Check for the latest version of MouseGestures").font(.caption).foregroundColor(.secondary)
                 HStack {
                     Button(action: checkForUpdates) {
@@ -380,8 +380,8 @@ struct AboutSettingsView: View {
 
 func settingsToggle(isOn: Binding<Bool>, title: String, description: String, onChange: @escaping (Bool) -> Void) -> some View {
     Toggle(isOn: isOn) {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(title).font(.system(size: 13, weight: .medium))
+        VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
+            Text(title).font(.system(size: MGStyle.FontSize.body, weight: .medium))
             Text(description).font(.caption).foregroundColor(.secondary)
         }
     }
