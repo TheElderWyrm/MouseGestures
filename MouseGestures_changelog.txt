@@ -157,3 +157,23 @@ This refactor makes the activation system truly extensible and modular, setting 
   * MouseButtonDetectorPlugin was filtering by `gesture.activationType` — now uses ActivationMapper
   * ActivationMapper is now the **single source of truth** for all gesture→activation mapping
   * ZERO direct `gesture.activationType` checks remain in detection layer
+
+## Unified UI Styles Throughout Application
+- **Goal**: Eliminate all hardcoded UI values (colors, spacing, padding, corner radii, font sizes)
+  and replace with centralized MGStyle constants from UIStyles.swift.
+- **Files Updated (10)**:
+  * AppProfilesView: Full rewrite — replaced custom header/search/empty state/badges/rows with
+    MGPageHeader, MGSearchField, MGEmptyState, MGBadge, MGSheetHeader, MGSheetFooter, MGRowActions,
+    MGListSectionHeader, MGStyle.Colors/Spacing/Corner throughout.
+  * GestureConfigurationSheet: MGSheetHeader/MGSheetFooter replace custom header/footer;
+    all hardcoded values replaced with MGStyle constants.
+  * SavedActionConfigurationSheet: MGSheetHeader/MGSheetFooter; unified spacing/padding.
+  * ServicesView (ServiceConfigurationSheet, ServiceInstallSheet): Unified sheet components.
+  * ActionSelectionView: MGSearchField replaces custom search; all Color(NSColor.*) → MGStyle.Colors;
+    raw values → MGStyle constants.
+  * BundleEditorView: All Color(NSColor.*) → MGStyle.Colors; raw values → MGStyle constants.
+  * PluginSettingsView: NSColor refs → MGStyle.Colors; hardcoded values → MGStyle constants.
+  * BuiltInSettingsCategories: All hardcoded font sizes, spacing, padding, corner radii
+    replaced with MGStyle constants across all settings views and helpers.
+- **Result**: 914 fewer lines (2582 removed, 1668 added) — cleaner, more consistent codebase.
+  All UI files now exclusively reference MGStyle for visual constants.

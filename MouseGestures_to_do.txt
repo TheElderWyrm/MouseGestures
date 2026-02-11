@@ -23,7 +23,7 @@ Improve UI
 - Action selection needs better indication of what is currently selected/add a select button to confirm selection (To prevent accidental overriding of previously selected action)
 - Improve appearance of Show Zone Highlights (currently labels down't stay within highlights).
 - Pre-render UI to increase performance
-- Unify UI Styles throughout the app
+- Unify UI Styles throughout the app ✓
 - Better Zone Configuration
 	- More visual menu
 	- More configuration options
