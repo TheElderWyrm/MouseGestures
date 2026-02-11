@@ -24,14 +24,10 @@ struct AppProfilesView: View {
     @State private var selectedApp: String = ""
     enum ActiveSheet: Identifiable {
         case addRule
-        case editMapping(AppProfileMapping)
-        case editDisabledApp(DisabledApp)
         
         var id: String {
             switch self {
             case .addRule: return "add"
-            case .editMapping(let m): return "editMap-\(m.id)"
-            case .editDisabledApp(let d): return "editDis-\(d.id)"
             }
         }
     }
@@ -104,32 +100,6 @@ struct AppProfilesView: View {
                     },
                     onCancel: { activeSheet = nil }
                 )
-            case .editMapping(let mapping):
-                EditAppRuleSheet(
-                    mapping: mapping,
-                    onSave: { profileId in
-                        updateMapping(mapping: mapping, newProfileId: profileId)
-                        activeSheet = nil
-                    },
-                    onCancel: { activeSheet = nil }
-                )
-            case .editDisabledApp(let disabledApp):
-                EditDisabledAppSheet(
-                    disabledApp: disabledApp,
-                    onSave: {
-                        if let profile = uiServices.profiles.first {
-                            uiServices.removeDisabledApp(bundleId: disabledApp.appBundleIdentifier)
-                            uiServices.addAppProfileMapping(
-                                bundleId: disabledApp.appBundleIdentifier,
-                                appName: disabledApp.appName,
-                                profileId: profile.id
-                            )
-                            loadData()
-                        }
-                        activeSheet = nil
-                    },
-                    onCancel: { activeSheet = nil }
-                )
             }
         }
         .alert("Delete App Rule", isPresented: $showDeleteConfirmation) {
@@ -158,7 +128,9 @@ struct AppProfilesView: View {
                     AppMappingRow(
                         mapping: mapping,
                         profileName: uiServices.profiles.first(where: { $0.id == mapping.profileId })?.name ?? "Unknown",
-                        onEdit: { activeSheet = .editMapping(mapping) },
+                        onProfileChange: { newProfileId in
+                            updateMapping(mapping: mapping, newProfileId: newProfileId)
+                        },
                         onDelete: {
                             itemToDelete = mapping.appBundleIdentifier
                             showDeleteConfirmation = true
@@ -184,7 +156,6 @@ struct AppProfilesView: View {
                 ForEach(filteredDisabledApps, id: \.id) { disabledApp in
                     DisabledAppRow(
                         disabledApp: disabledApp,
-                        onEdit: { activeSheet = .editDisabledApp(disabledApp) },
                         onDelete: {
                             itemToDelete = disabledApp.appBundleIdentifier
                             showDeleteConfirmation = true
@@ -259,10 +230,20 @@ struct AppProfilesView: View {
 struct AppMappingRow: View {
     let mapping: AppProfileMapping
     let profileName: String
-    let onEdit: () -> Void
+    let onProfileChange: (UUID) -> Void
     let onDelete: () -> Void
     
+    @StateObject private var uiServices = UIServices.shared
     @State private var isHovered = false
+    @State private var selectedProfileId: UUID
+    
+    init(mapping: AppProfileMapping, profileName: String, onProfileChange: @escaping (UUID) -> Void, onDelete: @escaping () -> Void) {
+        self.mapping = mapping
+        self.profileName = profileName
+        self.onProfileChange = onProfileChange
+        self.onDelete = onDelete
+        self._selectedProfileId = State(initialValue: mapping.profileId)
+    }
     
     var body: some View {
         HStack(spacing: MGStyle.Spacing.lg) {
@@ -289,14 +270,33 @@ struct AppMappingRow: View {
             
             Spacer()
             
-            MGBadge(profileName, color: .blue, icon: "square.stack.3d.up.fill")
-            
-            if isHovered {
-                MGRowActions(actions: [
-                    .init("pencil") { onEdit() },
-                    .init("trash", destructive: true) { onDelete() }
-                ])
+            // Inline profile picker
+            HStack(spacing: MGStyle.Spacing.sm) {
+                Text("Profile:")
+                    .font(.system(size: MGStyle.FontSize.caption))
+                    .foregroundColor(.secondary)
+                Picker("", selection: $selectedProfileId) {
+                    ForEach(uiServices.profiles.sorted(by: { $0.name < $1.name }), id: \.id) { profile in
+                        Text(profile.name).tag(profile.id)
+                    }
+                }
+                .pickerStyle(.menu)
+                .frame(width: 150)
+                .onChange(of: selectedProfileId) { newValue in
+                    if newValue != mapping.profileId {
+                        onProfileChange(newValue)
+                    }
+                }
             }
+            
+            Button(action: onDelete) {
+                Image(systemName: "trash")
+                    .font(.system(size: MGStyle.IconSize.row))
+                    .foregroundColor(.red.opacity(0.7))
+            }
+            .buttonStyle(.plain)
+            .opacity(isHovered ? 1 : 0)
+            .help("Remove rule")
         }
         .padding(.horizontal, MGStyle.Spacing.lg)
         .padding(.vertical, MGStyle.Spacing.md)
@@ -312,7 +312,6 @@ struct AppMappingRow: View {
 // MARK: - Disabled App Row
 struct DisabledAppRow: View {
     let disabledApp: DisabledApp
-    let onEdit: () -> Void
     let onDelete: () -> Void
     
     @State private var isHovered = false
@@ -344,12 +343,14 @@ struct DisabledAppRow: View {
             
             MGBadge("Disabled", color: .red, icon: "nosign")
             
-            if isHovered {
-                MGRowActions(actions: [
-                    .init("pencil") { onEdit() },
-                    .init("trash", destructive: true) { onDelete() }
-                ])
+            Button(action: onDelete) {
+                Image(systemName: "trash")
+                    .font(.system(size: MGStyle.IconSize.row))
+                    .foregroundColor(.red.opacity(0.7))
             }
+            .buttonStyle(.plain)
+            .opacity(isHovered ? 1 : 0)
+            .help("Remove rule")
         }
         .padding(.horizontal, MGStyle.Spacing.lg)
         .padding(.vertical, MGStyle.Spacing.md)
@@ -556,133 +557,4 @@ struct AppSelectionRow: View {
     }
 }
 
-// MARK: - Edit App Rule Sheet
-struct EditAppRuleSheet: View {
-    @StateObject private var uiServices = UIServices.shared
-    let mapping: AppProfileMapping
-    @State private var selectedProfileId: UUID
-    
-    let onSave: (UUID) -> Void
-    let onCancel: () -> Void
-    
-    init(mapping: AppProfileMapping, onSave: @escaping (UUID) -> Void, onCancel: @escaping () -> Void) {
-        self.mapping = mapping
-        self._selectedProfileId = State(initialValue: mapping.profileId)
-        self.onSave = onSave
-        self.onCancel = onCancel
-    }
-    
-    var body: some View {
-        VStack(spacing: 0) {
-            MGSheetHeader("Edit App Rule", onCancel: onCancel)
-            
-            VStack(spacing: MGStyle.Spacing.xxl) {
-                // App info card
-                HStack(spacing: MGStyle.Spacing.lg) {
-                    if let app = NSWorkspace.shared.urlForApplication(withBundleIdentifier: mapping.appBundleIdentifier) {
-                        Image(nsImage: NSWorkspace.shared.icon(forFile: app.path))
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: 48, height: 48)
-                    } else {
-                        Image(systemName: "app")
-                            .font(.system(size: 36))
-                            .frame(width: 48, height: 48)
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    VStack(alignment: .leading, spacing: MGStyle.Spacing.sm) {
-                        Text(mapping.appName)
-                            .font(.headline)
-                        Text(mapping.appBundleIdentifier)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    Spacer()
-                }
-                .padding(MGStyle.Spacing.xl)
-                .background(
-                    RoundedRectangle(cornerRadius: MGStyle.Corner.lg)
-                        .fill(MGStyle.Colors.cardBackground)
-                )
-                
-                // Profile selection
-                GroupBox("Select Profile") {
-                    Picker("", selection: $selectedProfileId) {
-                        ForEach(uiServices.profiles, id: \.id) { profile in
-                            Text(profile.name).tag(profile.id)
-                        }
-                    }
-                    .labelsHidden()
-                    .pickerStyle(.menu)
-                    .padding(.vertical, MGStyle.Spacing.md)
-                }
-            }
-            .padding(MGStyle.Spacing.xl)
-            
-            Spacer()
-            
-            MGSheetFooter("Save", disabled: selectedProfileId == mapping.profileId) {
-                onSave(selectedProfileId)
-            }
-        }
-        .frame(width: 400, height: 300)
-    }
-}
 
-// MARK: - Edit Disabled App Sheet
-struct EditDisabledAppSheet: View {
-    let disabledApp: DisabledApp
-    let onSave: () -> Void
-    let onCancel: () -> Void
-    
-    var body: some View {
-        VStack(spacing: 0) {
-            MGSheetHeader("Convert to Profile Mapping", onCancel: onCancel)
-            
-            VStack(spacing: MGStyle.Spacing.xxl) {
-                // App info card
-                HStack(spacing: MGStyle.Spacing.lg) {
-                    if let app = NSWorkspace.shared.urlForApplication(withBundleIdentifier: disabledApp.appBundleIdentifier) {
-                        Image(nsImage: NSWorkspace.shared.icon(forFile: app.path))
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: 48, height: 48)
-                    } else {
-                        Image(systemName: "app")
-                            .font(.system(size: 36))
-                            .frame(width: 48, height: 48)
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    VStack(alignment: .leading, spacing: MGStyle.Spacing.sm) {
-                        Text(disabledApp.appName)
-                            .font(.headline)
-                        Text(disabledApp.appBundleIdentifier)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    Spacer()
-                }
-                .padding(MGStyle.Spacing.xl)
-                .background(
-                    RoundedRectangle(cornerRadius: MGStyle.Corner.lg)
-                        .fill(MGStyle.Colors.cardBackground)
-                )
-                
-                Text("This will convert the disabled app rule to use a specific profile instead.")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-            }
-            .padding(MGStyle.Spacing.xl)
-            
-            Spacer()
-            
-            MGSheetFooter("Convert") { onSave() }
-        }
-        .frame(width: 400, height: 250)
-    }
-}

@@ -59,20 +59,15 @@ struct SavedActionConfigurationSheet: View {
                 .padding(MGStyle.Spacing.xl)
             }
             
-            MGSheetFooter(mode.buttonTitle, disabled: !isValid) {
+            MGSheetFooter(mode.buttonTitle, disabled: !isValid, action: {
                 saveAction()
-            } leading: {
-                HStack(spacing: MGStyle.Spacing.lg) {
-                    Button("Cancel") { dismiss() }
-                    
-                    if !actionName.isEmpty && !selectedActionId.isEmpty {
-                        Divider().frame(height: 16)
-                        if let action = PluginManager.shared.getAction(identifier: selectedActionId)?.action {
-                            Text("\(actionName) → \(action.name)")
-                                .font(.system(size: MGStyle.FontSize.caption))
-                                .foregroundColor(.secondary)
-                                .lineLimit(1)
-                        }
+            }, cancel: { dismiss() }) {
+                if !actionName.isEmpty && !selectedActionId.isEmpty {
+                    if let action = PluginManager.shared.getAction(identifier: selectedActionId)?.action {
+                        Text("\(actionName) → \(action.name)")
+                            .font(.system(size: MGStyle.FontSize.caption))
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
                     }
                 }
             }

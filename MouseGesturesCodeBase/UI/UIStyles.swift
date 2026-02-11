@@ -190,17 +190,20 @@ struct MGSheetFooter<LeadingContent: View>: View {
     let primaryLabel: String
     let primaryAction: () -> Void
     let primaryDisabled: Bool
+    let cancelAction: (() -> Void)?
     @ViewBuilder let leading: () -> LeadingContent
     
     init(
         _ primaryLabel: String,
         disabled: Bool = false,
         action: @escaping () -> Void,
+        cancel: (() -> Void)? = nil,
         @ViewBuilder leading: @escaping () -> LeadingContent = { EmptyView() }
     ) {
         self.primaryLabel = primaryLabel
         self.primaryAction = action
         self.primaryDisabled = disabled
+        self.cancelAction = cancel
         self.leading = leading
     }
     
@@ -213,9 +216,15 @@ struct MGSheetFooter<LeadingContent: View>: View {
                 
                 Spacer()
                 
-                Button(primaryLabel, action: primaryAction)
-                    .keyboardShortcut(.return)
-                    .disabled(primaryDisabled)
+                HStack(spacing: MGStyle.Spacing.md) {
+                    if let cancelAction {
+                        Button("Cancel", action: cancelAction)
+                            .keyboardShortcut(.escape, modifiers: [])
+                    }
+                    Button(primaryLabel, action: primaryAction)
+                        .keyboardShortcut(.return)
+                        .disabled(primaryDisabled)
+                }
             }
             .padding(MGStyle.Spacing.xl)
         }

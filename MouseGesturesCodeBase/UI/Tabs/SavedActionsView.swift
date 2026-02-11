@@ -254,11 +254,11 @@ struct SavedActionRow: View {
     
     var body: some View {
         HStack(spacing: MGStyle.Spacing.lg) {
-            // Selection toggle (switch-style visual using checkmark)
+            // Selection checkbox
             Button(action: onToggleSelection) {
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                Image(systemName: isSelected ? "checkmark.square.fill" : "square")
                     .foregroundColor(isSelected ? .accentColor : .secondary.opacity(0.4))
-                    .font(.system(size: 16))
+                    .font(.system(size: 15))
             }
             .buttonStyle(.plain)
             
@@ -292,13 +292,12 @@ struct SavedActionRow: View {
                 .font(.system(size: MGStyle.FontSize.badge))
                 .foregroundColor(.secondary.opacity(0.6))
             
-            if isHovered {
-                MGRowActions(actions: [
-                    .init("plus.square.on.square") { onDuplicate() },
-                    .init("pencil") { onEdit() },
-                    .init("trash", destructive: true) { onDelete() }
-                ])
-            }
+            MGRowActions(actions: [
+                .init("plus.square.on.square") { onDuplicate() },
+                .init("pencil") { onEdit() },
+                .init("trash", destructive: true) { onDelete() }
+            ])
+            .opacity(isHovered ? 1 : 0)
         }
         .padding(.horizontal, MGStyle.Spacing.lg)
         .padding(.vertical, MGStyle.Spacing.md)

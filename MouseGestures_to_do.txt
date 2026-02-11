@@ -21,6 +21,7 @@ Actions (fix later):
 - Conditional gesture bundle logic?
 
 Improve UI
+- add extra clickable area around all icon/hover buttons
 - Improve appearance of Show Zone Highlights (currently labels don't stay within highlights).
 - Pre-render UI to increase performance
 - General: UI Should be relatively simple and should not use lots of colors or accents. 

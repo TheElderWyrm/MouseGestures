@@ -73,11 +73,9 @@ struct GestureConfigurationSheet: View {
                 .padding(MGStyle.Spacing.xl)
             }
             
-            MGSheetFooter(mode.buttonTitle, disabled: !isValid) {
+            MGSheetFooter(mode.buttonTitle, disabled: !isValid, action: {
                 saveGesture()
-            } leading: {
-                Button("Cancel") { dismiss() }
-            }
+            }, cancel: { dismiss() })
         }
         .frame(width: 750, height: 680)
         .alert("Gesture Conflict", isPresented: $showingConflictAlert) {
@@ -174,12 +172,8 @@ struct GestureConfigurationSheet: View {
     
     private var activationComponentsSection: some View {
         GroupBox("Trigger Configuration") {
-            VStack(alignment: .leading, spacing: MGStyle.Spacing.xl) {
-                Text("Configure which conditions must be met to activate this gesture:")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                
-                VStack(spacing: MGStyle.Spacing.lg) {
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
+                VStack(spacing: MGStyle.Spacing.sm) {
                     // Modifier Keys Component
                     ComponentToggleCard(
                         icon: "command.square",
@@ -325,11 +319,7 @@ struct GestureConfigurationSheet: View {
     // MARK: - Component Configuration Views
     
     private var modifierKeyConfigView: some View {
-        VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
-            Text("Select modifier keys:")
-                .font(.system(size: MGStyle.FontSize.caption))
-                .foregroundColor(.secondary)
-            
+        VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
             HStack(spacing: MGStyle.Spacing.lg) {
                 ModifierToggle(label: "⌘", name: "Command", flag: .command, modifiers: Binding(
                     get: { components.modifierKey?.modifiers ?? [] },
@@ -349,42 +339,25 @@ struct GestureConfigurationSheet: View {
                 ))
             }
             
-            let mods = components.modifierKey?.modifiers ?? []
-            if !mods.isEmpty {
-                Text("Active: \(mods.symbolString)")
-                    .font(.system(size: MGStyle.FontSize.caption, weight: .medium))
-                    .foregroundColor(.accentColor)
-            }
         }
         .padding(.leading, MGStyle.Spacing.xxl)
-        .padding(MGStyle.Spacing.lg)
+        .padding(MGStyle.Spacing.md)
         .background(MGStyle.Colors.subtleOverlay)
-        .cornerRadius(MGStyle.Corner.lg)
+        .cornerRadius(MGStyle.Corner.md)
     }
     
     private var screenZoneConfigView: some View {
-        HStack(alignment: .top, spacing: MGStyle.Spacing.xxl) {
-            // Visual zone picker
-            VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
-                Text("Click a zone:")
-                    .font(.system(size: MGStyle.FontSize.caption))
-                    .foregroundColor(.secondary)
-                MGZonePicker(selected: Binding(
-                    get: { components.screenZone?.zone ?? .topRight },
-                    set: { components.screenZone?.zone = $0 }
-                ))
-            }
+        HStack(alignment: .center, spacing: MGStyle.Spacing.xxl) {
+            MGZonePicker(selected: Binding(
+                get: { components.screenZone?.zone ?? .topRight },
+                set: { components.screenZone?.zone = $0 }
+            ))
             
-            // Selected zone label
             VStack(alignment: .leading, spacing: MGStyle.Spacing.sm) {
-                Text("Selected Zone")
-                    .font(.system(size: MGStyle.FontSize.caption, weight: .medium))
-                    .foregroundColor(.secondary)
                 Text(components.screenZone?.zone.displayName ?? "Top Right Corner")
-                    .font(.system(size: MGStyle.FontSize.heading, weight: .semibold))
+                    .font(.system(size: MGStyle.FontSize.body, weight: .semibold))
                     .foregroundColor(.accentColor)
                 
-                // Also keep dropdown as alternative
                 Picker("", selection: Binding(
                     get: { components.screenZone?.zone ?? .topRight },
                     set: { components.screenZone?.zone = $0 }
@@ -394,97 +367,92 @@ struct GestureConfigurationSheet: View {
                     }
                 }
                 .pickerStyle(.menu)
-                .frame(width: 180)
+                .frame(width: 160)
                 .labelsHidden()
             }
-            .padding(.top, MGStyle.Spacing.lg)
             
             Spacer()
         }
         .padding(.leading, MGStyle.Spacing.xxl)
-        .padding(MGStyle.Spacing.lg)
+        .padding(MGStyle.Spacing.md)
         .background(MGStyle.Colors.subtleOverlay)
-        .cornerRadius(MGStyle.Corner.lg)
+        .cornerRadius(MGStyle.Corner.md)
     }
     
     private var dragTypeConfigView: some View {
-        VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
-            HStack {
-                Text("Drag Type:")
-                    .frame(width: 100, alignment: .trailing)
-                Picker("", selection: Binding(
-                    get: { components.dragType?.dragType ?? .leftDrag },
-                    set: { components.dragType?.dragType = $0 }
-                )) {
-                    ForEach(DragModifier.allCases.filter { $0 != .none }, id: \.self) { drag in
-                        Text(drag.displayName).tag(drag)
-                    }
+        HStack {
+            Text("Drag Type:")
+                .font(.system(size: MGStyle.FontSize.caption))
+                .foregroundColor(.secondary)
+                .frame(width: 80, alignment: .trailing)
+            Picker("", selection: Binding(
+                get: { components.dragType?.dragType ?? .leftDrag },
+                set: { components.dragType?.dragType = $0 }
+            )) {
+                ForEach(DragModifier.allCases.filter { $0 != .none }, id: \.self) { drag in
+                    Text(drag.displayName).tag(drag)
                 }
-                .pickerStyle(.menu)
-                .frame(width: 180)
-                Spacer()
             }
+            .pickerStyle(.menu)
+            .frame(width: 160)
+            Spacer()
         }
         .padding(.leading, MGStyle.Spacing.xxl)
-        .padding(MGStyle.Spacing.lg)
+        .padding(MGStyle.Spacing.md)
         .background(MGStyle.Colors.subtleOverlay)
-        .cornerRadius(MGStyle.Corner.lg)
+        .cornerRadius(MGStyle.Corner.md)
     }
     
     private var mouseButtonConfigView: some View {
-        VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
-            HStack {
-                Text("Button:")
-                    .frame(width: 100, alignment: .trailing)
-                Picker("", selection: Binding(
-                    get: { components.mouseButton?.button ?? .left },
-                    set: { components.mouseButton?.button = $0 }
-                )) {
-                    ForEach(MouseButtonTrigger.MouseButton.allCases.filter { $0 != .none }, id: \.self) { button in
-                        Text(button.rawValue).tag(button)
-                    }
+        HStack {
+            Text("Button:")
+                .font(.system(size: MGStyle.FontSize.caption))
+                .foregroundColor(.secondary)
+                .frame(width: 80, alignment: .trailing)
+            Picker("", selection: Binding(
+                get: { components.mouseButton?.button ?? .left },
+                set: { components.mouseButton?.button = $0 }
+            )) {
+                ForEach(MouseButtonTrigger.MouseButton.allCases, id: \.self) { button in
+                    Text(button.rawValue).tag(button)
                 }
-                .pickerStyle(.segmented)
-                .frame(width: 300)
-                Spacer()
             }
+            .pickerStyle(.menu)
+            .frame(width: 160)
+            Spacer()
         }
         .padding(.leading, MGStyle.Spacing.xxl)
-        .padding(MGStyle.Spacing.lg)
+        .padding(MGStyle.Spacing.md)
         .background(MGStyle.Colors.subtleOverlay)
-        .cornerRadius(MGStyle.Corner.lg)
+        .cornerRadius(MGStyle.Corner.md)
     }
     
     private var keyboardShortcutConfigView: some View {
-        VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
-            HStack {
-                Text("Shortcut:")
-                    .frame(width: 100, alignment: .trailing)
-                KeyboardShortcutFieldView(shortcut: Binding(
-                    get: { components.keyboardShortcut?.keyboardTrigger },
-                    set: { components.keyboardShortcut?.keyboardTrigger = $0 }
-                ))
-                .frame(width: 220, height: 28)
-                Spacer()
-            }
-            .padding(.leading, MGStyle.Spacing.xxl)
+        HStack {
+            Text("Shortcut:")
+                .font(.system(size: MGStyle.FontSize.caption))
+                .foregroundColor(.secondary)
+                .frame(width: 80, alignment: .trailing)
+            KeyboardShortcutFieldView(shortcut: Binding(
+                get: { components.keyboardShortcut?.keyboardTrigger },
+                set: { components.keyboardShortcut?.keyboardTrigger = $0 }
+            ))
+            .frame(width: 200, height: 24)
             
             if components.keyboardShortcut?.isEnabled == true && components.keyboardShortcut?.keyboardTrigger == nil {
-                HStack {
-                    Spacer().frame(width: 120)
-                    Image(systemName: "exclamationmark.circle.fill")
-                        .foregroundColor(.orange)
-                        .font(.caption)
-                    Text("Keyboard shortcut required")
-                        .font(.caption)
-                        .foregroundColor(.orange)
-                    Spacer()
-                }
+                Image(systemName: "exclamationmark.circle.fill")
+                    .foregroundColor(.orange)
+                    .font(.system(size: 10))
+                Text("Required")
+                    .font(.system(size: MGStyle.FontSize.badge))
+                    .foregroundColor(.orange)
             }
+            Spacer()
         }
-        .padding(MGStyle.Spacing.lg)
+        .padding(.leading, MGStyle.Spacing.xxl)
+        .padding(MGStyle.Spacing.md)
         .background(MGStyle.Colors.subtleOverlay)
-        .cornerRadius(MGStyle.Corner.lg)
+        .cornerRadius(MGStyle.Corner.md)
     }
     
     // MARK: - Action Section
@@ -557,34 +525,32 @@ struct GestureConfigurationSheet: View {
         @Binding var isEnabled: Bool
         
         var body: some View {
-            HStack(spacing: MGStyle.Spacing.lg) {
+            HStack(spacing: MGStyle.Spacing.md) {
                 Toggle("", isOn: $isEnabled)
                     .toggleStyle(.switch)
+                    .controlSize(.mini)
                     .labelsHidden()
                 
-                VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
-                    HStack(spacing: MGStyle.Spacing.md) {
-                        Image(systemName: icon)
-                            .foregroundColor(isEnabled ? .blue : .secondary)
-                        Text(title)
-                            .font(.system(size: MGStyle.FontSize.body, weight: .medium))
-                            .foregroundColor(isEnabled ? .primary : .secondary)
-                    }
-                    
-                    Text(description)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
+                Image(systemName: icon)
+                    .font(.system(size: 11))
+                    .foregroundColor(isEnabled ? .blue : .secondary)
+                    .frame(width: 14)
+                
+                Text(title)
+                    .font(.system(size: MGStyle.FontSize.body, weight: .medium))
+                    .foregroundColor(isEnabled ? .primary : .secondary)
                 
                 Spacer()
+                
+                Text(description)
+                    .font(.system(size: MGStyle.FontSize.badge))
+                    .foregroundColor(.secondary.opacity(0.6))
+                    .lineLimit(1)
             }
-            .padding(MGStyle.Spacing.lg)
-            .background(isEnabled ? Color.blue.opacity(0.08) : Color.clear)
-            .cornerRadius(MGStyle.Corner.lg)
-            .overlay(
-                RoundedRectangle(cornerRadius: MGStyle.Corner.lg)
-                    .stroke(isEnabled ? Color.blue.opacity(0.3) : Color.clear, lineWidth: 1)
-            )
+            .padding(.horizontal, MGStyle.Spacing.lg)
+            .padding(.vertical, MGStyle.Spacing.md)
+            .background(isEnabled ? Color.blue.opacity(0.06) : Color.clear)
+            .cornerRadius(MGStyle.Corner.md)
         }
     }
     

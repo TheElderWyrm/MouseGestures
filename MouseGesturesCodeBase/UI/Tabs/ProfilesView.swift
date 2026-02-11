@@ -279,28 +279,53 @@ struct ProfileListRow: View {
                     .font(.system(size: MGStyle.FontSize.body, weight: isActive ? .semibold : .medium))
                     .lineLimit(1)
                 
-                // Simple text info instead of badges
-                Text("\(profile.gestures.count) gestures · \(profile.gestures.filter { $0.isEnabled }.count) active")
-                    .font(.system(size: MGStyle.FontSize.badge))
-                    .foregroundColor(.secondary)
+                HStack(spacing: MGStyle.Spacing.md) {
+                    Text("\(profile.gestures.count) gestures · \(profile.gestures.filter { $0.isEnabled }.count) active")
+                        .font(.system(size: MGStyle.FontSize.badge))
+                        .foregroundColor(.secondary)
+                    
+                    if let shortcut = profile.keyboardShortcut {
+                        Text(shortcut.displayString)
+                            .font(.system(size: MGStyle.FontSize.badge, design: .monospaced))
+                            .foregroundColor(.secondary.opacity(0.6))
+                    }
+                }
             }
             
             Spacer()
             
-            // Quick actions on hover
-            if isHovered && !isActive {
-                Button(action: onSetActive) {
-                    Image(systemName: "checkmark.circle")
+            // Hover actions
+            HStack(spacing: MGStyle.Spacing.md) {
+                if !isActive {
+                    Button(action: onSetActive) {
+                        Image(systemName: "checkmark.circle")
+                            .font(.system(size: MGStyle.IconSize.row))
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Set as active")
+                }
+                Button(action: onDuplicate) {
+                    Image(systemName: "plus.square.on.square")
                         .font(.system(size: MGStyle.IconSize.row))
                         .foregroundColor(.secondary)
                 }
                 .buttonStyle(.plain)
-                .help("Set as active")
+                .help("Duplicate")
+                Button(action: onDelete) {
+                    Image(systemName: "trash")
+                        .font(.system(size: MGStyle.IconSize.row))
+                        .foregroundColor(.red.opacity(0.7))
+                }
+                .buttonStyle(.plain)
+                .help("Delete")
             }
+            .opacity(isHovered ? 1 : 0)
         }
         .mgListRow(isSelected: isSelected, isHovered: isHovered)
         .onHover { hovering in isHovered = hovering }
         .onTapGesture { onSelect() }
+        .onTapGesture(count: 2) { onSetActive() }
         .contextMenu {
             if !isActive {
                 Button(action: onSetActive) { Label("Set as Active", systemImage: "checkmark.circle") }
@@ -721,9 +746,7 @@ struct AddEditProfileSheet: View {
                 .padding(MGStyle.Spacing.xl)
             }
             
-            MGSheetFooter(mode.buttonTitle, disabled: profileName.isEmpty) { saveProfile() } leading: {
-                Button("Cancel") { dismiss() }
-            }
+            MGSheetFooter(mode.buttonTitle, disabled: profileName.isEmpty, action: { saveProfile() }, cancel: { dismiss() })
         }
         .frame(width: 550, height: 520)
         .alert("Invalid Name", isPresented: $showingNameError) { Button("OK") {} } message: {
@@ -798,11 +821,10 @@ struct ImportTemplatesSheet: View {
                 .padding(MGStyle.Spacing.xl)
             }
             
-            MGSheetFooter("Import Selected", disabled: selectedTypes.isEmpty || isImporting) {
+            MGSheetFooter("Import Selected", disabled: selectedTypes.isEmpty || isImporting, action: {
                 importSelectedTemplates()
-            } leading: {
+            }, cancel: { dismiss() }) {
                 HStack(spacing: MGStyle.Spacing.lg) {
-                    Button("Cancel") { dismiss() }
                     if !selectedTypes.isEmpty {
                         Text("\(selectedTypes.count) template\(selectedTypes.count == 1 ? "" : "s") selected")
                             .font(.caption).foregroundColor(.secondary)

@@ -47,9 +47,6 @@ struct GesturesView: View {
                     MGMenuItem("Clear All Gestures", icon: "trash", destructive: true) { clearAllGestures() }
                 ]
             ) {
-                // Inline profile switcher
-                profileSwitcher
-                
                 if showSearch {
                     MGSearchField("Search gestures...", text: $searchText)
                         .frame(width: MGStyle.Layout.searchFieldWidth)
@@ -70,15 +67,19 @@ struct GesturesView: View {
             
             Divider()
             
-            // Subtitle bar
-            HStack {
+            // Profile bar with stats
+            HStack(spacing: MGStyle.Spacing.lg) {
+                profileSwitcher
+                
+                Divider().frame(height: 14)
+                
                 Text("\(enabledCount) of \(uiServices.gestures.count) active")
                     .font(.system(size: MGStyle.FontSize.caption))
                     .foregroundColor(.secondary)
                 Spacer()
             }
             .padding(.horizontal, MGStyle.Spacing.xl)
-            .padding(.vertical, MGStyle.Spacing.sm)
+            .padding(.vertical, MGStyle.Spacing.md)
             
             // Main Content
             if filteredGestures.isEmpty {
@@ -305,26 +306,24 @@ struct GestureCardView: View {
                 }
                 
                 // Hover actions: edit + delete
-                if isHovered {
-                    HStack(spacing: MGStyle.Spacing.md) {
-                        Button(action: onEdit) {
-                            Image(systemName: "pencil")
-                                .font(.system(size: MGStyle.IconSize.row))
-                                .foregroundColor(.secondary)
-                        }
-                        .buttonStyle(.plain)
-                        .help("Edit gesture")
-                        
-                        Button(action: { showDeleteConfirm = true }) {
-                            Image(systemName: "trash")
-                                .font(.system(size: MGStyle.IconSize.row))
-                                .foregroundColor(.red.opacity(0.7))
-                        }
-                        .buttonStyle(.plain)
-                        .help("Delete gesture")
+                HStack(spacing: MGStyle.Spacing.md) {
+                    Button(action: onEdit) {
+                        Image(systemName: "pencil")
+                            .font(.system(size: MGStyle.IconSize.row))
+                            .foregroundColor(.secondary)
                     }
-                    .transition(.opacity)
+                    .buttonStyle(.plain)
+                    .help("Edit gesture")
+                    
+                    Button(action: { showDeleteConfirm = true }) {
+                        Image(systemName: "trash")
+                            .font(.system(size: MGStyle.IconSize.row))
+                            .foregroundColor(.red.opacity(0.7))
+                    }
+                    .buttonStyle(.plain)
+                    .help("Delete gesture")
                 }
+                .opacity(isHovered ? 1 : 0)
                 
                 // Expand chevron
                 Button(action: onToggleExpand) {
@@ -539,12 +538,12 @@ struct ProfilePickerSheet: View {
                 .padding(MGStyle.Spacing.xl)
             }
             
-            MGSheetFooter("Select", disabled: selectedProfileId == nil) {
+            MGSheetFooter("Select", disabled: selectedProfileId == nil, action: {
                 if let profileId = selectedProfileId {
                     uiServices.switchToProfile(profileId)
                     dismiss()
                 }
-            } leading: {
+            }, cancel: { dismiss() }) {
                 Button("New Profile...") {
                     if let newProfile = uiServices.createProfile(name: "New Profile") {
                         selectedProfileId = newProfile.id
