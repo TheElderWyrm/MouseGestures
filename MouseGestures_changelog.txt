@@ -1,3 +1,56 @@
+## 2026-02-11 (3)
+
+### UI Improvements: Responsiveness, Compactness, and Polish
+
+**Sheet Footer Buttons**
+- MGSheetFooter now supports `cancel:` parameter to place Cancel directly next to primary action
+- Updated all sheets (Gesture, Saved Action, Profile, Template Import, Profile Picker)
+- Cancel buttons grouped with Save/Add/Select for clearer visual pairing
+
+**Hover Button Responsiveness**
+- Changed all hover-revealed action buttons from conditional rendering (`if isHovered`) to
+  opacity-based (`opacity: isHovered ? 1 : 0`). Eliminates layout recalculation that caused
+  click delays. Applied across: SavedActionsView, AppProfilesView, GesturesView, ProfilesView.
+
+**Gestures Tab**
+- Profile switcher moved from header to dedicated bar below title with gesture stats
+- Delete button on gesture cards now always present (opacity-based, visible on hover)
+
+**Gesture Configuration Sheet**
+- ComponentToggleCard compacted: single-line layout, mini toggle, description as trailing hint
+- All sub-config views (modifiers, zone, drag, mouse, keyboard) reduced padding/borders
+- Mouse button picker: changed from segmented to menu, added "none" option
+- Keyboard shortcut: inline error indicator instead of multi-line warning
+- Screen zone: removed redundant labels, cleaner picker layout
+
+**Saved Actions Tab**
+- Selection indicator changed from circle checkmarks to square checkboxes
+- Hover actions use opacity approach for instant click responsiveness
+
+**Profiles Tab**
+- Profile list rows: added hover actions (set active, duplicate, delete) with opacity transition
+- Keyboard shortcut displayed inline in profile list rows
+- Double-click on profile row sets it as active
+- Profile detail header: gesture count, active count, keyboard shortcut, and modified date
+  all displayed in info summary row. Removed redundant keyboard shortcut from gesture card.
+- Empty state for profiles with no gestures
+
+**App Profiles**
+- Replaced edit sheet with inline profile dropdown on each app mapping row
+- Removed EditAppRuleSheet and EditDisabledAppSheet entirely (~130 lines removed)
+- DisabledAppRow simplified to just show badge and delete button
+
+**Settings**
+- Added Launch at Login, Hide Menu Bar Icon, and Haptic Feedback to General category
+- All three are searchable with appropriate keywords
+
+**Zone Highlights**
+- Fixed labels overflowing thin edge zones: smaller font for narrow zones (<50px),
+  position clamped within bounds, text truncates if too wide, semi-transparent
+  background pill for readability
+
+---
+
 ## 2026-02-11 (2)
 
 ### Major UI Overhaul: Gestures, Profiles, and Configuration
