@@ -232,7 +232,7 @@ struct MGContentCard<Content: View>: View {
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 15) {
+        VStack(alignment: .leading, spacing: MGStyle.Spacing.xl) {
             content()
         }
         .padding(MGStyle.Spacing.xl)
@@ -395,9 +395,23 @@ struct MGSidebarItem: View {
 }
 
 /// Consistent sidebar container layout.
-struct MGSidebar<Content: View>: View {
+struct MGSidebar<Content: View, Header: View, Footer: View>: View {
     let title: String
+    @ViewBuilder let header: () -> Header
     @ViewBuilder let content: () -> Content
+    @ViewBuilder let footer: () -> Footer
+    
+    init(
+        title: String,
+        @ViewBuilder content: @escaping () -> Content,
+        @ViewBuilder header: @escaping () -> Header = { EmptyView() },
+        @ViewBuilder footer: @escaping () -> Footer = { EmptyView() }
+    ) {
+        self.title = title
+        self.header = header
+        self.content = content
+        self.footer = footer
+    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -406,7 +420,9 @@ struct MGSidebar<Content: View>: View {
                 .fontWeight(.semibold)
                 .padding(.horizontal, MGStyle.Spacing.xxl)
                 .padding(.top, MGStyle.Spacing.xxl)
-                .padding(.bottom, 10)
+                .padding(.bottom, MGStyle.Spacing.lg)
+            
+            header()
             
             Divider()
                 .padding(.horizontal, MGStyle.Spacing.xxl)
@@ -416,10 +432,12 @@ struct MGSidebar<Content: View>: View {
                 VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
                     content()
                 }
-                .padding(.horizontal, 10)
+                .padding(.horizontal, MGStyle.Spacing.lg)
             }
             
             Spacer()
+            
+            footer()
         }
         .background(MGStyle.Colors.cardBackground)
     }

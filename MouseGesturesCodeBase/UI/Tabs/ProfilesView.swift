@@ -185,9 +185,7 @@ struct ProfilesView: View {
                 // Header
                 VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
                     HStack {
-                        Text(profile.name)
-                            .font(.title2)
-                            .fontWeight(.bold)
+                        MGSectionHeader(profile.name, icon: "person.crop.circle")
                         
                         if profile.id == uiServices.activeProfileId {
                             MGBadge("Active", color: .green)

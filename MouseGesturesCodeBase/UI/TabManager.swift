@@ -192,10 +192,8 @@ struct PluginTabManagerSettings: View {
     @State private var showingPluginManager = false
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            Text("UI Plugins")
-                .font(.title2)
-                .bold()
+        VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {
+            MGSectionHeader("UI Plugins")
             
             Text("Manage which tabs are visible in the application")
                 .foregroundColor(.secondary)
@@ -204,7 +202,7 @@ struct PluginTabManagerSettings: View {
             
             // Plugin list
             ScrollView {
-                VStack(spacing: 12) {
+                VStack(spacing: MGStyle.Spacing.lg) {
                     ForEach(Array(uiPluginManager.loadedPlugins.values), id: \.identifier) { plugin in
                         PluginRow(plugin: plugin)
                     }
@@ -227,7 +225,7 @@ struct PluginTabManagerSettings: View {
                 }
             }
         }
-        .padding()
+        .padding(MGStyle.Spacing.xxl)
         .frame(width: 600, height: 400)
         .sheet(isPresented: $showingPluginManager) {
             PluginManagerView()
@@ -256,7 +254,7 @@ struct PluginRow: View {
                 .foregroundColor(.accentColor)
                 .frame(width: 30)
             
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
                 Text(plugin.displayName)
                     .font(.headline)
                 
@@ -277,7 +275,7 @@ struct PluginRow: View {
                     }
                 }
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, MGStyle.Spacing.sm)
     }
 }
 
@@ -285,18 +283,18 @@ struct PluginManagerView: View {
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
-        VStack {
-            Text("Plugin Manager")
-                .font(.title)
+        VStack(spacing: MGStyle.Spacing.xxl) {
+            MGSectionHeader("Plugin Manager")
             
             Text("Install and manage UI plugins")
                 .foregroundColor(.secondary)
             
             Spacer()
             
-            Text("Plugin marketplace coming soon...")
-                .font(.headline)
-                .foregroundColor(.secondary)
+            MGEmptyState(
+                icon: "shippingbox",
+                title: "Plugin marketplace coming soon..."
+            )
             
             Spacer()
             
@@ -305,7 +303,7 @@ struct PluginManagerView: View {
             }
             .keyboardShortcut(.escape)
         }
-        .padding()
+        .padding(MGStyle.Spacing.xxl)
         .frame(width: 500, height: 400)
     }
 }

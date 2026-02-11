@@ -207,14 +207,14 @@ struct DeveloperView: View {
                         .font(.system(size: MGStyle.FontSize.heading, weight: .semibold))
                     
                     ScrollView {
-                        VStack(alignment: .leading, spacing: 5) {
+                        VStack(alignment: .leading, spacing: MGStyle.Spacing.sm) {
                             ForEach(logFiles, id: \.url) { logFile in
                                 logFileRow(logFile)
                             }
                         }
                     }
                     .frame(maxHeight: 200)
-                    .background(RoundedRectangle(cornerRadius: MGStyle.Corner.md).stroke(Color.gray.opacity(0.3)))
+                    .background(RoundedRectangle(cornerRadius: MGStyle.Corner.md).stroke(MGStyle.Colors.separator))
                 }
                 
                 if let selectedLog = selectedLogFile {
@@ -234,13 +234,13 @@ struct DeveloperView: View {
                             Text(logContent.isEmpty ? "Loading..." : logContent)
                                 .font(.system(.caption, design: .monospaced))
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(10)
+                                .padding(MGStyle.Spacing.lg)
                         }
                         .frame(height: 300)
                         .background(RoundedRectangle(cornerRadius: MGStyle.Corner.md).fill(MGStyle.Colors.contentBackground))
                         .overlay(
                             RoundedRectangle(cornerRadius: MGStyle.Corner.md)
-                                .stroke(Color.gray.opacity(0.3))
+                                .stroke(MGStyle.Colors.separator)
                         )
                     }
                 }
@@ -252,9 +252,9 @@ struct DeveloperView: View {
         HStack {
             VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
                 Text(logFile.name)
-                    .font(.system(size: 12, weight: selectedLogFile?.url == logFile.url ? .medium : .regular))
+                    .font(.system(size: MGStyle.FontSize.caption, weight: selectedLogFile?.url == logFile.url ? .medium : .regular))
                     .foregroundColor(selectedLogFile?.url == logFile.url ? .accentColor : .primary)
-                HStack(spacing: 10) {
+                HStack(spacing: MGStyle.Spacing.lg) {
                     Text(logFile.size).font(.caption2).foregroundColor(.secondary)
                     Text(logFile.date).font(.caption2).foregroundColor(.secondary)
                 }
@@ -265,11 +265,11 @@ struct DeveloperView: View {
             }
             .buttonStyle(PlainButtonStyle())
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 5)
+        .padding(.horizontal, MGStyle.Spacing.lg)
+        .padding(.vertical, MGStyle.Spacing.sm)
         .background(
             RoundedRectangle(cornerRadius: MGStyle.Corner.sm)
-                .fill(selectedLogFile?.url == logFile.url ? Color.accentColor.opacity(0.1) : Color.clear)
+                .fill(selectedLogFile?.url == logFile.url ? MGStyle.Colors.selectedRow : Color.clear)
         )
         .contentShape(Rectangle())
         .onTapGesture { selectLogFile(logFile) }
@@ -301,7 +301,7 @@ struct DeveloperView: View {
                         .font(.system(size: MGStyle.FontSize.heading, weight: .semibold))
                     
                     ScrollView {
-                        VStack(alignment: .leading, spacing: 10) {
+                        VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
                             ForEach(plugins, id: \.identifier) { plugin in
                                 pluginRow(plugin)
                             }
@@ -319,7 +319,7 @@ struct DeveloperView: View {
     private func pluginRow(_ plugin: PluginInfo) -> some View {
         VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
             HStack {
-                VStack(alignment: .leading, spacing: 3) {
+                VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
                     HStack {
                         Text(plugin.name)
                             .font(.system(size: MGStyle.FontSize.body, weight: .medium))
@@ -331,7 +331,7 @@ struct DeveloperView: View {
                     }
                     Text(plugin.description)
                         .font(.caption).foregroundColor(.secondary).lineLimit(2)
-                    HStack(spacing: 10) {
+                    HStack(spacing: MGStyle.Spacing.lg) {
                         Label("\(plugin.actionCount) actions", systemImage: "bolt.circle")
                             .font(.caption2).foregroundColor(.secondary)
                         Label(plugin.category.rawValue, systemImage: "tag")
@@ -341,7 +341,7 @@ struct DeveloperView: View {
                     }
                 }
                 Spacer()
-                VStack(spacing: 5) {
+                VStack(spacing: MGStyle.Spacing.sm) {
                     if !plugin.isBuiltIn {
                         Button("Permissions") { showPluginPermissions(plugin) }.font(.caption)
                         Button("Uninstall") { uninstallPlugin(plugin) }.font(.caption).foregroundColor(.red)
@@ -351,7 +351,7 @@ struct DeveloperView: View {
             }
             Divider()
         }
-        .padding(.vertical, 5)
+        .padding(.vertical, MGStyle.Spacing.sm)
         .contentShape(Rectangle())
         .onTapGesture { selectedPlugin = plugin }
     }
@@ -361,7 +361,7 @@ struct DeveloperView: View {
             Text("Plugin Details: \(plugin.name)")
                 .font(.system(size: MGStyle.FontSize.heading, weight: .semibold))
             
-            Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 20, verticalSpacing: 8) {
+            Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: MGStyle.Spacing.xxl, verticalSpacing: MGStyle.Spacing.md) {
                 GridRow {
                     Text("Identifier:").foregroundColor(.secondary)
                     Text(plugin.identifier).font(.system(.caption, design: .monospaced))
@@ -380,10 +380,10 @@ struct DeveloperView: View {
             }
             
             if plugin.actionCount > 0 {
-                VStack(alignment: .leading, spacing: 5) {
+                VStack(alignment: .leading, spacing: MGStyle.Spacing.sm) {
                     Text("Provided Actions:").font(.caption).foregroundColor(.secondary)
                     ScrollView {
-                        VStack(alignment: .leading, spacing: 3) {
+                        VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
                             ForEach(uiServices.getPluginActions(plugin.identifier), id: \.id) { action in
                                 HStack {
                                     Image(systemName: action.icon ?? "questionmark.circle").frame(width: 16).font(.caption)
@@ -393,7 +393,7 @@ struct DeveloperView: View {
                         }
                     }
                     .frame(maxHeight: 100)
-                    .padding(5)
+                    .padding(MGStyle.Spacing.sm)
                     .background(RoundedRectangle(cornerRadius: MGStyle.Corner.sm).fill(MGStyle.Colors.contentBackground))
                 }
             }
@@ -481,7 +481,7 @@ struct DeveloperView: View {
                 Text("System Permissions")
                     .font(.system(size: MGStyle.FontSize.heading, weight: .semibold))
                 
-                HStack(spacing: 10) {
+                HStack(spacing: MGStyle.Spacing.lg) {
                     Text("Accessibility:").foregroundColor(.secondary)
                     if hasAccessibilityPermissions() {
                         Label("Granted", systemImage: "checkmark.circle.fill").foregroundColor(.green).font(.caption)
@@ -498,7 +498,7 @@ struct DeveloperView: View {
             MGContentCard {
                 Text("Memory Usage")
                     .font(.system(size: MGStyle.FontSize.heading, weight: .semibold))
-                Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 30, verticalSpacing: 8) {
+                Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: MGStyle.Spacing.xxl, verticalSpacing: MGStyle.Spacing.md) {
                     GridRow {
                         Text("Resident Memory:").foregroundColor(.secondary)
                         Text(memoryUsage.resident).font(.system(.body, design: .monospaced))
@@ -529,7 +529,7 @@ struct DeveloperView: View {
             MGContentCard {
                 Text("System Information")
                     .font(.system(size: MGStyle.FontSize.heading, weight: .semibold))
-                Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 30, verticalSpacing: 8) {
+                Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: MGStyle.Spacing.xxl, verticalSpacing: MGStyle.Spacing.md) {
                     GridRow { Text("macOS Version:").foregroundColor(.secondary); Text(perfMonitor.getSystemVersion()) }
                     GridRow { Text("App Version:").foregroundColor(.secondary); Text(perfMonitor.getAppVersion()) }
                     GridRow { Text("Process ID:").foregroundColor(.secondary); Text("\(perfMonitor.getProcessID())").font(.system(.body, design: .monospaced)) }
@@ -568,11 +568,11 @@ struct DeveloperView: View {
                         Text(debugReport)
                             .font(.system(.caption, design: .monospaced))
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(10)
+                            .padding(MGStyle.Spacing.lg)
                     }
                     .frame(height: 300)
                     .background(RoundedRectangle(cornerRadius: MGStyle.Corner.md).fill(MGStyle.Colors.contentBackground))
-                    .overlay(RoundedRectangle(cornerRadius: MGStyle.Corner.md).stroke(Color.gray.opacity(0.3)))
+                    .overlay(RoundedRectangle(cornerRadius: MGStyle.Corner.md).stroke(MGStyle.Colors.separator))
                 }
             }
             
@@ -580,7 +580,7 @@ struct DeveloperView: View {
                 Text("Quick Actions")
                     .font(.system(size: MGStyle.FontSize.heading, weight: .semibold))
                 
-                VStack(alignment: .leading, spacing: 10) {
+                VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
                     Button("Reset All Preferences") { resetPreferences() }.foregroundColor(.red)
                     Button("Clear All Caches") { clearCaches() }
                     Button("Reload All Plugins") { reloadAllPlugins() }

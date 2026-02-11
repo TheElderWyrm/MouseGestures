@@ -71,34 +71,44 @@ struct ServicesView: View {
     // MARK: - Services Content
     
     private var servicesContent: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            MGPageHeader("Services") {
-                MGSearchField("Search services...", text: $searchText)
-                    .frame(width: MGStyle.Layout.searchFieldWidth)
-                
-                Button(action: { activeSheet = .install }) {
-                    Label("Install Plugin", systemImage: "plus.circle")
+        ScrollView {
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {
+                HStack {
+                    MGSectionHeader("Services", icon: "gearshape.2")
+                    
+                    Spacer()
+                    
+                    MGSearchField("Search services...", text: $searchText)
+                        .frame(width: MGStyle.Layout.searchFieldWidth)
+                    
+                    Button(action: { activeSheet = .install }) {
+                        Label("Install Plugin", systemImage: "plus.circle")
+                    }
+                    
+                    Button(action: loadServicePlugins) {
+                        Image(systemName: "arrow.clockwise")
+                    }
                 }
                 
-                Button(action: loadServicePlugins) {
-                    Image(systemName: "arrow.clockwise")
-                }
-            }
-            
-            Divider()
-            
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
-                    ForEach(filteredPlugins) { plugin in
-                        ServiceRow(plugin: plugin) {
-                            activeSheet = .configure(plugin)
-                        } onToggle: {
-                            togglePlugin(plugin)
+                if filteredPlugins.isEmpty {
+                    MGEmptyState(
+                        icon: "gearshape.2",
+                        title: searchText.isEmpty ? "No services available" : "No matching services"
+                    )
+                } else {
+                    LazyVStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
+                        ForEach(filteredPlugins) { plugin in
+                            ServiceRow(plugin: plugin) {
+                                activeSheet = .configure(plugin)
+                            } onToggle: {
+                                togglePlugin(plugin)
+                            }
                         }
                     }
                 }
-                .padding(MGStyle.Spacing.xl)
             }
+            .padding(MGStyle.Spacing.xxl)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
     
@@ -175,7 +185,7 @@ struct ServiceRow: View {
                 }
                 
                 Text(plugin.description)
-                    .font(.system(size: 12))
+                    .font(.system(size: MGStyle.FontSize.caption))
                     .foregroundColor(.secondary)
                     .lineLimit(2)
                 

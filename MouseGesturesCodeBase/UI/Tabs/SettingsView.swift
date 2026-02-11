@@ -43,71 +43,56 @@ struct SettingsView: View {
     // MARK: - Sidebar
     
     private var sidebarView: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text("Settings")
-                .font(.title2)
-                .fontWeight(.semibold)
-                .padding(.horizontal, MGStyle.Spacing.xxl)
-                .padding(.top, MGStyle.Spacing.xxl)
-                .padding(.bottom, 10)
-            
-            MGSearchField("Search settings…", text: $searchText)
-                .padding(.horizontal, 14)
-                .padding(.bottom, 10)
-            
-            if !searchText.isEmpty && !searchResults.isEmpty {
-                searchResultsList
+        MGSidebar(title: "Settings") {
+            ForEach(filteredCategories, id: \.id) { cat in
+                MGSidebarItem(
+                    title: cat.title,
+                    icon: cat.icon,
+                    isSelected: cat.id == selectedCategoryId,
+                    action: { selectedCategoryId = cat.id }
+                )
             }
             
-            Divider()
-                .padding(.horizontal, MGStyle.Spacing.xxl)
-                .padding(.bottom, MGStyle.Spacing.md)
-            
-            ScrollView {
-                VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
-                    ForEach(filteredCategories, id: \.id) { cat in
-                        MGSidebarItem(
-                            title: cat.title,
-                            icon: cat.icon,
-                            isSelected: cat.id == selectedCategoryId,
-                            action: { selectedCategoryId = cat.id }
-                        )
-                    }
-                    
-                    if filteredCategories.isEmpty && !searchText.isEmpty {
-                        Text("No matching settings")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .padding(.horizontal, MGStyle.Spacing.xxl)
-                            .padding(.vertical, 10)
-                    }
+            if filteredCategories.isEmpty && !searchText.isEmpty {
+                Text("No matching settings")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal, MGStyle.Spacing.lg)
+                    .padding(.vertical, MGStyle.Spacing.lg)
+            }
+        } header: {
+            VStack(spacing: 0) {
+                MGSearchField("Search settings…", text: $searchText)
+                    .padding(.horizontal, MGStyle.Spacing.xl)
+                    .padding(.bottom, MGStyle.Spacing.lg)
+                
+                if !searchText.isEmpty && !searchResults.isEmpty {
+                    searchResultsList
                 }
-                .padding(.horizontal, 10)
             }
-            
-            Spacer()
-            
-            Divider()
-                .padding(.horizontal, MGStyle.Spacing.xxl)
-                .padding(.vertical, MGStyle.Spacing.md)
-            
-            HStack {
-                Toggle(isOn: $showAdvanced) {
-                    HStack(spacing: MGStyle.Spacing.md) {
-                        Image(systemName: "slider.horizontal.3")
-                            .frame(width: 20)
-                            .foregroundColor(.secondary)
-                        Text("Advanced")
-                            .font(.system(size: 12))
+        } footer: {
+            VStack(spacing: 0) {
+                Divider()
+                    .padding(.horizontal, MGStyle.Spacing.xxl)
+                    .padding(.vertical, MGStyle.Spacing.md)
+                
+                HStack {
+                    Toggle(isOn: $showAdvanced) {
+                        HStack(spacing: MGStyle.Spacing.md) {
+                            Image(systemName: "slider.horizontal.3")
+                                .frame(width: 20)
+                                .foregroundColor(.secondary)
+                            Text("Advanced")
+                                .font(.system(size: MGStyle.FontSize.caption))
+                        }
                     }
+                    .toggleStyle(.switch)
+                    .controlSize(.small)
                 }
-                .toggleStyle(.switch)
-                .controlSize(.small)
+                .padding(.horizontal, MGStyle.Spacing.xxl)
+                .padding(.bottom, MGStyle.Spacing.xl)
             }
-            .padding(.horizontal, MGStyle.Spacing.xxl)
-            .padding(.bottom, 14)
         }
-        .background(MGStyle.Colors.cardBackground)
     }
     
     // MARK: - Search Results
@@ -121,7 +106,7 @@ struct SettingsView: View {
                 }) {
                     HStack(spacing: MGStyle.Spacing.md) {
                         Image(systemName: "magnifyingglass")
-                            .font(.system(size: 10))
+                            .font(.system(size: MGStyle.FontSize.badge))
                             .foregroundColor(.secondary)
                         VStack(alignment: .leading, spacing: 1) {
                             Text(result.item.title)
@@ -135,14 +120,14 @@ struct SettingsView: View {
                         }
                         Spacer()
                     }
-                    .padding(.horizontal, 10)
+                    .padding(.horizontal, MGStyle.Spacing.lg)
                     .padding(.vertical, MGStyle.Spacing.sm)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(PlainButtonStyle())
                 
                 if result.item.title != searchResults.prefix(8).last?.item.title {
-                    Divider().padding(.horizontal, 10)
+                    Divider().padding(.horizontal, MGStyle.Spacing.lg)
                 }
             }
         }
@@ -156,7 +141,7 @@ struct SettingsView: View {
             RoundedRectangle(cornerRadius: MGStyle.Corner.md)
                 .stroke(MGStyle.Colors.separator, lineWidth: 0.5)
         )
-        .padding(.horizontal, 14)
+        .padding(.horizontal, MGStyle.Spacing.xl)
         .padding(.bottom, MGStyle.Spacing.md)
     }
     

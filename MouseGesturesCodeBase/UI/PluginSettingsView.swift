@@ -8,11 +8,9 @@ struct PluginSettingsView: View {
     @State private var visibilityTrigger = UUID()
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {
             // Header
-            Text("Detection Plugin Settings")
-                .font(.title2)
-                .fontWeight(.semibold)
+            MGSectionHeader("Detection Plugin Settings", icon: "puzzlepiece.extension")
             
             // Category Picker - only show categories that have visible settings
             let visibleCategories = getVisibleCategories()
@@ -38,15 +36,13 @@ struct PluginSettingsView: View {
             let visibleItems = items.filter { shouldShowSetting($0.definition) }
             
             if visibleItems.isEmpty {
-                Text("No settings available for this category")
-                    .foregroundColor(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.vertical, 40)
-                    .padding()
-                    .background(RoundedRectangle(cornerRadius: MGStyle.Corner.lg).fill(MGStyle.Colors.cardBackground))
+                MGEmptyState(
+                    icon: "gearshape",
+                    title: "No settings available for this category"
+                )
             } else {
                 ScrollView {
-                    VStack(alignment: .leading, spacing: MGStyle.Spacing.xl) {
+                    MGContentCard {
                         ForEach(visibleItems, id: \.definition.key) { item in
                             PluginSettingRow(
                                 plugin: item.plugin,
@@ -55,8 +51,6 @@ struct PluginSettingsView: View {
                             )
                         }
                     }
-                    .padding()
-                    .background(RoundedRectangle(cornerRadius: MGStyle.Corner.lg).fill(MGStyle.Colors.cardBackground))
                     .id(visibilityTrigger)
                 }
             }
@@ -110,31 +104,22 @@ struct PluginSettingRow: View {
         switch definition.type {
         case .toggle(let label):
             toggleControl(label: label)
-        
         case .slider(let min, let max, let step, let unit):
             sliderControl(min: min, max: max, step: step, unit: unit)
-        
         case .stepper(let min, let max, let step):
             stepperControl(min: min, max: max, step: step)
-        
         case .picker(let options):
             pickerControl(options: options)
-        
         case .segmentedPicker(let options):
             segmentedPickerControl(options: options)
-        
         case .color:
             colorControl()
-        
         case .text(let placeholder, let maxLength):
             textControl(placeholder: placeholder, maxLength: maxLength)
-        
         case .button(let title, let style, let action):
             buttonControl(title: title, style: style, action: action)
-        
         case .info(let text):
             infoControl(text: text)
-        
         default:
             Text("Unsupported setting type")
                 .foregroundColor(.secondary)
@@ -184,7 +169,7 @@ struct PluginSettingRow: View {
                 step: step
             ) {
                 Text("\(plugin.settings.getInt(definition.key, default: definition.defaultValue as? Int ?? min))")
-                    .font(.system(size: 13, design: .monospaced))
+                    .font(.system(size: MGStyle.FontSize.body, design: .monospaced))
             }
         }
     }
@@ -212,7 +197,7 @@ struct PluginSettingRow: View {
     // MARK: - Segmented Picker Control
     
     private func segmentedPickerControl(options: [PluginSettingDefinition.PickerOption]) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
             settingLabel
             Picker("", selection: Binding(
                 get: { plugin.settings.getString(definition.key, default: definition.defaultValue as? String ?? "") },
@@ -250,7 +235,7 @@ struct PluginSettingRow: View {
     // MARK: - Text Control
     
     private func textControl(placeholder: String?, maxLength: Int?) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
             settingLabel
             TextField(
                 placeholder ?? "",
@@ -274,16 +259,16 @@ struct PluginSettingRow: View {
     private func buttonControl(title: String, style: PluginSettingDefinition.SettingType.ButtonStyle, action: @escaping () -> Void) -> some View {
         HStack {
             if let description = definition.description {
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
                     Text(definition.displayName)
-                        .font(.system(size: 13, weight: .medium))
+                        .font(.system(size: MGStyle.FontSize.body, weight: .medium))
                     Text(description)
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
             } else {
                 Text(definition.displayName)
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: MGStyle.FontSize.body, weight: .medium))
             }
             
             Spacer()
@@ -311,32 +296,26 @@ struct PluginSettingRow: View {
     // MARK: - Info Control
     
     private func infoControl(text: String) -> some View {
-        HStack(alignment: .top, spacing: 8) {
+        HStack(alignment: .top, spacing: MGStyle.Spacing.md) {
             Image(systemName: "info.circle")
                 .foregroundColor(.secondary)
             Text(text)
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, MGStyle.Spacing.sm)
     }
     
     // MARK: - Setting Label
     
     private var settingLabel: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            HStack(spacing: 4) {
+        VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
+            HStack(spacing: MGStyle.Spacing.sm) {
                 Text(definition.displayName)
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: MGStyle.FontSize.body, weight: .medium))
                 
                 if definition.isAdvanced {
-                    Text("Advanced")
-                        .font(.system(size: 9))
-                        .padding(.horizontal, MGStyle.Spacing.sm)
-                        .padding(.vertical, MGStyle.Spacing.xs)
-                        .background(Color.orange.opacity(0.2))
-                        .foregroundColor(.orange)
-                        .cornerRadius(MGStyle.Corner.sm)
+                    MGBadge("Advanced", color: .orange)
                 }
             }
             
@@ -348,7 +327,7 @@ struct PluginSettingRow: View {
             
             // Show plugin name for clarity
             Text("Plugin: \(plugin.name)")
-                .font(.system(size: 10))
+                .font(.system(size: MGStyle.FontSize.badge))
                 .foregroundColor(.secondary.opacity(0.7))
         }
     }
@@ -390,13 +369,7 @@ private struct SliderSettingControl: View {
                             .font(.system(size: MGStyle.FontSize.body, weight: .medium))
                         
                         if definition.isAdvanced {
-                            Text("Advanced")
-                                .font(.system(size: 9))
-                                .padding(.horizontal, MGStyle.Spacing.sm)
-                                .padding(.vertical, MGStyle.Spacing.xs)
-                                .background(Color.orange.opacity(0.2))
-                                .foregroundColor(.orange)
-                                .cornerRadius(MGStyle.Corner.sm)
+                            MGBadge("Advanced", color: .orange)
                         }
                     }
                     
@@ -407,12 +380,12 @@ private struct SliderSettingControl: View {
                     }
                     
                     Text("Plugin: \(plugin.name)")
-                        .font(.system(size: 10))
+                        .font(.system(size: MGStyle.FontSize.badge))
                         .foregroundColor(.secondary.opacity(0.7))
                 }
                 Spacer()
                 Text(formatValue(localValue, unit: unit))
-                    .font(.system(size: 12, design: .monospaced))
+                    .font(.system(size: MGStyle.FontSize.caption, design: .monospaced))
                     .foregroundColor(.secondary)
             }
             
@@ -459,7 +432,7 @@ struct CompactPluginSettingsSection: View {
     @State private var visibilityTrigger = UUID()
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
             ForEach(getSettingsForCategory(), id: \.definition.key) { item in
                 if shouldShowSetting(item.definition) {
                     PluginSettingRow(

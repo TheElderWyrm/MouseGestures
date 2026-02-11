@@ -164,9 +164,7 @@ struct GesturesView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {
                 VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
-                    Text("Gesture Details")
-                        .font(.title2)
-                        .fontWeight(.bold)
+                    MGSectionHeader("Gesture Details", icon: "hand.tap")
                     
                     Text(gesture.displayDescription)
                         .font(.headline)
