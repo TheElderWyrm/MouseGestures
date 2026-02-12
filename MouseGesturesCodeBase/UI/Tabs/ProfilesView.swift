@@ -125,7 +125,7 @@ struct ProfilesView: View {
     private var profileListView: some View {
         VStack(alignment: .leading, spacing: 0) {
             ScrollView {
-                VStack(spacing: MGStyle.Spacing.sm) {
+                LazyVStack(spacing: MGStyle.Spacing.sm) {
                     ForEach(filteredProfiles) { profile in
                         ProfileListRow(
                             profile: profile,
@@ -294,36 +294,18 @@ struct ProfileListRow: View {
             
             Spacer()
             
-            // Hover actions
-            HStack(spacing: MGStyle.Spacing.md) {
+            // Hover actions with expanded hit targets
+            HStack(spacing: MGStyle.Spacing.xs) {
                 if !isActive {
-                    Button(action: onSetActive) {
-                        Image(systemName: "checkmark.circle")
-                            .font(.system(size: MGStyle.IconSize.row))
-                            .foregroundColor(.secondary)
-                    }
-                    .buttonStyle(.plain)
-                    .help("Set as active")
+                    MGActionButton("checkmark.circle", help: "Set as active") { onSetActive() }
                 }
-                Button(action: onDuplicate) {
-                    Image(systemName: "plus.square.on.square")
-                        .font(.system(size: MGStyle.IconSize.row))
-                        .foregroundColor(.secondary)
-                }
-                .buttonStyle(.plain)
-                .help("Duplicate")
-                Button(action: onDelete) {
-                    Image(systemName: "trash")
-                        .font(.system(size: MGStyle.IconSize.row))
-                        .foregroundColor(.red.opacity(0.7))
-                }
-                .buttonStyle(.plain)
-                .help("Delete")
+                MGActionButton("plus.square.on.square", help: "Duplicate") { onDuplicate() }
+                MGActionButton("trash", help: "Delete", destructive: true) { onDelete() }
             }
             .opacity(isHovered ? 1 : 0)
         }
-        .mgListRow(isSelected: isSelected, isHovered: isHovered)
-        .onHover { hovering in isHovered = hovering }
+        .mgListRow(isSelected: isSelected, isHovered: isHovered, showBorder: true)
+        .onHover { hovering in withAnimation(.easeInOut(duration: 0.15)) { isHovered = hovering } }
         .onTapGesture { onSelect() }
         .onTapGesture(count: 2) { onSetActive() }
         .contextMenu {

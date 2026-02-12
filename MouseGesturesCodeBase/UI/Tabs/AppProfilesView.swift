@@ -123,7 +123,7 @@ struct AppProfilesView: View {
                 count: filteredMappings.count
             )
             
-            VStack(spacing: MGStyle.Spacing.md) {
+            LazyVStack(spacing: MGStyle.Spacing.md) {
                 ForEach(filteredMappings, id: \.id) { mapping in
                     AppMappingRow(
                         mapping: mapping,
@@ -152,7 +152,7 @@ struct AppProfilesView: View {
                 count: filteredDisabledApps.count
             )
             
-            VStack(spacing: MGStyle.Spacing.md) {
+            LazyVStack(spacing: MGStyle.Spacing.md) {
                 ForEach(filteredDisabledApps, id: \.id) { disabledApp in
                     DisabledAppRow(
                         disabledApp: disabledApp,
@@ -289,23 +289,11 @@ struct AppMappingRow: View {
                 }
             }
             
-            Button(action: onDelete) {
-                Image(systemName: "trash")
-                    .font(.system(size: MGStyle.IconSize.row))
-                    .foregroundColor(.red.opacity(0.7))
-            }
-            .buttonStyle(.plain)
-            .opacity(isHovered ? 1 : 0)
-            .help("Remove rule")
+            MGActionButton("trash", help: "Remove rule", destructive: true) { onDelete() }
+                .opacity(isHovered ? 1 : 0)
         }
-        .padding(.horizontal, MGStyle.Spacing.lg)
-        .padding(.vertical, MGStyle.Spacing.md)
-        .background(
-            RoundedRectangle(cornerRadius: MGStyle.Corner.lg)
-                .fill(isHovered ? MGStyle.Colors.hoveredRow : Color.clear)
-        )
-        .contentShape(Rectangle())
-        .onHover { hovering in isHovered = hovering }
+        .mgListRow(isSelected: false, isHovered: isHovered)
+        .onHover { hovering in withAnimation(.easeInOut(duration: 0.15)) { isHovered = hovering } }
     }
 }
 
@@ -343,23 +331,11 @@ struct DisabledAppRow: View {
             
             MGBadge("Disabled", color: .red, icon: "nosign")
             
-            Button(action: onDelete) {
-                Image(systemName: "trash")
-                    .font(.system(size: MGStyle.IconSize.row))
-                    .foregroundColor(.red.opacity(0.7))
-            }
-            .buttonStyle(.plain)
-            .opacity(isHovered ? 1 : 0)
-            .help("Remove rule")
+            MGActionButton("trash", help: "Remove rule", destructive: true) { onDelete() }
+                .opacity(isHovered ? 1 : 0)
         }
-        .padding(.horizontal, MGStyle.Spacing.lg)
-        .padding(.vertical, MGStyle.Spacing.md)
-        .background(
-            RoundedRectangle(cornerRadius: MGStyle.Corner.lg)
-                .fill(isHovered ? MGStyle.Colors.hoveredRow : Color.clear)
-        )
-        .contentShape(Rectangle())
-        .onHover { hovering in isHovered = hovering }
+        .mgListRow(isSelected: false, isHovered: isHovered)
+        .onHover { hovering in withAnimation(.easeInOut(duration: 0.15)) { isHovered = hovering } }
     }
 }
 

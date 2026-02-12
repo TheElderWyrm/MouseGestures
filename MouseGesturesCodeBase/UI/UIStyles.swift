@@ -459,15 +459,29 @@ struct MGSidebar<Content: View, Header: View, Footer: View>: View {
 struct MGListRowModifier: ViewModifier {
     let isSelected: Bool
     let isHovered: Bool
+    let showBorder: Bool
+    
+    init(isSelected: Bool, isHovered: Bool, showBorder: Bool = false) {
+        self.isSelected = isSelected
+        self.isHovered = isHovered
+        self.showBorder = showBorder
+    }
     
     func body(content: Content) -> some View {
         content
-            .padding(.horizontal, MGStyle.Spacing.xl)
+            .padding(.horizontal, MGStyle.Spacing.lg)
             .padding(.vertical, MGStyle.Spacing.md)
             .background(
-                RoundedRectangle(cornerRadius: MGStyle.Corner.md)
+                RoundedRectangle(cornerRadius: MGStyle.Corner.lg)
                     .fill(isSelected ? MGStyle.Colors.selectedRow :
                           (isHovered ? MGStyle.Colors.hoveredRow : Color.clear))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: MGStyle.Corner.lg)
+                    .stroke(
+                        showBorder && isSelected ? Color.accentColor.opacity(0.3) : Color.clear,
+                        lineWidth: 0.5
+                    )
             )
             .contentShape(Rectangle())
     }
@@ -475,22 +489,92 @@ struct MGListRowModifier: ViewModifier {
 
 extension View {
     /// Apply consistent list row styling with selection and hover states.
-    func mgListRow(isSelected: Bool, isHovered: Bool) -> some View {
-        modifier(MGListRowModifier(isSelected: isSelected, isHovered: isHovered))
+    func mgListRow(isSelected: Bool, isHovered: Bool, showBorder: Bool = false) -> some View {
+        modifier(MGListRowModifier(isSelected: isSelected, isHovered: isHovered, showBorder: showBorder))
+    }
+}
+
+// MARK: - Unified List Card
+
+/// Consistent card styling for list items across all tabs.
+/// Provides: rounded background, hover highlight, optional selection border, content shape.
+struct MGListCardModifier: ViewModifier {
+    let isHovered: Bool
+    let isExpanded: Bool
+    
+    init(isHovered: Bool, isExpanded: Bool = false) {
+        self.isHovered = isHovered
+        self.isExpanded = isExpanded
+    }
+    
+    func body(content: Content) -> some View {
+        content
+            .background(
+                RoundedRectangle(cornerRadius: MGStyle.Corner.lg)
+                    .fill(isHovered ? MGStyle.Colors.cardBackground : MGStyle.Colors.cardBackground.opacity(0.6))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: MGStyle.Corner.lg)
+                    .stroke(
+                        isExpanded ? Color.accentColor.opacity(0.3) :
+                        (isHovered ? MGStyle.Colors.separator.opacity(0.4) : MGStyle.Colors.separator.opacity(0.2)),
+                        lineWidth: isExpanded ? 1 : 0.5
+                    )
+            )
+            .contentShape(Rectangle())
+    }
+}
+
+extension View {
+    /// Apply unified list card styling.
+    func mgListCard(isHovered: Bool, isExpanded: Bool = false) -> some View {
+        modifier(MGListCardModifier(isHovered: isHovered, isExpanded: isExpanded))
+    }
+}
+
+// MARK: - Unified Action Button
+
+/// Button with expanded hit target for better clickability.
+/// Use instead of raw icon buttons for row actions.
+struct MGActionButton: View {
+    let icon: String
+    let isDestructive: Bool
+    let helpText: String
+    let action: () -> Void
+    
+    init(_ icon: String, help: String = "", destructive: Bool = false, action: @escaping () -> Void) {
+        self.icon = icon
+        self.helpText = help
+        self.isDestructive = destructive
+        self.action = action
+    }
+    
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: MGStyle.IconSize.row))
+                .foregroundColor(isDestructive ? .red.opacity(0.7) : .secondary)
+                .frame(width: 28, height: 28)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help(helpText)
     }
 }
 
 // MARK: - Unified Hover Row Actions
 
-/// Consistent inline action buttons shown on row hover.
+/// Consistent inline action buttons shown on row hover, with expanded hit targets.
 struct MGRowActions: View {
     struct Action {
         let icon: String
         let isDestructive: Bool
+        let helpText: String
         let handler: () -> Void
         
-        init(_ icon: String, destructive: Bool = false, action: @escaping () -> Void) {
+        init(_ icon: String, help: String = "", destructive: Bool = false, action: @escaping () -> Void) {
             self.icon = icon
+            self.helpText = help
             self.isDestructive = destructive
             self.handler = action
         }
@@ -499,14 +583,14 @@ struct MGRowActions: View {
     let actions: [Action]
     
     var body: some View {
-        HStack(spacing: MGStyle.Spacing.md) {
+        HStack(spacing: MGStyle.Spacing.xs) {
             ForEach(actions.indices, id: \.self) { i in
-                Button(action: actions[i].handler) {
-                    Image(systemName: actions[i].icon)
-                        .font(.system(size: MGStyle.IconSize.inline))
-                        .foregroundColor(actions[i].isDestructive ? .red : .secondary)
-                }
-                .buttonStyle(.plain)
+                MGActionButton(
+                    actions[i].icon,
+                    help: actions[i].helpText,
+                    destructive: actions[i].isDestructive,
+                    action: actions[i].handler
+                )
             }
         }
     }

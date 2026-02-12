@@ -254,11 +254,13 @@ struct SavedActionRow: View {
     
     var body: some View {
         HStack(spacing: MGStyle.Spacing.lg) {
-            // Selection checkbox
+            // Selection checkbox with expanded hit target
             Button(action: onToggleSelection) {
                 Image(systemName: isSelected ? "checkmark.square.fill" : "square")
                     .foregroundColor(isSelected ? .accentColor : .secondary.opacity(0.4))
                     .font(.system(size: 15))
+                    .frame(width: 28, height: 28)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             
@@ -293,26 +295,16 @@ struct SavedActionRow: View {
                 .foregroundColor(.secondary.opacity(0.6))
             
             MGRowActions(actions: [
-                .init("plus.square.on.square") { onDuplicate() },
-                .init("pencil") { onEdit() },
-                .init("trash", destructive: true) { onDelete() }
+                .init("plus.square.on.square", help: "Duplicate") { onDuplicate() },
+                .init("pencil", help: "Edit") { onEdit() },
+                .init("trash", help: "Delete", destructive: true) { onDelete() }
             ])
             .opacity(isHovered ? 1 : 0)
         }
-        .padding(.horizontal, MGStyle.Spacing.lg)
-        .padding(.vertical, MGStyle.Spacing.md)
-        .background(
-            RoundedRectangle(cornerRadius: MGStyle.Corner.lg)
-                .fill(isSelected ? Color.accentColor.opacity(0.06) : 
-                      (isHovered ? MGStyle.Colors.cardBackground : Color.clear))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: MGStyle.Corner.lg)
-                .stroke(isSelected ? Color.accentColor.opacity(0.2) : Color.clear, lineWidth: 0.5)
-        )
-        .onHover { hovering in isHovered = hovering }
-        .contentShape(Rectangle())
+        .mgListRow(isSelected: isSelected, isHovered: isHovered, showBorder: true)
+        .onHover { hovering in withAnimation(.easeInOut(duration: 0.15)) { isHovered = hovering } }
         .onTapGesture(count: 2) { onDoubleClick() }
+        .onTapGesture { onToggleSelection() }
         .contextMenu {
             Button(action: onEdit) { Label("Edit", systemImage: "pencil") }
             Button(action: onDuplicate) { Label("Duplicate", systemImage: "plus.square.on.square") }

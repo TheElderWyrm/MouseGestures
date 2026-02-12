@@ -253,7 +253,7 @@ struct GestureCardView: View {
         VStack(alignment: .leading, spacing: 0) {
             // Main row
             HStack(spacing: MGStyle.Spacing.lg) {
-                // Action icon as primary
+                // Action icon
                 ZStack {
                     RoundedRectangle(cornerRadius: MGStyle.Corner.md)
                         .fill(isEnabled ? Color.accentColor.opacity(0.1) : Color.secondary.opacity(0.06))
@@ -273,13 +273,11 @@ struct GestureCardView: View {
                 
                 // Info block
                 VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
-                    // Action name
                     Text(actionDef?.name ?? gesture.actionIdentifier)
                         .font(.system(size: MGStyle.FontSize.body, weight: .medium))
                         .lineLimit(1)
                         .opacity(isEnabled ? 1 : 0.5)
                     
-                    // Trigger summary as single line
                     Text(triggerSummary)
                         .font(.system(size: MGStyle.FontSize.caption))
                         .foregroundColor(.secondary)
@@ -289,7 +287,7 @@ struct GestureCardView: View {
                 
                 Spacer()
                 
-                // Timing indicators (subtle)
+                // Timing indicators
                 HStack(spacing: MGStyle.Spacing.sm) {
                     if gesture.timing.repeatOnHold {
                         Image(systemName: "repeat")
@@ -305,59 +303,33 @@ struct GestureCardView: View {
                     }
                 }
                 
-                // Hover actions: edit + delete
-                HStack(spacing: MGStyle.Spacing.md) {
-                    Button(action: onEdit) {
-                        Image(systemName: "pencil")
-                            .font(.system(size: MGStyle.IconSize.row))
-                            .foregroundColor(.secondary)
-                    }
-                    .buttonStyle(.plain)
-                    .help("Edit gesture")
-                    
-                    Button(action: { showDeleteConfirm = true }) {
-                        Image(systemName: "trash")
-                            .font(.system(size: MGStyle.IconSize.row))
-                            .foregroundColor(.red.opacity(0.7))
-                    }
-                    .buttonStyle(.plain)
-                    .help("Delete gesture")
-                }
+                // Hover actions with expanded hit targets
+                MGRowActions(actions: [
+                    .init("pencil", help: "Edit gesture") { onEdit() },
+                    .init("trash", help: "Delete gesture", destructive: true) { showDeleteConfirm = true }
+                ])
                 .opacity(isHovered ? 1 : 0)
                 
                 // Expand chevron
-                Button(action: onToggleExpand) {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundColor(.secondary)
-                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
-                }
-                .buttonStyle(.plain)
+                MGActionButton("chevron.right", help: "Show details") { onToggleExpand() }
+                    .rotationEffect(.degrees(isExpanded ? 90 : 0))
             }
-            .padding(.horizontal, MGStyle.Spacing.xl)
+            .padding(.horizontal, MGStyle.Spacing.lg)
             .padding(.vertical, MGStyle.Spacing.lg)
             
             // Expanded detail area
             if isExpanded {
                 Divider()
-                    .padding(.horizontal, MGStyle.Spacing.xl)
+                    .padding(.horizontal, MGStyle.Spacing.lg)
                 
                 expandedContent
-                    .padding(.horizontal, MGStyle.Spacing.xl)
+                    .padding(.horizontal, MGStyle.Spacing.lg)
                     .padding(.vertical, MGStyle.Spacing.lg)
                     .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
-        .background(
-            RoundedRectangle(cornerRadius: MGStyle.Corner.lg)
-                .fill(isHovered ? MGStyle.Colors.cardBackground : MGStyle.Colors.cardBackground.opacity(0.7))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: MGStyle.Corner.lg)
-                .stroke(isExpanded ? Color.accentColor.opacity(0.3) : MGStyle.Colors.separator.opacity(0.4), lineWidth: isExpanded ? 1 : 0.5)
-        )
-        .contentShape(Rectangle())
-        .onHover { h in withAnimation(.easeInOut(duration: 0.1)) { isHovered = h } }
+        .mgListCard(isHovered: isHovered, isExpanded: isExpanded)
+        .onHover { h in withAnimation(.easeInOut(duration: 0.15)) { isHovered = h } }
         .onTapGesture(count: 2) { onEdit() }
         .onTapGesture { onToggleExpand() }
         .contextMenu {

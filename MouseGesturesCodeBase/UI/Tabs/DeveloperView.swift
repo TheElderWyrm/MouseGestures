@@ -260,10 +260,7 @@ struct DeveloperView: View {
                 }
             }
             Spacer()
-            Button(action: { deleteLogFile(logFile) }) {
-                Image(systemName: "trash").foregroundColor(.red).font(.caption)
-            }
-            .buttonStyle(PlainButtonStyle())
+            MGActionButton("trash", help: "Delete log", destructive: true) { deleteLogFile(logFile) }
         }
         .padding(.horizontal, MGStyle.Spacing.lg)
         .padding(.vertical, MGStyle.Spacing.sm)
@@ -341,12 +338,12 @@ struct DeveloperView: View {
                     }
                 }
                 Spacer()
-                VStack(spacing: MGStyle.Spacing.sm) {
+                HStack(spacing: MGStyle.Spacing.xs) {
                     if !plugin.isBuiltIn {
-                        Button("Permissions") { showPluginPermissions(plugin) }.font(.caption)
-                        Button("Uninstall") { uninstallPlugin(plugin) }.font(.caption).foregroundColor(.red)
+                        MGActionButton("lock.shield", help: "Permissions") { showPluginPermissions(plugin) }
+                        MGActionButton("trash", help: "Uninstall", destructive: true) { uninstallPlugin(plugin) }
                     }
-                    Button("Reload") { reloadPlugin(plugin) }.font(.caption)
+                    MGActionButton("arrow.clockwise", help: "Reload") { reloadPlugin(plugin) }
                 }
             }
             Divider()

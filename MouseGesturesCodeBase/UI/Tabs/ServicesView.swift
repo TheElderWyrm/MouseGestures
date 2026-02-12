@@ -161,6 +161,8 @@ struct ServiceRow: View {
     let onConfigure: () -> Void
     let onToggle: () -> Void
     
+    @State private var isHovered = false
+    
     var body: some View {
         HStack(spacing: MGStyle.Spacing.lg) {
             Image(systemName: plugin.category.icon)
@@ -207,11 +209,7 @@ struct ServiceRow: View {
             Spacer()
             
             HStack(spacing: MGStyle.Spacing.md) {
-                Button(action: onConfigure) {
-                    Image(systemName: "gearshape")
-                }
-                .buttonStyle(BorderlessButtonStyle())
-                .help("Configure Service")
+                MGActionButton("gearshape", help: "Configure Service") { onConfigure() }
                 
                 Toggle("", isOn: Binding(
                     get: { plugin.isEnabled },
@@ -221,11 +219,10 @@ struct ServiceRow: View {
                 .help(plugin.isEnabled ? "Disable Service" : "Enable Service")
             }
         }
-        .padding(MGStyle.Spacing.xl)
-        .background(
-            RoundedRectangle(cornerRadius: MGStyle.Corner.lg)
-                .fill(MGStyle.Colors.cardBackground)
-        )
+        .padding(.horizontal, MGStyle.Spacing.lg)
+        .padding(.vertical, MGStyle.Spacing.lg)
+        .mgListCard(isHovered: isHovered)
+        .onHover { hovering in withAnimation(.easeInOut(duration: 0.15)) { isHovered = hovering } }
     }
     
     private var permissionsLabel: some View {

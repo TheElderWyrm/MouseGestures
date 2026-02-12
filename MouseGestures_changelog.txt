@@ -1,3 +1,40 @@
+## 2026-02-12
+
+### UI Unification: Hit Targets, List Styling, and Performance
+
+**New UIStyles Components:**
+- **MGActionButton**: Icon button with expanded 28×28 hit target (up from ~11px icon-only). 
+  Replaces all raw icon buttons for row actions across the app.
+- **MGListCardModifier (.mgListCard)**: Unified card styling for list items with consistent 
+  hover highlights, subtle borders, and expansion state. Used for gesture cards, service rows.
+- **MGListRowModifier**: Added `showBorder` parameter for optional selection accent border.
+- **MGRowActions**: Now uses MGActionButton internally; added `help` tooltip support per action.
+
+**Files Updated (7):**
+- **UIStyles.swift**: Added MGActionButton, MGListCardModifier, updated MGListRowModifier 
+  and MGRowActions.
+- **GesturesView**: Gesture cards use `mgListCard` modifier, `MGRowActions` with expanded 
+  targets, `MGActionButton` for expand chevron.
+- **ProfilesView**: Profile list rows use `MGActionButton`, `mgListRow(showBorder:)`, 
+  switched to LazyVStack for performance.
+- **SavedActionsView**: Rows use unified `mgListRow`, expanded checkbox hit target (28×28), 
+  full-row click now toggles selection (not just checkbox).
+- **AppProfilesView**: Mapping/disabled rows use `mgListRow` and `MGActionButton`, 
+  switched sections to LazyVStack.
+- **ServicesView**: Service rows use `mgListCard` and `MGActionButton` for configure button.
+- **DeveloperView**: Plugin rows use `MGActionButton` (horizontal layout), log file delete 
+  uses `MGActionButton`.
+
+**To-do Items Resolved:**
+- ✅ Extra clickable area around all icon/hover buttons (28×28 hit targets)
+- ✅ Unified list styles across all tabs (mgListCard/mgListRow modifiers)
+- ✅ Unified styles between plugin management and service management
+- ✅ Saved actions: clicking anywhere on card toggles selection
+- ✅ LazyVStack for performance in profiles, app profiles, and other list views
+- All hover animations now use consistent 0.15s easeInOut timing
+
+---
+
 ## 2026-02-11 (3)
 
 ### UI Improvements: Responsiveness, Compactness, and Polish

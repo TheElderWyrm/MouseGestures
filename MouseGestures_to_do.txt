@@ -21,27 +21,27 @@ Actions (fix later):
 - Conditional gesture bundle logic?
 
 Improve UI
-- add extra clickable area around all icon/hover buttons
-- Pre-render UI to increase performance
 - General: UI Should be relatively simple and should not use lots of colors or accents. 
-- Most tabs are displaying a list of objects, but they are all doing it with slightly different styles. Unify.
+- Further performance optimizations if needed (drawingGroup, equatable rendering)
 
 Gestures Tab:
 	- Add/edit Gesture screen:
 		- Show gesture preview: [Trigger] -> [Action] at the bottom bar of the add/edit gesture screen.
+	- Gesture information not properly accounting for custom configurations (Not everything has a modifier or zone.)
+	- Duplicate detection not working generally for all trigger plugins (Should not be hardcoded for specific triggers)
+
+Saved actions
 
 Profiles:
 	- Allow deletion of active profile, should switch to next profile or create a profile (Base off minimal by default) if no other profiles.
 	- Allow selection of multiple profiles at once (for deletion, export, import, duplication, or creating a merged profile.)
-	- Make the gesture list editable (Use a version of the 'gestures' tab
+	- Make the gesture list editable (Use a version of the 'gestures' tab, fully editable without activating)
 	- Create new profile: Add an import from template button to the bottom bar.
 
 App Profiles:
 	- Add: Add a button to select application from finder
+	- Sort profile mappings alphabetically
 
-Settings:
-	- Improve settings organization (additional categories, better grouping)
 Developer:
 	- Improve developer mode organization
-	- Unify styles between plugin management and service management
 
