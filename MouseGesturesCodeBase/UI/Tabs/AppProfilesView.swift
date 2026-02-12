@@ -24,11 +24,8 @@ struct AppProfilesView: View {
     @State private var selectedApp: String = ""
     enum ActiveSheet: Identifiable {
         case addRule
-        
         var id: String {
-            switch self {
-            case .addRule: return "add"
-            }
+            switch self { case .addRule: return "add" }
         }
     }
     @State private var activeSheet: ActiveSheet?
@@ -63,7 +60,7 @@ struct AppProfilesView: View {
             
             Divider()
             
-            if appMappings.isEmpty && disabledApps.isEmpty {
+            if allRules.isEmpty {
                 MGEmptyState(
                     icon: "app.badge.checkmark",
                     title: "No App Rules Configured",
@@ -73,13 +70,27 @@ struct AppProfilesView: View {
                 )
             } else {
                 ScrollView {
-                    VStack(spacing: MGStyle.Spacing.xl) {
-                        if !filteredMappings.isEmpty {
-                            profileMappingsSection
-                        }
-                        
-                        if !filteredDisabledApps.isEmpty {
-                            disabledAppsSection
+                    LazyVStack(spacing: MGStyle.Spacing.sm) {
+                        ForEach(filteredRules, id: \.bundleId) { rule in
+                            UnifiedAppRuleRow(
+                                rule: rule,
+                                onChangeToProfile: { profileId in
+                                    // Remove from disabled if it was there, add as mapping
+                                    uiServices.removeDisabledApp(bundleId: rule.bundleId)
+                                    uiServices.addAppProfileMapping(bundleId: rule.bundleId, appName: rule.appName, profileId: profileId)
+                                    loadData()
+                                },
+                                onChangeToDisabled: {
+                                    // Remove from mappings if it was there, add as disabled
+                                    uiServices.removeAppProfileMapping(bundleId: rule.bundleId)
+                                    uiServices.addDisabledApp(bundleId: rule.bundleId, appName: rule.appName)
+                                    loadData()
+                                },
+                                onDelete: {
+                                    itemToDelete = rule.bundleId
+                                    showDeleteConfirmation = true
+                                }
+                            )
                         }
                     }
                     .padding(MGStyle.Spacing.xl)
@@ -105,88 +116,43 @@ struct AppProfilesView: View {
         .alert("Delete App Rule", isPresented: $showDeleteConfirmation) {
             Button("Cancel", role: .cancel) { }
             Button("Delete", role: .destructive) {
-                if let bundleId = itemToDelete {
-                    deleteAppRule(bundleId: bundleId)
-                }
+                if let bundleId = itemToDelete { deleteAppRule(bundleId: bundleId) }
             }
         } message: {
             Text("Are you sure you want to delete this app rule?")
         }
     }
     
-    // MARK: - View Components
+    // MARK: - Unified Rule Model
     
-    private var profileMappingsSection: some View {
-        VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
-            MGListSectionHeader(
-                "Profile Mappings",
-                count: filteredMappings.count
+    struct AppRule {
+        let bundleId: String
+        let appName: String
+        let profileId: UUID?   // nil = disabled
+        let profileName: String?
+    }
+    
+    private var allRules: [AppRule] {
+        let mappingRules = appMappings.map { m in
+            AppRule(
+                bundleId: m.appBundleIdentifier,
+                appName: m.appName,
+                profileId: m.profileId,
+                profileName: uiServices.profiles.first(where: { $0.id == m.profileId })?.name
             )
-            
-            LazyVStack(spacing: MGStyle.Spacing.sm) {
-                ForEach(filteredMappings, id: \.id) { mapping in
-                    AppMappingRow(
-                        mapping: mapping,
-                        profileName: uiServices.profiles.first(where: { $0.id == mapping.profileId })?.name ?? "Unknown",
-                        onProfileChange: { newProfileId in
-                            updateMapping(mapping: mapping, newProfileId: newProfileId)
-                        },
-                        onDelete: {
-                            itemToDelete = mapping.appBundleIdentifier
-                            showDeleteConfirmation = true
-                        }
-                    )
-                }
-            }
         }
-        .background(
-            RoundedRectangle(cornerRadius: MGStyle.Corner.lg)
-                .fill(MGStyle.Colors.cardBackground)
-        )
+        let disabledRules = disabledApps.map { d in
+            AppRule(bundleId: d.appBundleIdentifier, appName: d.appName, profileId: nil, profileName: nil)
+        }
+        return (mappingRules + disabledRules)
+            .sorted { $0.appName.localizedCaseInsensitiveCompare($1.appName) == .orderedAscending }
     }
     
-    private var disabledAppsSection: some View {
-        VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
-            MGListSectionHeader(
-                "Disabled Apps",
-                count: filteredDisabledApps.count
-            )
-            
-            LazyVStack(spacing: MGStyle.Spacing.sm) {
-                ForEach(filteredDisabledApps, id: \.id) { disabledApp in
-                    DisabledAppRow(
-                        disabledApp: disabledApp,
-                        onDelete: {
-                            itemToDelete = disabledApp.appBundleIdentifier
-                            showDeleteConfirmation = true
-                        }
-                    )
-                }
-            }
-        }
-        .background(
-            RoundedRectangle(cornerRadius: MGStyle.Corner.lg)
-                .fill(MGStyle.Colors.cardBackground)
-        )
-    }
-    
-    // MARK: - Computed Properties
-    
-    private var filteredMappings: [AppProfileMapping] {
-        let sorted = appMappings.sorted { $0.appName.localizedCaseInsensitiveCompare($1.appName) == .orderedAscending }
-        if searchText.isEmpty { return sorted }
-        return sorted.filter { mapping in
-            mapping.appName.localizedCaseInsensitiveContains(searchText) ||
-            mapping.appBundleIdentifier.localizedCaseInsensitiveContains(searchText)
-        }
-    }
-    
-    private var filteredDisabledApps: [DisabledApp] {
-        let sorted = disabledApps.sorted { $0.appName.localizedCaseInsensitiveCompare($1.appName) == .orderedAscending }
-        if searchText.isEmpty { return sorted }
-        return sorted.filter { app in
-            app.appName.localizedCaseInsensitiveContains(searchText) ||
-            app.appBundleIdentifier.localizedCaseInsensitiveContains(searchText)
+    private var filteredRules: [AppRule] {
+        if searchText.isEmpty { return allRules }
+        return allRules.filter {
+            $0.appName.localizedCaseInsensitiveContains(searchText) ||
+            $0.bundleId.localizedCaseInsensitiveContains(searchText)
         }
     }
     
@@ -209,48 +175,44 @@ struct AppProfilesView: View {
         loadData()
     }
     
-    private func updateMapping(mapping: AppProfileMapping, newProfileId: UUID) {
-        uiServices.addAppProfileMapping(
-            bundleId: mapping.appBundleIdentifier,
-            appName: mapping.appName,
-            profileId: newProfileId
-        )
-        loadData()
-    }
-    
     private func deleteAppRule(bundleId: String) {
-        if appMappings.contains(where: { $0.appBundleIdentifier == bundleId }) {
-            uiServices.removeAppProfileMapping(bundleId: bundleId)
-        } else if disabledApps.contains(where: { $0.appBundleIdentifier == bundleId }) {
-            uiServices.removeDisabledApp(bundleId: bundleId)
-        }
+        uiServices.removeAppProfileMapping(bundleId: bundleId)
+        uiServices.removeDisabledApp(bundleId: bundleId)
         loadData()
     }
 }
 
-// MARK: - App Mapping Row
-struct AppMappingRow: View {
-    let mapping: AppProfileMapping
-    let profileName: String
-    let onProfileChange: (UUID) -> Void
+// MARK: - Unified App Rule Row (with inline dropdown including Disable option)
+
+struct UnifiedAppRuleRow: View {
+    let rule: AppProfilesView.AppRule
+    let onChangeToProfile: (UUID) -> Void
+    let onChangeToDisabled: () -> Void
     let onDelete: () -> Void
     
     @StateObject private var uiServices = UIServices.shared
     @State private var isHovered = false
-    @State private var selectedProfileId: UUID
     
-    init(mapping: AppProfileMapping, profileName: String, onProfileChange: @escaping (UUID) -> Void, onDelete: @escaping () -> Void) {
-        self.mapping = mapping
-        self.profileName = profileName
-        self.onProfileChange = onProfileChange
-        self.onDelete = onDelete
-        self._selectedProfileId = State(initialValue: mapping.profileId)
+    /// Sentinel UUID for the "Disable" option in the picker
+    private static let disableSentinel = UUID(uuidString: "00000000-0000-0000-0000-000000000000")!
+    
+    private var pickerSelection: Binding<UUID> {
+        Binding(
+            get: { rule.profileId ?? Self.disableSentinel },
+            set: { newValue in
+                if newValue == Self.disableSentinel {
+                    onChangeToDisabled()
+                } else {
+                    onChangeToProfile(newValue)
+                }
+            }
+        )
     }
     
     var body: some View {
         HStack(spacing: MGStyle.Spacing.md) {
             // App icon
-            if let app = NSWorkspace.shared.urlForApplication(withBundleIdentifier: mapping.appBundleIdentifier) {
+            if let app = NSWorkspace.shared.urlForApplication(withBundleIdentifier: rule.bundleId) {
                 Image(nsImage: NSWorkspace.shared.icon(forFile: app.path))
                     .resizable()
                     .aspectRatio(contentMode: .fit)
@@ -262,13 +224,11 @@ struct AppMappingRow: View {
                     .foregroundColor(.secondary)
             }
             
-            // App name + bundle id
             VStack(alignment: .leading, spacing: 1) {
-                Text(mapping.appName)
+                Text(rule.appName)
                     .font(.system(size: MGStyle.FontSize.body, weight: .medium))
                     .lineLimit(1)
-                
-                Text(mapping.appBundleIdentifier)
+                Text(rule.bundleId)
                     .font(.system(size: MGStyle.FontSize.badge))
                     .foregroundColor(.secondary)
                     .lineLimit(1)
@@ -277,24 +237,16 @@ struct AppMappingRow: View {
             
             Spacer()
             
-            // Inline rule: "Use profile: [Dropdown]"
-            HStack(spacing: MGStyle.Spacing.sm) {
-                Text("Use profile:")
-                    .font(.system(size: MGStyle.FontSize.caption))
-                    .foregroundColor(.secondary)
-                Picker("", selection: $selectedProfileId) {
-                    ForEach(uiServices.profiles.sorted(by: { $0.name < $1.name }), id: \.id) { profile in
-                        Text(profile.name).tag(profile.id)
-                    }
+            // Unified dropdown: profiles + disable option
+            Picker("", selection: pickerSelection) {
+                ForEach(uiServices.profiles.sorted(by: { $0.name < $1.name }), id: \.id) { profile in
+                    Text(profile.name).tag(profile.id)
                 }
-                .pickerStyle(.menu)
-                .frame(width: 140)
-                .onChange(of: selectedProfileId) { newValue in
-                    if newValue != mapping.profileId {
-                        onProfileChange(newValue)
-                    }
-                }
+                Divider()
+                Text("Disable Gestures").tag(Self.disableSentinel)
             }
+            .pickerStyle(.menu)
+            .frame(width: 160)
             
             MGActionButton("trash", help: "Remove rule", destructive: true) { onDelete() }
                 .opacity(isHovered ? 1 : 0)
@@ -302,56 +254,7 @@ struct AppMappingRow: View {
         .padding(.horizontal, MGStyle.Spacing.lg)
         .padding(.vertical, MGStyle.Spacing.sm)
         .mgListCard(isHovered: isHovered)
-        .onHover { hovering in withAnimation(.easeInOut(duration: 0.15)) { isHovered = hovering } }
-        .contextMenu {
-            Button(role: .destructive, action: onDelete) { Label("Delete", systemImage: "trash") }
-        }
-    }
-}
-
-// MARK: - Disabled App Row
-struct DisabledAppRow: View {
-    let disabledApp: DisabledApp
-    let onDelete: () -> Void
-    
-    @State private var isHovered = false
-    
-    var body: some View {
-        HStack(spacing: MGStyle.Spacing.md) {
-            if let app = NSWorkspace.shared.urlForApplication(withBundleIdentifier: disabledApp.appBundleIdentifier) {
-                Image(nsImage: NSWorkspace.shared.icon(forFile: app.path))
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 28, height: 28)
-            } else {
-                Image(systemName: "app")
-                    .font(.system(size: 20))
-                    .frame(width: 28, height: 28)
-                    .foregroundColor(.secondary)
-            }
-            
-            VStack(alignment: .leading, spacing: 1) {
-                Text(disabledApp.appName)
-                    .font(.system(size: MGStyle.FontSize.body, weight: .medium))
-                    .lineLimit(1)
-                
-                Text(disabledApp.appBundleIdentifier)
-                    .font(.system(size: MGStyle.FontSize.badge))
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
-            }
-            
-            Spacer()
-            
-            MGBadge("Disabled", color: .red, icon: "nosign")
-            
-            MGActionButton("trash", help: "Remove rule", destructive: true) { onDelete() }
-                .opacity(isHovered ? 1 : 0)
-        }
-        .padding(.horizontal, MGStyle.Spacing.lg)
-        .padding(.vertical, MGStyle.Spacing.sm)
-        .mgListCard(isHovered: isHovered)
-        .onHover { hovering in withAnimation(.easeInOut(duration: 0.15)) { isHovered = hovering } }
+        .onHover { h in withAnimation(.easeInOut(duration: 0.15)) { isHovered = h } }
         .contextMenu {
             Button(role: .destructive, action: onDelete) { Label("Delete", systemImage: "trash") }
         }
@@ -359,6 +262,7 @@ struct DisabledAppRow: View {
 }
 
 // MARK: - Add App Rule Sheet
+
 struct AddAppRuleSheet: View {
     @StateObject private var uiServices = UIServices.shared
     @State private var selectedApp: (bundleId: String, name: String, icon: NSImage?)? = nil
@@ -393,12 +297,10 @@ struct AddAppRuleSheet: View {
                             if isLoadingApps {
                                 HStack {
                                     Spacer()
-                                    ProgressView()
-                                        .progressViewStyle(.circular)
-                                        .scaleEffect(0.8)
+                                    ProgressView().progressViewStyle(.circular).scaleEffect(0.8)
                                     Spacer()
                                 }
-                                .frame(height: 200)
+                                .frame(height: 180)
                             } else {
                                 ScrollView {
                                     VStack(spacing: MGStyle.Spacing.xs) {
@@ -417,45 +319,73 @@ struct AddAppRuleSheet: View {
                                     }
                                     .padding(MGStyle.Spacing.sm)
                                 }
-                                .frame(height: 200)
+                                .frame(height: 180)
                                 .background(MGStyle.Colors.cardBackground)
                                 .cornerRadius(MGStyle.Corner.lg)
+                            }
+                            
+                            // Selected app indicator
+                            if let app = selectedApp {
+                                HStack(spacing: MGStyle.Spacing.md) {
+                                    if let icon = app.icon {
+                                        Image(nsImage: icon)
+                                            .resizable()
+                                            .aspectRatio(contentMode: .fit)
+                                            .frame(width: 20, height: 20)
+                                    }
+                                    Text("Selected: **\(app.name)**")
+                                        .font(.system(size: MGStyle.FontSize.caption))
+                                    
+                                    Text("(\(app.bundleId))")
+                                        .font(.system(size: MGStyle.FontSize.badge))
+                                        .foregroundColor(.secondary)
+                                        .lineLimit(1)
+                                }
+                                .padding(MGStyle.Spacing.md)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(
+                                    RoundedRectangle(cornerRadius: MGStyle.Corner.sm)
+                                        .fill(Color.accentColor.opacity(0.08))
+                                )
                             }
                         }
                     }
                     
-                    // Rule type + profile on same line
+                    // Rule type as radio buttons with inline profile dropdown
                     MGDetailSection("Rule Configuration", icon: "gearshape") {
                         VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
-                            HStack(spacing: MGStyle.Spacing.lg) {
-                                Picker("Rule:", selection: $ruleType) {
-                                    ForEach(AppProfileRuleType.allCases, id: \.self) { type in
-                                        Text(type.rawValue).tag(type)
+                            // Option 1: Use specific profile (with inline dropdown)
+                            HStack(spacing: MGStyle.Spacing.md) {
+                                RadioButton(isSelected: ruleType == .useProfile) {
+                                    ruleType = .useProfile
+                                }
+                                
+                                Text("Use specific profile:")
+                                    .font(.system(size: MGStyle.FontSize.body))
+                                    .onTapGesture { ruleType = .useProfile }
+                                
+                                Picker("", selection: $selectedProfileId) {
+                                    Text("Select...").tag(nil as UUID?)
+                                    ForEach(uiServices.profiles.sorted(by: { $0.name < $1.name }), id: \.id) { profile in
+                                        Text(profile.name).tag(profile.id as UUID?)
                                     }
                                 }
-                                .pickerStyle(.segmented)
-                                .frame(maxWidth: 300)
+                                .pickerStyle(.menu)
+                                .labelsHidden()
+                                .frame(width: 180)
+                                .disabled(ruleType != .useProfile)
+                                .opacity(ruleType == .useProfile ? 1 : 0.5)
                             }
                             
-                            if ruleType == .useProfile {
-                                HStack(spacing: MGStyle.Spacing.md) {
-                                    Text("Profile:")
-                                        .font(.system(size: MGStyle.FontSize.body))
-                                        .foregroundColor(.secondary)
-                                    Picker("", selection: $selectedProfileId) {
-                                        Text("Select a profile...").tag(nil as UUID?)
-                                        ForEach(uiServices.profiles.sorted(by: { $0.name < $1.name }), id: \.id) { profile in
-                                            Text(profile.name).tag(profile.id as UUID?)
-                                        }
-                                    }
-                                    .pickerStyle(.menu)
-                                    .labelsHidden()
-                                    .frame(width: 200)
+                            // Option 2: Disable gestures
+                            HStack(spacing: MGStyle.Spacing.md) {
+                                RadioButton(isSelected: ruleType == .disabled) {
+                                    ruleType = .disabled
                                 }
-                            } else {
-                                Text("All gestures will be disabled when this application is in the foreground.")
-                                    .font(.system(size: MGStyle.FontSize.caption))
-                                    .foregroundColor(.secondary)
+                                
+                                Text("Disable gestures")
+                                    .font(.system(size: MGStyle.FontSize.body))
+                                    .onTapGesture { ruleType = .disabled }
                             }
                         }
                     }
@@ -469,7 +399,7 @@ struct AddAppRuleSheet: View {
                 }
             }
         }
-        .frame(width: 550, height: 580)
+        .frame(width: 550, height: 600)
         .onAppear {
             loadInstalledApps()
             if let firstProfile = uiServices.profiles.first {
@@ -530,7 +460,31 @@ struct AddAppRuleSheet: View {
     }
 }
 
+// MARK: - Radio Button
+
+struct RadioButton: View {
+    let isSelected: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            ZStack {
+                Circle()
+                    .stroke(isSelected ? Color.accentColor : Color.secondary.opacity(0.5), lineWidth: 1.5)
+                    .frame(width: 16, height: 16)
+                if isSelected {
+                    Circle()
+                        .fill(Color.accentColor)
+                        .frame(width: 8, height: 8)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 // MARK: - App Selection Row
+
 struct AppSelectionRow: View {
     let app: (bundleId: String, name: String, icon: NSImage?)
     let isSelected: Bool
@@ -555,7 +509,6 @@ struct AppSelectionRow: View {
                 Text(app.name)
                     .font(.system(size: MGStyle.FontSize.body))
                     .lineLimit(1)
-                
                 Text(app.bundleId)
                     .font(.system(size: MGStyle.FontSize.badge))
                     .foregroundColor(.secondary)
@@ -578,9 +531,7 @@ struct AppSelectionRow: View {
                       (isDisabled ? Color.gray.opacity(0.1) : Color.clear))
         )
         .contentShape(Rectangle())
-        .onTapGesture {
-            if !isDisabled { onSelect() }
-        }
+        .onTapGesture { if !isDisabled { onSelect() } }
         .opacity(isDisabled ? 0.6 : 1.0)
     }
 }

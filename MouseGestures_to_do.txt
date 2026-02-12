@@ -36,3 +36,6 @@ Profiles:
 
 App Profiles:
 	(No current items)
+
+General UI Notes:
+- General: UI Should be relatively simple and should not use lots of colors or accents.

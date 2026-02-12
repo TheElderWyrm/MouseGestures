@@ -3,20 +3,24 @@
 ### UI Polish Pass: App Profiles, Gesture Config, Profile Management
 
 **App Profiles Tab:**
-- Sort profile mappings and disabled apps alphabetically (localizedCaseInsensitiveCompare)
-- Moved profile dropdown inline with rule type: "Use profile: [Dropdown]" instead of separate label
+- Sort all rules alphabetically (localizedCaseInsensitiveCompare)
+- Unified rule list: mappings and disabled apps in a single sorted list
+- Each row has a unified dropdown with all profiles + "Disable Gestures" option
+- Switching between profile/disable is seamless via the dropdown
 - Reduced card row padding/buffer (smaller icons 28px, tighter vertical spacing)
-- Added "Browse..." button to Add Rule sheet for selecting apps from Finder (NSOpenPanel)
-- Replaced GroupBox with MGDetailSection in Add Rule sheet for consistency
-- Rule type now uses segmented picker instead of radio group
-- App list in Add Rule also sorted alphabetically
-- Added context menus (right-click delete) to mapping and disabled app rows
+- Added "Browse..." button in Add Rule sheet to select apps from Finder (NSOpenPanel)
+- Add Rule sheet: radio buttons with inline profile dropdown
+  - "Use specific profile: [Dropdown]" (inline)
+  - "Disable gestures" (radio)
+- Custom RadioButton component for native-looking radio controls
+- Selected application shown at bottom of app selector with icon + name + bundle ID
+- Right-click context menus on all rule rows
 
 **Gesture Configuration Sheet:**
-- Moved gesture preview from top card to sticky bottom bar above Save/Cancel
-- Preview bar shows [Trigger Pills] → [Action Pill] at all times while scrolling
-- Removed old preview card from scroll area
-- Increased sheet height slightly to accommodate bottom preview bar
+- Gesture preview moved into the footer bar as plain text
+- Format: "Trigger1 + Trigger2 → Action Name"
+- No separate section — shares the same footer as Cancel/Save buttons
+- Removed pill-based preview in favor of simple text
 
 **Gesture Cards (Expanded View):**
 - Added parameter type/format hints (text, bool, int, number, list, json)
@@ -24,21 +28,24 @@
 - Improved formatting for array parameters ("3 items") and dict parameters ("2 fields")
 
 **Profiles Tab:**
-- Active profile can now be deleted: switches to next available profile automatically
-- If no profiles remain after deletion, creates a new "Default" profile
-- Delete confirmation dialog shows appropriate warning for active profile deletion
-- Added bottom bar with "Templates" and "+" buttons below profile list
-- Templates button provides quick access to Import Templates sheet
+- Active profile deletion now works correctly:
+  - Checks Configuration.activeProfileId directly (not stale @Published value)
+  - ProfileManagementService guard fixed to use configuration.activeProfileId
+  - Creates replacement "Default" profile if last profile deleted
+  - Verifies switch completed before attempting deletion
+- "Import from Template" button added to Create New Profile sheet footer (bottom-left)
+- Removed separate template/add buttons from profile list footer
 
 **To-Do Completed:**
 - [x] App Profiles: Add button to select application from finder
-- [x] App Profiles: Sort profile mappings alphabetically
+- [x] App Profiles: Sort profile mappings alphabetically  
 - [x] App Profiles: Move select profile in line with rule type
 - [x] App Profiles: Buffer on card buttons could be reduced
-- [x] Gesture Config: Show gesture preview [Trigger] -> [Action] at bottom bar
+- [x] App Profiles: Dropdown includes disable option alongside profiles
+- [x] Gesture Config: Show gesture preview [Trigger] -> [Action] in footer as text
 - [x] Gesture Cards: Show parameter information (Format)
-- [x] Profiles: Allow deletion of active profile
-- [x] Profiles: Add import from template button to bottom bar
+- [x] Profiles: Allow deletion of active profile (fixed service-layer guards)
+- [x] Profiles: Import from Template button in new profile sheet footer
 
 ---
 

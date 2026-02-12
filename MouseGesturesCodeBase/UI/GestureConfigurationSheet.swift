@@ -72,12 +72,16 @@ struct GestureConfigurationSheet: View {
                 .padding(MGStyle.Spacing.xl)
             }
             
-            // Gesture preview bar (sticky at bottom)
-            gesturePreviewBar
-            
             MGSheetFooter(mode.buttonTitle, disabled: !isValid, action: {
                 saveGesture()
-            }, cancel: { dismiss() })
+            }, cancel: { dismiss() }) {
+                // Gesture preview inline in footer
+                Text(gesturePreviewText)
+                    .font(.system(size: MGStyle.FontSize.caption))
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
         }
         .frame(width: 750, height: 700)
         .alert("Gesture Conflict", isPresented: $showingConflictAlert) {
@@ -87,59 +91,41 @@ struct GestureConfigurationSheet: View {
         }
     }
     
-    // MARK: - Gesture Preview Bar (Bottom)
+    // MARK: - Gesture Preview Text
     
-    private var gesturePreviewBar: some View {
-        VStack(spacing: 0) {
-            Divider()
-            
-            HStack(spacing: MGStyle.Spacing.md) {
-                // Trigger pills
-                HStack(spacing: MGStyle.Spacing.sm) {
-                    if components.screenZone?.isEnabled == true {
-                        MGTriggerPill(components.screenZone?.zone.displayName ?? "Zone", icon: "square.grid.3x3", color: .blue)
-                    }
-                    if components.modifierKey?.isEnabled == true {
-                        let mods = components.modifierKey?.modifiers ?? []
-                        let modStr = mods.symbolString.isEmpty ? "Mods" : mods.symbolString
-                        MGTriggerPill(modStr, icon: "command", color: .purple)
-                    }
-                    if components.dragType?.isEnabled == true {
-                        MGTriggerPill(components.dragType?.dragType.displayName ?? "Drag", icon: "hand.draw", color: .orange)
-                    }
-                    if components.mouseButton?.isEnabled == true {
-                        MGTriggerPill(components.mouseButton?.button.rawValue ?? "Click", icon: "computermouse", color: .teal)
-                    }
-                    if components.keyboardShortcut?.isEnabled == true {
-                        MGTriggerPill(components.keyboardShortcut?.keyboardTrigger?.displayString ?? "Key", icon: "keyboard", color: .green)
-                    }
-                    
-                    if !components.isValid {
-                        MGTriggerPill("No trigger", icon: "exclamationmark.triangle", color: .orange)
-                    }
-                }
-                
-                Image(systemName: "arrow.right")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(.secondary)
-                
-                // Action pill
-                if let action = PluginManager.shared.getAction(identifier: selectedActionId)?.action {
-                    MGTriggerPill(action.name, icon: action.icon ?? "bolt", color: .accentColor)
-                } else if !selectedActionId.isEmpty {
-                    MGTriggerPill(selectedActionId, icon: "bolt", color: .secondary)
-                } else {
-                    Text("Select an action")
-                        .font(.system(size: MGStyle.FontSize.caption))
-                        .foregroundColor(.secondary)
-                }
-                
-                Spacer()
-            }
-            .padding(.horizontal, MGStyle.Spacing.xl)
-            .padding(.vertical, MGStyle.Spacing.md)
-            .background(MGStyle.Colors.cardBackground.opacity(0.8))
+    private var gesturePreviewText: String {
+        var triggerParts: [String] = []
+        
+        if components.screenZone?.isEnabled == true {
+            triggerParts.append(components.screenZone?.zone.displayName ?? "Zone")
         }
+        if components.modifierKey?.isEnabled == true {
+            let mods = components.modifierKey?.modifiers ?? []
+            let modStr = mods.symbolString
+            if !modStr.isEmpty { triggerParts.append(modStr) }
+        }
+        if components.dragType?.isEnabled == true {
+            triggerParts.append(components.dragType?.dragType.displayName ?? "Drag")
+        }
+        if components.mouseButton?.isEnabled == true {
+            triggerParts.append(components.mouseButton?.button.rawValue ?? "Click")
+        }
+        if components.keyboardShortcut?.isEnabled == true {
+            triggerParts.append(components.keyboardShortcut?.keyboardTrigger?.displayString ?? "Key")
+        }
+        
+        let trigger = triggerParts.isEmpty ? "No trigger" : triggerParts.joined(separator: " + ")
+        
+        let actionName: String
+        if let action = PluginManager.shared.getAction(identifier: selectedActionId)?.action {
+            actionName = action.name
+        } else if !selectedActionId.isEmpty {
+            actionName = selectedActionId
+        } else {
+            actionName = "No action"
+        }
+        
+        return "\(trigger) \u{2192} \(actionName)"
     }
     
     // MARK: - Activation Components Section

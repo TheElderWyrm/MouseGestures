@@ -159,30 +159,7 @@ struct ProfilesView: View {
                 .padding(MGStyle.Spacing.lg)
             }
             
-            Spacer()
-            
-            // Bottom bar with quick actions
-            VStack(spacing: 0) {
-                Divider()
-                HStack(spacing: MGStyle.Spacing.md) {
-                    Button(action: { activeSheet = .importTemplates }) {
-                        Label("Templates", systemImage: "square.grid.2x2")
-                    }
-                    .buttonStyle(.borderless)
-                    .font(.system(size: MGStyle.FontSize.caption))
-                    .help("Import from template profiles")
-                    
-                    Spacer()
-                    
-                    Button(action: { activeSheet = .addProfile }) {
-                        Image(systemName: "plus")
-                    }
-                    .buttonStyle(.borderless)
-                    .help("Create new profile")
-                }
-                .padding(.horizontal, MGStyle.Spacing.lg)
-                .padding(.vertical, MGStyle.Spacing.md)
-            }
+
         }
         .background(MGStyle.Colors.windowBackground)
     }
@@ -194,25 +171,30 @@ struct ProfilesView: View {
     }
     
     private func deleteProfile(_ profileId: UUID) {
-        let wasActive = profileId == uiServices.activeProfileId
+        let isActive = profileId == uiServices.configuration.activeProfileId
         let otherProfiles = uiServices.profiles.filter { $0.id != profileId }
         
         // If deleting the active profile, switch to another first
-        if wasActive, let next = otherProfiles.first {
-            uiServices.switchToProfile(next.id)
+        if isActive {
+            if let next = otherProfiles.first {
+                uiServices.switchToProfile(next.id)
+            } else {
+                // Last profile — create a replacement before deleting
+                if let replacement = uiServices.createProfile(name: "Default") {
+                    uiServices.switchToProfile(replacement.id)
+                }
+            }
+        }
+        
+        // Verify the switch took effect (activeProfileId should differ now)
+        guard profileId != uiServices.configuration.activeProfileId else {
+            log.log("Failed to switch away from profile before deletion")
+            return
         }
         
         if uiServices.deleteProfile(profileId) {
-            // Select the now-active profile, or the first remaining one
-            selectedProfileId = uiServices.activeProfileId ?? otherProfiles.first?.id
-            
-            // If no profiles remain, create a default one
-            if uiServices.profiles.isEmpty {
-                if let newProfile = uiServices.createProfile(name: "Default") {
-                    uiServices.switchToProfile(newProfile.id)
-                    selectedProfileId = newProfile.id
-                }
-            }
+            selectedProfileId = uiServices.configuration.activeProfileId
+            uiServices.loadData()
         }
     }
     
@@ -710,6 +692,7 @@ struct AddEditProfileSheet: View {
     @State private var cornerBuffer: CGFloat = 50
     @State private var keyboardShortcut: KeyboardTrigger?
     @State private var showingNameError = false
+    @State private var showingTemplateImport = false
     
     init(mode: Mode, onSave: @escaping (ConfigurationProfile) -> Void) {
         self.mode = mode
@@ -784,9 +767,19 @@ struct AddEditProfileSheet: View {
                 .padding(MGStyle.Spacing.xl)
             }
             
-            MGSheetFooter(mode.buttonTitle, disabled: profileName.isEmpty, action: { saveProfile() }, cancel: { dismiss() })
+            MGSheetFooter(mode.buttonTitle, disabled: profileName.isEmpty, action: { saveProfile() }, cancel: { dismiss() }) {
+                if case .add = mode {
+                    Button(action: { showingTemplateImport = true }) {
+                        Label("Import from Template", systemImage: "square.grid.2x2")
+                    }
+                    .controlSize(.small)
+                }
+            }
         }
         .frame(width: 550, height: 520)
+        .sheet(isPresented: $showingTemplateImport) {
+            ImportTemplatesSheet()
+        }
         .alert("Invalid Name", isPresented: $showingNameError) { Button("OK") {} } message: {
             Text("A profile with this name already exists. Please choose a different name.")
         }

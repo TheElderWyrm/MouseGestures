@@ -135,14 +135,15 @@ class ProfileManagementService: ObservableObject {
     /// - Returns: True if deletion was successful
     @discardableResult
     func deleteProfile(profileId: UUID) -> Bool {
-        // Prevent deletion of active profile
-        if profileId == activeProfileId {
-            log.log("Cannot delete active profile")
+        // Check against Configuration's live activeProfileId (not our cached @Published one,
+        // which may be stale if a switch just happened via DispatchQueue.main.async)
+        if profileId == configuration.activeProfileId {
+            log.log("Cannot delete active profile — switch to another profile first")
             return false
         }
         
         // Prevent deletion if it's the last profile
-        if profiles.count <= 1 {
+        if configuration.profiles.count <= 1 {
             log.log("Cannot delete the last profile")
             return false
         }
