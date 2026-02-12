@@ -220,39 +220,10 @@ struct GestureCardView: View {
         UIServices.shared.getActionDefinition(for: gesture.actionIdentifier)
     }
     
-    private var modifiersText: String {
-        UIServices.shared.getModifiersDescription(gesture.modifiers)
-    }
-    
     /// Build a concise trigger summary string from enabled components
     private var triggerSummary: String {
-        var parts: [String] = []
         let comps = gesture.components ?? GestureActivationComponents(fromLegacyGesture: gesture)
-        
-        if comps.screenZone?.isEnabled == true {
-            parts.append(gesture.zone.displayName)
-        }
-        
-        if comps.modifierKey?.isEnabled == true {
-            let txt = modifiersText
-            if !txt.isEmpty && txt != "None" {
-                parts.append(txt)
-            }
-        }
-        
-        if comps.dragType?.isEnabled == true && gesture.dragModifier != .none {
-            parts.append(gesture.dragModifier.displayName)
-        }
-        
-        if comps.keyboardShortcut?.isEnabled == true, let kb = gesture.activation.keyboardTrigger {
-            parts.append(kb.displayString)
-        }
-        
-        if comps.mouseButton?.isEnabled == true, let mb = gesture.activation.mouseButtonTrigger {
-            parts.append("\(mb.displayString) click")
-        }
-        
-        return parts.isEmpty ? "No trigger" : parts.joined(separator: " + ")
+        return comps.previewString
     }
     
     var body: some View {
@@ -359,6 +330,7 @@ struct GestureCardView: View {
     
     private var expandedContent: some View {
         let comps = gesture.components ?? GestureActivationComponents(fromLegacyGesture: gesture)
+        let details = comps.enabledComponentDetails
         
         return HStack(alignment: .top, spacing: MGStyle.Spacing.xxl) {
             // Trigger details
@@ -368,24 +340,8 @@ struct GestureCardView: View {
                     .foregroundColor(.secondary)
                     .textCase(.uppercase)
                 
-                if comps.screenZone?.isEnabled == true {
-                    detailLine("Zone", gesture.zone.displayName)
-                }
-                
-                if comps.modifierKey?.isEnabled == true {
-                    let txt = modifiersText
-                    if !txt.isEmpty && txt != "None" {
-                        detailLine("Modifiers", txt)
-                    }
-                }
-                if comps.dragType?.isEnabled == true && gesture.dragModifier != .none {
-                    detailLine("Drag", gesture.dragModifier.displayName)
-                }
-                if comps.keyboardShortcut?.isEnabled == true, let kb = gesture.activation.keyboardTrigger {
-                    detailLine("Keyboard", kb.displayString)
-                }
-                if comps.mouseButton?.isEnabled == true, let mb = gesture.activation.mouseButtonTrigger {
-                    detailLine("Mouse", mb.displayString)
+                ForEach(Array(details.enumerated()), id: \.offset) { _, detail in
+                    detailLine(detail.label, detail.value)
                 }
             }
             .frame(minWidth: 160, alignment: .leading)

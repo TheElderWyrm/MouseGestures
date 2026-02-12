@@ -1,47 +1,45 @@
 ## 2026-02-12
 
-### UI Improvements: Gesture Display, Duplicate Detection, Profiles
+### UI Improvements: Generic Trigger System, Profiles, App Profiles
 
-**Fix: Gesture Trigger Display (Component-Aware)**
-- Gesture card trigger summary now checks which components are actually enabled
-  instead of always showing zone/modifiers/drag regardless of configuration
-- Expanded detail view also only shows enabled components
-- Gestures with only keyboard shortcuts or mouse buttons display correctly
-
-**Fix: Generic Duplicate Detection for All Trigger Plugins**
-- `triggerKey` now includes all configured components: zone, modifiers, drag,
-  keyboard shortcut (keyCode + modifiers), and mouse button
-- Previously only used zone + modifiers + drag, causing false conflicts when
-  gestures differed only by keyboard/mouse button configuration
-- Two gestures with same zone but different keyboard shortcuts now coexist properly
+**Refactor: Fully Generic Trigger Display & Duplicate Detection**
+- Gesture `triggerKey` now delegates entirely to `GestureActivationComponents.triggerKey`
+  which iterates all registered components generically — no hardcoded trigger types
+- Gesture `displayDescription` now uses `components.previewString` — no hardcoded types
+- GesturesView `triggerSummary` uses `components.previewString` instead of checking each type
+- GesturesView expanded detail iterates `enabledComponentDetails` via ForEach instead of
+  manual per-type if-checks
+- New on GestureActivationComponents:
+  * `allComponents` — all registered (label, config) pairs in display order
+  * `enabledComponentDetails` — only enabled components as (label, value) pairs
+  * `triggerKey` — deterministic duplicate-detection key built generically
+  * `previewString` now built from `enabledComponentDetails`
+- Main app code no longer knows about specific trigger types for display or dedup
 
 **Feature: Profile Multi-Selection**
-- Hold Cmd+click to toggle individual profiles in/out of selection
-- Hold Shift+click to range-select multiple profiles
-- Selection bar appears when multiple profiles are selected showing count
-  and batch action buttons (Duplicate, Export, Delete)
-- Multi-selection detail view shows aggregate stats and batch actions
+- Cmd+click to toggle individual profiles in/out of selection
+- Shift+click to range-select multiple profiles
+- Selection bar with batch Duplicate/Export/Delete buttons
+- Multi-selection detail view with aggregate stats and batch actions
 - Overflow menu updated with batch operations on selected profiles
 
 **Feature: Editable Gesture List in Profile Detail**
-- Profile detail now shows full editable gesture list with:
-  - Enable/disable toggle per gesture
-  - Edit button (opens gesture configuration sheet targeting that profile)
-  - Delete button with confirmation
-  - Double-click to edit
-  - Right-click context menu (Edit, Enable/Disable, Delete)
+- Profile detail shows full editable gesture list:
+  enable/disable toggle, edit (opens config sheet), delete with confirmation,
+  double-click to edit, right-click context menu
 - "Add Gesture" button to add gestures directly to the profile
-- New `updateProfileGestures()` method in UIServices for profile-specific gesture updates
-- New sheet wrappers: EditProfileGestureSheet, AddProfileGestureSheet
+- New `updateProfileGestures()` in UIServices
+- New EditProfileGestureSheet, AddProfileGestureSheet wrappers
 
-**Fix: Double-Click Behavior in Profile List**
-- Double-clicking a profile row now starts inline rename (was: set active)
-- Inline rename with commit/cancel buttons directly in the list row
-- Consistent with double-click-to-edit pattern across the app
+**Fix: App Profiles Card Margins**
+- `UnifiedAppRuleRow` now uses consistent spacing with other card rows:
+  `MGStyle.Spacing.lg` for HStack spacing, `.xs` for text VStack,
+  `.md` for vertical padding (was `.sm`), removed fixed `minWidth` on text
 
-**Profiles: Right-Click Context Menus**
-- Profile list rows: Set Active, Rename, Duplicate, Delete
-- Profile gesture rows: Edit, Enable/Disable, Delete
+**Profiles: Double-Click Sets Active**
+- Double-clicking a profile row sets it as active profile
+- Removed pencil/rename button from hover actions (rename is in detail editor)
+- Context menu: Set Active, Duplicate, Delete
 
 ### UI Polish Pass: App Profiles, Gesture Config, Profile Management
 

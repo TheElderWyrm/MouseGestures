@@ -115,27 +115,38 @@ struct GestureActivationComponents: Codable, Equatable {
         return !enabledTypes.isEmpty
     }
     
+    /// All registered components as (label, config) pairs in display order
+    var allComponents: [(label: String, config: any ActivationComponentConfig)] {
+        var result: [(String, any ActivationComponentConfig)] = []
+        if let c = screenZone { result.append(("Zone", c)) }
+        if let c = modifierKey { result.append(("Modifiers", c)) }
+        if let c = dragType { result.append(("Drag", c)) }
+        if let c = mouseButton { result.append(("Mouse Button", c)) }
+        if let c = keyboardShortcut { result.append(("Keyboard", c)) }
+        return result
+    }
+    
+    /// Only enabled components with their labels and display values
+    var enabledComponentDetails: [(label: String, value: String)] {
+        return allComponents
+            .filter { $0.config.isEnabled }
+            .map { (label: $0.label, value: $0.config.displayValue) }
+    }
+    
     /// Get display preview of all enabled components
     var previewString: String {
-        var parts: [String] = []
-        
-        if let mod = modifierKey, mod.isEnabled {
-            parts.append(mod.displayValue)
-        }
-        if let zone = screenZone, zone.isEnabled {
-            parts.append(zone.displayValue)
-        }
-        if let drag = dragType, drag.isEnabled, drag.dragType != .none {
-            parts.append(drag.displayValue)
-        }
-        if let btn = mouseButton, btn.isEnabled, btn.button != .none {
-            parts.append(btn.displayValue)
-        }
-        if let kbd = keyboardShortcut, kbd.isEnabled, kbd.keyboardTrigger != nil {
-            parts.append(kbd.displayValue)
-        }
-        
+        let parts = enabledComponentDetails.map { $0.value }
         return parts.isEmpty ? "No triggers configured" : parts.joined(separator: " + ")
+    }
+    
+    /// Deterministic key for duplicate detection — built generically from all enabled components
+    var triggerKey: String {
+        // Each component contributes a deterministic segment only if enabled
+        var segments: [String] = []
+        for (label, config) in allComponents where config.isEnabled {
+            segments.append("\(label):\(config.displayValue)")
+        }
+        return segments.joined(separator: "|")
     }
     
     // MARK: - Legacy Conversion Helpers

@@ -210,7 +210,7 @@ struct UnifiedAppRuleRow: View {
     }
     
     var body: some View {
-        HStack(spacing: MGStyle.Spacing.md) {
+        HStack(spacing: MGStyle.Spacing.lg) {
             // App icon
             if let app = NSWorkspace.shared.urlForApplication(withBundleIdentifier: rule.bundleId) {
                 Image(nsImage: NSWorkspace.shared.icon(forFile: app.path))
@@ -224,7 +224,7 @@ struct UnifiedAppRuleRow: View {
                     .foregroundColor(.secondary)
             }
             
-            VStack(alignment: .leading, spacing: 1) {
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
                 Text(rule.appName)
                     .font(.system(size: MGStyle.FontSize.body, weight: .medium))
                     .lineLimit(1)
@@ -233,7 +233,6 @@ struct UnifiedAppRuleRow: View {
                     .foregroundColor(.secondary)
                     .lineLimit(1)
             }
-            .frame(minWidth: 140)
             
             Spacer()
             
@@ -252,7 +251,7 @@ struct UnifiedAppRuleRow: View {
                 .opacity(isHovered ? 1 : 0)
         }
         .padding(.horizontal, MGStyle.Spacing.lg)
-        .padding(.vertical, MGStyle.Spacing.sm)
+        .padding(.vertical, MGStyle.Spacing.md)
         .mgListCard(isHovered: isHovered)
         .onHover { h in withAnimation(.easeInOut(duration: 0.15)) { isHovered = h } }
         .contextMenu {

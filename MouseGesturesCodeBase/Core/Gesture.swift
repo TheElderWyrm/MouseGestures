@@ -187,41 +187,15 @@ struct Gesture: Codable, Equatable {
     }
     
     var triggerKey: String {
-        var parts: [String] = [
-            "\(trigger.zone.rawValue)",
-            "\(trigger.modifiers.rawValue)"
-        ]
-        if trigger.dragModifier != .none {
-            parts.append("drag_\(trigger.dragModifier.rawValue)")
-        }
-        if let kbd = genericActivation.keyboardTrigger {
-            parts.append("kbd_\(kbd.keyCode)_\(kbd.modifiers.rawValue)")
-        }
-        if let mb = genericActivation.mouseButtonTrigger {
-            parts.append("mb_\(mb.button.rawValue)")
-        }
-        return parts.joined(separator: "_")
+        let comps = components ?? GestureActivationComponents(fromLegacyGesture: self)
+        return comps.triggerKey
     }
     
     // MARK: - Display
     
     var displayDescription: String {
-        var parts: [String] = []
-        
-        // Always show zone-based gesture
-        parts.append(trigger.displayString)
-        
-        // Show keyboard trigger if configured
-        if let kbd = genericActivation.keyboardTrigger {
-            parts.append(kbd.displayString)
-        }
-        
-        // Show mouse button trigger if configured
-        if let mouse = genericActivation.mouseButtonTrigger {
-            parts.append(mouse.displayString)
-        }
-        
-        return parts.isEmpty ? "Not Configured" : parts.joined(separator: " | ")
+        let comps = components ?? GestureActivationComponents(fromLegacyGesture: self)
+        return comps.previewString
     }
     
     // MARK: - Initializers

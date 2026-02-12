@@ -256,7 +256,6 @@ struct ProfilesView: View {
                             onSelect: { event in handleProfileSelect(profile.id, event: event) },
                             onSetActive: { setActiveProfile(profile.id) },
                             onDuplicate: { duplicateProfile(profile.id) },
-                            onRename: { /* handled inline */ },
                             onDelete: {
                                 selectedProfileIds = [profile.id]
                                 showingDeleteConfirmation = true
@@ -493,14 +492,9 @@ struct ProfileListRow: View {
     let onSelect: (SelectionEvent) -> Void
     let onSetActive: () -> Void
     let onDuplicate: () -> Void
-    let onRename: () -> Void
     let onDelete: () -> Void
     
-    @StateObject private var uiServices = UIServices.shared
     @State private var isHovered = false
-    @State private var isEditing = false
-    @State private var editName = ""
-    @State private var showNameError = false
     
     var body: some View {
         HStack(spacing: MGStyle.Spacing.lg) {
@@ -509,42 +503,20 @@ struct ProfileListRow: View {
                 .fill(isActive ? Color.green : Color.clear)
                 .frame(width: 6, height: 6)
             
-            if isEditing {
-                HStack(spacing: MGStyle.Spacing.sm) {
-                    TextField("Profile name", text: $editName, onCommit: commitRename)
-                        .textFieldStyle(.roundedBorder)
-                        .font(.system(size: MGStyle.FontSize.body))
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
+                Text(profile.name)
+                    .font(.system(size: MGStyle.FontSize.body, weight: isActive ? .semibold : .medium))
+                    .lineLimit(1)
+                
+                HStack(spacing: MGStyle.Spacing.md) {
+                    Text("\(profile.gestures.count) gestures · \(profile.gestures.filter { $0.isEnabled }.count) active")
+                        .font(.system(size: MGStyle.FontSize.badge))
+                        .foregroundColor(.secondary)
                     
-                    Button(action: commitRename) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(.green)
-                            .font(.system(size: 12))
-                    }
-                    .buttonStyle(.plain)
-                    
-                    Button(action: { isEditing = false }) {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(.secondary)
-                            .font(.system(size: 12))
-                    }
-                    .buttonStyle(.plain)
-                }
-            } else {
-                VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
-                    Text(profile.name)
-                        .font(.system(size: MGStyle.FontSize.body, weight: isActive ? .semibold : .medium))
-                        .lineLimit(1)
-                    
-                    HStack(spacing: MGStyle.Spacing.md) {
-                        Text("\(profile.gestures.count) gestures · \(profile.gestures.filter { $0.isEnabled }.count) active")
-                            .font(.system(size: MGStyle.FontSize.badge))
-                            .foregroundColor(.secondary)
-                        
-                        if let shortcut = profile.keyboardShortcut {
-                            Text(shortcut.displayString)
-                                .font(.system(size: MGStyle.FontSize.badge, design: .monospaced))
-                                .foregroundColor(.secondary.opacity(0.6))
-                        }
+                    if let shortcut = profile.keyboardShortcut {
+                        Text(shortcut.displayString)
+                            .font(.system(size: MGStyle.FontSize.badge, design: .monospaced))
+                            .foregroundColor(.secondary.opacity(0.6))
                     }
                 }
             }
@@ -556,7 +528,6 @@ struct ProfileListRow: View {
                 if !isActive {
                     MGActionButton("checkmark.circle", help: "Set as active") { onSetActive() }
                 }
-                MGActionButton("pencil", help: "Rename") { beginRename() }
                 MGActionButton("plus.square.on.square", help: "Duplicate") { onDuplicate() }
                 MGActionButton("trash", help: "Delete", destructive: true) { onDelete() }
             }
@@ -574,40 +545,17 @@ struct ProfileListRow: View {
                 onSelect(.shiftClick)
             }
         )
-        .onTapGesture(count: 2) { beginRename() }
+        .onTapGesture(count: 2) { onSetActive() }
         .onTapGesture { onSelect(.click) }
         .contextMenu {
             if !isActive {
                 Button(action: onSetActive) { Label("Set as Active", systemImage: "checkmark.circle") }
                 Divider()
             }
-            Button(action: beginRename) { Label("Rename", systemImage: "pencil") }
             Button(action: onDuplicate) { Label("Duplicate", systemImage: "plus.square.on.square") }
             Divider()
             Button(role: .destructive, action: onDelete) { Label("Delete", systemImage: "trash") }
         }
-        .alert("Invalid Name", isPresented: $showNameError) { Button("OK") {} } message: {
-            Text("A profile with this name already exists.")
-        }
-    }
-    
-    private func beginRename() {
-        editName = profile.name
-        isEditing = true
-    }
-    
-    private func commitRename() {
-        let trimmed = editName.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty else { isEditing = false; return }
-        
-        if trimmed != profile.name {
-            if uiServices.profiles.contains(where: { $0.name == trimmed && $0.id != profile.id }) {
-                showNameError = true
-                return
-            }
-            _ = uiServices.renameProfile(profile.id, to: trimmed)
-        }
-        isEditing = false
     }
 }
 

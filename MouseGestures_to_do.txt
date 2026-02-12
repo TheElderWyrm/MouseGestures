@@ -20,6 +20,14 @@ Actions (fix later):
 - Conditional gesture bundle logic?
 
 Improve UI
+- General: UI Should be relatively simple and should not use lots of colors or accents. 
+
+Gestures Tab:
+	(No current items)
+
+Saved actions
+	- 
+
 Profiles:
 	- Allow creating a merged profile from selected profiles.
 
