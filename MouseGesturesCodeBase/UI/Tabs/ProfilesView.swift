@@ -92,9 +92,13 @@ struct ProfilesView: View {
         .sheet(item: $activeSheet) { sheet in
             switch sheet {
             case .addProfile:
-                AddEditProfileSheet(mode: .add) { newProfile in
+                AddEditProfileSheet(mode: .add, onSave: { newProfile in
                     selectedProfileId = newProfile.id
-                }
+                }, onImportTemplate: {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        activeSheet = .importTemplates
+                    }
+                })
             case .importTemplates:
                 ImportTemplatesSheet()
             }
@@ -680,6 +684,7 @@ struct AddEditProfileSheet: View {
     
     let mode: Mode
     let onSave: (ConfigurationProfile) -> Void
+    var onImportTemplate: (() -> Void)? = nil
     
     @Environment(\.dismiss) private var dismiss
     @StateObject private var uiServices = UIServices.shared
@@ -692,11 +697,11 @@ struct AddEditProfileSheet: View {
     @State private var cornerBuffer: CGFloat = 50
     @State private var keyboardShortcut: KeyboardTrigger?
     @State private var showingNameError = false
-    @State private var showingTemplateImport = false
     
-    init(mode: Mode, onSave: @escaping (ConfigurationProfile) -> Void) {
+    init(mode: Mode, onSave: @escaping (ConfigurationProfile) -> Void, onImportTemplate: (() -> Void)? = nil) {
         self.mode = mode
         self.onSave = onSave
+        self.onImportTemplate = onImportTemplate
         if case .edit(let profile) = mode {
             _profileName = State(initialValue: profile.name)
             _hapticFeedbackEnabled = State(initialValue: profile.hapticFeedbackEnabled)
@@ -768,18 +773,17 @@ struct AddEditProfileSheet: View {
             }
             
             MGSheetFooter(mode.buttonTitle, disabled: profileName.isEmpty, action: { saveProfile() }, cancel: { dismiss() }) {
-                if case .add = mode {
-                    Button(action: { showingTemplateImport = true }) {
+                if case .add = mode, let onImportTemplate = onImportTemplate {
+                    Button(action: {
+                        dismiss()
+                        onImportTemplate()
+                    }) {
                         Label("Import from Template", systemImage: "square.grid.2x2")
                     }
-                    .controlSize(.small)
                 }
             }
         }
         .frame(width: 550, height: 520)
-        .sheet(isPresented: $showingTemplateImport) {
-            ImportTemplatesSheet()
-        }
         .alert("Invalid Name", isPresented: $showingNameError) { Button("OK") {} } message: {
             Text("A profile with this name already exists. Please choose a different name.")
         }
