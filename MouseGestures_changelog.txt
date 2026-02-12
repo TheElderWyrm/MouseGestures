@@ -40,10 +40,6 @@
 - Removed EditAppRuleSheet and EditDisabledAppSheet entirely (~130 lines removed)
 - DisabledAppRow simplified to just show badge and delete button
 
-**Settings**
-- Added Launch at Login, Hide Menu Bar Icon, and Haptic Feedback to General category
-- All three are searchable with appropriate keywords
-
 **Zone Highlights**
 - Fixed labels overflowing thin edge zones: smaller font for narrow zones (<50px),
   position clamped within bounds, text truncates if too wide, semi-transparent
