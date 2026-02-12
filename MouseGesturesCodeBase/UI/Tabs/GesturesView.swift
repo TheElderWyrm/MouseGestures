@@ -224,29 +224,35 @@ struct GestureCardView: View {
         UIServices.shared.getModifiersDescription(gesture.modifiers)
     }
     
-    /// Build a concise trigger summary string
+    /// Build a concise trigger summary string from enabled components
     private var triggerSummary: String {
         var parts: [String] = []
+        let comps = gesture.components ?? GestureActivationComponents(fromLegacyGesture: gesture)
         
-        parts.append(gesture.zone.displayName)
-        
-        if !modifiersText.isEmpty && modifiersText != "None" {
-            parts.append(modifiersText)
+        if comps.screenZone?.isEnabled == true {
+            parts.append(gesture.zone.displayName)
         }
         
-        if gesture.dragModifier != .none {
+        if comps.modifierKey?.isEnabled == true {
+            let txt = modifiersText
+            if !txt.isEmpty && txt != "None" {
+                parts.append(txt)
+            }
+        }
+        
+        if comps.dragType?.isEnabled == true && gesture.dragModifier != .none {
             parts.append(gesture.dragModifier.displayName)
         }
         
-        if let kb = gesture.activation.keyboardTrigger {
+        if comps.keyboardShortcut?.isEnabled == true, let kb = gesture.activation.keyboardTrigger {
             parts.append(kb.displayString)
         }
         
-        if let mb = gesture.activation.mouseButtonTrigger {
+        if comps.mouseButton?.isEnabled == true, let mb = gesture.activation.mouseButtonTrigger {
             parts.append("\(mb.displayString) click")
         }
         
-        return parts.joined(separator: " + ")
+        return parts.isEmpty ? "No trigger" : parts.joined(separator: " + ")
     }
     
     var body: some View {
@@ -352,7 +358,9 @@ struct GestureCardView: View {
     // MARK: - Expanded Content
     
     private var expandedContent: some View {
-        HStack(alignment: .top, spacing: MGStyle.Spacing.xxl) {
+        let comps = gesture.components ?? GestureActivationComponents(fromLegacyGesture: gesture)
+        
+        return HStack(alignment: .top, spacing: MGStyle.Spacing.xxl) {
             // Trigger details
             VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
                 Text("Trigger")
@@ -360,21 +368,25 @@ struct GestureCardView: View {
                     .foregroundColor(.secondary)
                     .textCase(.uppercase)
                 
-                detailLine("Zone", gesture.zone.displayName)
-                
-                if !modifiersText.isEmpty && modifiersText != "None" {
-                    detailLine("Modifiers", modifiersText)
+                if comps.screenZone?.isEnabled == true {
+                    detailLine("Zone", gesture.zone.displayName)
                 }
-                if gesture.dragModifier != .none {
+                
+                if comps.modifierKey?.isEnabled == true {
+                    let txt = modifiersText
+                    if !txt.isEmpty && txt != "None" {
+                        detailLine("Modifiers", txt)
+                    }
+                }
+                if comps.dragType?.isEnabled == true && gesture.dragModifier != .none {
                     detailLine("Drag", gesture.dragModifier.displayName)
                 }
-                if let kb = gesture.activation.keyboardTrigger {
+                if comps.keyboardShortcut?.isEnabled == true, let kb = gesture.activation.keyboardTrigger {
                     detailLine("Keyboard", kb.displayString)
                 }
-                if let mb = gesture.activation.mouseButtonTrigger {
+                if comps.mouseButton?.isEnabled == true, let mb = gesture.activation.mouseButtonTrigger {
                     detailLine("Mouse", mb.displayString)
                 }
-                detailLine("Mode", gesture.activation.activationType.rawValue)
             }
             .frame(minWidth: 160, alignment: .leading)
             

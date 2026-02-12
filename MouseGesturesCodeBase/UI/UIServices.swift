@@ -177,6 +177,14 @@ public class UIServices: ObservableObject {
         return success
     }
     
+    func updateProfileGestures(_ profileId: UUID, gestures: [Gesture]) -> Bool {
+        let success = profileManagementService.updateProfile(profileId: profileId, gestures: gestures)
+        if success {
+            loadData()
+        }
+        return success
+    }
+    
     func duplicateProfile(_ profileId: UUID) -> ConfigurationProfile? {
         let profile = profileManagementService.duplicateProfile(profileId: profileId)
         loadData()

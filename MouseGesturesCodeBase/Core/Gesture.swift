@@ -187,8 +187,20 @@ struct Gesture: Codable, Equatable {
     }
     
     var triggerKey: String {
-        let dragPart = trigger.dragModifier != .none ? "_\(trigger.dragModifier.rawValue)" : ""
-        return "\(trigger.zone.rawValue)_\(trigger.modifiers.rawValue)\(dragPart)"
+        var parts: [String] = [
+            "\(trigger.zone.rawValue)",
+            "\(trigger.modifiers.rawValue)"
+        ]
+        if trigger.dragModifier != .none {
+            parts.append("drag_\(trigger.dragModifier.rawValue)")
+        }
+        if let kbd = genericActivation.keyboardTrigger {
+            parts.append("kbd_\(kbd.keyCode)_\(kbd.modifiers.rawValue)")
+        }
+        if let mb = genericActivation.mouseButtonTrigger {
+            parts.append("mb_\(mb.button.rawValue)")
+        }
+        return parts.joined(separator: "_")
     }
     
     // MARK: - Display

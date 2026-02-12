@@ -1,5 +1,48 @@
 ## 2026-02-12
 
+### UI Improvements: Gesture Display, Duplicate Detection, Profiles
+
+**Fix: Gesture Trigger Display (Component-Aware)**
+- Gesture card trigger summary now checks which components are actually enabled
+  instead of always showing zone/modifiers/drag regardless of configuration
+- Expanded detail view also only shows enabled components
+- Gestures with only keyboard shortcuts or mouse buttons display correctly
+
+**Fix: Generic Duplicate Detection for All Trigger Plugins**
+- `triggerKey` now includes all configured components: zone, modifiers, drag,
+  keyboard shortcut (keyCode + modifiers), and mouse button
+- Previously only used zone + modifiers + drag, causing false conflicts when
+  gestures differed only by keyboard/mouse button configuration
+- Two gestures with same zone but different keyboard shortcuts now coexist properly
+
+**Feature: Profile Multi-Selection**
+- Hold Cmd+click to toggle individual profiles in/out of selection
+- Hold Shift+click to range-select multiple profiles
+- Selection bar appears when multiple profiles are selected showing count
+  and batch action buttons (Duplicate, Export, Delete)
+- Multi-selection detail view shows aggregate stats and batch actions
+- Overflow menu updated with batch operations on selected profiles
+
+**Feature: Editable Gesture List in Profile Detail**
+- Profile detail now shows full editable gesture list with:
+  - Enable/disable toggle per gesture
+  - Edit button (opens gesture configuration sheet targeting that profile)
+  - Delete button with confirmation
+  - Double-click to edit
+  - Right-click context menu (Edit, Enable/Disable, Delete)
+- "Add Gesture" button to add gestures directly to the profile
+- New `updateProfileGestures()` method in UIServices for profile-specific gesture updates
+- New sheet wrappers: EditProfileGestureSheet, AddProfileGestureSheet
+
+**Fix: Double-Click Behavior in Profile List**
+- Double-clicking a profile row now starts inline rename (was: set active)
+- Inline rename with commit/cancel buttons directly in the list row
+- Consistent with double-click-to-edit pattern across the app
+
+**Profiles: Right-Click Context Menus**
+- Profile list rows: Set Active, Rename, Duplicate, Delete
+- Profile gesture rows: Edit, Enable/Disable, Delete
+
 ### UI Polish Pass: App Profiles, Gesture Config, Profile Management
 
 **App Profiles Tab:**
