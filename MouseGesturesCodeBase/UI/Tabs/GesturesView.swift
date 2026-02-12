@@ -376,7 +376,7 @@ struct GestureCardView: View {
                 }
                 detailLine("Mode", gesture.activation.activationType.rawValue)
             }
-            .frame(minWidth: 180, alignment: .leading)
+            .frame(minWidth: 160, alignment: .leading)
             
             Divider()
                 .frame(height: 80)
@@ -400,11 +400,11 @@ struct GestureCardView: View {
                     detailLine("ID", gesture.actionIdentifier)
                 }
                 
-                // Display parameters with friendly formatting
+                // Display parameters with type hints
                 if !gesture.parameters.isEmpty {
                     ForEach(Array(gesture.parameters.keys.sorted()), id: \.self) { key in
                         if let val = gesture.parameters[key] {
-                            detailLine(formatParameterKey(key), formatParameterValue(val))
+                            parameterDetailLine(key: key, value: val)
                         }
                     }
                 }
@@ -455,9 +455,37 @@ struct GestureCardView: View {
         }
     }
     
+    /// Show a parameter with its value and a type/format hint
+    @ViewBuilder
+    private func parameterDetailLine(key: String, value: AnyCodable) -> some View {
+        let label = formatParameterKey(key)
+        let display = formatParameterValue(value)
+        let typeHint = parameterTypeHint(value)
+        
+        HStack(alignment: .firstTextBaseline, spacing: MGStyle.Spacing.md) {
+            Text(label)
+                .font(.system(size: MGStyle.FontSize.caption))
+                .foregroundColor(.secondary)
+                .frame(minWidth: 60, alignment: .leading)
+            
+            Text(display)
+                .font(.system(size: MGStyle.FontSize.caption, weight: .medium))
+                .lineLimit(1)
+            
+            if let hint = typeHint {
+                Text(hint)
+                    .font(.system(size: MGStyle.FontSize.badge, design: .monospaced))
+                    .foregroundColor(.secondary.opacity(0.5))
+                    .padding(.horizontal, MGStyle.Spacing.sm)
+                    .padding(.vertical, 1)
+                    .background(Color.secondary.opacity(0.08))
+                    .cornerRadius(MGStyle.Corner.xs)
+            }
+        }
+    }
+    
     /// Format a parameter key into a readable label
     private func formatParameterKey(_ key: String) -> String {
-        // Convert camelCase/snake_case to Title Case
         let spaced = key.replacingOccurrences(of: "_", with: " ")
         let words = spaced.unicodeScalars.reduce("") { result, scalar in
             if CharacterSet.uppercaseLetters.contains(scalar) && !result.isEmpty {
@@ -471,7 +499,6 @@ struct GestureCardView: View {
     /// Format a parameter value for display, avoiding raw data dumps
     private func formatParameterValue(_ value: AnyCodable) -> String {
         if let str = value.value as? String {
-            // Truncate very long strings
             return str.count > 60 ? String(str.prefix(57)) + "..." : str
         } else if let num = value.value as? NSNumber {
             return num.stringValue
@@ -479,9 +506,28 @@ struct GestureCardView: View {
             return bool ? "Yes" : "No"
         } else if value.value is NSNull {
             return "—"
+        } else if let arr = value.value as? [Any] {
+            return "\(arr.count) item\(arr.count == 1 ? "" : "s")"
+        } else if let dict = value.value as? [String: Any] {
+            return "\(dict.count) field\(dict.count == 1 ? "" : "s")"
         } else {
             return "Configured"
         }
+    }
+    
+    /// Return a compact type hint for the parameter format
+    private func parameterTypeHint(_ value: AnyCodable) -> String? {
+        if value.value is String { return "text" }
+        if value.value is Bool { return "bool" }
+        if let num = value.value as? NSNumber {
+            // Distinguish int from float
+            let t = String(cString: num.objCType)
+            if t == "d" || t == "f" { return "number" }
+            return "int"
+        }
+        if value.value is [Any] { return "list" }
+        if value.value is [String: Any] { return "json" }
+        return nil
     }
 }
 

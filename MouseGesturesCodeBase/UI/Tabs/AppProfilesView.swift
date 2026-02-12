@@ -123,7 +123,7 @@ struct AppProfilesView: View {
                 count: filteredMappings.count
             )
             
-            LazyVStack(spacing: MGStyle.Spacing.md) {
+            LazyVStack(spacing: MGStyle.Spacing.sm) {
                 ForEach(filteredMappings, id: \.id) { mapping in
                     AppMappingRow(
                         mapping: mapping,
@@ -152,7 +152,7 @@ struct AppProfilesView: View {
                 count: filteredDisabledApps.count
             )
             
-            LazyVStack(spacing: MGStyle.Spacing.md) {
+            LazyVStack(spacing: MGStyle.Spacing.sm) {
                 ForEach(filteredDisabledApps, id: \.id) { disabledApp in
                     DisabledAppRow(
                         disabledApp: disabledApp,
@@ -173,16 +173,18 @@ struct AppProfilesView: View {
     // MARK: - Computed Properties
     
     private var filteredMappings: [AppProfileMapping] {
-        if searchText.isEmpty { return appMappings }
-        return appMappings.filter { mapping in
+        let sorted = appMappings.sorted { $0.appName.localizedCaseInsensitiveCompare($1.appName) == .orderedAscending }
+        if searchText.isEmpty { return sorted }
+        return sorted.filter { mapping in
             mapping.appName.localizedCaseInsensitiveContains(searchText) ||
             mapping.appBundleIdentifier.localizedCaseInsensitiveContains(searchText)
         }
     }
     
     private var filteredDisabledApps: [DisabledApp] {
-        if searchText.isEmpty { return disabledApps }
-        return disabledApps.filter { app in
+        let sorted = disabledApps.sorted { $0.appName.localizedCaseInsensitiveCompare($1.appName) == .orderedAscending }
+        if searchText.isEmpty { return sorted }
+        return sorted.filter { app in
             app.appName.localizedCaseInsensitiveContains(searchText) ||
             app.appBundleIdentifier.localizedCaseInsensitiveContains(searchText)
         }
@@ -246,33 +248,38 @@ struct AppMappingRow: View {
     }
     
     var body: some View {
-        HStack(spacing: MGStyle.Spacing.lg) {
+        HStack(spacing: MGStyle.Spacing.md) {
+            // App icon
             if let app = NSWorkspace.shared.urlForApplication(withBundleIdentifier: mapping.appBundleIdentifier) {
                 Image(nsImage: NSWorkspace.shared.icon(forFile: app.path))
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(width: 32, height: 32)
+                    .frame(width: 28, height: 28)
             } else {
                 Image(systemName: "app")
-                    .font(.system(size: 24))
-                    .frame(width: 32, height: 32)
+                    .font(.system(size: 20))
+                    .frame(width: 28, height: 28)
                     .foregroundColor(.secondary)
             }
             
-            VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
+            // App name + bundle id
+            VStack(alignment: .leading, spacing: 1) {
                 Text(mapping.appName)
                     .font(.system(size: MGStyle.FontSize.body, weight: .medium))
+                    .lineLimit(1)
                 
                 Text(mapping.appBundleIdentifier)
-                    .font(.system(size: MGStyle.FontSize.caption))
+                    .font(.system(size: MGStyle.FontSize.badge))
                     .foregroundColor(.secondary)
+                    .lineLimit(1)
             }
+            .frame(minWidth: 140)
             
             Spacer()
             
-            // Inline profile picker
+            // Inline rule: "Use profile: [Dropdown]"
             HStack(spacing: MGStyle.Spacing.sm) {
-                Text("Profile:")
+                Text("Use profile:")
                     .font(.system(size: MGStyle.FontSize.caption))
                     .foregroundColor(.secondary)
                 Picker("", selection: $selectedProfileId) {
@@ -281,7 +288,7 @@ struct AppMappingRow: View {
                     }
                 }
                 .pickerStyle(.menu)
-                .frame(width: 150)
+                .frame(width: 140)
                 .onChange(of: selectedProfileId) { newValue in
                     if newValue != mapping.profileId {
                         onProfileChange(newValue)
@@ -292,8 +299,13 @@ struct AppMappingRow: View {
             MGActionButton("trash", help: "Remove rule", destructive: true) { onDelete() }
                 .opacity(isHovered ? 1 : 0)
         }
-        .mgListRow(isSelected: false, isHovered: isHovered)
+        .padding(.horizontal, MGStyle.Spacing.lg)
+        .padding(.vertical, MGStyle.Spacing.sm)
+        .mgListCard(isHovered: isHovered)
         .onHover { hovering in withAnimation(.easeInOut(duration: 0.15)) { isHovered = hovering } }
+        .contextMenu {
+            Button(role: .destructive, action: onDelete) { Label("Delete", systemImage: "trash") }
+        }
     }
 }
 
@@ -305,26 +317,28 @@ struct DisabledAppRow: View {
     @State private var isHovered = false
     
     var body: some View {
-        HStack(spacing: MGStyle.Spacing.lg) {
+        HStack(spacing: MGStyle.Spacing.md) {
             if let app = NSWorkspace.shared.urlForApplication(withBundleIdentifier: disabledApp.appBundleIdentifier) {
                 Image(nsImage: NSWorkspace.shared.icon(forFile: app.path))
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(width: 32, height: 32)
+                    .frame(width: 28, height: 28)
             } else {
                 Image(systemName: "app")
-                    .font(.system(size: 24))
-                    .frame(width: 32, height: 32)
+                    .font(.system(size: 20))
+                    .frame(width: 28, height: 28)
                     .foregroundColor(.secondary)
             }
             
-            VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
+            VStack(alignment: .leading, spacing: 1) {
                 Text(disabledApp.appName)
                     .font(.system(size: MGStyle.FontSize.body, weight: .medium))
+                    .lineLimit(1)
                 
                 Text(disabledApp.appBundleIdentifier)
-                    .font(.system(size: MGStyle.FontSize.caption))
+                    .font(.system(size: MGStyle.FontSize.badge))
                     .foregroundColor(.secondary)
+                    .lineLimit(1)
             }
             
             Spacer()
@@ -334,8 +348,13 @@ struct DisabledAppRow: View {
             MGActionButton("trash", help: "Remove rule", destructive: true) { onDelete() }
                 .opacity(isHovered ? 1 : 0)
         }
-        .mgListRow(isSelected: false, isHovered: isHovered)
+        .padding(.horizontal, MGStyle.Spacing.lg)
+        .padding(.vertical, MGStyle.Spacing.sm)
+        .mgListCard(isHovered: isHovered)
         .onHover { hovering in withAnimation(.easeInOut(duration: 0.15)) { isHovered = hovering } }
+        .contextMenu {
+            Button(role: .destructive, action: onDelete) { Label("Delete", systemImage: "trash") }
+        }
     }
 }
 
@@ -359,9 +378,17 @@ struct AddAppRuleSheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {
                     // App selection
-                    GroupBox("Select Application") {
+                    MGDetailSection("Select Application", icon: "app.badge") {
                         VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
-                            MGSearchField("Search applications...", text: $searchText)
+                            HStack(spacing: MGStyle.Spacing.md) {
+                                MGSearchField("Search applications...", text: $searchText)
+                                
+                                Button(action: browseForApp) {
+                                    Label("Browse...", systemImage: "folder")
+                                }
+                                .controlSize(.small)
+                                .help("Select an application from Finder")
+                            }
                             
                             if isLoadingApps {
                                 HStack {
@@ -374,7 +401,7 @@ struct AddAppRuleSheet: View {
                                 .frame(height: 200)
                             } else {
                                 ScrollView {
-                                    VStack(spacing: MGStyle.Spacing.sm) {
+                                    VStack(spacing: MGStyle.Spacing.xs) {
                                         ForEach(filteredApps, id: \.bundleId) { app in
                                             AppSelectionRow(
                                                 app: app,
@@ -395,37 +422,41 @@ struct AddAppRuleSheet: View {
                                 .cornerRadius(MGStyle.Corner.lg)
                             }
                         }
-                        .padding(.vertical, MGStyle.Spacing.md)
                     }
                     
-                    // Rule type selection
-                    GroupBox("Rule Type") {
-                        VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
-                            Picker("", selection: $ruleType) {
-                                ForEach(AppProfileRuleType.allCases, id: \.self) { type in
-                                    Text(type.rawValue).tag(type)
+                    // Rule type + profile on same line
+                    MGDetailSection("Rule Configuration", icon: "gearshape") {
+                        VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
+                            HStack(spacing: MGStyle.Spacing.lg) {
+                                Picker("Rule:", selection: $ruleType) {
+                                    ForEach(AppProfileRuleType.allCases, id: \.self) { type in
+                                        Text(type.rawValue).tag(type)
+                                    }
                                 }
+                                .pickerStyle(.segmented)
+                                .frame(maxWidth: 300)
                             }
-                            .pickerStyle(.radioGroup)
                             
-                            Text(ruleType.description)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                        .padding(.vertical, MGStyle.Spacing.md)
-                    }
-                    
-                    // Profile selection
-                    if ruleType == .useProfile {
-                        GroupBox("Select Profile") {
-                            Picker("", selection: $selectedProfileId) {
-                                Text("Select a profile...").tag(nil as UUID?)
-                                ForEach(uiServices.profiles, id: \.id) { profile in
-                                    Text(profile.name).tag(profile.id as UUID?)
+                            if ruleType == .useProfile {
+                                HStack(spacing: MGStyle.Spacing.md) {
+                                    Text("Profile:")
+                                        .font(.system(size: MGStyle.FontSize.body))
+                                        .foregroundColor(.secondary)
+                                    Picker("", selection: $selectedProfileId) {
+                                        Text("Select a profile...").tag(nil as UUID?)
+                                        ForEach(uiServices.profiles.sorted(by: { $0.name < $1.name }), id: \.id) { profile in
+                                            Text(profile.name).tag(profile.id as UUID?)
+                                        }
+                                    }
+                                    .pickerStyle(.menu)
+                                    .labelsHidden()
+                                    .frame(width: 200)
                                 }
+                            } else {
+                                Text("All gestures will be disabled when this application is in the foreground.")
+                                    .font(.system(size: MGStyle.FontSize.caption))
+                                    .foregroundColor(.secondary)
                             }
-                            .labelsHidden()
-                            .padding(.vertical, MGStyle.Spacing.md)
                         }
                     }
                 }
@@ -438,7 +469,7 @@ struct AddAppRuleSheet: View {
                 }
             }
         }
-        .frame(width: 500, height: 600)
+        .frame(width: 550, height: 580)
         .onAppear {
             loadInstalledApps()
             if let firstProfile = uiServices.profiles.first {
@@ -448,8 +479,9 @@ struct AddAppRuleSheet: View {
     }
     
     private var filteredApps: [(bundleId: String, name: String, icon: NSImage?)] {
-        if searchText.isEmpty { return installedApps }
-        return installedApps.filter { app in
+        let sorted = installedApps.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        if searchText.isEmpty { return sorted }
+        return sorted.filter { app in
             app.name.localizedCaseInsensitiveContains(searchText) ||
             app.bundleId.localizedCaseInsensitiveContains(searchText)
         }
@@ -476,6 +508,26 @@ struct AddAppRuleSheet: View {
             }
         }
     }
+    
+    private func browseForApp() {
+        let panel = NSOpenPanel()
+        panel.title = "Select Application"
+        panel.allowedContentTypes = [.application]
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+        panel.directoryURL = URL(fileURLWithPath: "/Applications")
+        panel.message = "Choose an application to create a rule for"
+        
+        if panel.runModal() == .OK, let url = panel.url {
+            if let bundle = Bundle(url: url), let bundleId = bundle.bundleIdentifier {
+                let name = bundle.infoDictionary?["CFBundleName"] as? String
+                    ?? bundle.infoDictionary?["CFBundleDisplayName"] as? String
+                    ?? url.deletingPathExtension().lastPathComponent
+                let icon = NSWorkspace.shared.icon(forFile: url.path)
+                selectedApp = (bundleId: bundleId, name: name, icon: icon)
+            }
+        }
+    }
 }
 
 // MARK: - App Selection Row
@@ -491,11 +543,11 @@ struct AppSelectionRow: View {
                 Image(nsImage: icon)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(width: 24, height: 24)
+                    .frame(width: 22, height: 22)
             } else {
                 Image(systemName: "app")
-                    .font(.system(size: 18))
-                    .frame(width: 24, height: 24)
+                    .font(.system(size: 16))
+                    .frame(width: 22, height: 22)
                     .foregroundColor(.secondary)
             }
             
@@ -519,7 +571,7 @@ struct AppSelectionRow: View {
             }
         }
         .padding(.horizontal, MGStyle.Spacing.md)
-        .padding(.vertical, MGStyle.Spacing.sm)
+        .padding(.vertical, MGStyle.Spacing.xs)
         .background(
             RoundedRectangle(cornerRadius: MGStyle.Corner.sm)
                 .fill(isSelected ? MGStyle.Colors.selectedRow :
@@ -532,5 +584,3 @@ struct AppSelectionRow: View {
         .opacity(isDisabled ? 0.6 : 1.0)
     }
 }
-
-

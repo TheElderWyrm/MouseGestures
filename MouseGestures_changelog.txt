@@ -1,5 +1,47 @@
 ## 2026-02-12
 
+### UI Polish Pass: App Profiles, Gesture Config, Profile Management
+
+**App Profiles Tab:**
+- Sort profile mappings and disabled apps alphabetically (localizedCaseInsensitiveCompare)
+- Moved profile dropdown inline with rule type: "Use profile: [Dropdown]" instead of separate label
+- Reduced card row padding/buffer (smaller icons 28px, tighter vertical spacing)
+- Added "Browse..." button to Add Rule sheet for selecting apps from Finder (NSOpenPanel)
+- Replaced GroupBox with MGDetailSection in Add Rule sheet for consistency
+- Rule type now uses segmented picker instead of radio group
+- App list in Add Rule also sorted alphabetically
+- Added context menus (right-click delete) to mapping and disabled app rows
+
+**Gesture Configuration Sheet:**
+- Moved gesture preview from top card to sticky bottom bar above Save/Cancel
+- Preview bar shows [Trigger Pills] → [Action Pill] at all times while scrolling
+- Removed old preview card from scroll area
+- Increased sheet height slightly to accommodate bottom preview bar
+
+**Gesture Cards (Expanded View):**
+- Added parameter type/format hints (text, bool, int, number, list, json)
+- Type hints shown as small monospaced badges next to parameter values
+- Improved formatting for array parameters ("3 items") and dict parameters ("2 fields")
+
+**Profiles Tab:**
+- Active profile can now be deleted: switches to next available profile automatically
+- If no profiles remain after deletion, creates a new "Default" profile
+- Delete confirmation dialog shows appropriate warning for active profile deletion
+- Added bottom bar with "Templates" and "+" buttons below profile list
+- Templates button provides quick access to Import Templates sheet
+
+**To-Do Completed:**
+- [x] App Profiles: Add button to select application from finder
+- [x] App Profiles: Sort profile mappings alphabetically
+- [x] App Profiles: Move select profile in line with rule type
+- [x] App Profiles: Buffer on card buttons could be reduced
+- [x] Gesture Config: Show gesture preview [Trigger] -> [Action] at bottom bar
+- [x] Gesture Cards: Show parameter information (Format)
+- [x] Profiles: Allow deletion of active profile
+- [x] Profiles: Add import from template button to bottom bar
+
+---
+
 ### UI Unification: Hit Targets, List Styling, and Performance
 
 **New UIStyles Components:**

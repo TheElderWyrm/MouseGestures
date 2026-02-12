@@ -106,7 +106,12 @@ struct ProfilesView: View {
             }
         } message: {
             if let profile = selectedProfile {
-                Text("Are you sure you want to delete the profile '\(profile.name)'? This action cannot be undone.")
+                let isActive = profile.id == uiServices.activeProfileId
+                if isActive {
+                    Text("Are you sure you want to delete the active profile '\(profile.name)'? A new profile will be activated automatically. This action cannot be undone.")
+                } else {
+                    Text("Are you sure you want to delete the profile '\(profile.name)'? This action cannot be undone.")
+                }
             }
         }
         .alert("Import Error", isPresented: $showingImportError) {
@@ -153,6 +158,31 @@ struct ProfilesView: View {
                 }
                 .padding(MGStyle.Spacing.lg)
             }
+            
+            Spacer()
+            
+            // Bottom bar with quick actions
+            VStack(spacing: 0) {
+                Divider()
+                HStack(spacing: MGStyle.Spacing.md) {
+                    Button(action: { activeSheet = .importTemplates }) {
+                        Label("Templates", systemImage: "square.grid.2x2")
+                    }
+                    .buttonStyle(.borderless)
+                    .font(.system(size: MGStyle.FontSize.caption))
+                    .help("Import from template profiles")
+                    
+                    Spacer()
+                    
+                    Button(action: { activeSheet = .addProfile }) {
+                        Image(systemName: "plus")
+                    }
+                    .buttonStyle(.borderless)
+                    .help("Create new profile")
+                }
+                .padding(.horizontal, MGStyle.Spacing.lg)
+                .padding(.vertical, MGStyle.Spacing.md)
+            }
         }
         .background(MGStyle.Colors.windowBackground)
     }
@@ -164,7 +194,26 @@ struct ProfilesView: View {
     }
     
     private func deleteProfile(_ profileId: UUID) {
-        if uiServices.deleteProfile(profileId) { selectedProfileId = uiServices.activeProfileId }
+        let wasActive = profileId == uiServices.activeProfileId
+        let otherProfiles = uiServices.profiles.filter { $0.id != profileId }
+        
+        // If deleting the active profile, switch to another first
+        if wasActive, let next = otherProfiles.first {
+            uiServices.switchToProfile(next.id)
+        }
+        
+        if uiServices.deleteProfile(profileId) {
+            // Select the now-active profile, or the first remaining one
+            selectedProfileId = uiServices.activeProfileId ?? otherProfiles.first?.id
+            
+            // If no profiles remain, create a default one
+            if uiServices.profiles.isEmpty {
+                if let newProfile = uiServices.createProfile(name: "Default") {
+                    uiServices.switchToProfile(newProfile.id)
+                    selectedProfileId = newProfile.id
+                }
+            }
+        }
     }
     
     private func duplicateProfile(_ profileId: UUID) {

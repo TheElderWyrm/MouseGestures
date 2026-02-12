@@ -65,7 +65,6 @@ struct GestureConfigurationSheet: View {
                         Spacer()
                     }
                     
-                    gesturePreviewCard
                     activationComponentsSection
                     actionSection
                     timingSettingsSection
@@ -73,11 +72,14 @@ struct GestureConfigurationSheet: View {
                 .padding(MGStyle.Spacing.xl)
             }
             
+            // Gesture preview bar (sticky at bottom)
+            gesturePreviewBar
+            
             MGSheetFooter(mode.buttonTitle, disabled: !isValid, action: {
                 saveGesture()
             }, cancel: { dismiss() })
         }
-        .frame(width: 750, height: 680)
+        .frame(width: 750, height: 700)
         .alert("Gesture Conflict", isPresented: $showingConflictAlert) {
             Button("OK") {}
         } message: {
@@ -85,31 +87,15 @@ struct GestureConfigurationSheet: View {
         }
     }
     
-    // MARK: - Preview Card
+    // MARK: - Gesture Preview Bar (Bottom)
     
-    private var gesturePreviewCard: some View {
-        HStack(spacing: MGStyle.Spacing.xl) {
-            // Zone indicator (if zone is enabled)
-            if components.screenZone?.isEnabled == true {
-                MGZoneIndicator(zone: components.screenZone?.zone ?? .topRight)
-                    .scaleEffect(2.0)
-                    .frame(width: 40)
-            } else {
-                Image(systemName: "sparkles")
-                    .font(.system(size: 16))
-                    .foregroundColor(.blue)
-                    .frame(width: 40)
-            }
+    private var gesturePreviewBar: some View {
+        VStack(spacing: 0) {
+            Divider()
             
-            // Preview pills
-            VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
-                Text("Gesture Preview")
-                    .font(.system(size: MGStyle.FontSize.caption, weight: .semibold))
-                    .foregroundColor(.secondary)
-                    .textCase(.uppercase)
-                
+            HStack(spacing: MGStyle.Spacing.md) {
+                // Trigger pills
                 HStack(spacing: MGStyle.Spacing.sm) {
-                    // Active trigger pills
                     if components.screenZone?.isEnabled == true {
                         MGTriggerPill(components.screenZone?.zone.displayName ?? "Zone", icon: "square.grid.3x3", color: .blue)
                     }
@@ -128,43 +114,31 @@ struct GestureConfigurationSheet: View {
                         MGTriggerPill(components.keyboardShortcut?.keyboardTrigger?.displayString ?? "Key", icon: "keyboard", color: .green)
                     }
                     
-                    Image(systemName: "arrow.right")
-                        .font(.system(size: 10))
-                        .foregroundColor(.secondary)
-                    
-                    // Action pill
-                    if let action = PluginManager.shared.getAction(identifier: selectedActionId)?.action {
-                        MGTriggerPill(action.name, icon: action.icon ?? "bolt", color: .accentColor)
-                    } else if !selectedActionId.isEmpty {
-                        MGTriggerPill(selectedActionId, icon: "bolt", color: .secondary)
-                    } else {
-                        Text("Select an action")
-                            .font(.system(size: MGStyle.FontSize.caption))
-                            .foregroundColor(.secondary)
+                    if !components.isValid {
+                        MGTriggerPill("No trigger", icon: "exclamationmark.triangle", color: .orange)
                     }
                 }
+                
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(.secondary)
+                
+                // Action pill
+                if let action = PluginManager.shared.getAction(identifier: selectedActionId)?.action {
+                    MGTriggerPill(action.name, icon: action.icon ?? "bolt", color: .accentColor)
+                } else if !selectedActionId.isEmpty {
+                    MGTriggerPill(selectedActionId, icon: "bolt", color: .secondary)
+                } else {
+                    Text("Select an action")
+                        .font(.system(size: MGStyle.FontSize.caption))
+                        .foregroundColor(.secondary)
+                }
+                
+                Spacer()
             }
-            
-            Spacer()
-        }
-        .padding(MGStyle.Spacing.xl)
-        .background(
-            RoundedRectangle(cornerRadius: MGStyle.Corner.lg)
-                .fill(MGStyle.Colors.cardBackground)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: MGStyle.Corner.lg)
-                .stroke(Color.accentColor.opacity(0.2), lineWidth: 1)
-        )
-    }
-    
-    private var actionPreview: String {
-        if let action = PluginManager.shared.getAction(identifier: selectedActionId)?.action {
-            return " → \(action.name)"
-        } else if !selectedActionId.isEmpty {
-            return " → [Action: \(selectedActionId)]"
-        } else {
-            return " → [No action selected]"
+            .padding(.horizontal, MGStyle.Spacing.xl)
+            .padding(.vertical, MGStyle.Spacing.md)
+            .background(MGStyle.Colors.cardBackground.opacity(0.8))
         }
     }
     
