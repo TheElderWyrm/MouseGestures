@@ -1010,7 +1010,10 @@ struct AddEditProfileSheet: View {
                     showingNameError = true; return
                 }
             }
-            if uiServices.renameProfile(existingProfile.id, to: profileName) {
+            let nameChanged = uiServices.renameProfile(existingProfile.id, to: profileName)
+            // Always save the keyboard shortcut
+            _ = uiServices.updateProfileKeyboardShortcut(existingProfile.id, shortcut: keyboardShortcut)
+            if nameChanged {
                 onSave(existingProfile); dismiss()
             }
         } else {
@@ -1024,7 +1027,11 @@ struct AddEditProfileSheet: View {
             } else {
                 newProfile = uiServices.createProfile(name: profileName)
             }
-            if let profile = newProfile { onSave(profile); dismiss() }
+            if let profile = newProfile {
+                // Save the keyboard shortcut on the new profile
+                _ = uiServices.updateProfileKeyboardShortcut(profile.id, shortcut: keyboardShortcut)
+                onSave(profile); dismiss()
+            }
         }
     }
 }

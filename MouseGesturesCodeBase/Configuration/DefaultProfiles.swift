@@ -50,10 +50,6 @@ struct DefaultProfiles {
         return ConfigurationProfile(
             name: "Window Management",
             gestures: gestures,
-            hapticFeedbackEnabled: true,
-            edgeThreshold: 30,
-            cornerSize: 100,
-            cornerBuffer: 50,
             isDefault: false
         )
     }
@@ -83,10 +79,6 @@ struct DefaultProfiles {
         return ConfigurationProfile(
             name: "Media Control",
             gestures: gestures,
-            hapticFeedbackEnabled: true,
-            edgeThreshold: 30,
-            cornerSize: 100,
-            cornerBuffer: 50,
             isDefault: false
         )
     }
@@ -120,10 +112,6 @@ struct DefaultProfiles {
         return ConfigurationProfile(
             name: "System Navigation",
             gestures: gestures,
-            hapticFeedbackEnabled: true,
-            edgeThreshold: 30,
-            cornerSize: 100,
-            cornerBuffer: 50,
             isDefault: false
         )
     }
@@ -156,10 +144,6 @@ struct DefaultProfiles {
         return ConfigurationProfile(
             name: "Productivity",
             gestures: gestures,
-            hapticFeedbackEnabled: true,
-            edgeThreshold: 30,
-            cornerSize: 100,
-            cornerBuffer: 50,
             isDefault: false
         )
     }
@@ -178,10 +162,6 @@ struct DefaultProfiles {
         return ConfigurationProfile(
             name: "Minimal",
             gestures: gestures,
-            hapticFeedbackEnabled: false,
-            edgeThreshold: 30,
-            cornerSize: 100,
-            cornerBuffer: 50,
             isDefault: false
         )
     }
@@ -218,10 +198,6 @@ struct DefaultProfiles {
         return ConfigurationProfile(
             name: "Developer",
             gestures: gestures,
-            hapticFeedbackEnabled: true,
-            edgeThreshold: 25,
-            cornerSize: 80,
-            cornerBuffer: 40,
             isDefault: false
         )
     }

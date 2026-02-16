@@ -238,8 +238,8 @@ class ZoneHighlightManager {
                 window.setFrame(frame, display: true)
             }
             
-            // Show zone name as label (forced, ignoring showZoneLabels setting)
-            window.updateState(isActive: false, label: zone.rawValue, forceLabel: true)
+            // Preview mode: show zones without labels
+            window.updateState(isActive: false, label: nil)
             window.animations = [:]
             window.alphaValue = 1.0
             window.orderFront(nil)
@@ -403,7 +403,8 @@ class ZoneHighlightManager {
             }
             
             let isActive = gesture != nil
-            let label = getLabel(for: gesture)
+            // Show zone name (not action name) when modifiers are held
+            let label = zone.rawValue
             
             window.updateState(isActive: isActive, label: label)
             // Cancel any running fade-out animation before making visible

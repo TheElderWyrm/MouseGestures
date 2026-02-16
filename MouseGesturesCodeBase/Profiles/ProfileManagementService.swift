@@ -98,7 +98,7 @@ class ProfileManagementService: ObservableObject {
     ///   - gestures: New gestures for the profile
     /// - Returns: True if update was successful
     @discardableResult
-    func updateProfile(profileId: UUID, name: String? = nil, gestures: [Gesture]? = nil) -> Bool {
+    func updateProfile(profileId: UUID, name: String? = nil, gestures: [Gesture]? = nil, keyboardShortcut: KeyboardTrigger?? = nil) -> Bool {
         guard let profileIndex = configuration.profiles.firstIndex(where: { $0.id == profileId }) else {
             log.log("Profile not found for update: \(profileId)")
             return false
@@ -119,6 +119,11 @@ class ProfileManagementService: ObservableObject {
         // Update gestures if provided
         if let newGestures = gestures {
             profile.gestures = newGestures
+        }
+        
+        // Update keyboard shortcut if provided (double-optional: nil means no change, .some(nil) means clear)
+        if let newShortcut = keyboardShortcut {
+            profile.keyboardShortcut = newShortcut
         }
         
         configuration.profiles[profileIndex] = profile
@@ -302,8 +307,9 @@ class ProfileManagementService: ObservableObject {
             return
         }
         
-        // Replace the active profile's gestures with defaults
-        configuration.profiles[index].gestures = Configuration.defaultGestures
+        // Replace the active profile's gestures with the Minimal profile defaults
+        let minimalGestures = DefaultProfiles.getProfile(for: .minimal)?.gestures ?? Configuration.defaultGestures
+        configuration.profiles[index].gestures = minimalGestures
         configuration.profiles[index].updateModifiedDate()
         
         configuration.save()

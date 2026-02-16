@@ -185,6 +185,14 @@ public class UIServices: ObservableObject {
         return success
     }
     
+    func updateProfileKeyboardShortcut(_ profileId: UUID, shortcut: KeyboardTrigger?) -> Bool {
+        let success = profileManagementService.updateProfile(profileId: profileId, keyboardShortcut: .some(shortcut))
+        if success {
+            loadData()
+        }
+        return success
+    }
+    
     func duplicateProfile(_ profileId: UUID) -> ConfigurationProfile? {
         let profile = profileManagementService.duplicateProfile(profileId: profileId)
         loadData()

@@ -32,26 +32,29 @@ struct ConfigurationProfile: Codable, Equatable, Identifiable {
     var id: UUID
     var name: String
     var gestures: [Gesture]
-    var hapticFeedbackEnabled: Bool
-    var edgeThreshold: CGFloat
-    var cornerSize: CGFloat
-    var cornerBuffer: CGFloat
     var createdDate: Date
     var modifiedDate: Date
     var isDefault: Bool
     var keyboardShortcut: KeyboardTrigger? // Direct keyboard shortcut for switching to this profile
     var userInfo: [String: AnyCodable] = [:] // For extensibility
     
-    init(name: String, gestures: [Gesture] = [], hapticFeedbackEnabled: Bool = true,
-         edgeThreshold: CGFloat = 30, cornerSize: CGFloat = 100, cornerBuffer: CGFloat = 50,
+    // Legacy fields: decoded for migration but no longer used (zone/haptic are global settings)
+    private var hapticFeedbackEnabled: Bool?
+    private var edgeThreshold: CGFloat?
+    private var cornerSize: CGFloat?
+    private var cornerBuffer: CGFloat?
+    
+    /// Access legacy values for one-time migration to global settings
+    var legacyHapticFeedbackEnabled: Bool? { hapticFeedbackEnabled }
+    var legacyEdgeThreshold: CGFloat? { edgeThreshold }
+    var legacyCornerSize: CGFloat? { cornerSize }
+    var legacyCornerBuffer: CGFloat? { cornerBuffer }
+    
+    init(name: String, gestures: [Gesture] = [],
          isDefault: Bool = false, keyboardShortcut: KeyboardTrigger? = nil) {
         self.id = UUID()
         self.name = name
         self.gestures = gestures
-        self.hapticFeedbackEnabled = hapticFeedbackEnabled
-        self.edgeThreshold = edgeThreshold
-        self.cornerSize = cornerSize
-        self.cornerBuffer = cornerBuffer
         self.createdDate = Date()
         self.modifiedDate = Date()
         self.isDefault = isDefault

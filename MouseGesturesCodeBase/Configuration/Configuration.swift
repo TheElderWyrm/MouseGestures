@@ -11,6 +11,10 @@ public class Configuration: Codable {
     var activeProfileId: UUID?
     var appProfileMappings: [AppProfileMapping] = []
     var disabledApps: [DisabledApp] = []  // Apps where gestures are disabled
+    var hapticFeedbackEnabled: Bool = true
+    var edgeThreshold: CGFloat = 30
+    var cornerSize: CGFloat = 100
+    var cornerBuffer: CGFloat = 50
     var showZoneHighlights: Bool = false
     var showZoneLabels: Bool = false
     // Transient: not persisted, synced from plugin settings at runtime
@@ -45,6 +49,10 @@ public class Configuration: Codable {
         var activeProfileId: UUID?
         var appProfileMappings: [AppProfileMapping]
         var disabledApps: [DisabledApp]?
+        var hapticFeedbackEnabled: Bool?
+        var edgeThreshold: CGFloat?
+        var cornerSize: CGFloat?
+        var cornerBuffer: CGFloat?
         var showZoneHighlights: Bool?
         var showZoneLabels: Bool?
         var hideFromMenuBar: Bool?
@@ -55,7 +63,7 @@ public class Configuration: Codable {
     
     // Defines which properties are saved to disk.
     enum CodingKeys: String, CodingKey {
-        case isEnabled, profiles, activeProfileId, appProfileMappings, disabledApps, showZoneHighlights, showZoneLabels, hideFromMenuBar, debugModeEnabled, developerModeEnabled, pluginConfigurations
+        case isEnabled, profiles, activeProfileId, appProfileMappings, disabledApps, hapticFeedbackEnabled, edgeThreshold, cornerSize, cornerBuffer, showZoneHighlights, showZoneLabels, hideFromMenuBar, debugModeEnabled, developerModeEnabled, pluginConfigurations
     }
 
     // --- Computed Properties ---
@@ -81,65 +89,8 @@ public class Configuration: Codable {
         }
     }
 
-    var hapticFeedbackEnabled: Bool {
-        get {
-            configQueue.sync {
-                activeProfile?.hapticFeedbackEnabled ?? true
-            }
-        }
-        set {
-            configQueue.async(flags: .barrier) {
-                guard let index = self.activeProfileIndex else { return }
-                self.profiles[index].hapticFeedbackEnabled = newValue
-                self.profiles[index].updateModifiedDate()
-            }
-        }
-    }
-
-    var edgeThreshold: CGFloat {
-        get {
-            configQueue.sync {
-                activeProfile?.edgeThreshold ?? 30
-            }
-        }
-        set {
-            configQueue.async(flags: .barrier) {
-                guard let index = self.activeProfileIndex else { return }
-                self.profiles[index].edgeThreshold = newValue
-                self.profiles[index].updateModifiedDate()
-            }
-        }
-    }
-
-    var cornerSize: CGFloat {
-        get {
-            configQueue.sync {
-                activeProfile?.cornerSize ?? 100
-            }
-        }
-        set {
-            configQueue.async(flags: .barrier) {
-                guard let index = self.activeProfileIndex else { return }
-                self.profiles[index].cornerSize = newValue
-                self.profiles[index].updateModifiedDate()
-            }
-        }
-    }
-
-    var cornerBuffer: CGFloat {
-        get {
-            configQueue.sync {
-                activeProfile?.cornerBuffer ?? 50
-            }
-        }
-        set {
-            configQueue.async(flags: .barrier) {
-                guard let index = self.activeProfileIndex else { return }
-                self.profiles[index].cornerBuffer = newValue
-                self.profiles[index].updateModifiedDate()
-            }
-        }
-    }
+    // hapticFeedbackEnabled, edgeThreshold, cornerSize, cornerBuffer
+    // are now top-level stored properties (global settings, not per-profile)
     
     var activeProfile: ConfigurationProfile? {
         get {
@@ -180,6 +131,13 @@ public class Configuration: Codable {
             self.disabledApps = decoded.disabledApps ?? []
             self.showZoneHighlights = decoded.showZoneHighlights ?? false
             self.showZoneLabels = decoded.showZoneLabels ?? false
+            
+            // Global zone/haptic settings — migrate from active profile if not yet saved globally
+            let activeProf = decoded.profiles.first(where: { $0.id == decoded.activeProfileId }) ?? decoded.profiles.first
+            self.hapticFeedbackEnabled = decoded.hapticFeedbackEnabled ?? activeProf?.legacyHapticFeedbackEnabled ?? true
+            self.edgeThreshold = decoded.edgeThreshold ?? activeProf?.legacyEdgeThreshold ?? 30
+            self.cornerSize = decoded.cornerSize ?? activeProf?.legacyCornerSize ?? 100
+            self.cornerBuffer = decoded.cornerBuffer ?? activeProf?.legacyCornerBuffer ?? 50
             self.hideFromMenuBar = decoded.hideFromMenuBar ?? false
             self.debugModeEnabled = decoded.debugModeEnabled ?? false
             self.developerModeEnabled = decoded.developerModeEnabled ?? false
@@ -283,14 +241,10 @@ public class Configuration: Codable {
     // --- Profile Management Methods (for UI) ---
     
     func createProfile(name: String) -> ConfigurationProfile {
-        // Create the new profile by copying settings from the currently active one.
+        // Create the new profile by copying gestures from the currently active one.
         let newProfile = ConfigurationProfile(
             name: name,
             gestures: self.gestures, // Uses computed property to get active gestures
-            hapticFeedbackEnabled: self.hapticFeedbackEnabled,
-            edgeThreshold: self.edgeThreshold,
-            cornerSize: self.cornerSize,
-            cornerBuffer: self.cornerBuffer,
             isDefault: false
         )
         profiles.append(newProfile)
@@ -503,13 +457,11 @@ public class Configuration: Codable {
         self.developerModeEnabled = false
         self.pluginConfigurations = [:]
         
-        // Reset active profile settings
-        if let index = self.activeProfileIndex {
-            self.profiles[index].hapticFeedbackEnabled = true
-            self.profiles[index].edgeThreshold = 30
-            self.profiles[index].cornerSize = 100
-            self.profiles[index].cornerBuffer = 50
-        }
+        // Reset global zone/haptic settings
+        self.hapticFeedbackEnabled = true
+        self.edgeThreshold = 30
+        self.cornerSize = 100
+        self.cornerBuffer = 50
     }
 
     // --- Global Settings Export/Import ---
@@ -521,6 +473,10 @@ public class Configuration: Codable {
         let appProfileMappings: [AppProfileMapping]
         let disabledApps: [DisabledApp]
         let isEnabled: Bool
+        let hapticFeedbackEnabled: Bool
+        let edgeThreshold: CGFloat
+        let cornerSize: CGFloat
+        let cornerBuffer: CGFloat
         let showZoneHighlights: Bool
         let showZoneLabels: Bool
         let hideFromMenuBar: Bool
@@ -535,6 +491,10 @@ public class Configuration: Codable {
             self.appProfileMappings = config.appProfileMappings
             self.disabledApps = config.disabledApps
             self.isEnabled = config.isEnabled
+            self.hapticFeedbackEnabled = config.hapticFeedbackEnabled
+            self.edgeThreshold = config.edgeThreshold
+            self.cornerSize = config.cornerSize
+            self.cornerBuffer = config.cornerBuffer
             self.showZoneHighlights = config.showZoneHighlights
             self.showZoneLabels = config.showZoneLabels
             self.hideFromMenuBar = config.hideFromMenuBar
@@ -570,6 +530,10 @@ public class Configuration: Codable {
             
             // Import all settings
             self.isEnabled = importData.isEnabled
+            self.hapticFeedbackEnabled = importData.hapticFeedbackEnabled
+            self.edgeThreshold = importData.edgeThreshold
+            self.cornerSize = importData.cornerSize
+            self.cornerBuffer = importData.cornerBuffer
             self.showZoneHighlights = importData.showZoneHighlights
             self.showZoneLabels = importData.showZoneLabels
             self.hideFromMenuBar = importData.hideFromMenuBar

@@ -24,3 +24,4 @@ Improve UI
 
 Profiles:
 - Add check boxes for selection
+- Remove confirmation box on import from template.

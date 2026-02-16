@@ -118,10 +118,6 @@ public class ProfileManager {
             newProfile = ConfigurationProfile(
                 name: name,
                 gestures: source.gestures,
-                hapticFeedbackEnabled: source.hapticFeedbackEnabled,
-                edgeThreshold: source.edgeThreshold,
-                cornerSize: source.cornerSize,
-                cornerBuffer: source.cornerBuffer,
                 isDefault: false,
                 keyboardShortcut: source.keyboardShortcut
             )
