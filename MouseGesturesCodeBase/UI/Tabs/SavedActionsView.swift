@@ -299,7 +299,6 @@ struct SavedActionRow: View {
                 .init("pencil", help: "Edit") { onEdit() },
                 .init("trash", help: "Delete", destructive: true) { onDelete() }
             ])
-            .opacity(isHovered ? 1 : 0)
         }
         .mgListRow(isSelected: isSelected, isHovered: isHovered, showBorder: true)
         .onHover { hovering in withAnimation(.easeInOut(duration: 0.15)) { isHovered = hovering } }

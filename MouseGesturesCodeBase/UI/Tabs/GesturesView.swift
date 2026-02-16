@@ -121,7 +121,7 @@ struct GesturesView: View {
             Button("Cancel", role: .cancel) {}
             Button("Reset", role: .destructive) { uiServices.resetToDefaultProfiles() }
         } message: {
-            Text("This will reset all profiles and gestures to factory defaults. This action cannot be undone.")
+            Text("This will reset the current profile's gestures to factory defaults. This action cannot be undone.")
         }
         .onAppear { uiServices.loadData() }
     }
@@ -285,7 +285,6 @@ struct GestureCardView: View {
                     .init("pencil", help: "Edit gesture") { onEdit() },
                     .init("trash", help: "Delete gesture", destructive: true) { showDeleteConfirm = true }
                 ])
-                .opacity(isHovered ? 1 : 0)
                 
                 // Expand chevron
                 MGActionButton("chevron.right", help: "Show details") { onToggleExpand() }
@@ -403,12 +402,6 @@ struct GestureCardView: View {
             }
             
             Spacer()
-            
-            // Edit button in expanded view
-            Button(action: onEdit) {
-                Label("Edit", systemImage: "pencil")
-            }
-            .controlSize(.small)
         }
     }
     

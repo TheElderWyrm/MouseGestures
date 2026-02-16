@@ -531,7 +531,6 @@ struct ProfileListRow: View {
                 MGActionButton("plus.square.on.square", help: "Duplicate") { onDuplicate() }
                 MGActionButton("trash", help: "Delete", destructive: true) { onDelete() }
             }
-            .opacity(isHovered ? 1 : 0)
         }
         .mgListRow(isSelected: isSelected, isHovered: isHovered, showBorder: isPrimary)
         .onHover { hovering in withAnimation(.easeInOut(duration: 0.15)) { isHovered = hovering } }
@@ -576,10 +575,6 @@ struct ProfileDetailEditor: View {
     // Editable state
     @State private var editingName = false
     @State private var nameText = ""
-    @State private var hapticEnabled: Bool = true
-    @State private var edgeThreshold: CGFloat = 30
-    @State private var cornerSize: CGFloat = 100
-    @State private var cornerBuffer: CGFloat = 50
     @State private var showNameError = false
     @State private var showDeleteGestureConfirm = false
     @State private var gestureToDelete: Gesture?
@@ -589,7 +584,6 @@ struct ProfileDetailEditor: View {
             VStack(alignment: .leading, spacing: MGStyle.Spacing.xl) {
                 profileHeader
                 actionBar
-                zoneSettingsCard
                 gestureEditorCard
             }
             .padding(MGStyle.Spacing.xl)
@@ -726,61 +720,6 @@ struct ProfileDetailEditor: View {
         )
     }
     
-    // MARK: - Zone Settings (Inline Editable)
-    
-    private var zoneSettingsCard: some View {
-        MGDetailSection("Zone Detection", icon: "square.grid.3x3") {
-            VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
-                HStack {
-                    Text("Edge Threshold")
-                        .font(.system(size: MGStyle.FontSize.body))
-                        .frame(width: 120, alignment: .leading)
-                    Slider(value: $edgeThreshold, in: 10...100, step: 5) { _ in saveZoneSettings() }
-                    Text("\(Int(edgeThreshold)) px")
-                        .font(.system(size: MGStyle.FontSize.caption, design: .monospaced))
-                        .foregroundColor(.secondary)
-                        .frame(width: 45, alignment: .trailing)
-                }
-                
-                HStack {
-                    Text("Corner Size")
-                        .font(.system(size: MGStyle.FontSize.body))
-                        .frame(width: 120, alignment: .leading)
-                    Slider(value: $cornerSize, in: 50...200, step: 10) { _ in saveZoneSettings() }
-                    Text("\(Int(cornerSize)) px")
-                        .font(.system(size: MGStyle.FontSize.caption, design: .monospaced))
-                        .foregroundColor(.secondary)
-                        .frame(width: 45, alignment: .trailing)
-                }
-                
-                HStack {
-                    Text("Corner Buffer")
-                        .font(.system(size: MGStyle.FontSize.body))
-                        .frame(width: 120, alignment: .leading)
-                    Slider(value: $cornerBuffer, in: 20...100, step: 5) { _ in saveZoneSettings() }
-                    Text("\(Int(cornerBuffer)) px")
-                        .font(.system(size: MGStyle.FontSize.caption, design: .monospaced))
-                        .foregroundColor(.secondary)
-                        .frame(width: 45, alignment: .trailing)
-                }
-                
-                Divider()
-                
-                Toggle(isOn: $hapticEnabled) {
-                    HStack(spacing: MGStyle.Spacing.md) {
-                        Image(systemName: "waveform")
-                            .foregroundColor(.secondary)
-                        Text("Haptic Feedback")
-                            .font(.system(size: MGStyle.FontSize.body))
-                    }
-                }
-                .toggleStyle(.switch)
-                .controlSize(.small)
-                .onChange(of: hapticEnabled) { _ in saveZoneSettings() }
-            }
-        }
-    }
-    
     // MARK: - Editable Gesture List
     
     private var gestureEditorCard: some View {
@@ -827,10 +766,6 @@ struct ProfileDetailEditor: View {
     
     private func loadProfileData() {
         nameText = profile.name
-        hapticEnabled = profile.hapticFeedbackEnabled
-        edgeThreshold = profile.edgeThreshold
-        cornerSize = profile.cornerSize
-        cornerBuffer = profile.cornerBuffer
     }
     
     private func commitNameEdit() {
@@ -845,15 +780,6 @@ struct ProfileDetailEditor: View {
             _ = uiServices.renameProfile(profile.id, to: trimmed)
         }
         editingName = false
-    }
-    
-    private func saveZoneSettings() {
-        if isActive {
-            uiServices.setEdgeThreshold(edgeThreshold)
-            uiServices.setCornerSize(cornerSize)
-            uiServices.setCornerBuffer(cornerBuffer)
-            uiServices.setHapticFeedbackEnabled(hapticEnabled)
-        }
     }
     
     private func toggleGestureEnabled(_ gesture: Gesture, enabled: Bool) {
@@ -935,7 +861,6 @@ struct ProfileGestureRow: View {
                 .init("pencil", help: "Edit gesture") { onEdit() },
                 .init("trash", help: "Delete gesture", destructive: true) { onDelete() }
             ])
-            .opacity(isHovered ? 1 : 0)
         }
         .padding(.horizontal, MGStyle.Spacing.md)
         .padding(.vertical, MGStyle.Spacing.sm)
@@ -1010,10 +935,6 @@ struct AddEditProfileSheet: View {
     
     @State private var profileName: String = ""
     @State private var basedOnProfileId: UUID?
-    @State private var hapticFeedbackEnabled: Bool = true
-    @State private var edgeThreshold: CGFloat = 30
-    @State private var cornerSize: CGFloat = 100
-    @State private var cornerBuffer: CGFloat = 50
     @State private var keyboardShortcut: KeyboardTrigger?
     @State private var showingNameError = false
     
@@ -1023,10 +944,6 @@ struct AddEditProfileSheet: View {
         self.onImportTemplate = onImportTemplate
         if case .edit(let profile) = mode {
             _profileName = State(initialValue: profile.name)
-            _hapticFeedbackEnabled = State(initialValue: profile.hapticFeedbackEnabled)
-            _edgeThreshold = State(initialValue: profile.edgeThreshold)
-            _cornerSize = State(initialValue: profile.cornerSize)
-            _cornerBuffer = State(initialValue: profile.cornerBuffer)
             _keyboardShortcut = State(initialValue: profile.keyboardShortcut)
         }
     }
@@ -1050,28 +967,6 @@ struct AddEditProfileSheet: View {
                                     }
                                 }
                                 .pickerStyle(.menu).frame(width: 250)
-                            }
-                        }
-                        Toggle("Haptic Feedback", isOn: $hapticFeedbackEnabled)
-                    }
-                    
-                    MGDetailSection("Zone Detection", icon: "square.grid.3x3") {
-                        LabeledContent("Edge Threshold:") {
-                            HStack {
-                                Slider(value: $edgeThreshold, in: 10...100, step: 5).frame(width: 150)
-                                Text("\(Int(edgeThreshold)) px").frame(width: 50, alignment: .trailing)
-                            }
-                        }
-                        LabeledContent("Corner Size:") {
-                            HStack {
-                                Slider(value: $cornerSize, in: 50...200, step: 10).frame(width: 150)
-                                Text("\(Int(cornerSize)) px").frame(width: 50, alignment: .trailing)
-                            }
-                        }
-                        LabeledContent("Corner Buffer:") {
-                            HStack {
-                                Slider(value: $cornerBuffer, in: 20...100, step: 5).frame(width: 150)
-                                Text("\(Int(cornerBuffer)) px").frame(width: 50, alignment: .trailing)
                             }
                         }
                     }

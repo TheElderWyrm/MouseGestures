@@ -465,3 +465,53 @@ This refactor makes the activation system truly extensible and modular, setting 
     replaced with MGStyle constants across all settings views and helpers.
 - **Result**: 914 fewer lines (2582 removed, 1668 added) — cleaner, more consistent codebase.
   All UI files now exclusively reference MGStyle for visual constants.
+
+## Bug Fixes and UI Improvements
+
+### Fix: Quick Profile Switch Now Works
+- **Problem**: Profile switching via gesture actions (Next Profile, Previous Profile, Switch to Profile)
+  silently failed — profile didn't persist and UI didn't update.
+- **Root Causes**:
+  1. `SandboxedPluginContext.applyProfile()` called `Configuration.applyProfile()` without
+     `setAsDefault: true`, so profile change didn't persist across sessions.
+  2. Built-in plugin permissions blocked posting "GestureConfigurationChanged" notification,
+     so UI never received the update signal after a switch.
+- **Fixes**:
+  * `SandboxedPluginContext.applyProfile()` now passes `setAsDefault: true`
+  * Added "GestureConfigurationChanged" to `allowedNotificationsToPost` in builtIn permissions
+
+### Fix: Preview Zones Button Shows Zone Names Regardless of Label Setting
+- **Problem**: Preview zones button only showed labels when `showZoneLabels` was enabled globally.
+- **Solution**: Added `forceShowLabel` flag to `ZoneView`. Preview mode sets this flag to always
+  display zone names (e.g. "topLeft", "bottom") independently of the global `showZoneLabels` setting.
+- Zone names are never replaced by action names during preview.
+
+### Fix: Removed Duplicate Edit Button from Gesture Cards
+- **Problem**: Expanded gesture cards showed two edit buttons — one in the hover actions row
+  and another standalone "Edit" button in the expanded detail area.
+- **Solution**: Removed the standalone Edit button from the expanded content area. The pencil
+  icon in the row actions is sufficient.
+
+### UI: Made Action Buttons Always Visible
+- **Problem**: Edit, delete, and other action buttons on list rows were only visible on hover,
+  making them hard to discover and inaccessible on trackpad-only setups.
+- **Solution**: Removed `.opacity(isHovered ? 1 : 0)` from all row action buttons across:
+  * GesturesView (gesture card row actions)
+  * ProfilesView (profile list row actions, profile gesture row actions)
+  * SavedActionsView (saved action row actions)
+  * AppProfilesView (app mapping row actions)
+
+### UI: Removed Zone/Haptic Settings from Profiles
+- **Problem**: Zone detection settings (edge threshold, corner size, corner buffer) and haptic
+  feedback toggle were shown per-profile, but these are global settings — not per-profile.
+- **Solution**: Removed zone detection and haptic feedback controls from:
+  * ProfileDetailEditor (inline editing view)
+  * AddEditProfileSheet (create/edit profile dialog)
+- These settings remain accessible in the global Settings tab.
+
+### Fix: Reset to Defaults Now Only Affects Current Profile
+- **Problem**: "Reset to Defaults" in the Gestures tab deleted ALL profiles and recreated
+  them from templates — losing all custom profiles.
+- **Solution**: `resetToDefaults()` now only replaces the active profile's gestures with
+  the factory default gesture set. Other profiles remain untouched.
+- Updated confirmation dialog text to reflect the new behavior.

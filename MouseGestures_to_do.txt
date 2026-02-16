@@ -1,9 +1,7 @@
 - Reduce duplicate code, unify architecture whenever possible
 
 General:
-- Add right click functionality throughout app
-- 'Default' profile doesn't do anything and can be removed.
-- Quick profile switch doesn't work.
+- Remove legacy gesture trigger structure
 
 Actions (fix later):
 - Not all actions work.
@@ -21,18 +19,8 @@ Actions (fix later):
 
 Improve UI
 - General: UI Should be relatively simple and should not use lots of colors or accents. 
-
-Gestures Tab:
-	(No current items)
-
-Saved actions
-	- 
+- Different tabs use different styles for cards
+- Unify selection/multiselection behavior between tabs.
 
 Profiles:
-	- Allow creating a merged profile from selected profiles.
-
-App Profiles:
-	(No current items)
-
-General UI Notes:
-- General: UI Should be relatively simple and should not use lots of colors or accents.
+- Add check boxes for selection

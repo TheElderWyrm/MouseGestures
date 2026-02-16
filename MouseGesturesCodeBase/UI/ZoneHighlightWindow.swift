@@ -29,9 +29,10 @@ class ZoneWindow: NSWindow {
         contentView = zoneView
     }
     
-    func updateState(isActive: Bool, label: String?) {
+    func updateState(isActive: Bool, label: String?, forceLabel: Bool = false) {
         zoneView?.isActive = isActive
         zoneView?.label = label
+        zoneView?.forceShowLabel = forceLabel
         zoneView?.needsDisplay = true
     }
     
@@ -46,6 +47,7 @@ class ZoneView: NSView {
     let zone: ScreenZone
     var isActive: Bool = false
     var label: String?
+    var forceShowLabel: Bool = false
     
     private var inactiveColor: NSColor {
         Configuration.shared.zoneHighlightColor.withAlphaComponent(0.1)
@@ -76,8 +78,8 @@ class ZoneView: NSView {
         borderPath.lineWidth = 1.0
         borderPath.stroke()
         
-        // Draw label if present
-        if let label = label, Configuration.shared.showZoneLabels {
+        // Draw label if present (forceShowLabel bypasses the global setting for preview mode)
+        if let label = label, (forceShowLabel || Configuration.shared.showZoneLabels) {
             // Use smaller font for narrow zones
             let isNarrow = min(bounds.width, bounds.height) < 50
             let fontSize: CGFloat = isNarrow ? 9 : 11
@@ -236,8 +238,8 @@ class ZoneHighlightManager {
                 window.setFrame(frame, display: true)
             }
             
-            // Show zone name as label
-            window.updateState(isActive: false, label: zone.rawValue)
+            // Show zone name as label (forced, ignoring showZoneLabels setting)
+            window.updateState(isActive: false, label: zone.rawValue, forceLabel: true)
             window.animations = [:]
             window.alphaValue = 1.0
             window.orderFront(nil)

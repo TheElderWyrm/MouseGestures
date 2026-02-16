@@ -248,7 +248,6 @@ struct UnifiedAppRuleRow: View {
             .frame(width: 160)
             
             MGActionButton("trash", help: "Remove rule", destructive: true) { onDelete() }
-                .opacity(isHovered ? 1 : 0)
         }
         .padding(.horizontal, MGStyle.Spacing.lg)
         .padding(.vertical, MGStyle.Spacing.md)

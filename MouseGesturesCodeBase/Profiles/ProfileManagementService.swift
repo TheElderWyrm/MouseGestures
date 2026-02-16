@@ -294,30 +294,24 @@ class ProfileManagementService: ObservableObject {
         return profile
     }
     
-    /// Resets all profiles to factory defaults
+    /// Resets the current active profile's gestures to factory defaults
     func resetToDefaults() {
-        // Clear existing profiles
-        configuration.profiles.removeAll()
-        
-        // Add all default profiles
-        for type in DefaultProfileType.allCases {
-            if let profile = DefaultProfiles.getProfile(for: type) {
-                configuration.profiles.append(profile)
-            }
+        guard let activeId = configuration.activeProfileId,
+              let index = configuration.profiles.firstIndex(where: { $0.id == activeId }) else {
+            log.log("Cannot reset: no active profile")
+            return
         }
         
-        // Set the first profile as active
-        if let firstProfile = configuration.profiles.first {
-            configuration.activeProfileId = firstProfile.id
-            configuration.gestures = firstProfile.gestures
-        }
+        // Replace the active profile's gestures with defaults
+        configuration.profiles[index].gestures = Configuration.defaultGestures
+        configuration.profiles[index].updateModifiedDate()
         
         configuration.save()
         
         NotificationCenter.default.post(name: .profilesDidChange, object: nil)
         loadProfiles()
         
-        log.log("Reset to default profiles")
+        log.log("Reset active profile '\(configuration.profiles[index].name)' gestures to defaults")
     }
     
     // MARK: - Search and Filter

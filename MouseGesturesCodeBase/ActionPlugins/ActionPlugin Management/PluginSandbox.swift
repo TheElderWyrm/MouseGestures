@@ -496,9 +496,9 @@ class SandboxedPluginContext: PluginContext {
             return
         }
         
-        // Find and apply the profile
+        // Find and apply the profile, setting it as the new default so it persists
         if let profile = Configuration.shared.profiles.first(where: { $0.id == profileId }) {
-            Configuration.shared.applyProfile(profile)
+            Configuration.shared.applyProfile(profile, setAsDefault: true)
         }
     }
     
@@ -593,7 +593,8 @@ public struct PluginPermissions: Equatable {
         ],
         allowedNotificationsToPost: [
             .init("PluginActionCompleted"),
-            .init("PluginNotification")
+            .init("PluginNotification"),
+            .init("GestureConfigurationChanged")
         ],
         maxMemoryUsage: 200_000_000, // 200 MB
         maxCPUUsage: 80.0,
