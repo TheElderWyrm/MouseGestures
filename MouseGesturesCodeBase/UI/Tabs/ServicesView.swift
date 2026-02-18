@@ -167,7 +167,7 @@ struct ServiceRow: View {
         HStack(spacing: MGStyle.Spacing.lg) {
             Image(systemName: plugin.category.icon)
                 .font(.title2)
-                .foregroundColor(.accentColor)
+                .foregroundColor(.secondary)
                 .frame(width: 30)
             
             VStack(alignment: .leading, spacing: MGStyle.Spacing.sm) {

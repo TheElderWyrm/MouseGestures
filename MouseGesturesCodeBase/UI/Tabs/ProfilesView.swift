@@ -517,7 +517,9 @@ struct ProfileListRow: View {
                 MGActionButton("trash", help: "Delete", destructive: true) { onDelete() }
             }
         }
-        .mgListRow(isSelected: isSelected, isHovered: isHovered, showBorder: isPrimary)
+        .padding(.horizontal, MGStyle.Spacing.lg)
+        .padding(.vertical, MGStyle.Spacing.md)
+        .mgListCard(isHovered: isHovered, isSelected: isSelected)
         .onHover { hovering in withAnimation(.easeInOut(duration: 0.15)) { isHovered = hovering } }
         .gesture(
             TapGesture(count: 1).modifiers(.command).onEnded { _ in onSelect(.commandClick) }
@@ -1117,7 +1119,7 @@ struct TemplateProfileCard: View {
         HStack(spacing: MGStyle.Spacing.xl) {
             Image(systemName: type.iconName)
                 .font(.system(size: 24))
-                .foregroundColor(.accentColor)
+                .foregroundColor(.secondary)
                 .frame(width: 40)
             
             VStack(alignment: .leading, spacing: MGStyle.Spacing.sm) {

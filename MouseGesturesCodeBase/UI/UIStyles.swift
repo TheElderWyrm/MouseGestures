@@ -497,28 +497,32 @@ extension View {
 // MARK: - Unified List Card
 
 /// Consistent card styling for list items across all tabs.
-/// Provides: rounded background, hover highlight, optional selection border, content shape.
+/// Provides: rounded background, hover highlight, selection state, optional expand border, content shape.
 struct MGListCardModifier: ViewModifier {
     let isHovered: Bool
     let isExpanded: Bool
+    let isSelected: Bool
     
-    init(isHovered: Bool, isExpanded: Bool = false) {
+    init(isHovered: Bool, isExpanded: Bool = false, isSelected: Bool = false) {
         self.isHovered = isHovered
         self.isExpanded = isExpanded
+        self.isSelected = isSelected
     }
     
     func body(content: Content) -> some View {
         content
             .background(
                 RoundedRectangle(cornerRadius: MGStyle.Corner.lg)
-                    .fill(isHovered ? MGStyle.Colors.cardBackground : MGStyle.Colors.cardBackground.opacity(0.6))
+                    .fill(isSelected ? MGStyle.Colors.selectedRow :
+                          (isHovered ? MGStyle.Colors.cardBackground : MGStyle.Colors.cardBackground.opacity(0.6)))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: MGStyle.Corner.lg)
                     .stroke(
-                        isExpanded ? Color.accentColor.opacity(0.3) :
-                        (isHovered ? MGStyle.Colors.separator.opacity(0.4) : MGStyle.Colors.separator.opacity(0.2)),
-                        lineWidth: isExpanded ? 1 : 0.5
+                        isSelected ? Color.accentColor.opacity(0.35) :
+                        (isExpanded ? Color.accentColor.opacity(0.3) :
+                        (isHovered ? MGStyle.Colors.separator.opacity(0.4) : MGStyle.Colors.separator.opacity(0.2))),
+                        lineWidth: isSelected || isExpanded ? 1 : 0.5
                     )
             )
             .contentShape(Rectangle())
@@ -527,8 +531,8 @@ struct MGListCardModifier: ViewModifier {
 
 extension View {
     /// Apply unified list card styling.
-    func mgListCard(isHovered: Bool, isExpanded: Bool = false) -> some View {
-        modifier(MGListCardModifier(isHovered: isHovered, isExpanded: isExpanded))
+    func mgListCard(isHovered: Bool, isExpanded: Bool = false, isSelected: Bool = false) -> some View {
+        modifier(MGListCardModifier(isHovered: isHovered, isExpanded: isExpanded, isSelected: isSelected))
     }
 }
 
@@ -612,7 +616,7 @@ struct MGSectionHeader: View {
         HStack(spacing: MGStyle.Spacing.md) {
             if let icon {
                 Image(systemName: icon)
-                    .foregroundColor(.accentColor)
+                    .foregroundColor(.secondary)
             }
             Text(title)
                 .font(.title2)
@@ -809,7 +813,7 @@ struct MGDetailSection<Content: View>: View {
                 if let icon {
                     Image(systemName: icon)
                         .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(.accentColor)
+                        .foregroundColor(.secondary)
                 }
                 Text(title)
                     .font(.system(size: MGStyle.FontSize.heading, weight: .semibold))

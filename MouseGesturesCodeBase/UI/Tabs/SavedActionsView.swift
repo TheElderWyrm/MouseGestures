@@ -256,9 +256,9 @@ struct SavedActionRow: View {
         HStack(spacing: MGStyle.Spacing.lg) {
             // Selection checkbox with expanded hit target
             Button(action: onToggleSelection) {
-                Image(systemName: isSelected ? "checkmark.square.fill" : "square")
-                    .foregroundColor(isSelected ? .accentColor : .secondary.opacity(0.4))
-                    .font(.system(size: 15))
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .foregroundColor(isSelected ? .accentColor : (isHovered ? .secondary.opacity(0.6) : .secondary.opacity(0.25)))
+                    .font(.system(size: 14))
                     .frame(width: 28, height: 28)
                     .contentShape(Rectangle())
             }
@@ -266,7 +266,7 @@ struct SavedActionRow: View {
             
             Image(systemName: getActionIcon())
                 .font(.system(size: 14))
-                .foregroundColor(.accentColor)
+                .foregroundColor(.secondary)
                 .frame(width: 24)
             
             VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
@@ -300,7 +300,7 @@ struct SavedActionRow: View {
                 .init("trash", help: "Delete", destructive: true) { onDelete() }
             ])
         }
-        .mgListRow(isSelected: isSelected, isHovered: isHovered, showBorder: true)
+        .mgListCard(isHovered: isHovered, isSelected: isSelected)
         .onHover { hovering in withAnimation(.easeInOut(duration: 0.15)) { isHovered = hovering } }
         .onTapGesture(count: 2) { onDoubleClick() }
         .onTapGesture { onToggleSelection() }
