@@ -70,7 +70,6 @@ enum DetectionSubcategories {
     static let general = SettingsSubcategoryDescriptor(id: "general", title: "General", icon: "gearshape", order: 0)
     static let zones = SettingsSubcategoryDescriptor(id: "zones", title: "Zone Detection", icon: "hand.tap", order: 1)
     static let appProfiles = SettingsSubcategoryDescriptor(id: "appProfiles", title: "App Profiles", icon: "app.badge", order: 2)
-    static let performance = SettingsSubcategoryDescriptor(id: "performance", title: "Performance", icon: "speedometer", order: 3)
 }
 
 // MARK: - Detection Plugin Settings Provider
@@ -86,7 +85,6 @@ struct DetectionPluginSettingsProvider: SettingsProvider {
         // Partition items into subcategories
         var appProfileItems: [(plugin: DetectionPlugin, definition: PluginSettingDefinition)] = []
         var zoneItems: [(plugin: DetectionPlugin, definition: PluginSettingDefinition)] = []
-        var performanceItems: [(plugin: DetectionPlugin, definition: PluginSettingDefinition)] = []
         var generalItems: [(plugin: DetectionPlugin, definition: PluginSettingDefinition)] = []
         
         for item in allItems {
@@ -94,10 +92,7 @@ struct DetectionPluginSettingsProvider: SettingsProvider {
             case AppConfigurationDetectorPlugin.pluginIdentifier:
                 appProfileItems.append(item)
             case ScreenZoneDetectorPlugin.pluginIdentifier:
-                switch item.definition.category {
-                case .performance: performanceItems.append(item)
-                default:           zoneItems.append(item)
-                }
+                zoneItems.append(item)
             default:
                 generalItems.append(item)
             }
@@ -125,8 +120,6 @@ struct DetectionPluginSettingsProvider: SettingsProvider {
         if !generalItems.isEmpty     { entries.append(makeEntry(DetectionSubcategories.general, generalItems)) }
         if !zoneItems.isEmpty        { entries.append(makeEntry(DetectionSubcategories.zones, zoneItems)) }
         if !appProfileItems.isEmpty  { entries.append(makeEntry(DetectionSubcategories.appProfiles, appProfileItems)) }
-        if !performanceItems.isEmpty { entries.append(makeEntry(DetectionSubcategories.performance, performanceItems)) }
-        
         return entries
     }
 }
