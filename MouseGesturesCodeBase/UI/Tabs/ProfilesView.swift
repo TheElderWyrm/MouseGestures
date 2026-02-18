@@ -85,7 +85,7 @@ struct ProfilesView: View {
             
             HStack(spacing: 0) {
                 profileListView
-                    .frame(width: 320)
+                    .frame(width: 380)
                 
                 Divider()
                 
@@ -515,7 +515,7 @@ struct ProfileListRow: View {
             // Hover actions
             HStack(spacing: MGStyle.Spacing.xs) {
                 if !isActive {
-                    MGActionButton("checkmark.square", help: "Set as active") { onSetActive() }
+                    MGActionButton("checkmark.circle", help: "Set as active") { onSetActive() }
                 }
                 MGActionButton("plus.square.on.square", help: "Duplicate") { onDuplicate() }
                 MGActionButton("trash", help: "Delete", destructive: true) { onDelete() }
@@ -535,7 +535,7 @@ struct ProfileListRow: View {
         .onTapGesture { onSelect(.click) }
         .contextMenu {
             if !isActive {
-                Button(action: onSetActive) { Label("Set as Active", systemImage: "checkmark.square") }
+                Button(action: onSetActive) { Label("Set as Active", systemImage: "checkmark.circle") }
                 Divider()
             }
             Button(action: onDuplicate) { Label("Duplicate", systemImage: "plus.square.on.square") }
@@ -597,9 +597,8 @@ struct ProfileDetailEditor: View {
     
     private var profileHeader: some View {
         VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
-            // Row 1: name + shortcut + actions at far right
-            HStack(alignment: .center, spacing: MGStyle.Spacing.lg) {
-                // Name (text field when editing, plain text otherwise)
+            // Row 1: name + pencil + [Set Active at far right]
+            HStack(alignment: .center, spacing: MGStyle.Spacing.md) {
                 if editingName {
                     HStack(spacing: MGStyle.Spacing.md) {
                         TextField("Profile name", text: $nameText, onCommit: commitNameEdit)
@@ -607,7 +606,7 @@ struct ProfileDetailEditor: View {
                             .font(.title3)
                             .frame(maxWidth: 240)
                         Button(action: commitNameEdit) {
-                            Image(systemName: "checkmark.square.fill").foregroundColor(.green)
+                            Image(systemName: "checkmark.circle.fill").foregroundColor(.green)
                         }
                         .buttonStyle(.plain)
                         Button(action: { editingName = false }) {
@@ -617,15 +616,6 @@ struct ProfileDetailEditor: View {
                     }
                 } else {
                     Text(profile.name).font(.title3).fontWeight(.semibold)
-                }
-                
-                // Shortcut inline view
-                shortcutInlineView
-                
-                Spacer()
-                
-                // Pencil (rename) — hidden while actively editing name
-                if !editingName {
                     Button(action: { nameText = profile.name; editingName = true }) {
                         Image(systemName: "pencil").font(.system(size: 11)).foregroundColor(.secondary)
                     }
@@ -633,16 +623,18 @@ struct ProfileDetailEditor: View {
                     .help("Rename profile")
                 }
                 
+                Spacer()
+                
                 if !isActive {
                     Button(action: onActivate) {
-                        Label("Set Active", systemImage: "checkmark.square")
+                        Label("Set Active", systemImage: "checkmark.circle")
                     }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.small)
                 }
             }
             
-            // Row 2: status metadata
+            // Row 2: status metadata + shortcut
             HStack(spacing: MGStyle.Spacing.xl) {
                 if isActive {
                     HStack(spacing: MGStyle.Spacing.sm) {
@@ -657,11 +649,16 @@ struct ProfileDetailEditor: View {
                 }
                 Text("Modified \(profile.modifiedDate, formatter: dateFormatter)")
                     .font(.system(size: MGStyle.FontSize.caption)).foregroundColor(.secondary.opacity(0.6))
+                
+                Spacer()
+                
+                // Shortcut lives in the info row
+                shortcutInlineView
             }
         }
     }
     
-    // Shortcut: text + pencil button when idle, field + save/cancel when editing
+    // Shortcut: clickable display + pencil when idle, field + save/cancel when editing
     @ViewBuilder
     private var shortcutInlineView: some View {
         if editingShortcutInline {
@@ -670,7 +667,7 @@ struct ProfileDetailEditor: View {
                 KeyboardShortcutFieldView(shortcut: $editingShortcut)
                     .frame(width: 180, height: 22)
                 Button(action: commitShortcutEdit) {
-                    Image(systemName: "checkmark.square.fill").foregroundColor(.green)
+                    Image(systemName: "checkmark.circle.fill").foregroundColor(.green)
                 }
                 .buttonStyle(.plain)
                 .help("Save shortcut")
@@ -683,16 +680,27 @@ struct ProfileDetailEditor: View {
             .transition(.opacity)
         } else {
             HStack(spacing: MGStyle.Spacing.sm) {
-                Image(systemName: "keyboard").font(.system(size: 10)).foregroundColor(.secondary)
-                if let shortcut = editingShortcut {
-                    Text(shortcut.displayString)
-                        .font(.system(size: MGStyle.FontSize.caption, design: .monospaced))
-                        .foregroundColor(.secondary)
-                } else {
-                    Text("No shortcut")
-                        .font(.system(size: MGStyle.FontSize.caption))
-                        .foregroundColor(.secondary.opacity(0.5))
+                // Clicking anywhere on this display opens edit mode
+                Button(action: {
+                    preEditShortcut = editingShortcut
+                    editingShortcutInline = true
+                }) {
+                    HStack(spacing: MGStyle.Spacing.sm) {
+                        Image(systemName: "keyboard").font(.system(size: 10))
+                        if let shortcut = editingShortcut {
+                            Text(shortcut.displayString)
+                                .font(.system(size: MGStyle.FontSize.caption, design: .monospaced))
+                        } else {
+                            Text("Add shortcut")
+                                .font(.system(size: MGStyle.FontSize.caption))
+                                .opacity(0.5)
+                        }
+                    }
+                    .foregroundColor(.secondary)
                 }
+                .buttonStyle(.plain)
+                .help("Edit quick switch shortcut")
+                // Pencil as secondary affordance
                 Button(action: {
                     preEditShortcut = editingShortcut
                     editingShortcutInline = true
@@ -700,7 +708,6 @@ struct ProfileDetailEditor: View {
                     Image(systemName: "pencil").font(.system(size: 11)).foregroundColor(.secondary)
                 }
                 .buttonStyle(.plain)
-                .help("Edit quick switch shortcut")
             }
             .transition(.opacity)
         }
