@@ -41,7 +41,7 @@ struct BuiltInSettingsProvider: SettingsProvider {
             // Data Management
             SettingsEntry(
                 category: SettingsCategories.about,
-                order: 0,
+                order: 1,
                 searchableItems: [
                     SearchableSettingItem(title: "Export Settings", description: "Export all application settings to a file", keywords: ["export", "backup", "save", "settings", "file"]),
                     SearchableSettingItem(title: "Import Settings", description: "Import application settings from a file", keywords: ["import", "restore", "load", "settings", "file"]),
@@ -53,7 +53,7 @@ struct BuiltInSettingsProvider: SettingsProvider {
             // About
             SettingsEntry(
                 category: SettingsCategories.about,
-                order: 1,
+                order: 0,
                 searchableItems: [
                     SearchableSettingItem(title: "Version Information", description: "Current app version and build number", keywords: ["version", "build", "number", "about"]),
                     SearchableSettingItem(title: "Check for Updates", description: "Check for the latest version of MouseGestures", keywords: ["update", "check", "latest", "new", "version"])
