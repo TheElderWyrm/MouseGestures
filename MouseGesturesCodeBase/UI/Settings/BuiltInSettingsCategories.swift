@@ -70,8 +70,7 @@ enum DetectionSubcategories {
     static let general = SettingsSubcategoryDescriptor(id: "general", title: "General", icon: "gearshape", order: 0)
     static let zones = SettingsSubcategoryDescriptor(id: "zones", title: "Zone Detection", icon: "hand.tap", order: 1)
     static let appProfiles = SettingsSubcategoryDescriptor(id: "appProfiles", title: "App Profiles", icon: "app.badge", order: 2)
-    static let appearance = SettingsSubcategoryDescriptor(id: "appearance", title: "Appearance", icon: "paintbrush", order: 3)
-    static let performance = SettingsSubcategoryDescriptor(id: "performance", title: "Performance", icon: "speedometer", order: 4)
+    static let performance = SettingsSubcategoryDescriptor(id: "performance", title: "Performance", icon: "speedometer", order: 3)
 }
 
 // MARK: - Detection Plugin Settings Provider
@@ -87,20 +86,20 @@ struct DetectionPluginSettingsProvider: SettingsProvider {
         // Partition items into subcategories
         var appProfileItems: [(plugin: DetectionPlugin, definition: PluginSettingDefinition)] = []
         var zoneItems: [(plugin: DetectionPlugin, definition: PluginSettingDefinition)] = []
-        var appearanceItems: [(plugin: DetectionPlugin, definition: PluginSettingDefinition)] = []
         var performanceItems: [(plugin: DetectionPlugin, definition: PluginSettingDefinition)] = []
         var generalItems: [(plugin: DetectionPlugin, definition: PluginSettingDefinition)] = []
         
         for item in allItems {
-            if item.plugin.identifier == AppConfigurationDetectorPlugin.pluginIdentifier {
+            switch item.plugin.identifier {
+            case AppConfigurationDetectorPlugin.pluginIdentifier:
                 appProfileItems.append(item)
-            } else {
+            case ScreenZoneDetectorPlugin.pluginIdentifier:
                 switch item.definition.category {
-                case .detection:   zoneItems.append(item)
-                case .appearance:  appearanceItems.append(item)
                 case .performance: performanceItems.append(item)
-                default:           generalItems.append(item)
+                default:           zoneItems.append(item)
                 }
+            default:
+                generalItems.append(item)
             }
         }
         
@@ -126,7 +125,6 @@ struct DetectionPluginSettingsProvider: SettingsProvider {
         if !generalItems.isEmpty     { entries.append(makeEntry(DetectionSubcategories.general, generalItems)) }
         if !zoneItems.isEmpty        { entries.append(makeEntry(DetectionSubcategories.zones, zoneItems)) }
         if !appProfileItems.isEmpty  { entries.append(makeEntry(DetectionSubcategories.appProfiles, appProfileItems)) }
-        if !appearanceItems.isEmpty  { entries.append(makeEntry(DetectionSubcategories.appearance, appearanceItems)) }
         if !performanceItems.isEmpty { entries.append(makeEntry(DetectionSubcategories.performance, performanceItems)) }
         
         return entries

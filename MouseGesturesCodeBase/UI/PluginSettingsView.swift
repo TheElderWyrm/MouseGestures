@@ -85,13 +85,10 @@ struct PluginSettingRow: View {
     @Binding var visibilityTrigger: UUID
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            // Check if setting should be visible based on dependencies
-            if isSettingVisible() {
-                settingControl
-                    .disabled(!plugin.isEnabled)
-                    .opacity(plugin.isEnabled ? 1.0 : 0.5)
-            }
+        if isSettingVisible() {
+            settingControl
+                .disabled(!plugin.isEnabled)
+                .opacity(plugin.isEnabled ? 1.0 : 0.5)
         }
     }
     
