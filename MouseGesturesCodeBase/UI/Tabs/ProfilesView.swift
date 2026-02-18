@@ -85,7 +85,7 @@ struct ProfilesView: View {
             
             HStack(spacing: 0) {
                 profileListView
-                    .frame(width: 380)
+                    .frame(width: 360)
                 
                 Divider()
                 
@@ -567,6 +567,7 @@ struct ProfileDetailEditor: View {
     @State private var editingShortcut: KeyboardTrigger?
     @State private var editingShortcutInline = false
     @State private var preEditShortcut: KeyboardTrigger?
+    @State private var shortcutEnabled: Bool = false
     
     var body: some View {
         ScrollView {
@@ -579,9 +580,7 @@ struct ProfileDetailEditor: View {
         }
         .onAppear { loadProfileData() }
         .onChange(of: profile.id) { _ in loadProfileData() }
-        .onChange(of: editingShortcut) { newShortcut in
-            _ = uiServices.updateProfileKeyboardShortcut(profile.id, shortcut: newShortcut)
-        }
+        // Shortcut is saved explicitly in commitShortcutEdit and toggleShortcutEnabled
         .alert("Invalid Name", isPresented: $showNameError) { Button("OK") {} } message: {
             Text("A profile with this name already exists.")
         }
@@ -658,12 +657,14 @@ struct ProfileDetailEditor: View {
         }
     }
     
-    // Shortcut: clickable display + pencil when idle, field + save/cancel when editing
+    // Shortcut: labelled toggle + clickable display + pencil + duplicate warning
     @ViewBuilder
     private var shortcutInlineView: some View {
         if editingShortcutInline {
             HStack(spacing: MGStyle.Spacing.md) {
-                Image(systemName: "keyboard").font(.system(size: 10)).foregroundColor(.secondary)
+                Text("Quick Switch:")
+                    .font(.system(size: MGStyle.FontSize.caption))
+                    .foregroundColor(.secondary)
                 KeyboardShortcutFieldView(shortcut: $editingShortcut)
                     .frame(width: 180, height: 22)
                 Button(action: commitShortcutEdit) {
@@ -680,23 +681,32 @@ struct ProfileDetailEditor: View {
             .transition(.opacity)
         } else {
             HStack(spacing: MGStyle.Spacing.sm) {
-                // Clicking anywhere on this display opens edit mode
+                Text("Quick Switch:")
+                    .font(.system(size: MGStyle.FontSize.caption))
+                    .foregroundColor(.secondary)
+                // Keyboard icon = enable/disable toggle
+                Button(action: toggleShortcutEnabled) {
+                    Image(systemName: "keyboard")
+                        .font(.system(size: 10))
+                        .foregroundColor(shortcutEnabled ? .accentColor : .secondary.opacity(0.4))
+                }
+                .buttonStyle(.plain)
+                .help(shortcutEnabled ? "Disable quick switch shortcut" : "Enable quick switch shortcut")
+                // Shortcut text — clickable to edit
                 Button(action: {
                     preEditShortcut = editingShortcut
                     editingShortcutInline = true
                 }) {
-                    HStack(spacing: MGStyle.Spacing.sm) {
-                        Image(systemName: "keyboard").font(.system(size: 10))
-                        if let shortcut = editingShortcut {
-                            Text(shortcut.displayString)
-                                .font(.system(size: MGStyle.FontSize.caption, design: .monospaced))
-                        } else {
-                            Text("Add shortcut")
-                                .font(.system(size: MGStyle.FontSize.caption))
-                                .opacity(0.5)
-                        }
+                    if let shortcut = editingShortcut {
+                        Text(shortcut.displayString)
+                            .font(.system(size: MGStyle.FontSize.caption, design: .monospaced))
+                            .foregroundColor(shortcutEnabled ? .secondary : .secondary.opacity(0.4))
+                            .strikethrough(!shortcutEnabled, color: .secondary.opacity(0.4))
+                    } else {
+                        Text("Add shortcut")
+                            .font(.system(size: MGStyle.FontSize.caption))
+                            .foregroundColor(.secondary.opacity(0.4))
                     }
-                    .foregroundColor(.secondary)
                 }
                 .buttonStyle(.plain)
                 .help("Edit quick switch shortcut")
@@ -708,18 +718,44 @@ struct ProfileDetailEditor: View {
                     Image(systemName: "pencil").font(.system(size: 11)).foregroundColor(.secondary)
                 }
                 .buttonStyle(.plain)
+                // Duplicate conflict warning
+                if shortcutEnabled, let shortcut = editingShortcut,
+                   let conflict = duplicateShortcutProfileName(shortcut) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 10))
+                        .foregroundColor(.orange)
+                        .help("Shortcut already used by \"\(conflict)\" — both will be active")
+                }
             }
             .transition(.opacity)
         }
     }
     
+    private func toggleShortcutEnabled() {
+        shortcutEnabled.toggle()
+        if shortcutEnabled {
+            _ = uiServices.updateProfileKeyboardShortcut(profile.id, shortcut: editingShortcut)
+        } else {
+            _ = uiServices.updateProfileKeyboardShortcut(profile.id, shortcut: nil)
+        }
+    }
+    
     private func commitShortcutEdit() {
         editingShortcutInline = false
+        if shortcutEnabled || editingShortcut != nil {
+            // If user set a shortcut while disabled, enable it automatically
+            if editingShortcut != nil { shortcutEnabled = true }
+            _ = uiServices.updateProfileKeyboardShortcut(profile.id, shortcut: shortcutEnabled ? editingShortcut : nil)
+        }
     }
     
     private func cancelShortcutEdit() {
         editingShortcut = preEditShortcut
         editingShortcutInline = false
+    }
+    
+    private func duplicateShortcutProfileName(_ shortcut: KeyboardTrigger) -> String? {
+        uiServices.profiles.first { $0.id != profile.id && $0.keyboardShortcut == shortcut }?.name
     }
     
     // MARK: - Quick Actions
@@ -780,6 +816,7 @@ struct ProfileDetailEditor: View {
     private func loadProfileData() {
         nameText = profile.name
         editingShortcut = profile.keyboardShortcut
+        shortcutEnabled = profile.keyboardShortcut != nil
     }
     
     private func commitNameEdit() {
