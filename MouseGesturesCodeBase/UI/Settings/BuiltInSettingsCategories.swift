@@ -11,11 +11,6 @@ enum SettingsCategories {
 
 // MARK: - Well-Known Subcategory Descriptors
 
-enum AboutSubcategories {
-    static let info = SettingsSubcategoryDescriptor(id: "info", title: "About", icon: "info.circle", order: 0)
-    static let data = SettingsSubcategoryDescriptor(id: "data", title: "Data Management", icon: "externaldrive", order: 1)
-}
-
 // MARK: - Built-In Settings Provider
 
 /// Core app settings that don't belong to any particular plugin.
@@ -43,10 +38,9 @@ struct BuiltInSettingsProvider: SettingsProvider {
                 viewBuilder: { _ in AnyView(DeveloperModeSettingView()) }
             ),
             
-            // Data Management (subcategory of About)
+            // Data Management
             SettingsEntry(
                 category: SettingsCategories.about,
-                subcategory: AboutSubcategories.data,
                 order: 0,
                 searchableItems: [
                     SearchableSettingItem(title: "Export Settings", description: "Export all application settings to a file", keywords: ["export", "backup", "save", "settings", "file"]),
@@ -59,8 +53,7 @@ struct BuiltInSettingsProvider: SettingsProvider {
             // About
             SettingsEntry(
                 category: SettingsCategories.about,
-                subcategory: AboutSubcategories.info,
-                order: 0,
+                order: 1,
                 searchableItems: [
                     SearchableSettingItem(title: "Version Information", description: "Current app version and build number", keywords: ["version", "build", "number", "about"]),
                     SearchableSettingItem(title: "Check for Updates", description: "Check for the latest version of MouseGestures", keywords: ["update", "check", "latest", "new", "version"])
@@ -71,106 +64,105 @@ struct BuiltInSettingsProvider: SettingsProvider {
     }
 }
 
+// MARK: - Well-Known Detection Subcategory Descriptors
+
+enum DetectionSubcategories {
+    static let general = SettingsSubcategoryDescriptor(id: "general", title: "General", icon: "gearshape", order: 0)
+    static let zones = SettingsSubcategoryDescriptor(id: "zones", title: "Zone Detection", icon: "hand.tap", order: 1)
+    static let appProfiles = SettingsSubcategoryDescriptor(id: "appProfiles", title: "App Profiles", icon: "app.badge", order: 2)
+    static let appearance = SettingsSubcategoryDescriptor(id: "appearance", title: "Appearance", icon: "paintbrush", order: 3)
+    static let performance = SettingsSubcategoryDescriptor(id: "performance", title: "Performance", icon: "speedometer", order: 4)
+}
+
 // MARK: - Detection Plugin Settings Provider
 
 /// Bridges detection plugin settings into the unified settings system.
-/// Emits a single flat SettingsEntry for all detection settings,
-/// rendered with inline section headers: General, Zone Detection, App Profiles.
+/// Partitions settings into subcategories: General, Zone Detection, App Profiles, Appearance, Performance.
 struct DetectionPluginSettingsProvider: SettingsProvider {
     var settingsEntries: [SettingsEntry] {
         let allSettings = DetectionPluginManager.shared.getAllSettingsDefinitions()
-        
-        // Flatten all items for search metadata
         let allItems = allSettings.values.flatMap { $0 }
         guard !allItems.isEmpty else { return [] }
         
-        let searchItems = allItems.map { item in
-            SearchableSettingItem(
-                title: item.definition.displayName,
-                description: item.definition.description ?? "",
-                keywords: ["detection", item.plugin.name.lowercased()]
+        // Partition items into subcategories
+        var appProfileItems: [(plugin: DetectionPlugin, definition: PluginSettingDefinition)] = []
+        var zoneItems: [(plugin: DetectionPlugin, definition: PluginSettingDefinition)] = []
+        var appearanceItems: [(plugin: DetectionPlugin, definition: PluginSettingDefinition)] = []
+        var performanceItems: [(plugin: DetectionPlugin, definition: PluginSettingDefinition)] = []
+        var generalItems: [(plugin: DetectionPlugin, definition: PluginSettingDefinition)] = []
+        
+        for item in allItems {
+            if item.plugin.identifier == AppConfigurationDetectorPlugin.pluginIdentifier {
+                appProfileItems.append(item)
+            } else {
+                switch item.definition.category {
+                case .detection:   zoneItems.append(item)
+                case .appearance:  appearanceItems.append(item)
+                case .performance: performanceItems.append(item)
+                default:           generalItems.append(item)
+                }
+            }
+        }
+        
+        var entries: [SettingsEntry] = []
+        
+        func makeEntry(_ sub: SettingsSubcategoryDescriptor,
+                       _ items: [(plugin: DetectionPlugin, definition: PluginSettingDefinition)]) -> SettingsEntry {
+            SettingsEntry(
+                category: SettingsCategories.detection,
+                subcategory: sub,
+                order: sub.order,
+                searchableItems: items.map {
+                    SearchableSettingItem(title: $0.definition.displayName,
+                                         description: $0.definition.description ?? "",
+                                         keywords: ["detection", $0.plugin.name.lowercased()])
+                },
+                viewBuilder: { showAdvanced in
+                    AnyView(DetectionSubcategoryView(items: items, showAdvanced: showAdvanced))
+                }
             )
         }
         
-        return [
-            SettingsEntry(
-                category: SettingsCategories.detection,
-                order: 0,
-                searchableItems: searchItems,
-                viewBuilder: { showAdvanced in
-                    AnyView(DetectionFlatSettingsView(allSettings: allSettings, showAdvanced: showAdvanced))
-                }
-            )
-        ]
+        if !generalItems.isEmpty     { entries.append(makeEntry(DetectionSubcategories.general, generalItems)) }
+        if !zoneItems.isEmpty        { entries.append(makeEntry(DetectionSubcategories.zones, zoneItems)) }
+        if !appProfileItems.isEmpty  { entries.append(makeEntry(DetectionSubcategories.appProfiles, appProfileItems)) }
+        if !appearanceItems.isEmpty  { entries.append(makeEntry(DetectionSubcategories.appearance, appearanceItems)) }
+        if !performanceItems.isEmpty { entries.append(makeEntry(DetectionSubcategories.performance, performanceItems)) }
+        
+        return entries
     }
 }
 
-// MARK: - Detection Flat Settings View
+// MARK: - Detection Subcategory View
 
-/// Renders all detection plugin settings in one flat list with labeled sections.
-/// Sections: "App Profiles" (AppConfigurationDetectorPlugin),
-/// "Zone Detection" (.detection + .appearance categories),
-/// "General" (everything else).
-struct DetectionFlatSettingsView: View {
-    let allSettings: [PluginSettingDefinition.SettingCategory: [(plugin: DetectionPlugin, definition: PluginSettingDefinition)]]
+/// Renders all PluginSettingRows for a single detection subcategory.
+struct DetectionSubcategoryView: View {
+    let items: [(plugin: DetectionPlugin, definition: PluginSettingDefinition)]
     @Binding var showAdvanced: Bool
     @State private var visibilityTrigger = UUID()
     
-    private typealias Item = (plugin: DetectionPlugin, definition: PluginSettingDefinition)
-    
-    // Partition all items into named sections
-    private var sections: [(title: String, items: [Item])] {
-        let all = allSettings.values.flatMap { $0 }
-        
-        var appProfiles: [Item] = []
-        var zoneDetection: [Item] = []
-        var general: [Item] = []
-        
-        for item in all {
-            let isAppConfig = item.plugin.identifier == AppConfigurationDetectorPlugin.pluginIdentifier
-            let isZoneCategory = item.definition.category == .detection || item.definition.category == .appearance
-            
-            if isAppConfig {
-                appProfiles.append(item)
-            } else if isZoneCategory {
-                zoneDetection.append(item)
-            } else {
-                general.append(item)
-            }
-        }
-        
-        // Sort each section by definition order (preserve plugin-declared order)
-        var result: [(String, [Item])] = []
-        if !general.isEmpty      { result.append(("General", general)) }
-        if !zoneDetection.isEmpty { result.append(("Zone Detection", zoneDetection)) }
-        if !appProfiles.isEmpty  { result.append(("App Profiles", appProfiles)) }
-        return result
+    private var visibleItems: [(plugin: DetectionPlugin, definition: PluginSettingDefinition)] {
+        items.filter { !$0.definition.isAdvanced || showAdvanced }
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {
-            ForEach(sections, id: \.title) { section in
-                let visible = section.items.filter { !$0.definition.isAdvanced || showAdvanced }
-                if !visible.isEmpty {
-                    VStack(alignment: .leading, spacing: MGStyle.Spacing.xl) {
-                        Text(section.title)
-                            .font(.system(size: MGStyle.FontSize.caption, weight: .semibold))
-                            .foregroundColor(.secondary)
-                            .textCase(.uppercase)
-                            .padding(.top, MGStyle.Spacing.sm)
-                        
-                        ForEach(visible, id: \.definition.key) { item in
-                            PluginSettingRow(
-                                plugin: item.plugin,
-                                definition: item.definition,
-                                visibilityTrigger: $visibilityTrigger
-                            )
-                        }
-                    }
+        if visibleItems.isEmpty {
+            Text("No settings available")
+                .foregroundColor(.secondary)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.vertical, MGStyle.Spacing.xxl)
+        } else {
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.xl) {
+                ForEach(visibleItems, id: \.definition.key) { item in
+                    PluginSettingRow(
+                        plugin: item.plugin,
+                        definition: item.definition,
+                        visibilityTrigger: $visibilityTrigger
+                    )
                 }
             }
+            .id(visibilityTrigger)
         }
-        .id(visibilityTrigger)
     }
 }
 

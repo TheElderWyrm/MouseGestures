@@ -560,6 +560,7 @@ struct ProfileDetailEditor: View {
     @State private var gestureToDelete: Gesture?
     @State private var editingShortcut: KeyboardTrigger?
     @State private var editingShortcutInline = false
+    @State private var preEditShortcut: KeyboardTrigger?
     
     var body: some View {
         ScrollView {
@@ -590,9 +591,9 @@ struct ProfileDetailEditor: View {
     
     private var profileHeader: some View {
         VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
-            // Row 1: name + shortcut + set active button
+            // Row 1: name + shortcut + actions at far right
             HStack(alignment: .center, spacing: MGStyle.Spacing.lg) {
-                // Name
+                // Name (text field when editing, plain text otherwise)
                 if editingName {
                     HStack(spacing: MGStyle.Spacing.md) {
                         TextField("Profile name", text: $nameText, onCommit: commitNameEdit)
@@ -609,20 +610,22 @@ struct ProfileDetailEditor: View {
                         .buttonStyle(.plain)
                     }
                 } else {
-                    HStack(spacing: MGStyle.Spacing.md) {
-                        Text(profile.name).font(.title3).fontWeight(.semibold)
-                        Button(action: { nameText = profile.name; editingName = true }) {
-                            Image(systemName: "pencil").font(.system(size: 11)).foregroundColor(.secondary)
-                        }
-                        .buttonStyle(.plain)
-                        .help("Rename profile")
-                    }
+                    Text(profile.name).font(.title3).fontWeight(.semibold)
                 }
                 
                 // Shortcut (inline)
                 shortcutInlineView
                 
                 Spacer()
+                
+                // Pencil (rename) always at far right, hidden while actively editing name
+                if !editingName {
+                    Button(action: { nameText = profile.name; editingName = true }) {
+                        Image(systemName: "pencil").font(.system(size: 11)).foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Rename profile")
+                }
                 
                 if !isActive {
                     Button(action: onActivate) {
@@ -656,27 +659,27 @@ struct ProfileDetailEditor: View {
     @ViewBuilder
     private var shortcutInlineView: some View {
         if editingShortcutInline {
-            HStack(spacing: MGStyle.Spacing.sm) {
+            HStack(spacing: MGStyle.Spacing.md) {
                 Image(systemName: "keyboard").font(.system(size: 10)).foregroundColor(.secondary)
                 KeyboardShortcutFieldView(shortcut: $editingShortcut)
                     .frame(width: 180, height: 22)
-                if editingShortcut != nil {
-                    Button("Clear") {
-                        editingShortcut = nil
-                    }
-                    .buttonStyle(.link)
-                    .font(.system(size: MGStyle.FontSize.badge))
-                    .controlSize(.small)
-                }
-                Button(action: { editingShortcutInline = false }) {
-                    Image(systemName: "checkmark").font(.system(size: 10)).foregroundColor(.accentColor)
+                Button(action: commitShortcutEdit) {
+                    Image(systemName: "checkmark.circle.fill").foregroundColor(.green)
                 }
                 .buttonStyle(.plain)
-                .help("Done")
+                .help("Save shortcut")
+                Button(action: cancelShortcutEdit) {
+                    Image(systemName: "xmark.circle.fill").foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
+                .help("Cancel")
             }
             .transition(.opacity)
         } else {
-            Button(action: { editingShortcutInline = true }) {
+            Button(action: {
+                preEditShortcut = editingShortcut
+                editingShortcutInline = true
+            }) {
                 HStack(spacing: MGStyle.Spacing.sm) {
                     Image(systemName: "keyboard").font(.system(size: 10)).foregroundColor(.secondary)
                     if let shortcut = editingShortcut {
@@ -694,6 +697,16 @@ struct ProfileDetailEditor: View {
             .help("Edit quick switch shortcut")
             .transition(.opacity)
         }
+    }
+    
+    private func commitShortcutEdit() {
+        editingShortcutInline = false
+        // onChange(of: editingShortcut) already saved the value
+    }
+    
+    private func cancelShortcutEdit() {
+        editingShortcut = preEditShortcut
+        editingShortcutInline = false
     }
     
     // MARK: - Quick Actions
