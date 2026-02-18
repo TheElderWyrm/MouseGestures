@@ -107,6 +107,7 @@ struct ProfilesView: View {
                             activeSheet = .addGesture(profile.id)
                         }
                     )
+                    .id(profile.id)
                     .frame(minWidth: 450)
                 } else if multipleSelected {
                     multiSelectionDetailView
@@ -579,8 +580,9 @@ struct ProfileDetailEditor: View {
             .padding(MGStyle.Spacing.xl)
         }
         .onAppear { loadProfileData() }
-        .onChange(of: profile.id) { _ in loadProfileData() }
         // Shortcut is saved explicitly in commitShortcutEdit and toggleShortcutEnabled
+        // Note: .id(profile.id) on this view ensures full recreation on profile switch,
+        // so onAppear is the only state-loading path needed.
         .alert("Invalid Name", isPresented: $showNameError) { Button("OK") {} } message: {
             Text("A profile with this name already exists.")
         }
@@ -818,8 +820,6 @@ struct ProfileDetailEditor: View {
         nameText = profile.name
         editingShortcut = profile.keyboardShortcut
         shortcutEnabled = profile.keyboardShortcut != nil
-        editingShortcutInline = false
-        editingName = false
     }
     
     private func commitNameEdit() {
