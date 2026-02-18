@@ -633,7 +633,7 @@ struct ProfileDetailEditor: View {
                 }
             }
             
-            // Row 2: status metadata + shortcut
+            // Row 2: status metadata
             HStack(spacing: MGStyle.Spacing.xl) {
                 if isActive {
                     HStack(spacing: MGStyle.Spacing.sm) {
@@ -648,12 +648,9 @@ struct ProfileDetailEditor: View {
                 }
                 Text("Modified \(profile.modifiedDate, formatter: dateFormatter)")
                     .font(.system(size: MGStyle.FontSize.caption)).foregroundColor(.secondary.opacity(0.6))
-                
-                Spacer()
-                
-                // Shortcut lives in the info row
-                shortcutInlineView
             }
+            // Row 3: shortcut — own row so editing mode has full width
+            shortcutInlineView
         }
     }
     
@@ -665,6 +662,7 @@ struct ProfileDetailEditor: View {
                 Text("Quick Switch:")
                     .font(.system(size: MGStyle.FontSize.caption))
                     .foregroundColor(.secondary)
+                    .fixedSize()
                 KeyboardShortcutFieldView(shortcut: $editingShortcut)
                     .frame(width: 180, height: 22)
                 Button(action: commitShortcutEdit) {
@@ -677,13 +675,14 @@ struct ProfileDetailEditor: View {
                 }
                 .buttonStyle(.plain)
                 .help("Cancel")
+                Spacer()
             }
-            .transition(.opacity)
         } else {
             HStack(spacing: MGStyle.Spacing.sm) {
                 Text("Quick Switch:")
                     .font(.system(size: MGStyle.FontSize.caption))
                     .foregroundColor(.secondary)
+                    .fixedSize()
                 // Keyboard icon = enable/disable toggle
                 Button(action: toggleShortcutEnabled) {
                     Image(systemName: "keyboard")
@@ -702,10 +701,12 @@ struct ProfileDetailEditor: View {
                             .font(.system(size: MGStyle.FontSize.caption, design: .monospaced))
                             .foregroundColor(shortcutEnabled ? .secondary : .secondary.opacity(0.4))
                             .strikethrough(!shortcutEnabled, color: .secondary.opacity(0.4))
+                            .fixedSize()
                     } else {
                         Text("Add shortcut")
                             .font(.system(size: MGStyle.FontSize.caption))
                             .foregroundColor(.secondary.opacity(0.4))
+                            .fixedSize()
                     }
                 }
                 .buttonStyle(.plain)
@@ -726,8 +727,8 @@ struct ProfileDetailEditor: View {
                         .foregroundColor(.orange)
                         .help("Shortcut already used by \"\(conflict)\" — both will be active")
                 }
+                Spacer()
             }
-            .transition(.opacity)
         }
     }
     
@@ -817,6 +818,8 @@ struct ProfileDetailEditor: View {
         nameText = profile.name
         editingShortcut = profile.keyboardShortcut
         shortcutEnabled = profile.keyboardShortcut != nil
+        editingShortcutInline = false
+        editingName = false
     }
     
     private func commitNameEdit() {
