@@ -11,7 +11,7 @@ Actions (fix later):
 - Open File parameter should have a button to select from finder
 - Full screen unreliable.
 	-Fn + F works on some apps
-	-Command + Control + F
+	-Command + Control + F works in some apps (Most but not all)
 	-Using Accessibility to click the full screen button doesn't work when buttons aren't shown (common when in full screen) 
 - Window Actions targeting multiple windows does not work
 - May just start from scratch and rewrite actions.

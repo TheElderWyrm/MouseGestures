@@ -83,9 +83,11 @@ struct ProfilesView: View {
                 selectionBar
             }
             
-            HSplitView {
+            HStack(spacing: 0) {
                 profileListView
-                    .frame(minWidth: MGStyle.Layout.sidebarMinWidth, idealWidth: 280, maxWidth: 350)
+                    .frame(width: 320)
+                
+                Divider()
                 
                 if let profile = primaryProfile {
                     ProfileDetailEditor(
@@ -114,6 +116,7 @@ struct ProfilesView: View {
                         .frame(minWidth: 450)
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .sheet(item: $activeSheet) { sheet in
@@ -477,7 +480,7 @@ struct ProfileListRow: View {
         HStack(spacing: MGStyle.Spacing.lg) {
             // Selection checkbox
             Button(action: { onSelect(.commandClick) }) {
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                Image(systemName: isSelected ? "checkmark.square.fill" : "square")
                     .font(.system(size: 14))
                     .foregroundColor(isSelected ? .accentColor : (isHovered ? .secondary.opacity(0.6) : .secondary.opacity(0.25)))
             }
@@ -504,6 +507,7 @@ struct ProfileListRow: View {
                             .foregroundColor(.secondary.opacity(0.6))
                     }
                 }
+                .lineLimit(1)
             }
             
             Spacer()
@@ -511,7 +515,7 @@ struct ProfileListRow: View {
             // Hover actions
             HStack(spacing: MGStyle.Spacing.xs) {
                 if !isActive {
-                    MGActionButton("checkmark.circle", help: "Set as active") { onSetActive() }
+                    MGActionButton("checkmark.square", help: "Set as active") { onSetActive() }
                 }
                 MGActionButton("plus.square.on.square", help: "Duplicate") { onDuplicate() }
                 MGActionButton("trash", help: "Delete", destructive: true) { onDelete() }
@@ -531,7 +535,7 @@ struct ProfileListRow: View {
         .onTapGesture { onSelect(.click) }
         .contextMenu {
             if !isActive {
-                Button(action: onSetActive) { Label("Set as Active", systemImage: "checkmark.circle") }
+                Button(action: onSetActive) { Label("Set as Active", systemImage: "checkmark.square") }
                 Divider()
             }
             Button(action: onDuplicate) { Label("Duplicate", systemImage: "plus.square.on.square") }
@@ -603,7 +607,7 @@ struct ProfileDetailEditor: View {
                             .font(.title3)
                             .frame(maxWidth: 240)
                         Button(action: commitNameEdit) {
-                            Image(systemName: "checkmark.circle.fill").foregroundColor(.green)
+                            Image(systemName: "checkmark.square.fill").foregroundColor(.green)
                         }
                         .buttonStyle(.plain)
                         Button(action: { editingName = false }) {
@@ -615,12 +619,12 @@ struct ProfileDetailEditor: View {
                     Text(profile.name).font(.title3).fontWeight(.semibold)
                 }
                 
-                // Shortcut (inline)
+                // Shortcut inline view
                 shortcutInlineView
                 
                 Spacer()
                 
-                // Pencil (rename) always at far right, hidden while actively editing name
+                // Pencil (rename) — hidden while actively editing name
                 if !editingName {
                     Button(action: { nameText = profile.name; editingName = true }) {
                         Image(systemName: "pencil").font(.system(size: 11)).foregroundColor(.secondary)
@@ -631,7 +635,7 @@ struct ProfileDetailEditor: View {
                 
                 if !isActive {
                     Button(action: onActivate) {
-                        Label("Set Active", systemImage: "checkmark.circle")
+                        Label("Set Active", systemImage: "checkmark.square")
                     }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.small)
@@ -657,7 +661,7 @@ struct ProfileDetailEditor: View {
         }
     }
     
-    // Inline shortcut: text when idle, field when editing
+    // Shortcut: text + pencil button when idle, field + save/cancel when editing
     @ViewBuilder
     private var shortcutInlineView: some View {
         if editingShortcutInline {
@@ -666,7 +670,7 @@ struct ProfileDetailEditor: View {
                 KeyboardShortcutFieldView(shortcut: $editingShortcut)
                     .frame(width: 180, height: 22)
                 Button(action: commitShortcutEdit) {
-                    Image(systemName: "checkmark.circle.fill").foregroundColor(.green)
+                    Image(systemName: "checkmark.square.fill").foregroundColor(.green)
                 }
                 .buttonStyle(.plain)
                 .help("Save shortcut")
@@ -678,32 +682,32 @@ struct ProfileDetailEditor: View {
             }
             .transition(.opacity)
         } else {
-            Button(action: {
-                preEditShortcut = editingShortcut
-                editingShortcutInline = true
-            }) {
-                HStack(spacing: MGStyle.Spacing.sm) {
-                    Image(systemName: "keyboard").font(.system(size: 10)).foregroundColor(.secondary)
-                    if let shortcut = editingShortcut {
-                        Text(shortcut.displayString)
-                            .font(.system(size: MGStyle.FontSize.caption, design: .monospaced))
-                            .foregroundColor(.secondary)
-                    } else {
-                        Text("Add shortcut")
-                            .font(.system(size: MGStyle.FontSize.caption))
-                            .foregroundColor(.secondary.opacity(0.5))
-                    }
+            HStack(spacing: MGStyle.Spacing.sm) {
+                Image(systemName: "keyboard").font(.system(size: 10)).foregroundColor(.secondary)
+                if let shortcut = editingShortcut {
+                    Text(shortcut.displayString)
+                        .font(.system(size: MGStyle.FontSize.caption, design: .monospaced))
+                        .foregroundColor(.secondary)
+                } else {
+                    Text("No shortcut")
+                        .font(.system(size: MGStyle.FontSize.caption))
+                        .foregroundColor(.secondary.opacity(0.5))
                 }
+                Button(action: {
+                    preEditShortcut = editingShortcut
+                    editingShortcutInline = true
+                }) {
+                    Image(systemName: "pencil").font(.system(size: 11)).foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
+                .help("Edit quick switch shortcut")
             }
-            .buttonStyle(.plain)
-            .help("Edit quick switch shortcut")
             .transition(.opacity)
         }
     }
     
     private func commitShortcutEdit() {
         editingShortcutInline = false
-        // onChange(of: editingShortcut) already saved the value
     }
     
     private func cancelShortcutEdit() {
@@ -1054,7 +1058,7 @@ struct ImportTemplatesSheet: View {
             
             if let msg = importMessage {
                 HStack(spacing: MGStyle.Spacing.md) {
-                    Image(systemName: importSuccess ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                    Image(systemName: importSuccess ? "checkmark.square.fill" : "exclamationmark.triangle.fill")
                         .foregroundColor(importSuccess ? .green : .orange)
                     Text(msg).font(.caption).foregroundColor(.secondary)
                 }
@@ -1130,7 +1134,7 @@ struct TemplateProfileCard: View {
             Spacer()
             
             if isSelected {
-                Image(systemName: "checkmark.circle.fill")
+                Image(systemName: "checkmark.square.fill")
                     .foregroundColor(.accentColor).font(.system(size: 16))
             }
         }

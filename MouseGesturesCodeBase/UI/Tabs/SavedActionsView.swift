@@ -26,11 +26,17 @@ struct SavedActionsView: View {
     @State private var showingImportPanel = false
     @State private var sortOrder = SavedActionsSortService.SortOrder.dateModified
     
+    private var multipleSelected: Bool { selectedActions.count > 1 }
+    
     var body: some View {
         VStack(spacing: 0) {
             headerView
             
             Divider()
+            
+            if multipleSelected {
+                selectionBar
+            }
             
             if filteredAndSortedActions.isEmpty && searchText.isEmpty {
                 MGEmptyState(
@@ -93,6 +99,41 @@ struct SavedActionsView: View {
                 log.log("Failed to import saved actions: \(error)")
             }
         }
+    }
+    
+    // MARK: - Selection Bar
+    
+    private var selectionBar: some View {
+        HStack(spacing: MGStyle.Spacing.lg) {
+            Text("\(selectedActions.count) actions selected")
+                .font(.system(size: MGStyle.FontSize.caption, weight: .medium))
+                .foregroundColor(.accentColor)
+            
+            Spacer()
+            
+            Button(action: duplicateSelectedAction) {
+                Label("Duplicate", systemImage: "plus.square.on.square")
+            }
+            .controlSize(.small)
+            
+            Button(action: { showingExportPanel = true }) {
+                Label("Export", systemImage: "square.and.arrow.up")
+            }
+            .controlSize(.small)
+            
+            Button(role: .destructive, action: confirmDeleteSelectedActions) {
+                Label("Delete", systemImage: "trash")
+            }
+            .controlSize(.small)
+            
+            Button("Clear Selection") {
+                selectedActions.removeAll()
+            }
+            .controlSize(.small)
+        }
+        .padding(.horizontal, MGStyle.Spacing.xl)
+        .padding(.vertical, MGStyle.Spacing.md)
+        .background(Color.accentColor.opacity(0.08))
     }
     
     // MARK: - View Components
@@ -205,9 +246,10 @@ struct SavedActionsView: View {
     }
     
     private func duplicateSelectedAction() {
-        if let id = selectedActions.first,
-           let action = uiServices.getSavedAction(byId: id) {
-            duplicateAction(action)
+        for id in selectedActions {
+            if let action = uiServices.getSavedAction(byId: id) {
+                duplicateAction(action)
+            }
         }
     }
     
@@ -256,7 +298,7 @@ struct SavedActionRow: View {
         HStack(spacing: MGStyle.Spacing.lg) {
             // Selection checkbox with expanded hit target
             Button(action: onToggleSelection) {
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                Image(systemName: isSelected ? "checkmark.square.fill" : "square")
                     .foregroundColor(isSelected ? .accentColor : (isHovered ? .secondary.opacity(0.6) : .secondary.opacity(0.25)))
                     .font(.system(size: 14))
                     .frame(width: 28, height: 28)
@@ -266,7 +308,7 @@ struct SavedActionRow: View {
             
             Image(systemName: getActionIcon())
                 .font(.system(size: 14))
-                .foregroundColor(.secondary)
+                .foregroundColor(.accentColor)
                 .frame(width: 24)
             
             VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
@@ -300,6 +342,8 @@ struct SavedActionRow: View {
                 .init("trash", help: "Delete", destructive: true) { onDelete() }
             ])
         }
+        .padding(.horizontal, MGStyle.Spacing.lg)
+        .padding(.vertical, MGStyle.Spacing.md)
         .mgListCard(isHovered: isHovered, isSelected: isSelected)
         .onHover { hovering in withAnimation(.easeInOut(duration: 0.15)) { isHovered = hovering } }
         .onTapGesture(count: 2) { onDoubleClick() }

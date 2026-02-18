@@ -268,7 +268,7 @@ struct BundleEditorView: View {
                 if isEditing {
                     Button(action: applyEdits) {
                         HStack(spacing: MGStyle.Spacing.sm) {
-                            Image(systemName: "checkmark.circle.fill")
+                            Image(systemName: "checkmark.square.fill")
                                 .font(.system(size: 12))
                             Text("Update Action")
                                 .font(.system(size: MGStyle.FontSize.body, weight: .medium))

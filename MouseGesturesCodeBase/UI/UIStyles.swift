@@ -908,7 +908,7 @@ struct MGSelectionBanner: View {
             
             Spacer()
             
-            Image(systemName: "checkmark.circle.fill")
+            Image(systemName: "checkmark.square.fill")
                 .font(.system(size: 14))
                 .foregroundColor(accentColor)
         }
