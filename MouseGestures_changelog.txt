@@ -1,3 +1,26 @@
+## 2026-02-17 (continued)
+
+**Feature: Inline Shortcut in Profile Header**
+- Removed separate "Quick Switch Shortcut" section card from ProfileDetailEditor
+- Shortcut now appears inline in the header row next to the profile name
+- Idle state: keyboard icon + shortcut text (or faded "Add shortcut" if none)
+- Edit state: `KeyboardShortcutFieldView` + Clear link + ✓ done button appear in-place
+- Toggled via `editingShortcutInline` state; saves immediately via `onChange(of: editingShortcut)`
+- Profile loads/reloads shortcut in `loadProfileData()` on profile switch
+
+**Settings: Detection Flat Grouped Layout**
+- Replaced subcategory-based detection rendering (segmented picker) with a single flat `SettingsEntry`
+- `DetectionPluginSettingsProvider` now emits one entry; `DetectionFlatSettingsView` renders all items
+- Items partitioned into three labeled sections: General, Zone Detection, App Profiles
+  - App Profiles: all `AppConfigurationDetectorPlugin` settings
+  - Zone Detection: `.detection` + `.appearance` category settings from any plugin
+  - General: remaining settings (`.performance`, etc.)
+- Section labels are small uppercase headers between groups
+- `DetectionSubcategories` enum removed (no longer needed)
+- Detection category in Settings sidebar is now a single flat page, no subcategory picker
+
+---
+
 ## 2026-02-17
 
 ### Profiles & Settings Polish

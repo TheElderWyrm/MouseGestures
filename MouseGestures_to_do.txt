@@ -29,6 +29,6 @@ Profiles:
 - ~~Make quick change shortcut editable after creation~~ ✓
 
 Settings
-- Reorganize Detection settings
-	- Categorize more specifically (General, Zones, App Profiles)
+- ~~Reorganize Detection settings~~ ✓
+	- ~~Categorize more specifically (General, Zones, App Profiles)~~ ✓
 	- ~~Data Management and about could be combined~~ ✓
