@@ -1,3 +1,33 @@
+## 2026-02-17
+
+### Profiles & Settings Polish
+
+**Feature: Checkboxes for Profile Selection**
+- Each ProfileListRow now has a visible checkbox (circle icon) at left
+- Clicking the checkbox toggles selection (cmd+click behavior)
+- Checkbox fades in on hover when not selected, always visible when selected
+- Cmd+click and shift+click multi-selection still works as before
+
+**Feature: Shortcut Editing in Profile Detail**
+- ProfileDetailEditor now shows a "Quick Switch Shortcut" section
+- KeyboardShortcutFieldView embedded directly — record or clear shortcut without opening a sheet
+- Saves immediately on change via `updateProfileKeyboardShortcut`
+- `loadProfileData()` also initializes the shortcut state when switching profiles
+
+**Fix: Remove Import Templates Confirmation Sheet**
+- Removed ImportResultsSheet — no longer shown after template import
+- Import now shows inline status message (success or partial failure with name conflicts)
+- Auto-dismisses after 1.5s on full success; stays open on partial failure for user to see errors
+- Calls `UIServices.shared.loadData()` after import to refresh profile list
+
+**Settings: Combine Data Management + About**
+- Removed separate `dataManagement` category from SettingsCategories
+- Both Data Management and About content now live under the single "About" category
+- New `AboutSubcategories.info` and `AboutSubcategories.data` subcategory descriptors
+- Settings sidebar loses one entry; content accessible via segmented subcategory picker
+
+---
+
 ## 2026-02-12
 
 ### UI Improvements: Generic Trigger System, Profiles, App Profiles

@@ -559,12 +559,12 @@ struct ProfileDetailEditor: View {
     @State private var showDeleteGestureConfirm = false
     @State private var gestureToDelete: Gesture?
     @State private var editingShortcut: KeyboardTrigger?
+    @State private var editingShortcutInline = false
     
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: MGStyle.Spacing.xl) {
                 profileHeader
-                shortcutSection
                 actionBar
                 gestureEditorCard
             }
@@ -572,6 +572,9 @@ struct ProfileDetailEditor: View {
         }
         .onAppear { loadProfileData() }
         .onChange(of: profile.id) { _ in loadProfileData() }
+        .onChange(of: editingShortcut) { newShortcut in
+            _ = uiServices.updateProfileKeyboardShortcut(profile.id, shortcut: newShortcut)
+        }
         .alert("Invalid Name", isPresented: $showNameError) { Button("OK") {} } message: {
             Text("A profile with this name already exists.")
         }
@@ -587,13 +590,15 @@ struct ProfileDetailEditor: View {
     
     private var profileHeader: some View {
         VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
-            HStack(alignment: .center) {
+            // Row 1: name + shortcut + set active button
+            HStack(alignment: .center, spacing: MGStyle.Spacing.lg) {
+                // Name
                 if editingName {
                     HStack(spacing: MGStyle.Spacing.md) {
                         TextField("Profile name", text: $nameText, onCommit: commitNameEdit)
                             .textFieldStyle(.roundedBorder)
                             .font(.title3)
-                            .frame(maxWidth: 300)
+                            .frame(maxWidth: 240)
                         Button(action: commitNameEdit) {
                             Image(systemName: "checkmark.circle.fill").foregroundColor(.green)
                         }
@@ -613,7 +618,12 @@ struct ProfileDetailEditor: View {
                         .help("Rename profile")
                     }
                 }
+                
+                // Shortcut (inline)
+                shortcutInlineView
+                
                 Spacer()
+                
                 if !isActive {
                     Button(action: onActivate) {
                         Label("Set Active", systemImage: "checkmark.circle")
@@ -623,6 +633,7 @@ struct ProfileDetailEditor: View {
                 }
             }
             
+            // Row 2: status metadata
             HStack(spacing: MGStyle.Spacing.xl) {
                 if isActive {
                     HStack(spacing: MGStyle.Spacing.sm) {
@@ -641,32 +652,47 @@ struct ProfileDetailEditor: View {
         }
     }
     
-    // MARK: - Shortcut Section
-    
-    private var shortcutSection: some View {
-        MGDetailSection("Quick Switch Shortcut", icon: "keyboard") {
-            VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
-                Text("Keyboard shortcut to quickly activate this profile")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                
-                HStack(spacing: MGStyle.Spacing.lg) {
-                    KeyboardShortcutFieldView(shortcut: $editingShortcut)
-                        .frame(width: 200, height: 24)
-                    
-                    if editingShortcut != nil {
-                        Button("Clear") {
-                            editingShortcut = nil
-                            _ = uiServices.updateProfileKeyboardShortcut(profile.id, shortcut: nil)
-                        }
-                        .buttonStyle(.link)
-                        .controlSize(.small)
+    // Inline shortcut: text when idle, field when editing
+    @ViewBuilder
+    private var shortcutInlineView: some View {
+        if editingShortcutInline {
+            HStack(spacing: MGStyle.Spacing.sm) {
+                Image(systemName: "keyboard").font(.system(size: 10)).foregroundColor(.secondary)
+                KeyboardShortcutFieldView(shortcut: $editingShortcut)
+                    .frame(width: 180, height: 22)
+                if editingShortcut != nil {
+                    Button("Clear") {
+                        editingShortcut = nil
+                    }
+                    .buttonStyle(.link)
+                    .font(.system(size: MGStyle.FontSize.badge))
+                    .controlSize(.small)
+                }
+                Button(action: { editingShortcutInline = false }) {
+                    Image(systemName: "checkmark").font(.system(size: 10)).foregroundColor(.accentColor)
+                }
+                .buttonStyle(.plain)
+                .help("Done")
+            }
+            .transition(.opacity)
+        } else {
+            Button(action: { editingShortcutInline = true }) {
+                HStack(spacing: MGStyle.Spacing.sm) {
+                    Image(systemName: "keyboard").font(.system(size: 10)).foregroundColor(.secondary)
+                    if let shortcut = editingShortcut {
+                        Text(shortcut.displayString)
+                            .font(.system(size: MGStyle.FontSize.caption, design: .monospaced))
+                            .foregroundColor(.secondary)
+                    } else {
+                        Text("Add shortcut")
+                            .font(.system(size: MGStyle.FontSize.caption))
+                            .foregroundColor(.secondary.opacity(0.5))
                     }
                 }
             }
-        }
-        .onChange(of: editingShortcut) { newShortcut in
-            _ = uiServices.updateProfileKeyboardShortcut(profile.id, shortcut: newShortcut)
+            .buttonStyle(.plain)
+            .help("Edit quick switch shortcut")
+            .transition(.opacity)
         }
     }
     
