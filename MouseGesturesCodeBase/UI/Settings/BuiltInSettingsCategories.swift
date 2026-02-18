@@ -6,11 +6,15 @@ import UniformTypeIdentifiers
 enum SettingsCategories {
     static let general = SettingsCategoryDescriptor(id: "general", title: "General", icon: "gear", order: 0)
     static let detection = SettingsCategoryDescriptor(id: "detection", title: "Detection", icon: "hand.tap", order: 10)
-    static let dataManagement = SettingsCategoryDescriptor(id: "dataManagement", title: "Data Management", icon: "externaldrive", order: 80)
-    static let about = SettingsCategoryDescriptor(id: "about", title: "About", icon: "info.circle", order: 90)
+    static let about = SettingsCategoryDescriptor(id: "about", title: "About", icon: "info.circle", order: 80)
 }
 
 // MARK: - Well-Known Subcategory Descriptors
+
+enum AboutSubcategories {
+    static let info = SettingsSubcategoryDescriptor(id: "info", title: "About", icon: "info.circle", order: 0)
+    static let data = SettingsSubcategoryDescriptor(id: "data", title: "Data Management", icon: "externaldrive", order: 1)
+}
 
 enum DetectionSubcategories {
     static let general = SettingsSubcategoryDescriptor(id: "general", title: "General", icon: "gearshape", order: 0)
@@ -58,9 +62,10 @@ struct BuiltInSettingsProvider: SettingsProvider {
                 viewBuilder: { _ in AnyView(DeveloperModeSettingView()) }
             ),
             
-            // Data Management
+            // Data Management (subcategory of About)
             SettingsEntry(
-                category: SettingsCategories.dataManagement,
+                category: SettingsCategories.about,
+                subcategory: AboutSubcategories.data,
                 order: 0,
                 searchableItems: [
                     SearchableSettingItem(title: "Export Settings", description: "Export all application settings to a file", keywords: ["export", "backup", "save", "settings", "file"]),
@@ -73,6 +78,7 @@ struct BuiltInSettingsProvider: SettingsProvider {
             // About
             SettingsEntry(
                 category: SettingsCategories.about,
+                subcategory: AboutSubcategories.info,
                 order: 0,
                 searchableItems: [
                     SearchableSettingItem(title: "Version Information", description: "Current app version and build number", keywords: ["version", "build", "number", "about"]),

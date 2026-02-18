@@ -8,8 +8,8 @@ struct ProfilesView: View {
     enum ActiveSheet: Identifiable {
         case addProfile
         case importTemplates
-        case editGesture(UUID, Gesture) // profileId, gesture
-        case addGesture(UUID) // profileId
+        case editGesture(UUID, Gesture)
+        case addGesture(UUID)
         
         var id: String {
             switch self {
@@ -33,7 +33,6 @@ struct ProfilesView: View {
         return sorted.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
     }
     
-    /// Primary selection for detail view (last clicked)
     @State private var primaryProfileId: UUID?
     
     private var primaryProfile: ConfigurationProfile? {
@@ -80,7 +79,6 @@ struct ProfilesView: View {
             
             Divider()
             
-            // Selection info bar when multiple profiles selected
             if multipleSelected {
                 selectionBar
             }
@@ -284,11 +282,9 @@ struct ProfilesView: View {
     private func handleProfileSelect(_ profileId: UUID, event: SelectionEvent) {
         switch event {
         case .click:
-            // Simple click: single select
             selectedProfileIds = [profileId]
             primaryProfileId = profileId
         case .commandClick:
-            // Cmd+click: toggle in multi-select
             if selectedProfileIds.contains(profileId) {
                 selectedProfileIds.remove(profileId)
                 if primaryProfileId == profileId {
@@ -299,14 +295,11 @@ struct ProfilesView: View {
                 primaryProfileId = profileId
             }
         case .shiftClick:
-            // Shift+click: range select
             let sorted = filteredProfiles
             if let currentIdx = sorted.firstIndex(where: { $0.id == primaryProfileId }),
                let targetIdx = sorted.firstIndex(where: { $0.id == profileId }) {
                 let range = min(currentIdx, targetIdx)...max(currentIdx, targetIdx)
-                for i in range {
-                    selectedProfileIds.insert(sorted[i].id)
-                }
+                for i in range { selectedProfileIds.insert(sorted[i].id) }
             } else {
                 selectedProfileIds.insert(profileId)
             }
@@ -322,29 +315,22 @@ struct ProfilesView: View {
     
     private func deleteSelectedProfiles() {
         var toDelete = Array(selectedProfileIds)
-        
-        // If deleting the active profile, switch away first
         if let activeId = uiServices.activeProfileId, toDelete.contains(activeId) {
             let remaining = uiServices.profiles.filter { !toDelete.contains($0.id) }
             if let next = remaining.first {
                 uiServices.switchToProfile(next.id)
             } else {
-                // All being deleted — create replacement
                 if let replacement = uiServices.createProfile(name: "Default") {
                     uiServices.switchToProfile(replacement.id)
                 }
             }
-            // Move active to end so it's deleted last
             toDelete.removeAll { $0 == activeId }
             toDelete.append(activeId)
         }
-        
         for profileId in toDelete {
-            // Re-check that it's not the current active
             if profileId == uiServices.configuration.activeProfileId { continue }
             _ = uiServices.deleteProfile(profileId)
         }
-        
         selectedProfileIds.removeAll()
         primaryProfileId = uiServices.activeProfileId
         if let pid = primaryProfileId { selectedProfileIds = [pid] }
@@ -361,9 +347,7 @@ struct ProfilesView: View {
     private func duplicateSelectedProfiles() {
         var newIds: [UUID] = []
         for profileId in selectedProfileIds {
-            if let dup = uiServices.duplicateProfile(profileId) {
-                newIds.append(dup.id)
-            }
+            if let dup = uiServices.duplicateProfile(profileId) { newIds.append(dup.id) }
         }
         if let first = newIds.first {
             selectedProfileIds = Set(newIds)
@@ -374,7 +358,6 @@ struct ProfilesView: View {
     private func exportSelectedProfiles() {
         let selected = uiServices.profiles.filter { selectedProfileIds.contains($0.id) }
         guard !selected.isEmpty else { return }
-        
         if selected.count == 1, let profile = selected.first {
             exportSingleProfile(profile.id)
         } else {
@@ -385,8 +368,7 @@ struct ProfilesView: View {
             if savePanel.runModal() == .OK, let url = savePanel.url {
                 let exportData = ProfileBundleExportData(profiles: selected)
                 do {
-                    let encoder = JSONEncoder()
-                    encoder.outputFormatting = .prettyPrinted
+                    let encoder = JSONEncoder(); encoder.outputFormatting = .prettyPrinted
                     let data = try encoder.encode(exportData)
                     try data.write(to: url)
                 } catch {
@@ -416,8 +398,7 @@ struct ProfilesView: View {
         if savePanel.runModal() == .OK, let url = savePanel.url {
             let exportData = ProfileBundleExportData(profiles: uiServices.profiles)
             do {
-                let encoder = JSONEncoder()
-                encoder.outputFormatting = .prettyPrinted
+                let encoder = JSONEncoder(); encoder.outputFormatting = .prettyPrinted
                 let data = try encoder.encode(exportData)
                 try data.write(to: url)
             } catch {
@@ -457,17 +438,13 @@ struct ProfilesView: View {
                     var importName = profile.name
                     var counter = 2
                     while uiServices.profiles.contains(where: { $0.name == importName }) {
-                        importName = "\(profile.name) (\(counter))"
-                        counter += 1
+                        importName = "\(profile.name) (\(counter))"; counter += 1
                     }
                     profile.name = importName
                     if uiServices.createProfile(name: profile.name, basedOn: profile) != nil { importedCount += 1 }
                 }
                 if importedCount > 0 { uiServices.loadData() }
-                else {
-                    importError = "No profiles were imported"
-                    showingImportError = true
-                }
+                else { importError = "No profiles were imported"; showingImportError = true }
             } catch {
                 importError = "Failed to import profiles: \(error.localizedDescription)"
                 showingImportError = true
@@ -498,6 +475,14 @@ struct ProfileListRow: View {
     
     var body: some View {
         HStack(spacing: MGStyle.Spacing.lg) {
+            // Selection checkbox
+            Button(action: { onSelect(.commandClick) }) {
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 14))
+                    .foregroundColor(isSelected ? .accentColor : (isHovered ? .secondary.opacity(0.6) : .secondary.opacity(0.25)))
+            }
+            .buttonStyle(.plain)
+            
             // Active indicator dot
             Circle()
                 .fill(isActive ? Color.green : Color.clear)
@@ -535,14 +520,10 @@ struct ProfileListRow: View {
         .mgListRow(isSelected: isSelected, isHovered: isHovered, showBorder: isPrimary)
         .onHover { hovering in withAnimation(.easeInOut(duration: 0.15)) { isHovered = hovering } }
         .gesture(
-            TapGesture(count: 1).modifiers(.command).onEnded { _ in
-                onSelect(.commandClick)
-            }
+            TapGesture(count: 1).modifiers(.command).onEnded { _ in onSelect(.commandClick) }
         )
         .gesture(
-            TapGesture(count: 1).modifiers(.shift).onEnded { _ in
-                onSelect(.shiftClick)
-            }
+            TapGesture(count: 1).modifiers(.shift).onEnded { _ in onSelect(.shiftClick) }
         )
         .onTapGesture(count: 2) { onSetActive() }
         .onTapGesture { onSelect(.click) }
@@ -558,7 +539,7 @@ struct ProfileListRow: View {
     }
 }
 
-// MARK: - Profile Detail Editor (Inline Editing)
+// MARK: - Profile Detail Editor
 
 struct ProfileDetailEditor: View {
     let profile: ConfigurationProfile
@@ -572,17 +553,18 @@ struct ProfileDetailEditor: View {
     
     @StateObject private var uiServices = UIServices.shared
     
-    // Editable state
     @State private var editingName = false
     @State private var nameText = ""
     @State private var showNameError = false
     @State private var showDeleteGestureConfirm = false
     @State private var gestureToDelete: Gesture?
+    @State private var editingShortcut: KeyboardTrigger?
     
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: MGStyle.Spacing.xl) {
                 profileHeader
+                shortcutSection
                 actionBar
                 gestureEditorCard
             }
@@ -612,40 +594,26 @@ struct ProfileDetailEditor: View {
                             .textFieldStyle(.roundedBorder)
                             .font(.title3)
                             .frame(maxWidth: 300)
-                        
                         Button(action: commitNameEdit) {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundColor(.green)
+                            Image(systemName: "checkmark.circle.fill").foregroundColor(.green)
                         }
                         .buttonStyle(.plain)
-                        
                         Button(action: { editingName = false }) {
-                            Image(systemName: "xmark.circle.fill")
-                                .foregroundColor(.secondary)
+                            Image(systemName: "xmark.circle.fill").foregroundColor(.secondary)
                         }
                         .buttonStyle(.plain)
                     }
                 } else {
                     HStack(spacing: MGStyle.Spacing.md) {
-                        Text(profile.name)
-                            .font(.title3)
-                            .fontWeight(.semibold)
-                        
-                        Button(action: {
-                            nameText = profile.name
-                            editingName = true
-                        }) {
-                            Image(systemName: "pencil")
-                                .font(.system(size: 11))
-                                .foregroundColor(.secondary)
+                        Text(profile.name).font(.title3).fontWeight(.semibold)
+                        Button(action: { nameText = profile.name; editingName = true }) {
+                            Image(systemName: "pencil").font(.system(size: 11)).foregroundColor(.secondary)
                         }
                         .buttonStyle(.plain)
                         .help("Rename profile")
                     }
                 }
-                
                 Spacer()
-                
                 if !isActive {
                     Button(action: onActivate) {
                         Label("Set Active", systemImage: "checkmark.circle")
@@ -659,36 +627,46 @@ struct ProfileDetailEditor: View {
                 if isActive {
                     HStack(spacing: MGStyle.Spacing.sm) {
                         Circle().fill(Color.green).frame(width: 6, height: 6)
-                        Text("Active")
-                            .font(.system(size: MGStyle.FontSize.caption))
-                            .foregroundColor(.green)
+                        Text("Active").font(.system(size: MGStyle.FontSize.caption)).foregroundColor(.green)
                     }
                 }
-                
                 HStack(spacing: MGStyle.Spacing.sm) {
-                    Image(systemName: "hand.draw")
-                        .font(.system(size: 10))
-                        .foregroundColor(.secondary)
+                    Image(systemName: "hand.draw").font(.system(size: 10)).foregroundColor(.secondary)
                     Text("\(profile.gestures.count) gestures · \(profile.gestures.filter { $0.isEnabled }.count) active")
-                        .font(.system(size: MGStyle.FontSize.caption))
-                        .foregroundColor(.secondary)
+                        .font(.system(size: MGStyle.FontSize.caption)).foregroundColor(.secondary)
                 }
+                Text("Modified \(profile.modifiedDate, formatter: dateFormatter)")
+                    .font(.system(size: MGStyle.FontSize.caption)).foregroundColor(.secondary.opacity(0.6))
+            }
+        }
+    }
+    
+    // MARK: - Shortcut Section
+    
+    private var shortcutSection: some View {
+        MGDetailSection("Quick Switch Shortcut", icon: "keyboard") {
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
+                Text("Keyboard shortcut to quickly activate this profile")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
                 
-                if let shortcut = profile.keyboardShortcut {
-                    HStack(spacing: MGStyle.Spacing.sm) {
-                        Image(systemName: "keyboard")
-                            .font(.system(size: 10))
-                            .foregroundColor(.secondary)
-                        Text(shortcut.displayString)
-                            .font(.system(size: MGStyle.FontSize.caption, design: .monospaced))
-                            .foregroundColor(.secondary)
+                HStack(spacing: MGStyle.Spacing.lg) {
+                    KeyboardShortcutFieldView(shortcut: $editingShortcut)
+                        .frame(width: 200, height: 24)
+                    
+                    if editingShortcut != nil {
+                        Button("Clear") {
+                            editingShortcut = nil
+                            _ = uiServices.updateProfileKeyboardShortcut(profile.id, shortcut: nil)
+                        }
+                        .buttonStyle(.link)
+                        .controlSize(.small)
                     }
                 }
-                
-                Text("Modified \(profile.modifiedDate, formatter: dateFormatter)")
-                    .font(.system(size: MGStyle.FontSize.caption))
-                    .foregroundColor(.secondary.opacity(0.6))
             }
+        }
+        .onChange(of: editingShortcut) { newShortcut in
+            _ = uiServices.updateProfileKeyboardShortcut(profile.id, shortcut: newShortcut)
         }
     }
     
@@ -696,22 +674,13 @@ struct ProfileDetailEditor: View {
     
     private var actionBar: some View {
         HStack(spacing: MGStyle.Spacing.lg) {
-            Button(action: onDuplicate) {
-                Label("Duplicate", systemImage: "plus.square.on.square")
-            }
-            .controlSize(.small)
-            
-            Button(action: onExport) {
-                Label("Export", systemImage: "square.and.arrow.up")
-            }
-            .controlSize(.small)
-            
+            Button(action: onDuplicate) { Label("Duplicate", systemImage: "plus.square.on.square") }
+                .controlSize(.small)
+            Button(action: onExport) { Label("Export", systemImage: "square.and.arrow.up") }
+                .controlSize(.small)
             Spacer()
-            
-            Button(role: .destructive, action: onDelete) {
-                Label("Delete", systemImage: "trash")
-            }
-            .controlSize(.small)
+            Button(role: .destructive, action: onDelete) { Label("Delete", systemImage: "trash") }
+                .controlSize(.small)
         }
         .padding(MGStyle.Spacing.lg)
         .background(
@@ -725,13 +694,10 @@ struct ProfileDetailEditor: View {
     private var gestureEditorCard: some View {
         MGDetailSection("Gestures", icon: "hand.tap") {
             VStack(spacing: 0) {
-                // Add gesture button
                 HStack {
                     Spacer()
-                    Button(action: onAddGesture) {
-                        Label("Add Gesture", systemImage: "plus")
-                    }
-                    .controlSize(.small)
+                    Button(action: onAddGesture) { Label("Add Gesture", systemImage: "plus") }
+                        .controlSize(.small)
                 }
                 .padding(.bottom, MGStyle.Spacing.md)
                 
@@ -747,13 +713,8 @@ struct ProfileDetailEditor: View {
                             ProfileGestureRow(
                                 gesture: gesture,
                                 onEdit: { onEditGesture(gesture) },
-                                onDelete: {
-                                    gestureToDelete = gesture
-                                    showDeleteGestureConfirm = true
-                                },
-                                onToggleEnabled: { enabled in
-                                    toggleGestureEnabled(gesture, enabled: enabled)
-                                }
+                                onDelete: { gestureToDelete = gesture; showDeleteGestureConfirm = true },
+                                onToggleEnabled: { enabled in toggleGestureEnabled(gesture, enabled: enabled) }
                             )
                         }
                     }
@@ -766,16 +727,15 @@ struct ProfileDetailEditor: View {
     
     private func loadProfileData() {
         nameText = profile.name
+        editingShortcut = profile.keyboardShortcut
     }
     
     private func commitNameEdit() {
         let trimmed = nameText.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { editingName = false; return }
-        
         if trimmed != profile.name {
             if uiServices.profiles.contains(where: { $0.name == trimmed && $0.id != profile.id }) {
-                showNameError = true
-                return
+                showNameError = true; return
             }
             _ = uiServices.renameProfile(profile.id, to: trimmed)
         }
@@ -799,14 +759,11 @@ struct ProfileDetailEditor: View {
     }
     
     private var dateFormatter: DateFormatter {
-        let f = DateFormatter()
-        f.dateStyle = .medium
-        f.timeStyle = .short
-        return f
+        let f = DateFormatter(); f.dateStyle = .medium; f.timeStyle = .short; return f
     }
 }
 
-// MARK: - Profile Gesture Row (Editable)
+// MARK: - Profile Gesture Row
 
 struct ProfileGestureRow: View {
     let gesture: Gesture
@@ -818,23 +775,16 @@ struct ProfileGestureRow: View {
     @State private var isHovered = false
     
     init(gesture: Gesture, onEdit: @escaping () -> Void, onDelete: @escaping () -> Void, onToggleEnabled: @escaping (Bool) -> Void) {
-        self.gesture = gesture
-        self.onEdit = onEdit
-        self.onDelete = onDelete
-        self.onToggleEnabled = onToggleEnabled
+        self.gesture = gesture; self.onEdit = onEdit; self.onDelete = onDelete; self.onToggleEnabled = onToggleEnabled
         self._isEnabled = State(initialValue: gesture.isEnabled)
     }
     
-    private var actionDef: PluginAction? {
-        UIServices.shared.getActionDefinition(for: gesture.actionIdentifier)
-    }
+    private var actionDef: PluginAction? { UIServices.shared.getActionDefinition(for: gesture.actionIdentifier) }
     
     var body: some View {
         HStack(spacing: MGStyle.Spacing.md) {
             Toggle("", isOn: $isEnabled)
-                .toggleStyle(.switch)
-                .controlSize(.mini)
-                .labelsHidden()
+                .toggleStyle(.switch).controlSize(.mini).labelsHidden()
                 .onChange(of: isEnabled) { v in onToggleEnabled(v) }
             
             Image(systemName: actionDef?.icon ?? "bolt")
@@ -845,14 +795,10 @@ struct ProfileGestureRow: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text(actionDef?.name ?? gesture.actionIdentifier)
                     .font(.system(size: MGStyle.FontSize.caption, weight: .medium))
-                    .lineLimit(1)
-                    .opacity(isEnabled ? 1 : 0.5)
-                
+                    .lineLimit(1).opacity(isEnabled ? 1 : 0.5)
                 Text(gesture.displayDescription)
                     .font(.system(size: MGStyle.FontSize.badge))
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
-                    .opacity(isEnabled ? 0.8 : 0.4)
+                    .foregroundColor(.secondary).lineLimit(1).opacity(isEnabled ? 0.8 : 0.4)
             }
             
             Spacer()
@@ -887,7 +833,6 @@ struct ProfileGestureRow: View {
 struct EditProfileGestureSheet: View {
     let profileId: UUID
     let gesture: Gesture
-    @Environment(\.dismiss) private var dismiss
     @StateObject private var uiServices = UIServices.shared
     
     var body: some View {
@@ -905,7 +850,6 @@ struct EditProfileGestureSheet: View {
 
 struct AddProfileGestureSheet: View {
     let profileId: UUID
-    @Environment(\.dismiss) private var dismiss
     @StateObject private var uiServices = UIServices.shared
     
     var body: some View {
@@ -939,9 +883,7 @@ struct AddEditProfileSheet: View {
     @State private var showingNameError = false
     
     init(mode: Mode, onSave: @escaping (ConfigurationProfile) -> Void, onImportTemplate: (() -> Void)? = nil) {
-        self.mode = mode
-        self.onSave = onSave
-        self.onImportTemplate = onImportTemplate
+        self.mode = mode; self.onSave = onSave; self.onImportTemplate = onImportTemplate
         if case .edit(let profile) = mode {
             _profileName = State(initialValue: profile.name)
             _keyboardShortcut = State(initialValue: profile.keyboardShortcut)
@@ -988,10 +930,7 @@ struct AddEditProfileSheet: View {
             
             MGSheetFooter(mode.buttonTitle, disabled: profileName.isEmpty, action: { saveProfile() }, cancel: { dismiss() }) {
                 if case .add = mode, let onImportTemplate = onImportTemplate {
-                    Button(action: {
-                        dismiss()
-                        onImportTemplate()
-                    }) {
+                    Button(action: { dismiss(); onImportTemplate() }) {
                         Label("Import from Template", systemImage: "square.grid.2x2")
                     }
                 }
@@ -1011,24 +950,19 @@ struct AddEditProfileSheet: View {
                 }
             }
             let nameChanged = uiServices.renameProfile(existingProfile.id, to: profileName)
-            // Always save the keyboard shortcut
             _ = uiServices.updateProfileKeyboardShortcut(existingProfile.id, shortcut: keyboardShortcut)
-            if nameChanged {
-                onSave(existingProfile); dismiss()
-            }
+            if nameChanged { onSave(existingProfile); dismiss() }
         } else {
             if uiServices.profiles.contains(where: { $0.name == profileName }) {
                 showingNameError = true; return
             }
             var newProfile: ConfigurationProfile?
-            if let baseId = basedOnProfileId,
-               let baseProfile = uiServices.profiles.first(where: { $0.id == baseId }) {
+            if let baseId = basedOnProfileId, let baseProfile = uiServices.profiles.first(where: { $0.id == baseId }) {
                 newProfile = uiServices.createProfile(name: profileName, basedOn: baseProfile)
             } else {
                 newProfile = uiServices.createProfile(name: profileName)
             }
             if let profile = newProfile {
-                // Save the keyboard shortcut on the new profile
                 _ = uiServices.updateProfileKeyboardShortcut(profile.id, shortcut: keyboardShortcut)
                 onSave(profile); dismiss()
             }
@@ -1043,8 +977,8 @@ struct ImportTemplatesSheet: View {
     @StateObject private var uiServices = UIServices.shared
     @State private var selectedTypes: Set<DefaultProfileType> = []
     @State private var isImporting = false
-    @State private var importResults: [(type: DefaultProfileType, success: Bool, message: String)] = []
-    @State private var showingResults = false
+    @State private var importMessage: String?
+    @State private var importSuccess = false
     
     var body: some View {
         VStack(spacing: 0) {
@@ -1077,36 +1011,57 @@ struct ImportTemplatesSheet: View {
                 .padding(MGStyle.Spacing.xl)
             }
             
+            if let msg = importMessage {
+                HStack(spacing: MGStyle.Spacing.md) {
+                    Image(systemName: importSuccess ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                        .foregroundColor(importSuccess ? .green : .orange)
+                    Text(msg).font(.caption).foregroundColor(.secondary)
+                }
+                .padding(.horizontal, MGStyle.Spacing.xl)
+                .padding(.vertical, MGStyle.Spacing.md)
+            }
+            
             MGSheetFooter("Import Selected", disabled: selectedTypes.isEmpty || isImporting, action: {
                 importSelectedTemplates()
             }, cancel: { dismiss() }) {
                 HStack(spacing: MGStyle.Spacing.lg) {
-                    if !selectedTypes.isEmpty {
+                    if !selectedTypes.isEmpty && !isImporting {
                         Text("\(selectedTypes.count) template\(selectedTypes.count == 1 ? "" : "s") selected")
                             .font(.caption).foregroundColor(.secondary)
                     }
-                    if isImporting { ProgressView().scaleEffect(0.8).padding(.horizontal, MGStyle.Spacing.md) }
+                    if isImporting {
+                        ProgressView().scaleEffect(0.8).padding(.horizontal, MGStyle.Spacing.md)
+                    }
                 }
             }
         }
-        .frame(width: 600, height: 500)
-        .sheet(isPresented: $showingResults) {
-            ImportResultsSheet(results: importResults) { dismiss() }
-        }
+        .frame(width: 600, height: 520)
     }
     
     private func importSelectedTemplates() {
         isImporting = true
-        importResults.removeAll()
+        importMessage = nil
+        var successCount = 0
+        var failCount = 0
+        
         DispatchQueue.global(qos: .userInitiated).async {
             for type in selectedTypes {
-                let success = UIServices.shared.importDefaultProfile(type: type)
-                let message = success ? "Successfully imported" : "Failed to import (name conflict or error)"
-                DispatchQueue.main.async { importResults.append((type: type, success: success, message: message)) }
+                if UIServices.shared.importDefaultProfile(type: type) { successCount += 1 }
+                else { failCount += 1 }
             }
             DispatchQueue.main.async {
                 isImporting = false
-                if !importResults.isEmpty { showingResults = true }
+                UIServices.shared.loadData()
+                if failCount == 0 {
+                    importSuccess = true
+                    importMessage = "Imported \(successCount) template\(successCount == 1 ? "" : "s") successfully"
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { dismiss() }
+                } else {
+                    importSuccess = successCount > 0
+                    importMessage = successCount > 0
+                        ? "Imported \(successCount), \(failCount) failed (name conflicts)"
+                        : "\(failCount) import\(failCount == 1 ? "" : "s") failed (name conflicts)"
+                }
             }
         }
     }
@@ -1135,8 +1090,7 @@ struct TemplateProfileCard: View {
             
             if isSelected {
                 Image(systemName: "checkmark.circle.fill")
-                    .foregroundColor(.accentColor)
-                    .font(.system(size: 16))
+                    .foregroundColor(.accentColor).font(.system(size: 16))
             }
         }
         .padding(MGStyle.Spacing.xl)
@@ -1150,44 +1104,5 @@ struct TemplateProfileCard: View {
         )
         .contentShape(Rectangle())
         .onTapGesture { onSelect() }
-    }
-}
-
-// MARK: - Import Results Sheet
-
-struct ImportResultsSheet: View {
-    let results: [(type: DefaultProfileType, success: Bool, message: String)]
-    let onDone: () -> Void
-    
-    var body: some View {
-        VStack(spacing: 0) {
-            MGSheetHeader(
-                "Import Results",
-                subtitle: "\(results.filter { $0.success }.count) of \(results.count) templates imported successfully"
-            )
-            
-            ScrollView {
-                VStack(spacing: MGStyle.Spacing.md) {
-                    ForEach(results, id: \.type) { result in
-                        HStack(spacing: MGStyle.Spacing.lg) {
-                            Image(systemName: result.success ? "checkmark.circle.fill" : "xmark.circle.fill")
-                                .foregroundColor(result.success ? .green : .red)
-                                .font(.system(size: 16))
-                            VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
-                                Text(result.type.rawValue)
-                                    .font(.system(size: MGStyle.FontSize.heading, weight: .medium))
-                                Text(result.message).font(.caption).foregroundColor(.secondary)
-                            }
-                            Spacer()
-                        }
-                        .padding(MGStyle.Spacing.lg)
-                    }
-                }
-                .padding(MGStyle.Spacing.xl)
-            }
-            
-            MGSheetFooter("Done") { onDone() }
-        }
-        .frame(width: 450, height: 400)
     }
 }

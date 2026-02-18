@@ -21,7 +21,14 @@ Improve UI
 - General: UI Should be relatively simple and should not use lots of colors or accents. 
 - Different tabs use different styles for cards
 - Unify selection/multiselection behavior between tabs.
+- UIs seem to have a small (Maybe 1/4 second or 1/2 second) delay between any UI actions and response.
 
 Profiles:
 - Add check boxes for selection
 - Remove confirmation box on import from template.
+- Make quick change shortcut editable after creation.
+
+Settings
+- Reorganize Detection settings
+	- Categorize more specifically (General, Zones, App Profiles)
+	- Data Management and about could be combined
