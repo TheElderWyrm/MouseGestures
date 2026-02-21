@@ -149,51 +149,6 @@ struct GestureActivationComponents: Codable, Equatable {
         return segments.joined(separator: "|")
     }
     
-    // MARK: - Legacy Conversion Helpers
-    
-    /// Create from legacy gesture structure
-    init(fromLegacyGesture gesture: Gesture) {
-        // Modifier keys from GestureTrigger
-        if !gesture.modifiers.isEmpty {
-            self.modifierKey = ModifierKeyConfig(isEnabled: true, modifiers: gesture.modifiers)
-        }
-        
-        // Screen zone from GestureTrigger
-        self.screenZone = ScreenZoneConfig(isEnabled: true, zone: gesture.zone)
-        
-        // Drag type from GestureTrigger
-        if gesture.dragModifier != .none {
-            self.dragType = DragTypeConfig(isEnabled: true, dragType: gesture.dragModifier)
-        }
-        
-        // Mouse button from ActivationSettings
-        if let mouseBtn = gesture.mouseButtonTrigger {
-            self.mouseButton = MouseButtonConfig(isEnabled: true, button: mouseBtn.button)
-        }
-        
-        // Keyboard shortcut from ActivationSettings
-        if let kbd = gesture.keyboardTrigger {
-            self.keyboardShortcut = KeyboardShortcutConfig(isEnabled: true, keyboardTrigger: kbd)
-        }
-    }
-    
-    /// Convert to legacy structure (for backward compatibility during transition)
-    func toLegacyActivationType() -> ActivationSettings.ActivationType {
-        let hasGesture = screenZone?.isEnabled == true
-        let hasKeyboard = keyboardShortcut?.isEnabled == true
-        let hasMouse = mouseButton?.isEnabled == true
-        
-        switch (hasGesture, hasKeyboard, hasMouse) {
-        case (true, false, false): return .gesture
-        case (false, true, false): return .keyboard
-        case (false, false, true): return .mouseButton
-        case (true, true, false): return .both
-        case (true, false, true): return .gestureMouseButton
-        case (false, true, true): return .keyboardMouseButton
-        case (true, true, true): return .all
-        default: return .gesture
-        }
-    }
 }
 
 // MARK: - Component UI Provider Protocol

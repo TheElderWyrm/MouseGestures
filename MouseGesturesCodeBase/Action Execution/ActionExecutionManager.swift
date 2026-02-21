@@ -148,13 +148,13 @@ class ActionExecutionManager {
         if let zone = zone {
             source = .gesture(zone: zone, dragState: dragState)
         } else {
-            source = .gesture(zone: gesture.trigger.zone, dragState: gesture.trigger.dragModifier)
+            source = .gesture(zone: gesture.zone, dragState: gesture.dragModifier)
         }
         
         let context = ActionExecutionContext(
             source: source,
             gesture: gesture,
-            modifiers: modifiers.isEmpty ? gesture.trigger.modifiers : modifiers
+            modifiers: modifiers.isEmpty ? gesture.modifiers : modifiers
         )
         
         executeAction(gesture.actionIdentifier, parameters: ActionParameters(values: gesture.parameters), context: context)
@@ -212,7 +212,7 @@ class ActionExecutionManager {
         let context = ActionExecutionContext(
             source: .repeat,
             gesture: gesture,
-            modifiers: gesture.trigger.modifiers
+            modifiers: gesture.modifiers
         )
         
         // Skip debouncing for repeated actions
@@ -268,7 +268,7 @@ class ActionExecutionManager {
         let context = ActionExecutionContext(
             source: .longPress,
             gesture: gesture,
-            modifiers: gesture.trigger.modifiers
+            modifiers: gesture.modifiers
         )
         
         if let longPressId = gesture.longPressActionIdentifier {

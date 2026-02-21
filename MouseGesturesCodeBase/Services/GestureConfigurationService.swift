@@ -178,11 +178,11 @@ class GestureConfigurationService {
         }
         
         // Check activation settings
-        if gesture.activation.hasKeyboard && gesture.activation.keyboardTrigger == nil {
+        if gesture.genericActivation.hasConfig(for: "keyboard_detector") && gesture.keyboardTrigger == nil {
             return (false, "Keyboard activation enabled but no trigger defined")
         }
         
-        if gesture.activation.hasMouseButton && gesture.activation.mouseButtonTrigger == nil {
+        if gesture.genericActivation.hasConfig(for: "mouse_button_detector") && gesture.mouseButtonTrigger == nil {
             return (false, "Mouse button activation enabled but no trigger defined")
         }
         

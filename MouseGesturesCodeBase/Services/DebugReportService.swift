@@ -83,7 +83,7 @@ class DebugReportService {
         if !configuration.gestures.isEmpty {
             report += "=== Recent Gestures (First 10) ===\n"
             for (index, gesture) in configuration.gestures.prefix(10).enumerated() {
-                report += "\(index + 1). Zone: \(gesture.trigger.zone), "
+                report += "\(index + 1). Zone: \(gesture.zone), "
                 report += "Action: \(gesture.actionIdentifier)\n"
             }
             report += "\n"

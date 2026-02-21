@@ -387,7 +387,7 @@ class MouseButtonDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         }.count
         
         let dragCount = config.gestures.filter {
-            $0.isEnabled && $0.activation.hasGesture && $0.dragModifier != .none
+            $0.isEnabled && $0.hasZoneTrigger && $0.dragModifier != .none
         }.count
         
         context?.logger.log("Mouse button detection started (clicks: \(clickCount), drag gestures: \(dragCount))", file: #file, function: #function, line: #line)

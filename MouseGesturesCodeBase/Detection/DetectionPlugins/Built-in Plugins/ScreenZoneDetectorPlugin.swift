@@ -317,7 +317,7 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     /// Called on config change to avoid per-event gesture scanning.
     private func rebuildDragGestureFlag() {
         let gestures = context?.configuration.gestures ?? Configuration.shared.gestures
-        hasDragGestures = gestures.contains { $0.isEnabled && $0.activation.hasGesture && $0.dragModifier != .none }
+        hasDragGestures = gestures.contains { $0.isEnabled && $0.hasZoneTrigger && $0.dragModifier != .none }
         
         // If tracking is active, update drag monitors to match
         if isMouseTrackingActive {

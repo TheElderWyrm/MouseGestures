@@ -185,7 +185,7 @@ struct GesturesView: View {
     
     private func toggleGestureEnabled(_ gesture: Gesture, enabled: Bool) {
         var updated = gesture
-        updated.activation.isEnabled = enabled
+        updated.isEnabled = enabled
         _ = uiServices.updateGesture(oldGesture: gesture, newGesture: updated)
     }
 }
@@ -222,8 +222,7 @@ struct GestureCardView: View {
     
     /// Build a concise trigger summary string from enabled components
     private var triggerSummary: String {
-        let comps = gesture.components ?? GestureActivationComponents(fromLegacyGesture: gesture)
-        return comps.previewString
+        return gesture.components.previewString
     }
     
     var body: some View {
@@ -328,8 +327,7 @@ struct GestureCardView: View {
     // MARK: - Expanded Content
     
     private var expandedContent: some View {
-        let comps = gesture.components ?? GestureActivationComponents(fromLegacyGesture: gesture)
-        let details = comps.enabledComponentDetails
+        let details = gesture.components.enabledComponentDetails
         
         return HStack(alignment: .top, spacing: MGStyle.Spacing.xxl) {
             // Trigger details
@@ -339,8 +337,8 @@ struct GestureCardView: View {
                     .foregroundColor(.secondary)
                     .textCase(.uppercase)
                 
-                ForEach(Array(details.enumerated()), id: \.offset) { _, detail in
-                    detailLine(detail.label, detail.value)
+                ForEach(details.indices, id: \.self) { i in
+                    detailLine(details[i].label, details[i].value)
                 }
             }
             .frame(minWidth: 160, alignment: .leading)

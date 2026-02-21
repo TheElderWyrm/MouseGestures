@@ -24,34 +24,30 @@ class ActivationMapper {
     func activationTypes(for gesture: Gesture) -> Set<ActivationType> {
         var types = Set<ActivationType>()
         
-        // Modifier keys: Required when gesture has gesture-type activation with modifiers
-        if gesture.activation.hasGesture && !gesture.modifiers.isEmpty {
+        // Modifier keys: Required when gesture has a zone trigger with modifiers
+        if gesture.hasZoneTrigger && !gesture.modifiers.isEmpty {
             types.insert(.modifierKey)
         }
         
         // Mouse button: Required when:
-        // 1. Gesture has mouse button trigger (click-based), OR
+        // 1. Gesture has a mouse button trigger (click-based), OR
         // 2. Gesture has drag requirement (button must be held for zone detection)
-        if gesture.activation.hasMouseButton && gesture.mouseButtonTrigger != nil {
+        if gesture.mouseButtonTrigger != nil {
             types.insert(.mouseButton)
         }
-        if gesture.activation.hasGesture && gesture.dragModifier != .none {
+        if gesture.hasZoneTrigger && gesture.dragModifier != .none {
             types.insert(.mouseButton)
         }
         
         // Keyboard shortcut: Required when gesture has keyboard trigger
-        if gesture.activation.hasKeyboard && gesture.keyboardTrigger != nil {
+        if gesture.keyboardTrigger != nil {
             types.insert(.keyboardShortcut)
         }
         
-        // Screen zone: Required when gesture has gesture-type activation
-        // (zone gestures need mouse position tracking)
-        if gesture.activation.hasGesture {
+        // Screen zone: Required when gesture has a zone trigger
+        if gesture.hasZoneTrigger {
             types.insert(.screenZone)
         }
-        
-        // App change: Infrastructure type, not required by individual gestures
-        // (always active to track current app)
         
         return types
     }
@@ -59,19 +55,15 @@ class ActivationMapper {
     // MARK: - Gate Validation Helpers
     
     /// Check if held modifiers match any gesture that uses a dependent type.
-    /// Used for precision gating of screen zones when modifiers are the gate.
     func heldModifiersMatchGestures(_ modifiers: NSEvent.ModifierFlags, 
                                     dependentType: ActivationType, 
                                     gestures: [Gesture]) -> Bool {
-        // If any gesture requiring the dependent type has no modifier requirements,
-        // any modifier state suffices
         if gestures.contains(where: { gesture in
             activationTypes(for: gesture).contains(dependentType) && gesture.modifiers.isEmpty
         }) {
             return true
         }
         
-        // Check if current modifiers match any gesture requiring the dependent type
         for gesture in gestures {
             guard activationTypes(for: gesture).contains(dependentType) else { continue }
             if modifiers.contains(gesture.modifiers) {
@@ -83,14 +75,10 @@ class ActivationMapper {
     }
     
     /// Check if held mouse button matches any gesture that uses screen zones.
-    /// Used for precision gating of screen zones when mouse button is the gate.
     func heldButtonMatchesGestures(_ button: MouseButtonTrigger.MouseButton,
                                    gestures: [Gesture]) -> Bool {
         let heldDrag = DragModifier.from(mouseButton: button)
         
-        // Only enable screen zones if:
-        // 1. A gesture requires this specific drag modifier, OR
-        // 2. A gesture requires no drag (dragModifier == .none)
         for gesture in gestures {
             guard activationTypes(for: gesture).contains(.screenZone) else { continue }
             if gesture.dragModifier == heldDrag || gesture.dragModifier == .none {

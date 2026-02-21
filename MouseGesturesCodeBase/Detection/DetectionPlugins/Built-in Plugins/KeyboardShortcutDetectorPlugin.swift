@@ -307,10 +307,7 @@ class KeyboardShortcutDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         guard let config = context?.configuration else { return }
         
         let shortcutCount = config.gestures.filter {
-            $0.keyboardTrigger != nil &&
-            ($0.activationType == .keyboard || $0.activationType == .both || 
-             $0.activationType == .keyboardMouseButton || $0.activationType == .all) &&
-            $0.isEnabled
+            $0.keyboardTrigger != nil && $0.isEnabled
         }.count
         
         context?.logger.log("Keyboard shortcut detection started (monitoring \(shortcutCount) shortcuts)", file: #file, function: #function, line: #line)

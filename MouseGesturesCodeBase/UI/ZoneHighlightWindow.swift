@@ -399,7 +399,7 @@ class ZoneHighlightManager {
                 g.zone == zone &&
                 g.modifiers == modifiers &&
                 g.isEnabled &&
-                (g.activationType == .gesture || g.activationType == .both)
+                g.hasZoneTrigger
             }
             
             let isActive = gesture != nil
@@ -544,7 +544,7 @@ class ZoneHighlightManager {
             let hasMatchingGestures = Configuration.shared.gestures.contains { g in
                 g.modifiers == modifiers &&
                 g.isEnabled &&
-                (g.activationType == .gesture || g.activationType == .both)
+                g.hasZoneTrigger
             }
             
             if hasMatchingGestures {

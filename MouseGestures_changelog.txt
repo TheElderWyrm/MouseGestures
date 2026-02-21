@@ -1,5 +1,18 @@
 ## 2026-02-21
 
+**Refactor: Gesture Model — Removed GestureTrigger, Flattened API**
+- Removed `GestureTrigger` struct; `zone`, `modifiers`, and `dragModifier` are now computed
+  properties directly on `Gesture` (derived from `components`)
+- Removed deprecated `ActivationSettings` struct; moved to private `LegacyActivationSettings`
+  used only inside `Gesture.init(from:)` for backward-compatible Codable migration
+- `components: GestureActivationComponents` changed from optional to non-optional stored property
+- `genericActivation` promoted to primary stored property (was secondary/optional)
+- `Gesture.init(from:)` now handles migration from legacy `trigger` and `activation` coding keys
+- Removed `GenericActivation.init(from legacy: ActivationSettings)` migration initializer
+- Removed `GestureActivationComponents.init(fromLegacyGesture:)` and `toLegacyActivationType()` helpers
+- Updated all callers: `ActionExecutionManager`, `GesturesView`, `GestureConfigurationSheet`,
+  `DebugReportService`, `GestureConfigurationService`, `ZoneHighlightWindow`, `ActivationMapper`
+
 **Fix: Disabling Profile Shortcut No Longer Deletes It**
 - Added `keyboardShortcutEnabled` field to `ConfigurationProfile` (optional backing store
   for backwards compatibility; existing profiles default to enabled)

@@ -35,7 +35,7 @@ struct GestureConfigurationSheet: View {
         
         if let g = existingGesture {
             var gesture = g
-            _components = State(initialValue: gesture.getComponents())
+            _components = State(initialValue: g.components)
             _selectedActionId = State(initialValue: g.actionIdentifier)
             _actionParameters = State(initialValue: g.parameters)
             _timing = State(initialValue: g.timing)
