@@ -489,7 +489,7 @@ struct ProfileListRow: View {
                         .font(.system(size: MGStyle.FontSize.badge))
                         .foregroundColor(.secondary)
                     
-                    if let shortcut = profile.keyboardShortcut {
+                    if let shortcut = profile.keyboardShortcut, profile.keyboardShortcutEnabled {
                         Text(shortcut.displayString)
                             .font(.system(size: MGStyle.FontSize.badge, design: .monospaced))
                             .foregroundColor(.secondary.opacity(0.6))
