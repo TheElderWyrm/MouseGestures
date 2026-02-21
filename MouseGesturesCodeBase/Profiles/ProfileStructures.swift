@@ -36,6 +36,13 @@ struct ConfigurationProfile: Codable, Equatable, Identifiable {
     var modifiedDate: Date
     var isDefault: Bool
     var keyboardShortcut: KeyboardTrigger? // Direct keyboard shortcut for switching to this profile
+    // Backing store: nil means "not yet set" (migrates to true for existing data)
+    private var _keyboardShortcutEnabled: Bool?
+    /// Whether the quick-switch shortcut is currently active. Defaults to true for backwards compatibility.
+    var keyboardShortcutEnabled: Bool {
+        get { _keyboardShortcutEnabled ?? true }
+        set { _keyboardShortcutEnabled = newValue }
+    }
     var userInfo: [String: AnyCodable] = [:] // For extensibility
     
     // Legacy fields: decoded for migration but no longer used (zone/haptic are global settings)
@@ -51,7 +58,8 @@ struct ConfigurationProfile: Codable, Equatable, Identifiable {
     var legacyCornerBuffer: CGFloat? { cornerBuffer }
     
     init(name: String, gestures: [Gesture] = [],
-         isDefault: Bool = false, keyboardShortcut: KeyboardTrigger? = nil) {
+         isDefault: Bool = false, keyboardShortcut: KeyboardTrigger? = nil,
+         keyboardShortcutEnabled: Bool = true) {
         self.id = UUID()
         self.name = name
         self.gestures = gestures
@@ -59,6 +67,7 @@ struct ConfigurationProfile: Codable, Equatable, Identifiable {
         self.modifiedDate = Date()
         self.isDefault = isDefault
         self.keyboardShortcut = keyboardShortcut
+        self._keyboardShortcutEnabled = keyboardShortcutEnabled
         self.userInfo = [:]
     }
     

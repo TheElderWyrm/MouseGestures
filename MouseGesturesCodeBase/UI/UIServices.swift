@@ -129,18 +129,18 @@ public class UIServices: ObservableObject {
     // MARK: - Data Loading
     
     func loadData() {
-        DispatchQueue.main.async {
+        let update = {
             self.profiles = self.configuration.profiles
             self.activeProfileId = self.configuration.activeProfileId
             self.gestures = self.configuration.gestures
             self.savedActions = SavedActionsManager.shared.savedActions
         }
+        if Thread.isMainThread { update() } else { DispatchQueue.main.async { update() } }
     }
     
     private func loadSavedActions() {
-        DispatchQueue.main.async {
-            self.savedActions = SavedActionsManager.shared.savedActions
-        }
+        let update = { self.savedActions = SavedActionsManager.shared.savedActions }
+        if Thread.isMainThread { update() } else { DispatchQueue.main.async { update() } }
     }
     
     // MARK: - Profile Management
@@ -187,9 +187,13 @@ public class UIServices: ObservableObject {
     
     func updateProfileKeyboardShortcut(_ profileId: UUID, shortcut: KeyboardTrigger?) -> Bool {
         let success = profileManagementService.updateProfile(profileId: profileId, keyboardShortcut: .some(shortcut))
-        if success {
-            loadData()
-        }
+        if success { loadData() }
+        return success
+    }
+    
+    func updateProfileKeyboardShortcutEnabled(_ profileId: UUID, enabled: Bool) -> Bool {
+        let success = profileManagementService.updateProfile(profileId: profileId, keyboardShortcutEnabled: enabled)
+        if success { loadData() }
         return success
     }
     

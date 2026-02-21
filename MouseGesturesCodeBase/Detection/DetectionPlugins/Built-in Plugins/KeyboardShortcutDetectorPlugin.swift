@@ -221,6 +221,7 @@ class KeyboardShortcutDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         // First, check for profile keyboard shortcuts (these are global and take priority)
         for profile in config.profiles {
             if let trigger = profile.keyboardShortcut,
+               profile.keyboardShortcutEnabled,
                trigger.keyCode == CGKeyCode(keyCode) &&
                trigger.modifiers.normalized == modifiers {
                 

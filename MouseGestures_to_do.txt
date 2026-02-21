@@ -23,4 +23,5 @@ Improve UI
 - Different tabs use different styles for cards
 - Unify selection/multiselection behavior between tabs.
 - UIs seem to have a small (Maybe 1/4 second or 1/2 second) delay between any UI actions and response.
-- Quick switch shortcut needs to be edditable
+- Profiles: selection different from checkmark selection (Separate these two)
+- Profiles: Disabling the quick switch shortcut deletes it entirely

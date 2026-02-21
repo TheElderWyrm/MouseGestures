@@ -47,10 +47,11 @@ class ProfileManagementService: ObservableObject {
     // MARK: - Profile Loading
     
     func loadProfiles() {
-        DispatchQueue.main.async {
+        let update = {
             self.profiles = self.configuration.profiles
             self.activeProfileId = self.configuration.activeProfileId
         }
+        if Thread.isMainThread { update() } else { DispatchQueue.main.async { update() } }
     }
     
     @objc private func handleProfilesChanged() {
@@ -98,7 +99,7 @@ class ProfileManagementService: ObservableObject {
     ///   - gestures: New gestures for the profile
     /// - Returns: True if update was successful
     @discardableResult
-    func updateProfile(profileId: UUID, name: String? = nil, gestures: [Gesture]? = nil, keyboardShortcut: KeyboardTrigger?? = nil) -> Bool {
+    func updateProfile(profileId: UUID, name: String? = nil, gestures: [Gesture]? = nil, keyboardShortcut: KeyboardTrigger?? = nil, keyboardShortcutEnabled: Bool? = nil) -> Bool {
         guard let profileIndex = configuration.profiles.firstIndex(where: { $0.id == profileId }) else {
             log.log("Profile not found for update: \(profileId)")
             return false
@@ -124,6 +125,11 @@ class ProfileManagementService: ObservableObject {
         // Update keyboard shortcut if provided (double-optional: nil means no change, .some(nil) means clear)
         if let newShortcut = keyboardShortcut {
             profile.keyboardShortcut = newShortcut
+        }
+        
+        // Update shortcut enabled state if provided
+        if let enabled = keyboardShortcutEnabled {
+            profile.keyboardShortcutEnabled = enabled
         }
         
         configuration.profiles[profileIndex] = profile

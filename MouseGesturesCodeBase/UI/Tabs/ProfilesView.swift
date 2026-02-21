@@ -736,20 +736,18 @@ struct ProfileDetailEditor: View {
     
     private func toggleShortcutEnabled() {
         shortcutEnabled.toggle()
-        if shortcutEnabled {
-            _ = uiServices.updateProfileKeyboardShortcut(profile.id, shortcut: editingShortcut)
-        } else {
-            _ = uiServices.updateProfileKeyboardShortcut(profile.id, shortcut: nil)
-        }
+        // Only persist the enabled flag — never clear the shortcut value from the profile
+        _ = uiServices.updateProfileKeyboardShortcutEnabled(profile.id, enabled: shortcutEnabled)
     }
     
     private func commitShortcutEdit() {
         editingShortcutInline = false
-        if shortcutEnabled || editingShortcut != nil {
-            // If user set a shortcut while disabled, enable it automatically
-            if editingShortcut != nil { shortcutEnabled = true }
-            _ = uiServices.updateProfileKeyboardShortcut(profile.id, shortcut: shortcutEnabled ? editingShortcut : nil)
+        // Save shortcut value; if user set a shortcut while disabled, auto-enable it
+        if editingShortcut != nil && !shortcutEnabled {
+            shortcutEnabled = true
+            _ = uiServices.updateProfileKeyboardShortcutEnabled(profile.id, enabled: true)
         }
+        _ = uiServices.updateProfileKeyboardShortcut(profile.id, shortcut: editingShortcut)
     }
     
     private func cancelShortcutEdit() {
@@ -819,7 +817,7 @@ struct ProfileDetailEditor: View {
     private func loadProfileData() {
         nameText = profile.name
         editingShortcut = profile.keyboardShortcut
-        shortcutEnabled = profile.keyboardShortcut != nil
+        shortcutEnabled = profile.keyboardShortcutEnabled && profile.keyboardShortcut != nil
     }
     
     private func commitNameEdit() {
