@@ -1,3 +1,23 @@
+## 2026-02-21
+
+**Fix: Disabling Profile Shortcut No Longer Deletes It**
+- Added `keyboardShortcutEnabled` field to `ConfigurationProfile` (optional backing store
+  for backwards compatibility; existing profiles default to enabled)
+- `toggleShortcutEnabled` now only persists the enabled flag — the shortcut value is
+  preserved in the profile even when disabled
+- `KeyboardShortcutDetectorPlugin` checks `keyboardShortcutEnabled` before triggering
+  a profile switch, so disabled shortcuts are ignored at the detection level
+- `loadProfileData()` initializes `shortcutEnabled` from `profile.keyboardShortcutEnabled`
+  so the correct state is restored on profile switch or app restart
+
+**Fix: UI Response Delay Eliminated**
+- `UIServices.loadData()` and `ProfileManagementService.loadProfiles()` now skip the
+  `DispatchQueue.main.async` hop when already on the main thread
+- All UI-triggered actions (add, update, delete, rename, etc.) now update `@Published`
+  properties synchronously, removing the ~¼s delay between action and UI update
+
+---
+
 ## 2026-02-17 (continued)
 
 **Feature: Inline Shortcut in Profile Header**

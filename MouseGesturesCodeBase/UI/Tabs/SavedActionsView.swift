@@ -26,7 +26,7 @@ struct SavedActionsView: View {
     @State private var showingImportPanel = false
     @State private var sortOrder = SavedActionsSortService.SortOrder.dateModified
     
-    private var multipleSelected: Bool { selectedActions.count > 1 }
+    private var anySelected: Bool { selectedActions.count > 0 }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -34,7 +34,7 @@ struct SavedActionsView: View {
             
             Divider()
             
-            if multipleSelected {
+            if anySelected {
                 selectionBar
             }
             
@@ -347,7 +347,6 @@ struct SavedActionRow: View {
         .mgListCard(isHovered: isHovered, isSelected: isSelected)
         .onHover { hovering in withAnimation(.easeInOut(duration: 0.15)) { isHovered = hovering } }
         .onTapGesture(count: 2) { onDoubleClick() }
-        .onTapGesture { onToggleSelection() }
         .contextMenu {
             Button(action: onEdit) { Label("Edit", systemImage: "pencil") }
             Button(action: onDuplicate) { Label("Duplicate", systemImage: "plus.square.on.square") }

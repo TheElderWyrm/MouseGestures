@@ -40,7 +40,7 @@ struct ProfilesView: View {
         return uiServices.profiles.first { $0.id == id }
     }
     
-    private var multipleSelected: Bool { selectedProfileIds.count > 1 }
+    private var anySelected: Bool { selectedProfileIds.count > 0 }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -79,7 +79,7 @@ struct ProfilesView: View {
             
             Divider()
             
-            if multipleSelected {
+            if anySelected {
                 selectionBar
             }
             
@@ -109,7 +109,7 @@ struct ProfilesView: View {
                     )
                     .id(profile.id)
                     .frame(minWidth: 450)
-                } else if multipleSelected {
+                } else if anySelected {
                     multiSelectionDetailView
                         .frame(minWidth: 450)
                 } else {
@@ -163,7 +163,6 @@ struct ProfilesView: View {
         .onAppear {
             uiServices.loadData()
             if primaryProfileId == nil { primaryProfileId = uiServices.activeProfileId }
-            if let pid = primaryProfileId { selectedProfileIds = [pid] }
         }
     }
     
@@ -193,11 +192,7 @@ struct ProfilesView: View {
             .controlSize(.small)
             
             Button("Clear Selection") {
-                if let pid = primaryProfileId {
-                    selectedProfileIds = [pid]
-                } else {
-                    selectedProfileIds.removeAll()
-                }
+                selectedProfileIds.removeAll()
             }
             .controlSize(.small)
         }
@@ -253,9 +248,11 @@ struct ProfilesView: View {
                         ProfileListRow(
                             profile: profile,
                             isActive: profile.id == uiServices.activeProfileId,
-                            isSelected: selectedProfileIds.contains(profile.id),
+                            isChecked: selectedProfileIds.contains(profile.id),
                             isPrimary: profile.id == primaryProfileId,
-                            onSelect: { event in handleProfileSelect(profile.id, event: event) },
+                            onSetPrimary: { handleSetPrimary(profile.id) },
+                            onToggleCheckmark: { handleToggleCheckmark(profile.id) },
+                            onShiftSelect: { handleShiftSelect(profile.id) },
                             onSetActive: { setActiveProfile(profile.id) },
                             onDuplicate: { duplicateProfile(profile.id) },
                             onDelete: {
@@ -283,32 +280,32 @@ struct ProfilesView: View {
     
     // MARK: - Selection Logic
     
-    private func handleProfileSelect(_ profileId: UUID, event: SelectionEvent) {
-        switch event {
-        case .click:
-            selectedProfileIds = [profileId]
-            primaryProfileId = profileId
-        case .commandClick:
-            if selectedProfileIds.contains(profileId) {
-                selectedProfileIds.remove(profileId)
-                if primaryProfileId == profileId {
-                    primaryProfileId = selectedProfileIds.first
-                }
-            } else {
-                selectedProfileIds.insert(profileId)
-                primaryProfileId = profileId
+    private func handleSetPrimary(_ profileId: UUID) {
+        primaryProfileId = profileId
+    }
+    
+    private func handleToggleCheckmark(_ profileId: UUID) {
+        if selectedProfileIds.contains(profileId) {
+            selectedProfileIds.remove(profileId)
+            if primaryProfileId == profileId {
+                primaryProfileId = selectedProfileIds.first ?? profileId
             }
-        case .shiftClick:
-            let sorted = filteredProfiles
-            if let currentIdx = sorted.firstIndex(where: { $0.id == primaryProfileId }),
-               let targetIdx = sorted.firstIndex(where: { $0.id == profileId }) {
-                let range = min(currentIdx, targetIdx)...max(currentIdx, targetIdx)
-                for i in range { selectedProfileIds.insert(sorted[i].id) }
-            } else {
-                selectedProfileIds.insert(profileId)
-            }
+        } else {
+            selectedProfileIds.insert(profileId)
             primaryProfileId = profileId
         }
+    }
+    
+    private func handleShiftSelect(_ profileId: UUID) {
+        let sorted = filteredProfiles
+        if let currentIdx = sorted.firstIndex(where: { $0.id == primaryProfileId }),
+           let targetIdx = sorted.firstIndex(where: { $0.id == profileId }) {
+            let range = min(currentIdx, targetIdx)...max(currentIdx, targetIdx)
+            for i in range { selectedProfileIds.insert(sorted[i].id) }
+        } else {
+            selectedProfileIds.insert(profileId)
+        }
+        primaryProfileId = profileId
     }
     
     // MARK: - Helper Methods
@@ -337,7 +334,6 @@ struct ProfilesView: View {
         }
         selectedProfileIds.removeAll()
         primaryProfileId = uiServices.activeProfileId
-        if let pid = primaryProfileId { selectedProfileIds = [pid] }
         uiServices.loadData()
     }
     
@@ -457,20 +453,16 @@ struct ProfilesView: View {
     }
 }
 
-// MARK: - Selection Event
-
-enum SelectionEvent {
-    case click, commandClick, shiftClick
-}
-
 // MARK: - Profile List Row
 
 struct ProfileListRow: View {
     let profile: ConfigurationProfile
     let isActive: Bool
-    let isSelected: Bool
-    let isPrimary: Bool
-    let onSelect: (SelectionEvent) -> Void
+    let isChecked: Bool      // checkbox / multi-select state
+    let isPrimary: Bool      // currently shown in detail panel
+    let onSetPrimary: () -> Void
+    let onToggleCheckmark: () -> Void
+    let onShiftSelect: () -> Void
     let onSetActive: () -> Void
     let onDuplicate: () -> Void
     let onDelete: () -> Void
@@ -479,11 +471,11 @@ struct ProfileListRow: View {
     
     var body: some View {
         HStack(spacing: MGStyle.Spacing.lg) {
-            // Selection checkbox
-            Button(action: { onSelect(.commandClick) }) {
-                Image(systemName: isSelected ? "checkmark.square.fill" : "square")
+            // Checkmark selection checkbox — only this toggles checkmark state
+            Button(action: onToggleCheckmark) {
+                Image(systemName: isChecked ? "checkmark.square.fill" : "square")
                     .font(.system(size: 14))
-                    .foregroundColor(isSelected ? .accentColor : (isHovered ? .secondary.opacity(0.6) : .secondary.opacity(0.25)))
+                    .foregroundColor(isChecked ? .accentColor : (isHovered ? .secondary.opacity(0.6) : .secondary.opacity(0.25)))
             }
             .buttonStyle(.plain)
             
@@ -524,16 +516,18 @@ struct ProfileListRow: View {
         }
         .padding(.horizontal, MGStyle.Spacing.lg)
         .padding(.vertical, MGStyle.Spacing.md)
-        .mgListCard(isHovered: isHovered, isSelected: isSelected)
+        // isPrimary drives the card highlight (detail-view selection); isChecked only affects the checkbox icon
+        .mgListCard(isHovered: isHovered, isSelected: isPrimary)
         .onHover { hovering in withAnimation(.easeInOut(duration: 0.15)) { isHovered = hovering } }
+        // Cmd+click toggles checkmark; Shift+click range-selects checkmarks
         .gesture(
-            TapGesture(count: 1).modifiers(.command).onEnded { _ in onSelect(.commandClick) }
+            TapGesture(count: 1).modifiers(.command).onEnded { _ in onToggleCheckmark() }
         )
         .gesture(
-            TapGesture(count: 1).modifiers(.shift).onEnded { _ in onSelect(.shiftClick) }
+            TapGesture(count: 1).modifiers(.shift).onEnded { _ in onShiftSelect() }
         )
         .onTapGesture(count: 2) { onSetActive() }
-        .onTapGesture { onSelect(.click) }
+        .onTapGesture { onSetPrimary() }   // plain click only sets detail view — no checkmark change
         .contextMenu {
             if !isActive {
                 Button(action: onSetActive) { Label("Set as Active", systemImage: "checkmark.circle") }
