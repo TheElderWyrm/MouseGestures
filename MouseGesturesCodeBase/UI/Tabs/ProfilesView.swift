@@ -287,12 +287,8 @@ struct ProfilesView: View {
     private func handleToggleCheckmark(_ profileId: UUID) {
         if selectedProfileIds.contains(profileId) {
             selectedProfileIds.remove(profileId)
-            if primaryProfileId == profileId {
-                primaryProfileId = selectedProfileIds.first ?? profileId
-            }
         } else {
             selectedProfileIds.insert(profileId)
-            primaryProfileId = profileId
         }
     }
     
@@ -305,7 +301,6 @@ struct ProfilesView: View {
         } else {
             selectedProfileIds.insert(profileId)
         }
-        primaryProfileId = profileId
     }
     
     // MARK: - Helper Methods
