@@ -11,24 +11,121 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
     let identifier = "com.mousegestures.core"
     let name = "Core Actions"
     override var description: String { "Essential system and application control actions" }
-    let version = "1.0.0"
+    let version = "1.1.0"
     let author = "MouseGestures"
     let category = ActionCategory.system
     let icon: NSImage? = nil
     
+    // MARK: - Common Parameters
+    
+    private var windowTargetParameters: [ParameterDefinition] {
+        [
+            ParameterDefinition(
+                key: "target",
+                name: "Window Target",
+                type: .selection,
+                defaultValue: AnyCodable("frontmost"),
+                description: "Which window to target",
+                validation: ValidationRule(allowedValues: [
+                    AnyCodable("frontmost"),
+                    AnyCodable("by_age"),
+                    AnyCodable("by_application"),
+                    AnyCodable("by_title"),
+                    AnyCodable("mouse_position")
+                ])
+            ),
+            ParameterDefinition(
+                key: "app_bundle_id",
+                name: "Application",
+                type: .application,
+                description: "Application when targeting by app"
+            ),
+            ParameterDefinition(
+                key: "window_title",
+                name: "Window Title",
+                type: .string,
+                description: "Title of the window to target"
+            ),
+            ParameterDefinition(
+                key: "window_age",
+                name: "Window Age",
+                type: .number,
+                defaultValue: AnyCodable(1),
+                description: "Age of window (1 = frontmost, 2 = second, etc.)",
+                validation: ValidationRule(minValue: 1)
+            )
+        ]
+    }
+    
     // MARK: - Actions
     
     lazy var providedActions: [PluginAction] = [
+        
+        // MARK: Window Actions (with target support)
         PluginAction(
             id: "close_window",
             name: "Close Window",
-            description: "Close the current window",
+            description: "Close a window",
+            requiresParameters: true,
+            supportedParameters: windowTargetParameters,
             icon: "xmark.circle"
         ),
         PluginAction(
+            id: "minimize",
+            name: "Minimize Window",
+            description: "Minimize a window",
+            requiresParameters: true,
+            supportedParameters: windowTargetParameters,
+            icon: "minus.circle"
+        ),
+        PluginAction(
+            id: "maximize",
+            name: "Maximize Window",
+            description: "Maximize a window",
+            requiresParameters: true,
+            supportedParameters: windowTargetParameters,
+            icon: "plus.circle"
+        ),
+        PluginAction(
+            id: "fullscreen",
+            name: "Toggle Fullscreen",
+            description: "Toggle fullscreen mode",
+            requiresParameters: true,
+            supportedParameters: windowTargetParameters,
+            icon: "arrow.up.left.and.arrow.down.right"
+        ),
+        PluginAction(
+            id: "hide_app",
+            name: "Hide Application",
+            description: "Hide the active application",
+            requiresParameters: true,
+            supportedParameters: [
+                ParameterDefinition(
+                    key: "target",
+                    name: "Target",
+                    type: .selection,
+                    defaultValue: AnyCodable("frontmost"),
+                    description: "Which application to hide",
+                    validation: ValidationRule(allowedValues: [
+                        AnyCodable("frontmost"),
+                        AnyCodable("specific")
+                    ])
+                ),
+                ParameterDefinition(
+                    key: "app_bundle_id",
+                    name: "Application",
+                    type: .application,
+                    description: "Application to hide when using specific target"
+                )
+            ],
+            icon: "eye.slash"
+        ),
+        
+        // MARK: App Actions
+        PluginAction(
             id: "quit_app",
             name: "Quit Application",
-            description: "Quit the frontmost application",
+            description: "Quit an application",
             requiresParameters: true,
             supportedParameters: [
                 ParameterDefinition(
@@ -44,38 +141,16 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
                     ])
                 ),
                 ParameterDefinition(
-                    key: "bundle_id",
-                    name: "Bundle ID",
-                    type: .string,
-                    description: "Bundle ID when targeting specific app"
+                    key: "app_bundle_id",
+                    name: "Application",
+                    type: .application,
+                    description: "Application to quit (when targeting specific app)"
                 )
             ],
             icon: "xmark.app"
         ),
-        PluginAction(
-            id: "minimize",
-            name: "Minimize Window",
-            description: "Minimize the current window",
-            icon: "minus.circle"
-        ),
-        PluginAction(
-            id: "maximize",
-            name: "Maximize Window",
-            description: "Maximize the current window",
-            icon: "plus.circle"
-        ),
-        PluginAction(
-            id: "fullscreen",
-            name: "Toggle Fullscreen",
-            description: "Toggle fullscreen mode",
-            icon: "arrow.up.left.and.arrow.down.right"
-        ),
-        PluginAction(
-            id: "hide_app",
-            name: "Hide Application",
-            description: "Hide the frontmost application",
-            icon: "eye.slash"
-        ),
+        
+        // MARK: System UI
         PluginAction(
             id: "mission_control",
             name: "Mission Control",
@@ -94,32 +169,54 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
             description: "Show all windows of current application",
             icon: "rectangle.stack"
         ),
+        
+        // MARK: Cycle Window (replaces next_window / previous_window)
         PluginAction(
-            id: "next_window",
-            name: "Next Window",
-            description: "Switch to next window",
+            id: "cycle_window",
+            name: "Cycle Window",
+            description: "Switch to the next or previous window",
+            requiresParameters: true,
+            supportedParameters: [
+                ParameterDefinition(
+                    key: "direction",
+                    name: "Direction",
+                    type: .selection,
+                    defaultValue: AnyCodable("forward"),
+                    description: "Which direction to cycle",
+                    validation: ValidationRule(allowedValues: [
+                        AnyCodable("forward"),
+                        AnyCodable("backward")
+                    ])
+                )
+            ],
             supportsRepeat: true,
             icon: "arrow.right.circle"
         ),
+        
+        // MARK: Cycle Space (replaces next_space / previous_space)
         PluginAction(
-            id: "previous_window",
-            name: "Previous Window", 
-            description: "Switch to previous window",
+            id: "cycle_space",
+            name: "Cycle Space",
+            description: "Move to the next or previous desktop space",
+            requiresParameters: true,
+            supportedParameters: [
+                ParameterDefinition(
+                    key: "direction",
+                    name: "Direction",
+                    type: .selection,
+                    defaultValue: AnyCodable("next"),
+                    description: "Which direction to move",
+                    validation: ValidationRule(allowedValues: [
+                        AnyCodable("next"),
+                        AnyCodable("previous")
+                    ])
+                )
+            ],
             supportsRepeat: true,
-            icon: "arrow.left.circle"
-        ),
-        PluginAction(
-            id: "next_space",
-            name: "Next Space",
-            description: "Move to next desktop space",
             icon: "arrow.right.square"
         ),
-        PluginAction(
-            id: "previous_space",
-            name: "Previous Space",
-            description: "Move to previous desktop space",
-            icon: "arrow.left.square"
-        ),
+        
+        // MARK: System
         PluginAction(
             id: "lock_screen",
             name: "Lock Screen",
@@ -138,30 +235,42 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
             description: "Empty the trash",
             icon: "trash"
         ),
+        
+        // MARK: Cycle Profile (replaces next_profile / previous_profile)
         PluginAction(
-            id: "next_profile",
-            name: "Next Profile",
-            description: "Switch to next gesture profile",
-            icon: "person.crop.circle.fill.badge.plus"
-        ),
-        PluginAction(
-            id: "previous_profile",
-            name: "Previous Profile",
-            description: "Switch to previous gesture profile",
-            icon: "person.crop.circle.fill.badge.minus"
-        ),
-        PluginAction(
-            id: "switch_profile",
-            name: "Switch to Profile",
-            description: "Switch to specific gesture profile",
+            id: "cycle_profile",
+            name: "Cycle Profile",
+            description: "Switch to the next or previous gesture profile",
             requiresParameters: true,
             supportedParameters: [
                 ParameterDefinition(
-                    key: "profile_id",
-                    name: "Profile ID",
+                    key: "direction",
+                    name: "Direction",
+                    type: .selection,
+                    defaultValue: AnyCodable("next"),
+                    description: "Which direction to cycle",
+                    validation: ValidationRule(allowedValues: [
+                        AnyCodable("next"),
+                        AnyCodable("previous")
+                    ])
+                )
+            ],
+            icon: "person.crop.circle.fill.badge.plus"
+        ),
+        
+        // Switch to Profile (by name)
+        PluginAction(
+            id: "switch_profile",
+            name: "Switch to Profile",
+            description: "Switch to a specific gesture profile by name",
+            requiresParameters: true,
+            supportedParameters: [
+                ParameterDefinition(
+                    key: "profile_name",
+                    name: "Profile Name",
                     type: .string,
                     required: true,
-                    description: "UUID of the profile to switch to"
+                    description: "Name of the profile to switch to"
                 )
             ],
             icon: "person.crop.circle.fill"
@@ -191,49 +300,67 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
         }
         
         switch action.id {
+            
+        // MARK: Window Actions
         case "close_window":
-            closeCurrentWindow(context: context)
+            closeWindow(target: parseWindowTarget(from: parameters), context: context)
+            
+        case "minimize":
+            minimizeWindow(target: parseWindowTarget(from: parameters), context: context)
+            
+        case "maximize":
+            maximizeWindow(target: parseWindowTarget(from: parameters), context: context)
+            
+        case "fullscreen":
+            toggleFullscreen(target: parseWindowTarget(from: parameters), context: context)
+            
+        case "hide_app":
+            let target = parameters.string(for: "target") ?? "frontmost"
+            let bundleId = parameters.string(for: "app_bundle_id")
+            hideApplication(target: target, bundleId: bundleId, context: context)
+            
+        // MARK: App Actions
         case "quit_app":
             let target = parameters.string(for: "target") ?? "frontmost"
-            let bundleId = parameters.string(for: "bundle_id")
+            let bundleId = parameters.string(for: "app_bundle_id")
             quitApplication(target: target, bundleId: bundleId, context: context)
-        case "minimize":
-            minimizeWindow(context: context)
-        case "maximize":
-            maximizeWindow(context: context)
-        case "fullscreen":
-            toggleFullscreen(context: context)
-        case "hide_app":
-            hideApplication(context: context)
+            
+        // MARK: System UI
         case "mission_control":
             activateMissionControl(context: context)
         case "show_desktop":
             showDesktop(context: context)
         case "app_expose":
             activateAppExpose(context: context)
-        case "next_window":
-            cycleWindows(forward: true, context: context)
-        case "previous_window":
-            cycleWindows(forward: false, context: context)
-        case "next_space":
-            moveToSpace(next: true, context: context)
-        case "previous_space":
-            moveToSpace(next: false, context: context)
+            
+        // MARK: Cycle Window
+        case "cycle_window":
+            let forward = (parameters.string(for: "direction") ?? "forward") == "forward"
+            cycleWindows(forward: forward, context: context)
+            
+        // MARK: Cycle Space
+        case "cycle_space":
+            let next = (parameters.string(for: "direction") ?? "next") == "next"
+            moveToSpace(next: next, context: context)
+            
+        // MARK: System
         case "lock_screen":
             lockScreen(context: context)
         case "sleep_display":
             sleepDisplay(context: context)
         case "empty_trash":
             emptyTrash(context: context)
-        case "next_profile":
-            switchToNextProfile(context: context)
-        case "previous_profile":
-            switchToPreviousProfile(context: context)
+            
+        // MARK: Profile
+        case "cycle_profile":
+            let forward = (parameters.string(for: "direction") ?? "next") == "next"
+            cycleProfile(forward: forward, context: context)
+            
         case "switch_profile":
-            if let profileIdString = parameters.string(for: "profile_id"),
-               let profileId = UUID(uuidString: profileIdString) {
-                switchToSpecificProfile(profileId, context: context)
+            if let name = parameters.string(for: "profile_name") {
+                switchToProfileByName(name, context: context)
             }
+            
         default:
             throw PluginError.actionNotFound(action.id)
         }
@@ -242,9 +369,16 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
     func validate(action: PluginAction, with parameters: ActionParameters) -> ValidationResult {
         switch action.id {
         case "quit_app":
-            if let target = parameters.string(for: "target"),
-               target == "specific" && parameters.string(for: "bundle_id") == nil {
-                return ValidationResult.invalid(error: "Bundle ID required when targeting specific app")
+            if parameters.string(for: "target") == "specific" && parameters.string(for: "app_bundle_id") == nil {
+                return .invalid(error: "An application must be specified")
+            }
+        case "hide_app":
+            if parameters.string(for: "target") == "specific" && parameters.string(for: "app_bundle_id") == nil {
+                return .invalid(error: "An application must be specified")
+            }
+        case "switch_profile":
+            if parameters.string(for: "profile_name") == nil {
+                return .invalid(error: "Profile name is required")
             }
         default:
             break
@@ -253,30 +387,133 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
     }
     
     func configurationView(for action: PluginAction) -> NSView? {
-        // Return custom configuration views for actions that need them
         return nil
     }
     
-    // MARK: - Private Implementation
+    // MARK: - Window Target Helpers
     
-    private func closeCurrentWindow(context: PluginContext) {
-        guard let frontApp = context.getFrontmostApplication() else { return }
+    private func parseWindowTarget(from parameters: ActionParameters) -> WindowTarget {
+        let typeStr = parameters.string(for: "target") ?? "frontmost"
+        return WindowTarget(
+            typeStr: typeStr,
+            bundleId: parameters.string(for: "app_bundle_id"),
+            title: parameters.string(for: "window_title"),
+            age: parameters.number(for: "window_age").map { Int($0) }
+        )
+    }
+    
+    /// Lightweight target descriptor used by Core plugin (does not depend on WindowTargeting)
+    private struct WindowTarget {
+        enum Kind { case frontmost, byAge(Int), byApplication(String), byTitle(String), mousePosition }
+        let kind: Kind
         
-        let appElement = AXUIElementCreateApplication(frontApp.processIdentifier)
-        
-        if let windowValue = context.getAccessibilityAttribute(appElement, attribute: kAXFocusedWindowAttribute as String),
-           let window = windowValue as! AXUIElement? {
-            
-            if let buttonValue = context.getAccessibilityAttribute(window, attribute: kAXCloseButtonAttribute as String),
-               let closeButton = buttonValue as! AXUIElement? {
-                _ = context.performAccessibilityAction(closeButton, action: kAXPressAction as String)
-            } else {
-                context.sendKeyboardShortcut(keyCode: 13, modifiers: [.maskCommand]) // Cmd+W
+        init(typeStr: String, bundleId: String?, title: String?, age: Int?) {
+            switch typeStr {
+            case "by_age":          self.kind = .byAge(age ?? 1)
+            case "by_application":  self.kind = bundleId.map { .byApplication($0) } ?? .frontmost
+            case "by_title":        self.kind = title.map { .byTitle($0) } ?? .frontmost
+            case "mouse_position":  self.kind = .mousePosition
+            default:                self.kind = .frontmost
             }
-        } else {
-            context.sendKeyboardShortcut(keyCode: 13, modifiers: [.maskCommand]) // Cmd+W
         }
     }
+    
+    /// Returns the AXUIElement for the target window, falling back to frontmost.
+    private func resolveTargetWindow(_ target: WindowTarget, context: PluginContext) -> AXUIElement? {
+        switch target.kind {
+        case .frontmost, .mousePosition:
+            guard let app = context.getFrontmostApplication() else { return nil }
+            let appEl = AXUIElementCreateApplication(app.processIdentifier)
+            guard let wv = context.getAccessibilityAttribute(appEl, attribute: kAXFocusedWindowAttribute as String) else { return nil }
+            // swiftlint:disable:next force_cast
+            return unsafeBitCast(wv, to: AXUIElement.self)
+            
+        case .byAge(let age):
+            guard let app = context.getFrontmostApplication() else { return nil }
+            let windows = context.getWindowsForApplication(app.processIdentifier)
+            let idx = age - 1
+            return idx < windows.count ? windows[idx] : windows.first
+            
+        case .byApplication(let bundleId):
+            guard let app = context.getRunningApplications().first(where: { $0.bundleIdentifier == bundleId }) else { return nil }
+            let appEl = AXUIElementCreateApplication(app.processIdentifier)
+            guard let wv = context.getAccessibilityAttribute(appEl, attribute: kAXFocusedWindowAttribute as String) else { return nil }
+            // swiftlint:disable:next force_cast
+            return unsafeBitCast(wv, to: AXUIElement.self)
+            
+        case .byTitle(let title):
+            for (window, _) in context.getAllVisibleWindows() {
+                if let tv = context.getAccessibilityAttribute(window, attribute: kAXTitleAttribute as String) as? String,
+                   tv == title { return window }
+            }
+            return nil
+        }
+    }
+    
+    // MARK: - Window Action Implementations
+    
+    private func closeWindow(target: WindowTarget, context: PluginContext) {
+        guard let window = resolveTargetWindow(target, context: context) else {
+            context.sendKeyboardShortcut(keyCode: 13, modifiers: [.maskCommand])
+            return
+        }
+        if let btnObj = context.getAccessibilityAttribute(window, attribute: kAXCloseButtonAttribute as String) {
+            let btn = unsafeBitCast(btnObj, to: AXUIElement.self)
+            _ = context.performAccessibilityAction(btn, action: kAXPressAction as String)
+        } else {
+            context.sendKeyboardShortcut(keyCode: 13, modifiers: [.maskCommand])
+        }
+    }
+    
+    private func minimizeWindow(target: WindowTarget, context: PluginContext) {
+        guard let window = resolveTargetWindow(target, context: context) else {
+            context.sendKeyboardShortcut(keyCode: 46, modifiers: [.maskCommand])
+            return
+        }
+        _ = context.setAccessibilityAttribute(window, attribute: kAXMinimizedAttribute as String, value: true as CFBoolean)
+    }
+    
+    private func maximizeWindow(target: WindowTarget, context: PluginContext) {
+        guard let window = resolveTargetWindow(target, context: context),
+              let screen = NSScreen.main else {
+            return
+        }
+        let frame = screen.visibleFrame
+        var position = frame.origin
+        var size     = frame.size
+        if let posVal = AXValueCreate(.cgPoint, &position) {
+            _ = context.setAccessibilityAttribute(window, attribute: kAXPositionAttribute as String, value: posVal)
+        }
+        if let sizeVal = AXValueCreate(.cgSize, &size) {
+            _ = context.setAccessibilityAttribute(window, attribute: kAXSizeAttribute as String, value: sizeVal)
+        }
+    }
+    
+    private func toggleFullscreen(target: WindowTarget, context: PluginContext) {
+        // If targeting a specific app, activate it first
+        if case .byApplication(let bundleId) = target.kind,
+           let app = context.getRunningApplications().first(where: { $0.bundleIdentifier == bundleId }) {
+            app.activate(options: [])
+            usleep(100_000)
+        }
+        context.sendKeyboardShortcut(keyCode: 3, modifiers: [.maskControl, .maskCommand])
+    }
+    
+    private func hideApplication(target: String, bundleId: String?, context: PluginContext) {
+        switch target {
+        case "specific":
+            guard let bid = bundleId else { return }
+            if let app = context.getRunningApplications().first(where: { $0.bundleIdentifier == bid }) {
+                _ = context.hideApplication(app)
+            }
+        default: // frontmost
+            if let app = context.getFrontmostApplication() {
+                _ = context.hideApplication(app)
+            }
+        }
+    }
+    
+    // MARK: - App Actions
     
     private func quitApplication(target: String, bundleId: String?, context: PluginContext) {
         switch target {
@@ -289,11 +526,10 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
                 }
             }
         case "specific":
-            guard let bundleId = bundleId else { return }
-            if bundleId != "com.apple.finder" {
-                let apps = context.getRunningApplications().filter { $0.bundleIdentifier == bundleId }
-                apps.forEach { _ = context.terminateApplication($0) }
-            }
+            guard let bid = bundleId, bid != "com.apple.finder" else { return }
+            context.getRunningApplications()
+                .filter { $0.bundleIdentifier == bid }
+                .forEach { _ = context.terminateApplication($0) }
         case "all_except_finder":
             context.getRunningApplications().forEach { app in
                 if app.activationPolicy == .regular,
@@ -307,51 +543,7 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
         }
     }
     
-    private func minimizeWindow(context: PluginContext) {
-        guard let frontApp = context.getFrontmostApplication() else { return }
-        
-        let appElement = AXUIElementCreateApplication(frontApp.processIdentifier)
-        
-        if let windowValue = context.getAccessibilityAttribute(appElement, attribute: kAXFocusedWindowAttribute as String),
-           let window = windowValue as! AXUIElement? {
-            let minimized = true as CFBoolean
-            _ = context.setAccessibilityAttribute(window, attribute: kAXMinimizedAttribute as String, value: minimized)
-        } else {
-            context.sendKeyboardShortcut(keyCode: 46, modifiers: [.maskCommand]) // Cmd+M
-        }
-    }
-    
-    private func maximizeWindow(context: PluginContext) {
-        guard let frontApp = context.getFrontmostApplication() else { return }
-        guard let screen = NSScreen.main else { return }
-        
-        let appElement = AXUIElementCreateApplication(frontApp.processIdentifier)
-        
-        if let windowValue = context.getAccessibilityAttribute(appElement, attribute: kAXFocusedWindowAttribute as String),
-           let window = windowValue as! AXUIElement? {
-            
-            let frame = screen.visibleFrame
-            var position = CGPoint(x: frame.origin.x, y: frame.origin.y)
-            var size = CGSize(width: frame.size.width, height: frame.size.height)
-            
-            if let positionValue = AXValueCreate(.cgPoint, &position),
-               let sizeValue = AXValueCreate(.cgSize, &size) {
-                _ = context.setAccessibilityAttribute(window, attribute: kAXPositionAttribute as String, value: positionValue)
-                _ = context.setAccessibilityAttribute(window, attribute: kAXSizeAttribute as String, value: sizeValue)
-            }
-        }
-    }
-    
-    private func toggleFullscreen(context: PluginContext) {
-        // Ctrl+Cmd+F is the standard macOS fullscreen toggle - use it as primary method
-        context.sendKeyboardShortcut(keyCode: 3, modifiers: [.maskControl, .maskCommand])
-    }
-    
-    private func hideApplication(context: PluginContext) {
-        if let app = context.getFrontmostApplication() {
-            _ = context.hideApplication(app)
-        }
-    }
+    // MARK: - System UI
     
     private func activateMissionControl(context: PluginContext) {
         context.sendKeyboardShortcut(keyCode: 99, modifiers: []) // F3
@@ -362,61 +554,55 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
     }
     
     private func activateAppExpose(context: PluginContext) {
-        context.sendKeyboardShortcut(keyCode: 125, modifiers: [.maskControl]) // Control+Down
+        context.sendKeyboardShortcut(keyCode: 125, modifiers: [.maskControl]) // Ctrl+Down
     }
     
     private func cycleWindows(forward: Bool, context: PluginContext) {
         if forward {
-            context.sendKeyboardShortcut(keyCode: 50, modifiers: [.maskCommand]) // Cmd+`
+            context.sendKeyboardShortcut(keyCode: 50, modifiers: [.maskCommand])           // Cmd+`
         } else {
             context.sendKeyboardShortcut(keyCode: 50, modifiers: [.maskCommand, .maskShift]) // Cmd+Shift+`
         }
     }
     
     private func moveToSpace(next: Bool, context: PluginContext) {
-        let keyCode: CGKeyCode = next ? 124 : 123 // Right/Left arrow
+        let keyCode: CGKeyCode = next ? 124 : 123 // Right / Left arrow
         context.sendKeyboardShortcut(keyCode: keyCode, modifiers: [.maskControl])
     }
+    
+    // MARK: - System
     
     private func lockScreen(context: PluginContext) {
         context.sendKeyboardShortcut(keyCode: 12, modifiers: [.maskCommand, .maskControl]) // Cmd+Ctrl+Q
     }
     
     private func sleepDisplay(context: PluginContext) {
-        let script = "do shell script \"pmset displaysleepnow\""
-        try? context.executeAppleScript(script)
+        try? context.executeAppleScript("do shell script \"pmset displaysleepnow\"")
     }
     
     private func emptyTrash(context: PluginContext) {
-        let script = """
+        try? context.executeAppleScript("""
             tell application "Finder"
                 empty trash
             end tell
-        """
-        try? context.executeAppleScript(script)
+        """)
     }
-    
-    // MARK: - Helper Methods removed - now using context methods
     
     // MARK: - Profile Management
     
-    /// Cycle to an adjacent profile (next or previous).
     private func cycleProfile(forward: Bool, context: PluginContext) {
         let profiles = context.getProfiles()
         guard !profiles.isEmpty else { return }
-        
         let currentId = context.getActiveProfileId()
         let currentIndex = profiles.firstIndex(where: {
             ($0["id"] as? String).flatMap(UUID.init(uuidString:)) == currentId
         }) ?? 0
-        
         let targetIndex = forward
             ? (currentIndex + 1) % profiles.count
             : (currentIndex > 0 ? currentIndex - 1 : profiles.count - 1)
         let targetProfile = profiles[targetIndex]
-        
-        if let idString = targetProfile["id"] as? String,
-           let profileId = UUID(uuidString: idString),
+        if let idStr = targetProfile["id"] as? String,
+           let profileId = UUID(uuidString: idStr),
            let profileName = targetProfile["name"] as? String {
             context.applyProfile(profileId: profileId)
             context.saveConfiguration()
@@ -425,21 +611,17 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
         }
     }
     
-    private func switchToNextProfile(context: PluginContext) {
-        cycleProfile(forward: true, context: context)
-    }
-    
-    private func switchToPreviousProfile(context: PluginContext) {
-        cycleProfile(forward: false, context: context)
-    }
-    
-    private func switchToSpecificProfile(_ profileId: UUID, context: PluginContext) {
+    private func switchToProfileByName(_ name: String, context: PluginContext) {
         let profiles = context.getProfiles()
         guard let targetProfile = profiles.first(where: {
-            ($0["id"] as? String).flatMap(UUID.init(uuidString:)) == profileId
-        }) else { return }
-        
-        if let profileName = targetProfile["name"] as? String {
+            ($0["name"] as? String)?.lowercased() == name.lowercased()
+        }) else {
+            context.logger.log("No profile found with name: \(name)", file: #file, function: #function, line: #line)
+            return
+        }
+        if let idStr = targetProfile["id"] as? String,
+           let profileId = UUID(uuidString: idStr),
+           let profileName = targetProfile["name"] as? String {
             context.applyProfile(profileId: profileId)
             context.saveConfiguration()
             context.postNotification(name: NSNotification.Name("GestureConfigurationChanged"), userInfo: nil)

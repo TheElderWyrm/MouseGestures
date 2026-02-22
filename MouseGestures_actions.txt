@@ -1,0 +1,170 @@
+- Make similar actions 1 action + parameter (Example: moving to part of screen)
+
+
+MOUSEGESTURES - ALL AVAILABLE ACTIONS
+======================================
+Last updated: 2026-02-21
+
+--------------------------------------
+CORE ACTIONS (com.mousegestures.core)
+--------------------------------------
+* Remove 'frontmost' from descriptions
+* Actions may need to get moved into other bundles
+* Not all system control, should not be labeled as such?
+
+close_window         - Close the current window 
+	* Add window target parameters
+quit_app             - Quit the frontmost application
+	* Hide bundle id option when not needed
+	* Add finder button for quoting specific application
+minimize             - Minimize the current window
+	* Add window target parameters
+maximize             - Maximize the current window
+	* Add window target parameters
+fullscreen           - Toggle fullscreen mode
+	* Fn + F works on some apps
+	* Command + Control + F works in some apps (Most but not all)
+	* Using Accessibility to click the full screen button doesn't work when buttons aren't shown (common when in full screen) <-- Can we check this and then fall back?
+	* Add window target parameters
+hide_app             - Hide the frontmost application
+	* Window Target parameters
+mission_control      - Show Mission Control
+	* Not Functioning
+show_desktop         - Show the desktop
+	* Not Functioning
+app_expose           - Show all windows of current application
+	* Not working
+[next_window          - Switch to next window
+previous_window      - Switch to previous window]
+	* Duplicate of cycle_windows?
+[next_space           - Move to next desktop space
+	* Not working
+previous_space       - Move to previous desktop space]
+	* Not Working
+	* Action + Parameter
+lock_screen          - Lock the screen [✓]
+sleep_display        - Put the display to sleep
+	* How is this different from system sleep?
+empty_trash          - Empty the trash
+	* Not working
+[next_profile         - Switch to next gesture profile
+previous_profile     - Switch to previous gesture profile]
+	* Takes a long time/lags. 
+	* Display using simple notification (No custom UI)
+	* Action + Paramter
+switch_profile       - Switch to a specific gesture profile
+	* Use Profile Name not UUID as parameter
+
+------------------------------------------
+WINDOW MANAGEMENT (com.mousegestures.window)
+------------------------------------------
+- Window targeting not working
+- Window age should be an integer
+- Actions that change the size only should not reposition
+- Targeting its own window crashes
+	-         let result = AXUIElementSetAttributeValue(element, attribute as CFString, value)
+- Improved parameter organization
+
+ 
+
+[left_half            - Move window to left half of screen
+right_half           - Move window to right half of screen
+top_half             - Move window to top half of screen
+bottom_half          - Move window to bottom half of screen]
+	* Action + Parameter
+[top_left             - Move window to top left quarter
+top_right            - Move window to top right quarter
+bottom_left          - Move window to bottom left quarter
+bottom_right         - Move window to bottom right quarter]
+	* Action + Paramter
+[left_third           - Move window to left third of screen
+center_third         - Move window to center third of screen
+right_third          - Move window to right third of screen]
+	* action + paramter
+center               - Center window on screen
+[resize_25            - Resize window to 25% of screen
+resize_50            - Resize window to 50% of screen
+resize_75            - Resize window to 75% of screen]
+	* Make one Action + Parameter
+[grow                 - Increase window size by 10%
+shrink               - Decrease window size by 10%]
+	* Make one Action + Parameter
+	* Make the % a parameter
+next_display         - Move window to next display
+	* Remove
+previous_display     - Move window to previous display
+	* Remove
+[cycle_windows_forward  - Cycle through windows forward
+cycle_windows_backward - Cycle through windows backward]
+	* Make one Action + Parameter
+switch_to_window     - Switch to a specific window
+tile_all             - Tile all windows on screen
+	* Only Partially Works
+	* Activates only within a single application (Make a parameter)
+cascade              - Cascade all windows
+	* Activates only within a single application (Make a parameter)
+[save_position        - Save current window position
+	* Save as __
+restore_position     - Restore saved window position
+	* Restore from __]
+	* Action + Parameter
+	* Add delete saved position
+[save_layout          - Save all window positions as a named layout
+restore_layout       - Restore a saved window layout
+delete_layout        - Delete a saved window layout]
+	* Action + Parameter
+set_size             - Set custom window size (px or % of screen)
+	* Select Type
+set_position         - Set custom window position (absolute, relative, %, or preset)
+	* Issues with parameter selection
+
+------------------------------------------
+MEDIA CONTROL (com.mousegestures.media)
+------------------------------------------
+play_pause           - Toggle media playback
+next_track           - Skip to next track
+previous_track       - Go to previous track
+volume_up            - Increase volume
+volume_down          - Decrease volume
+mute                 - Toggle mute state
+set_volume           - Set volume to a specific level (0-100)
+fast_forward         - Fast forward playback by N seconds
+rewind               - Rewind playback by N seconds
+
+------------------------------------------
+SYSTEM CONTROL (com.mousegestures.system)
+------------------------------------------
+brightness_up        - Increase display brightness
+brightness_down      - Decrease display brightness
+keyboard_brightness_up   - Increase keyboard brightness
+keyboard_brightness_down - Decrease keyboard brightness
+toggle_dark_mode     - Switch between light and dark mode
+toggle_do_not_disturb - Enable/disable Do Not Disturb
+toggle_night_shift   - Enable/disable Night Shift
+screenshot_full      - Take a screenshot of entire screen
+screenshot_selection - Take a screenshot of selected area
+screenshot_window    - Take a screenshot of a window
+screenshot_clipboard - Take a screenshot to clipboard (full/selection/window)
+system_sleep         - Put computer to sleep
+restart              - Restart the computer
+shutdown             - Shut down the computer
+logout               - Log out current user
+
+------------------------------------------
+AUTOMATION (com.mousegestures.automation)
+------------------------------------------
+keyboard_shortcut    - Trigger a keyboard shortcut
+run_shortcut         - Run a Shortcuts app shortcut
+run_script           - Execute a script (AppleScript, Shell, JavaScript, Python)
+open_app             - Launch an application
+open_file            - Open a file or folder
+open_url             - Open a URL in default browser
+clipboard_action     - Manipulate clipboard (copy/paste/cut/clear/set text)
+
+------------------------------------------
+BUNDLE ACTIONS (com.mousegestures.bundle)
+------------------------------------------
+execute_bundle       - Execute a bundle of actions sequentially or in parallel
+conditional_action   - Execute an action based on an if/else condition
+repeat_action        - Repeat an action N times with a configurable delay
+delay                - Insert a timed pause (used within bundles)

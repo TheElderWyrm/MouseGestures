@@ -7,13 +7,16 @@
 - Reduce size of modifier keys.
 - Certain trigger combinations don't work (Example: Shortcut + Mousebutton)
 - Drag does not need to be a separate trigger configuration than mouse button
+- Profiles: pressing delete should not select the profile check box
+- Hide unnecessary parameters (Example: Specific)
+- Action selection not displaying 'core'
+- Keyboard shortcut detection not working
 
 Actions:
 - Advanced configurations should label themselves (Currently just says: "This action requires advanced configuration")
 - For window actions have a 'target' dropdown instead of listing all parameter options
 - Not all actions work.
 - Clean up unneeded actions
-- bundle actions vs execute bundle actions?
 - Open application should bring up finder to select any application
 - Open File parameter should have a button to select from finder
 - Full screen unreliable.
@@ -21,5 +24,4 @@ Actions:
 	-Command + Control + F works in some apps (Most but not all)
 	-Using Accessibility to click the full screen button doesn't work when buttons aren't shown (common when in full screen) 
 - Window Actions targeting multiple windows does not work
-- May just start from scratch and rewrite actions.
-- Conditional gesture bundle logic?
+- Improve: conditional gesture bundle logic
