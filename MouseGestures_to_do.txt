@@ -25,3 +25,4 @@ Actions:
 	-Using Accessibility to click the full screen button doesn't work when buttons aren't shown (common when in full screen) 
 - Window Actions targeting multiple windows does not work
 - Improve: conditional gesture bundle logic
+Picker: the selection "" is invalid and does not have an associated tag, this will give undefined results.

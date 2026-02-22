@@ -8,52 +8,52 @@ Last updated: 2026-02-21
 --------------------------------------
 CORE ACTIONS (com.mousegestures.core)
 --------------------------------------
-* Remove 'frontmost' from descriptions
 * Actions may need to get moved into other bundles
 * Not all system control, should not be labeled as such?
 
-close_window         - Close the current window 
-	* Add window target parameters
-quit_app             - Quit the frontmost application
+close_window         - Close a window [✓]
+	* Add window target parameters [✓]
+quit_app             - Quit an application [✓]
 	* Hide bundle id option when not needed
-	* Add finder button for quoting specific application
-minimize             - Minimize the current window
-	* Add window target parameters
-maximize             - Maximize the current window
-	* Add window target parameters
-fullscreen           - Toggle fullscreen mode
+	* Add finder button for quoting specific application [✓ uses .application type]
+minimize             - Minimize a window [✓]
+	* Add window target parameters [✓]
+maximize             - Maximize a window [✓]
+	* Add window target parameters [✓]
+fullscreen           - Toggle fullscreen mode [✓]
 	* Fn + F works on some apps
 	* Command + Control + F works in some apps (Most but not all)
 	* Using Accessibility to click the full screen button doesn't work when buttons aren't shown (common when in full screen) <-- Can we check this and then fall back?
-	* Add window target parameters
-hide_app             - Hide the frontmost application
-	* Window Target parameters
+	* Add window target parameters [✓]
+hide_app             - Hide the active application [✓]
+	* Window Target parameters [✓]
 mission_control      - Show Mission Control
 	* Not Functioning
 show_desktop         - Show the desktop
 	* Not Functioning
 app_expose           - Show all windows of current application
 	* Not working
-[next_window          - Switch to next window
-previous_window      - Switch to previous window]
-	* Duplicate of cycle_windows?
-[next_space           - Move to next desktop space
+[next_window          - Switch to next window        → cycle_window (direction: forward)  [✓]
+previous_window      - Switch to previous window]    → cycle_window (direction: backward) [✓]
+	* Duplicate of cycle_windows? [✓ consolidated]
+[next_space           - Move to next desktop space    → cycle_space (direction: next)     [✓]
 	* Not working
-previous_space       - Move to previous desktop space]
+previous_space       - Move to previous desktop space] → cycle_space (direction: previous) [✓]
 	* Not Working
-	* Action + Parameter
+	* Action + Parameter [✓]
 lock_screen          - Lock the screen [✓]
 sleep_display        - Put the display to sleep
 	* How is this different from system sleep?
 empty_trash          - Empty the trash
 	* Not working
-[next_profile         - Switch to next gesture profile
-previous_profile     - Switch to previous gesture profile]
+[next_profile         - Switch to next gesture profile    → cycle_profile (direction: next)     [✓]
+previous_profile     - Switch to previous gesture profile] → cycle_profile (direction: previous) [✓]
 	* Takes a long time/lags. 
-	* Display using simple notification (No custom UI)
-	* Action + Paramter
-switch_profile       - Switch to a specific gesture profile
-	* Use Profile Name not UUID as parameter
+	* Display using simple notification (No custom UI) [✓]
+	* Action + Parameter [✓]
+switch_profile       - Switch to a specific gesture profile [✓]
+	* Use Profile Name not UUID as parameter [✓]
+	* Switch to dropdown
 
 ------------------------------------------
 WINDOW MANAGEMENT (com.mousegestures.window)
@@ -65,54 +65,57 @@ WINDOW MANAGEMENT (com.mousegestures.window)
 	-         let result = AXUIElementSetAttributeValue(element, attribute as CFString, value)
 - Improved parameter organization
 
- 
-
 [left_half            - Move window to left half of screen
 right_half           - Move window to right half of screen
 top_half             - Move window to top half of screen
-bottom_half          - Move window to bottom half of screen]
-	* Action + Parameter
-[top_left             - Move window to top left quarter
+bottom_half          - Move window to bottom half of screen
+top_left             - Move window to top left quarter
 top_right            - Move window to top right quarter
 bottom_left          - Move window to bottom left quarter
-bottom_right         - Move window to bottom right quarter]
-	* Action + Paramter
-[left_third           - Move window to left third of screen
+bottom_right         - Move window to bottom right quarter
+left_third           - Move window to left third of screen
 center_third         - Move window to center third of screen
 right_third          - Move window to right third of screen]
-	* action + paramter
+	→ snap_window (position: left_half | right_half | top_half | bottom_half |
+	               top_left | top_right | bottom_left | bottom_right |
+	               left_third | center_third | right_third) [✓]
+
 center               - Center window on screen
 [resize_25            - Resize window to 25% of screen
 resize_50            - Resize window to 50% of screen
 resize_75            - Resize window to 75% of screen]
-	* Make one Action + Parameter
+	→ resize_to_percent (percent: 1–100) [✓]
+
 [grow                 - Increase window size by 10%
 shrink               - Decrease window size by 10%]
-	* Make one Action + Parameter
-	* Make the % a parameter
+	→ adjust_size (direction: grow | shrink, percent: 1–100) [✓]
+
 next_display         - Move window to next display
-	* Remove
+	* Remove [✓ removed]
 previous_display     - Move window to previous display
-	* Remove
+	* Remove [✓ removed]
+
 [cycle_windows_forward  - Cycle through windows forward
 cycle_windows_backward - Cycle through windows backward]
-	* Make one Action + Parameter
+	→ cycle_windows (direction: forward | backward) [✓]
+
 switch_to_window     - Switch to a specific window
 tile_all             - Tile all windows on screen
 	* Only Partially Works
 	* Activates only within a single application (Make a parameter)
 cascade              - Cascade all windows
 	* Activates only within a single application (Make a parameter)
+
 [save_position        - Save current window position
-	* Save as __
-restore_position     - Restore saved window position
-	* Restore from __]
-	* Action + Parameter
-	* Add delete saved position
+restore_position     - Restore saved window position]
+	→ window_position_memory (operation: save | restore | delete, slot: name) [✓]
+	* Add delete saved position [✓]
+
 [save_layout          - Save all window positions as a named layout
 restore_layout       - Restore a saved window layout
 delete_layout        - Delete a saved window layout]
-	* Action + Parameter
+	→ window_layout (operation: save | restore | delete, layout_name) [✓]
+
 set_size             - Set custom window size (px or % of screen)
 	* Select Type
 set_position         - Set custom window position (absolute, relative, %, or preset)
