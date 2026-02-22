@@ -45,18 +45,6 @@ struct ConfigurationProfile: Codable, Equatable, Identifiable {
     }
     var userInfo: [String: AnyCodable] = [:] // For extensibility
     
-    // Legacy fields: decoded for migration but no longer used (zone/haptic are global settings)
-    private var hapticFeedbackEnabled: Bool?
-    private var edgeThreshold: CGFloat?
-    private var cornerSize: CGFloat?
-    private var cornerBuffer: CGFloat?
-    
-    /// Access legacy values for one-time migration to global settings
-    var legacyHapticFeedbackEnabled: Bool? { hapticFeedbackEnabled }
-    var legacyEdgeThreshold: CGFloat? { edgeThreshold }
-    var legacyCornerSize: CGFloat? { cornerSize }
-    var legacyCornerBuffer: CGFloat? { cornerBuffer }
-    
     init(name: String, gestures: [Gesture] = [],
          isDefault: Bool = false, keyboardShortcut: KeyboardTrigger? = nil,
          keyboardShortcutEnabled: Bool = true) {

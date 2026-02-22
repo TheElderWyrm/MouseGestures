@@ -132,12 +132,11 @@ public class Configuration: Codable {
             self.showZoneHighlights = decoded.showZoneHighlights ?? false
             self.showZoneLabels = decoded.showZoneLabels ?? false
             
-            // Global zone/haptic settings — migrate from active profile if not yet saved globally
-            let activeProf = decoded.profiles.first(where: { $0.id == decoded.activeProfileId }) ?? decoded.profiles.first
-            self.hapticFeedbackEnabled = decoded.hapticFeedbackEnabled ?? activeProf?.legacyHapticFeedbackEnabled ?? true
-            self.edgeThreshold = decoded.edgeThreshold ?? activeProf?.legacyEdgeThreshold ?? 30
-            self.cornerSize = decoded.cornerSize ?? activeProf?.legacyCornerSize ?? 100
-            self.cornerBuffer = decoded.cornerBuffer ?? activeProf?.legacyCornerBuffer ?? 50
+            // Global zone/haptic settings
+            self.hapticFeedbackEnabled = decoded.hapticFeedbackEnabled ?? true
+            self.edgeThreshold = decoded.edgeThreshold ?? 30
+            self.cornerSize = decoded.cornerSize ?? 100
+            self.cornerBuffer = decoded.cornerBuffer ?? 50
             self.hideFromMenuBar = decoded.hideFromMenuBar ?? false
             self.debugModeEnabled = decoded.debugModeEnabled ?? false
             self.developerModeEnabled = decoded.developerModeEnabled ?? false

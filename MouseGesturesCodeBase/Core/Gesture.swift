@@ -50,9 +50,7 @@ struct Gesture: Codable, Equatable {
     
     enum CodingKeys: String, CodingKey {
         case genericActivation
-        case activation           // Legacy key (ActivationSettings)
         case components
-        case trigger              // Legacy key (GestureTrigger)
         case actionIdentifier
         case timing
         case parameters
@@ -60,7 +58,7 @@ struct Gesture: Codable, Equatable {
         case longPressParameters
     }
     
-    // MARK: - Codable (with migration)
+    // MARK: - Codable
     
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -70,58 +68,8 @@ struct Gesture: Codable, Equatable {
         parameters = try c.decode([String: AnyCodable].self, forKey: .parameters)
         longPressActionIdentifier = try c.decodeIfPresent(String.self, forKey: .longPressActionIdentifier)
         longPressParameters = try c.decodeIfPresent([String: AnyCodable].self, forKey: .longPressParameters)
-        
-        // --- Migrate genericActivation ---
-        if let generic = try? c.decode(GenericActivation.self, forKey: .genericActivation) {
-            genericActivation = generic
-        } else if let legacy = try? c.decode(LegacyActivationSettings.self, forKey: .activation) {
-            // Migrate from old ActivationSettings
-            var configs: [String: [String: AnyCodable]] = [:]
-            if let kbd = legacy.keyboardTrigger {
-                configs["keyboard_detector"] = [
-                    "keyCode": AnyCodable(Int(kbd.keyCode)),
-                    "modifiers": AnyCodable(kbd.modifiers.rawValue),
-                    "displayString": AnyCodable(kbd.displayString)
-                ]
-            }
-            if let mouse = legacy.mouseButtonTrigger {
-                configs["mouse_button_detector"] = [
-                    "button": AnyCodable(mouse.button.rawValue),
-                    "modifiers": AnyCodable(mouse.modifiers.rawValue),
-                    "displayString": AnyCodable(mouse.displayString)
-                ]
-            }
-            genericActivation = GenericActivation(detectionConfigs: configs, isEnabled: legacy.isEnabled)
-        } else {
-            genericActivation = GenericActivation()
-        }
-        
-        // --- Migrate components ---
-        if let comps = try? c.decode(GestureActivationComponents.self, forKey: .components) {
-            components = comps
-        } else {
-            // Build components from legacy GestureTrigger + genericActivation
-            var comps = GestureActivationComponents()
-            
-            if let trigger = try? c.decode(LegacyGestureTrigger.self, forKey: .trigger) {
-                comps.screenZone = ScreenZoneConfig(isEnabled: true, zone: trigger.zone)
-                if !trigger.modifiers.isEmpty {
-                    comps.modifierKey = ModifierKeyConfig(isEnabled: true, modifiers: trigger.modifiers)
-                }
-                if trigger.dragModifier != .none {
-                    comps.dragType = DragTypeConfig(isEnabled: true, dragType: trigger.dragModifier)
-                }
-            }
-            
-            if let kbd = genericActivation.keyboardTrigger {
-                comps.keyboardShortcut = KeyboardShortcutConfig(isEnabled: true, keyboardTrigger: kbd)
-            }
-            if let mouse = genericActivation.mouseButtonTrigger {
-                comps.mouseButton = MouseButtonConfig(isEnabled: true, button: mouse.button)
-            }
-            
-            components = comps
-        }
+        genericActivation = try c.decode(GenericActivation.self, forKey: .genericActivation)
+        components = try c.decode(GestureActivationComponents.self, forKey: .components)
     }
     
     func encode(to encoder: Encoder) throws {
@@ -297,52 +245,4 @@ struct Gesture: Codable, Equatable {
     }
 }
 
-// MARK: - Legacy Migration Types (private, decode-only)
 
-/// Used only during Codable migration from old save files. Not a live data structure.
-private struct LegacyGestureTrigger: Codable {
-    let zone: ScreenZone
-    let modifiers: NSEvent.ModifierFlags
-    let dragModifier: DragModifier
-    
-    init(zone: ScreenZone, modifiers: NSEvent.ModifierFlags, dragModifier: DragModifier = .none) {
-        self.zone = zone
-        self.modifiers = modifiers
-        self.dragModifier = dragModifier
-    }
-}
-
-/// Used only during Codable migration from old save files. Not a live data structure.
-private struct LegacyActivationSettings: Codable {
-    var activationType: ActivationType
-    var keyboardTrigger: KeyboardTrigger?
-    var mouseButtonTrigger: MouseButtonTrigger?
-    var isEnabled: Bool
-    
-    enum CodingKeys: String, CodingKey {
-        case activationType
-        case keyboardTrigger
-        case mouseButtonTrigger
-        case isEnabled
-    }
-    
-    init(activationType: ActivationType = .both,
-         keyboardTrigger: KeyboardTrigger? = nil,
-         mouseButtonTrigger: MouseButtonTrigger? = nil,
-         isEnabled: Bool = true) {
-        self.activationType = activationType
-        self.keyboardTrigger = keyboardTrigger
-        self.mouseButtonTrigger = mouseButtonTrigger
-        self.isEnabled = isEnabled
-    }
-    
-    enum ActivationType: String, Codable, CaseIterable {
-        case gesture = "Gesture Only"
-        case keyboard = "Keyboard Only"
-        case mouseButton = "Mouse Button Only"
-        case both = "Both"
-        case gestureMouseButton = "Gesture + Mouse Button"
-        case keyboardMouseButton = "Keyboard + Mouse Button"
-        case all = "All Methods"
-    }
-}
