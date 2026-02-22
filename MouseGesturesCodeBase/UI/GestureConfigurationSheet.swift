@@ -307,30 +307,22 @@ struct GestureConfigurationSheet: View {
     }
     
     private var screenZoneConfigView: some View {
-        HStack(alignment: .center, spacing: MGStyle.Spacing.xxl) {
-            MGZonePicker(selected: Binding(
+        HStack {
+            Text("Zone:")
+                .font(.system(size: MGStyle.FontSize.caption))
+                .foregroundColor(.secondary)
+                .frame(width: 80, alignment: .trailing)
+            Picker("", selection: Binding(
                 get: { components.screenZone?.zone ?? .topRight },
                 set: { components.screenZone?.zone = $0 }
-            ))
-            
-            VStack(alignment: .leading, spacing: MGStyle.Spacing.sm) {
-                Text(components.screenZone?.zone.displayName ?? "Top Right Corner")
-                    .font(.system(size: MGStyle.FontSize.body, weight: .semibold))
-                    .foregroundColor(.accentColor)
-                
-                Picker("", selection: Binding(
-                    get: { components.screenZone?.zone ?? .topRight },
-                    set: { components.screenZone?.zone = $0 }
-                )) {
-                    ForEach(ScreenZone.allCases, id: \.self) { zone in
-                        Text(zone.displayName).tag(zone)
-                    }
+            )) {
+                ForEach(ScreenZone.allCases, id: \.self) { zone in
+                    Text(zone.displayName).tag(zone)
                 }
-                .pickerStyle(.menu)
-                .frame(width: 160)
-                .labelsHidden()
             }
-            
+            .pickerStyle(.menu)
+            .frame(width: 160)
+            .labelsHidden()
             Spacer()
         }
         .padding(.leading, MGStyle.Spacing.xxl)

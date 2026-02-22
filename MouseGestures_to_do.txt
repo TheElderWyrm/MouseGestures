@@ -1,9 +1,8 @@
 - Reduce duplicate code, unify architecture whenever possible
 
-General:
-- Remove legacy gesture trigger structure
+- Remove Dummy Autoupdate
 
-Actions (fix later):
+Actions:
 - Not all actions work.
 - Clean up unneeded actions
 - bundle actions vs execute bundle actions?
