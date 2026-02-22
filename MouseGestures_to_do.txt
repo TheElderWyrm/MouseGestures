@@ -1,8 +1,16 @@
 - Reduce duplicate code, unify architecture whenever possible
 
 - Remove Dummy Autoupdate
+- Manage detection plugins under developer mode
+- Use full 'gestures' UI in plugins
+- Trigger Configuration: Configurations not aligned between types.
+- Reduce size of modifier keys.
+- Certain trigger combinations don't work (Example: Shortcut + Mousebutton)
+- Drag does not need to be a separate trigger configuration than mouse button
 
 Actions:
+- Advanced configurations should label themselves (Currently just says: "This action requires advanced configuration")
+- For window actions have a 'target' dropdown instead of listing all parameter options
 - Not all actions work.
 - Clean up unneeded actions
 - bundle actions vs execute bundle actions?

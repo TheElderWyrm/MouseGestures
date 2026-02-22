@@ -167,65 +167,6 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
             icon: "safari"
         ),
         PluginAction(
-            id: "search_finder",
-            name: "Search in Finder",
-            description: "Search for files in Finder",
-            requiresParameters: true,
-            supportedParameters: [
-                ParameterDefinition(
-                    key: "query",
-                    name: "Search Query",
-                    type: .string,
-                    required: true,
-                    description: "What to search for"
-                ),
-                ParameterDefinition(
-                    key: "scope",
-                    name: "Search Scope",
-                    type: .selection,
-                    defaultValue: AnyCodable("current"),
-                    description: "Where to search",
-                    validation: ValidationRule(allowedValues: [
-                        AnyCodable("current"),
-                        AnyCodable("home"),
-                        AnyCodable("entire_mac"),
-                        AnyCodable("custom")
-                    ])
-                ),
-                ParameterDefinition(
-                    key: "custom_path",
-                    name: "Custom Path",
-                    type: .path,
-                    description: "Path when using custom scope"
-                )
-            ],
-            icon: "magnifyingglass"
-        ),
-        PluginAction(
-            id: "bundle_actions",
-            name: "Bundle Actions",
-            description: "Execute multiple actions in sequence",
-            requiresParameters: true,
-            supportedParameters: [
-                ParameterDefinition(
-                    key: "actions",
-                    name: "Actions",
-                    type: .json,
-                    required: true,
-                    description: "List of actions to execute"
-                ),
-                ParameterDefinition(
-                    key: "delay_between",
-                    name: "Delay Between Actions",
-                    type: .number,
-                    defaultValue: AnyCodable(0.2),
-                    description: "Seconds to wait between actions",
-                    validation: ValidationRule(minValue: 0, maxValue: 10)
-                )
-            ],
-            icon: "square.stack"
-        ),
-        PluginAction(
             id: "clipboard_action",
             name: "Clipboard Action",
             description: "Manipulate clipboard contents",
@@ -320,19 +261,6 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
                 openURL(urlString, with: browser, context: context)
             }
             
-        case "search_finder":
-            if let query = parameters.string(for: "query") {
-                let scope = parameters.string(for: "scope") ?? "current"
-                let customPath = parameters.string(for: "custom_path")
-                searchInFinder(query: query, scope: scope, customPath: customPath)
-            }
-            
-        case "bundle_actions":
-            if let actionsData = parameters.array(for: "actions") {
-                let delay = parameters.number(for: "delay_between") ?? 0.2
-                executeBundledActions(actionsData, delayBetween: delay, context: context)
-            }
-            
         case "clipboard_action":
             if let action = parameters.string(for: "action") {
                 let text = parameters.string(for: "text")
@@ -383,16 +311,6 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
                 return ValidationResult.invalid(error: "URL is required")
             }
             
-        case "search_finder":
-            guard parameters.string(for: "query") != nil else {
-                return ValidationResult.invalid(error: "Search query is required")
-            }
-            
-        case "bundle_actions":
-            guard parameters.array(for: "actions") != nil else {
-                return ValidationResult.invalid(error: "Actions list is required")
-            }
-            
         case "app_intent":
             guard parameters.string(for: "app_bundle_id") != nil else {
                 return ValidationResult.invalid(error: "Application bundle ID is required")
@@ -422,8 +340,6 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
             return createScriptConfigurationView()
         case "keyboard_shortcut":
             return createKeyboardShortcutConfigurationView()
-        case "bundle_actions":
-            return createBundleActionsConfigurationView()
         default:
             return createDefaultConfigurationView(for: action)
         }
@@ -621,90 +537,6 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
         }
     }
     
-    private func searchInFinder(query: String, scope: String, customPath: String?) {
-        var searchPath: String
-        
-        switch scope {
-        case "current":
-            // Get current Finder window path
-            let script = """
-                tell application "Finder"
-                    if exists window 1 then
-                        return POSIX path of (target of window 1 as alias)
-                    else
-                        return POSIX path of (path to home folder)
-                    end if
-                end tell
-            """
-            
-            var error: NSDictionary?
-            if let scriptObject = NSAppleScript(source: script) {
-                let output = scriptObject.executeAndReturnError(&error)
-                searchPath = output.stringValue ?? NSHomeDirectory()
-            } else {
-                searchPath = NSHomeDirectory()
-            }
-            
-        case "home":
-            searchPath = NSHomeDirectory()
-            
-        case "entire_mac":
-            searchPath = "/"
-            
-        case "custom":
-            searchPath = customPath ?? NSHomeDirectory()
-            
-        default:
-            searchPath = NSHomeDirectory()
-        }
-        
-        let escapedQuery = query.replacingOccurrences(of: "\"", with: "\\\\\"")
-        let escapedPath = searchPath.replacingOccurrences(of: "'", with: "'\\''")
-        
-        let script = """
-            tell application "Finder"
-                activate
-                set newWindow to make new Finder window
-                set target of newWindow to POSIX file "\(escapedPath)"
-                
-                tell application "System Events"
-                    tell process "Finder"
-                        keystroke "f" using command down
-                        delay 0.5
-                        keystroke "\(escapedQuery)"
-                    end tell
-                end tell
-            end tell
-        """
-        
-        executeAppleScript(script)
-    }
-    
-    private func executeBundledActions(_ actionsData: [Any], delayBetween: Double, context: PluginContext) {
-        DispatchQueue.global(qos: .userInitiated).async {
-            for (index, actionData) in actionsData.enumerated() {
-                guard let action = actionData as? [String: Any],
-                      let pluginId = action["plugin"] as? String,
-                      let actionId = action["action"] as? String else {
-                    continue
-                }
-                
-                let parameters = ActionParameters(values: (action["parameters"] as? [String: AnyCodable]) ?? [:])
-                let fullActionId = "\(pluginId).\(actionId)"
-                
-                do {
-                    try PluginManager.shared.executeAction(identifier: fullActionId, parameters: parameters)
-                } catch {
-                    context.logger.log("Error executing bundled action: \(error)", file: #file, function: #function, line: #line)
-                }
-                
-                if index < actionsData.count - 1 && delayBetween > 0 {
-                    Thread.sleep(forTimeInterval: delayBetween)
-                }
-            }
-        }
-    }
-    
     private func executeClipboardAction(_ action: String, text: String?) {
         switch action {
         case "copy":
@@ -864,62 +696,6 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
         clearButton.target = self
         clearButton.action = #selector(clearKeyboardShortcut(_:))
         containerView.addSubview(clearButton)
-        
-        return containerView
-    }
-    
-    private func createBundleActionsConfigurationView() -> NSView {
-        let containerView = NSView(frame: NSRect(x: 0, y: 0, width: 600, height: 400))
-        
-        let label = NSTextField(labelWithString: "Bundle Actions:")
-        label.frame = NSRect(x: 20, y: 360, width: 120, height: 20)
-        containerView.addSubview(label)
-        
-        // Actions table
-        let scrollView = NSScrollView(frame: NSRect(x: 20, y: 100, width: 560, height: 250))
-        scrollView.hasVerticalScroller = true
-        scrollView.autohidesScrollers = true
-        scrollView.borderType = .bezelBorder
-        
-        let tableView = NSTableView(frame: scrollView.bounds)
-        tableView.identifier = NSUserInterfaceItemIdentifier("actions_table")
-        
-        let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("action"))
-        column.title = "Actions"
-        column.width = 540
-        tableView.addTableColumn(column)
-        
-        scrollView.documentView = tableView
-        containerView.addSubview(scrollView)
-        
-        // Add/Remove buttons
-        let addButton = NSButton(frame: NSRect(x: 20, y: 60, width: 100, height: 25))
-        addButton.bezelStyle = .rounded
-        addButton.title = "Add Action"
-        addButton.target = self
-        addButton.action = #selector(addBundleAction(_:))
-        containerView.addSubview(addButton)
-        
-        let removeButton = NSButton(frame: NSRect(x: 130, y: 60, width: 100, height: 25))
-        removeButton.bezelStyle = .rounded
-        removeButton.title = "Remove"
-        removeButton.target = self
-        removeButton.action = #selector(removeBundleAction(_:))
-        containerView.addSubview(removeButton)
-        
-        // Delay between actions
-        let delayLabel = NSTextField(labelWithString: "Delay between actions:")
-        delayLabel.frame = NSRect(x: 20, y: 20, width: 150, height: 20)
-        containerView.addSubview(delayLabel)
-        
-        let delayField = NSTextField(frame: NSRect(x: 180, y: 15, width: 60, height: 25))
-        delayField.stringValue = "0.2"
-        delayField.identifier = NSUserInterfaceItemIdentifier("delay_between")
-        containerView.addSubview(delayField)
-        
-        let delayUnitLabel = NSTextField(labelWithString: "seconds")
-        delayUnitLabel.frame = NSRect(x: 250, y: 20, width: 60, height: 20)
-        containerView.addSubview(delayUnitLabel)
         
         return containerView
     }
@@ -1104,22 +880,4 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
         }
     }
     
-    @objc private func addBundleAction(_ sender: NSButton) {
-        // This would open a dialog to select and configure an action to add
-        // For now, just a placeholder
-        NSLog("AutomationPlugin: Add bundle action clicked")
-    }
-    
-    @objc private func removeBundleAction(_ sender: NSButton) {
-        // Remove selected action from the table
-        if let containerView = sender.superview,
-           let scrollView = containerView.subviews.first(where: { ($0 as? NSScrollView)?.documentView is NSTableView }) as? NSScrollView,
-           let tableView = scrollView.documentView as? NSTableView {
-            let selectedRow = tableView.selectedRow
-            if selectedRow >= 0 {
-                // Remove from data source and reload table
-                NSLog("AutomationPlugin: Remove action at row \(selectedRow)")
-            }
-        }
-    }
 }
