@@ -134,10 +134,13 @@ extension CGKeyCode {
 /// Release all modifier keys (Command, Control, Option, Shift).
 /// Shared by AutomationPlugin, PluginSandbox, and any code that needs
 /// to reset modifier state before posting synthetic keyboard events.
+///
+/// Uses `.hidSystemState` so the key-up events actually clear the
+/// system-wide modifier state table (not just a private source).
+/// This is important for AppleScript/System Events keyboard sends
+/// that check the global modifier state.
 func releaseAllModifierKeys() {
-    // Use .privateState so our key-up events arrive with a clean source state,
-    // preventing any modifier flag inheritance from the physical keyboard.
-    guard let source = CGEventSource(stateID: .privateState) else { return }
+    guard let source = CGEventSource(stateID: .hidSystemState) else { return }
     let modifierKeys: [(CGKeyCode, CGKeyCode)] = [
         (0x37, 0x36), // Command L/R
         (0x3B, 0x3E), // Control L/R

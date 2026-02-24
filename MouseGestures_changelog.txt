@@ -1,3 +1,19 @@
+## 2026-02-24
+
+**Fix: Modifier key interference when gesture triggers use modifier keys**
+- Gestures activated with modifier keys (e.g. Ctrl+drag) caused held modifiers to
+  bleed into the action's keyboard shortcuts (e.g. switch spaces, App Exposé)
+- Root cause: `releaseAllModifierKeys()` used `.privateState` which only cleared a
+  private event source table, not the system-wide HID state. AppleScript/System Events
+  keyboard sends and AutomationPlugin shortcuts used `.combinedSessionState` which
+  was contaminated by physically-held keys.
+- Fix: Changed `releaseAllModifierKeys()` to use `.hidSystemState` for actual system
+  state clearing. Switched CoreActionsPlugin's `moveToSpace` and `activateAppExpose`
+  from AppleScript to CGEvent `.privateState` path (immune to physical key state).
+  Changed AutomationPlugin's two `sendKeyboardShortcut` methods from
+  `.combinedSessionState` to `.privateState`. Removed unnecessary delays and
+  `releaseAllModifierKeys()` calls that were workarounds for the wrong event source.
+
 ## 2026-02-21
 
 **Refactor: Gesture Model — Removed GestureTrigger, Flattened API**

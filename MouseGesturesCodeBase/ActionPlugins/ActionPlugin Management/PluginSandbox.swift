@@ -59,10 +59,11 @@ public class PluginSandbox {
         
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
-            // Release physically held modifier keys on the background thread before the action runs.
-            // This avoids stalling the main thread and is the single authoritative release point.
-            // sendKeyboardShortcut uses .privateState so it's immune to physical key state;
-            // this release primarily ensures AppleScript/System Events key sends arrive clean.
+            // Release physically held modifier keys before the action runs.
+            // Uses .hidSystemState to clear the system-wide modifier table.
+            // This ensures AppleScript/System Events key sends arrive clean.
+            // CGEvent-based sendKeyboardShortcut already uses .privateState
+            // for full isolation, but this release helps any remaining paths.
             releaseAllModifierKeys()
             // 80 ms: enough to flush HID key-up events before any synthetic key send.
             usleep(80_000)

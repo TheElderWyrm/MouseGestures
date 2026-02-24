@@ -374,23 +374,21 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
     }
     
     private func executeKeyboardShortcut(_ shortcut: KeyboardShortcut) {
-        releaseAllModifierKeys()
+        // Use .privateState so the event carries ONLY the specified modifiers,
+        // immune to any physically-held modifier keys from gesture triggers.
+        guard let source = CGEventSource(stateID: .privateState) else { return }
         
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            guard let source = CGEventSource(stateID: .combinedSessionState) else { return }
-            
-            guard let keyDown = CGEvent(keyboardEventSource: source, virtualKey: shortcut.keyCode, keyDown: true),
-                  let keyUp = CGEvent(keyboardEventSource: source, virtualKey: shortcut.keyCode, keyDown: false) else {
-                return
-            }
-            
-            keyDown.flags = shortcut.modifiers
-            keyUp.flags = shortcut.modifiers
-            
-            keyDown.post(tap: .cghidEventTap)
-            usleep(100000)
-            keyUp.post(tap: .cghidEventTap)
+        guard let keyDown = CGEvent(keyboardEventSource: source, virtualKey: shortcut.keyCode, keyDown: true),
+              let keyUp = CGEvent(keyboardEventSource: source, virtualKey: shortcut.keyCode, keyDown: false) else {
+            return
         }
+        
+        keyDown.flags = shortcut.modifiers
+        keyUp.flags = shortcut.modifiers
+        
+        keyDown.post(tap: .cghidEventTap)
+        usleep(100_000)
+        keyUp.post(tap: .cghidEventTap)
     }
     
     private func runShortcut(name: String, input: String?) {
@@ -564,20 +562,18 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
     }
     
     private func sendKeyboardShortcut(keyCode: CGKeyCode, modifiers: CGEventFlags) {
-        releaseAllModifierKeys()
+        // Use .privateState so the event carries ONLY the specified modifiers,
+        // immune to any physically-held modifier keys from gesture triggers.
+        guard let source = CGEventSource(stateID: .privateState) else { return }
+        guard let keyDown = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: true),
+              let keyUp = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: false) else { return }
         
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-            guard let source = CGEventSource(stateID: .combinedSessionState) else { return }
-            guard let keyDown = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: true),
-                  let keyUp = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: false) else { return }
-            
-            keyDown.flags = modifiers
-            keyUp.flags = modifiers
-            
-            keyDown.post(tap: .cghidEventTap)
-            usleep(50000)
-            keyUp.post(tap: .cghidEventTap)
-        }
+        keyDown.flags = modifiers
+        keyUp.flags = modifiers
+        
+        keyDown.post(tap: .cghidEventTap)
+        usleep(50_000)
+        keyUp.post(tap: .cghidEventTap)
     }
     
     private func executeAppleScript(_ script: String) {
