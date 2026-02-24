@@ -162,25 +162,26 @@ func releaseAllModifierKeys() {
 /// This makes the system "forget" about held physical modifiers so that
 /// AppleScript/System Events keyboard sends arrive with a clean state.
 ///
+/// IMPORTANT: The event tap callback runs on the run loop where the tap source
+/// is registered. The caller must ensure that run loop is spinning. The
+/// `withCleanModifiers` method handles this by running the tap on the
+/// calling thread's run loop and spinning it manually.
+///
 /// Usage:
 ///     ModifierMask.withCleanModifiers {
 ///         // AppleScript or other code that needs no physical modifiers
 ///     }
 class ModifierMask {
     
-    /// The installed event tap (CFMachPort). Nil when not active.
-    private static var eventTap: CFMachPort?
-    /// Run loop source for the tap.
-    private static var runLoopSource: CFRunLoopSource?
-    /// Serial queue to protect install/remove.
-    private static let queue = DispatchQueue(label: "com.mousegestures.modifiermask")
-    
     /// The C callback for the event tap. Strips all modifier flags from flagsChanged events.
-    private static let tapCallback: CGEventTapCallBack = { _, type, event, _ in
+    private static let tapCallback: CGEventTapCallBack = { _, type, event, refcon in
         // If the tap is disabled by the system (e.g. timeout), re-enable it
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
-            if let tap = ModifierMask.eventTap {
-                CGEvent.tapEnable(tap: tap, enable: true)
+            if let refcon = refcon {
+                let tapPtr = Unmanaged<TapState>.fromOpaque(refcon).takeUnretainedValue()
+                if let tap = tapPtr.machPort {
+                    CGEvent.tapEnable(tap: tap, enable: true)
+                }
             }
             return Unmanaged.passUnretained(event)
         }
@@ -189,10 +190,24 @@ class ModifierMask {
         return Unmanaged.passUnretained(event)
     }
     
-    /// Install the modifier-stripping event tap.
-    private static func install() -> Bool {
-        // Only flagsChanged events need interception
+    /// Mutable state passed to the tap callback via refcon.
+    private class TapState {
+        var machPort: CFMachPort?
+    }
+    
+    /// Execute a closure with all physical modifier keys masked.
+    /// Installs a HID-level event tap that strips modifier flags, executes
+    /// the closure, then removes the tap.
+    ///
+    /// The tap callback is processed on the CURRENT thread's run loop, which
+    /// is spun manually. This avoids the deadlock that occurs when the main
+    /// thread is blocked (e.g. by a semaphore in the sandbox).
+    static func withCleanModifiers(_ body: () -> Void) {
         let mask: CGEventMask = (1 << CGEventType.flagsChanged.rawValue)
+        
+        // TapState lets the callback re-enable the tap if the system disables it.
+        let state = TapState()
+        let statePtr = Unmanaged.passRetained(state)
         
         guard let tap = CGEvent.tapCreate(
             tap: .cghidEventTap,
@@ -200,22 +215,33 @@ class ModifierMask {
             options: .defaultTap,
             eventsOfInterest: mask,
             callback: tapCallback,
-            userInfo: nil
+            userInfo: statePtr.toOpaque()
         ) else {
-            return false
+            statePtr.release()
+            // Tap creation failed (no accessibility?), run body anyway
+            body()
+            return
+        }
+        state.machPort = tap
+        
+        guard let rlSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0) else {
+            statePtr.release()
+            body()
+            return
         }
         
-        guard let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0) else {
-            return false
-        }
-        
-        eventTap = tap
-        runLoopSource = source
-        CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
+        // Add tap to the CURRENT thread's run loop (not main, which may be blocked).
+        let rl = CFRunLoopGetCurrent()
+        CFRunLoopAddSource(rl, rlSource, .commonModes)
         CGEvent.tapEnable(tap: tap, enable: true)
         
+        // Spin the run loop briefly to let the tap start processing events.
+        // This ensures the system picks up the tap before we proceed.
+        CFRunLoopRunInMode(.defaultMode, 0.01, false)
+        
         // Post a clean flagsChanged event to flush the current modifier state.
-        // This makes the system immediately see "no modifiers held".
+        // This event will be intercepted by our tap, which strips its flags,
+        // making the system see "no modifiers held".
         if let src = CGEventSource(stateID: .hidSystemState),
            let cleanFlags = CGEvent(source: src) {
             cleanFlags.type = .flagsChanged
@@ -223,44 +249,19 @@ class ModifierMask {
             cleanFlags.post(tap: .cghidEventTap)
         }
         
-        return true
-    }
-    
-    /// Remove the event tap, restoring normal modifier handling.
-    private static func remove() {
-        if let source = runLoopSource {
-            CFRunLoopRemoveSource(CFRunLoopGetMain(), source, .commonModes)
-        }
-        if let tap = eventTap {
-            CGEvent.tapEnable(tap: tap, enable: false)
-        }
-        eventTap = nil
-        runLoopSource = nil
-    }
-    
-    /// Execute a closure with all physical modifier keys masked.
-    /// Installs a HID-level event tap that strips modifier flags, executes
-    /// the closure, then removes the tap. The brief settle delay ensures
-    /// the system has processed the clean state before the closure runs.
-    static func withCleanModifiers(_ body: () -> Void) {
-        queue.sync {
-            guard install() else {
-                // If tap creation fails (e.g. no accessibility permission),
-                // fall back to running anyway
-                body()
-                return
-            }
-            
-            // Brief settle time for the system to process the clean flagsChanged
-            usleep(50_000)
-            
-            body()
-            
-            // Brief delay before removing so the action's events are fully processed
-            usleep(50_000)
-            
-            remove()
-        }
+        // Spin again to process the clean flagsChanged through the tap.
+        CFRunLoopRunInMode(.defaultMode, 0.05, false)
+        
+        // Execute the action.
+        body()
+        
+        // Spin briefly to process any residual events before removing the tap.
+        CFRunLoopRunInMode(.defaultMode, 0.05, false)
+        
+        // Remove the tap, restoring normal modifier handling.
+        CGEvent.tapEnable(tap: tap, enable: false)
+        CFRunLoopRemoveSource(rl, rlSource, .commonModes)
+        statePtr.release()
     }
 }
 
