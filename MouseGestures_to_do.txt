@@ -1,3 +1,5 @@
+- Modifier key interference: Actions using keyboard shortcuts (e.g. Ctrl+Arrow for spaces) fail when gesture trigger includes modifier keys. Current workaround: waitForModifierRelease() polls until user releases all modifiers. Proper fix needs a refactor to mask/suppress physical modifiers during action execution.
+
 - Reduce duplicate code, unify architecture whenever possible
 
 - Remove Dummy Autoupdate
