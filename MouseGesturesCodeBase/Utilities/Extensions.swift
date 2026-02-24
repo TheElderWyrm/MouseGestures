@@ -151,7 +151,13 @@ func postKeyboardShortcut(keyCode: CGKeyCode, modifiers: CGEventFlags) {
     
     // Suppress physical keyboard events while our synthetic shortcut is processed.
     // This prevents held gesture-trigger modifier keys from interfering.
+    // By default the system permits local keyboard events even during suppression;
+    // we must explicitly filter them out.
     source.localEventsSuppressionInterval = 0.5
+    source.setLocalEventsFilterDuringSuppressionState(
+        [.permitLocalMouseEvents],  // permit mouse, suppress keyboard
+        state: .eventSuppressionStateSuppressionInterval
+    )
     
     // Step 1: Release ALL modifier keys to clear any physically-held state.
     for (_, modKeyCode) in kModifierKeyCodes {
@@ -206,6 +212,10 @@ func postKeyboardShortcut(keyCode: CGKeyCode, modifiers: CGEventFlags) {
 func releaseAllModifierKeys() {
     guard let source = CGEventSource(stateID: .hidSystemState) else { return }
     source.localEventsSuppressionInterval = 0.25
+    source.setLocalEventsFilterDuringSuppressionState(
+        [.permitLocalMouseEvents],
+        state: .eventSuppressionStateSuppressionInterval
+    )
     // Release both left and right variants of each modifier
     let modifierKeys: [(CGKeyCode, CGKeyCode)] = [
         (0x37, 0x36), // Command L/R
