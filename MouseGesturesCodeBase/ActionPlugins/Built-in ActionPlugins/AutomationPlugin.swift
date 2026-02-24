@@ -374,7 +374,15 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
     }
     
     private func executeKeyboardShortcut(_ shortcut: KeyboardShortcut) {
-        postKeyboardShortcut(keyCode: shortcut.keyCode, modifiers: shortcut.modifiers)
+        // Physical modifiers are already released by the sandbox before we get here.
+        guard let source = CGEventSource(stateID: .privateState) else { return }
+        guard let keyDown = CGEvent(keyboardEventSource: source, virtualKey: shortcut.keyCode, keyDown: true),
+              let keyUp = CGEvent(keyboardEventSource: source, virtualKey: shortcut.keyCode, keyDown: false) else { return }
+        keyDown.flags = shortcut.modifiers
+        keyUp.flags = shortcut.modifiers
+        keyDown.post(tap: .cghidEventTap)
+        usleep(100_000)
+        keyUp.post(tap: .cghidEventTap)
     }
     
     private func runShortcut(name: String, input: String?) {
@@ -548,7 +556,15 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
     }
     
     private func sendKeyboardShortcut(keyCode: CGKeyCode, modifiers: CGEventFlags) {
-        postKeyboardShortcut(keyCode: keyCode, modifiers: modifiers)
+        // Physical modifiers are already released by the sandbox before we get here.
+        guard let source = CGEventSource(stateID: .privateState) else { return }
+        guard let keyDown = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: true),
+              let keyUp = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: false) else { return }
+        keyDown.flags = modifiers
+        keyUp.flags = modifiers
+        keyDown.post(tap: .cghidEventTap)
+        usleep(50_000)
+        keyUp.post(tap: .cghidEventTap)
     }
     
     private func executeAppleScript(_ script: String) {

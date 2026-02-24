@@ -131,92 +131,13 @@ extension CGKeyCode {
 
 // MARK: - CGEvent Utilities
 
-/// Mapping from CGEventFlags modifier bits to their virtual key codes.
-private let kModifierKeyCodes: [(CGEventFlags, CGKeyCode)] = [
-    (.maskCommand,   0x37),  // Left Command
-    (.maskControl,   0x3B),  // Left Control
-    (.maskAlternate, 0x3A),  // Left Option
-    (.maskShift,     0x38),  // Left Shift
-]
-
-/// Synthesize a complete keyboard shortcut with explicit modifier key-down/up events.
-///
-/// Uses `.hidSystemState` so events actually update the system-wide modifier state
-/// (required for system-level shortcuts like Ctrl+Arrow for switching spaces).
-/// Sets `localEventsSuppressionInterval` so that physical keyboard input — including
-/// modifier keys the user is still holding from a gesture trigger — is temporarily
-/// suppressed while our synthetic events are processed.
-func postKeyboardShortcut(keyCode: CGKeyCode, modifiers: CGEventFlags) {
-    guard let source = CGEventSource(stateID: .hidSystemState) else { return }
-    
-    // Suppress physical keyboard events while our synthetic shortcut is processed.
-    // This prevents held gesture-trigger modifier keys from interfering.
-    // By default the system permits local keyboard events even during suppression;
-    // we must explicitly filter them out.
-    source.localEventsSuppressionInterval = 0.5
-    source.setLocalEventsFilterDuringSuppressionState(
-        [.permitLocalMouseEvents],  // permit mouse, suppress keyboard
-        state: .eventSuppressionStateSuppressionInterval
-    )
-    
-    // Step 1: Release ALL modifier keys to clear any physically-held state.
-    for (_, modKeyCode) in kModifierKeyCodes {
-        if let keyUp = CGEvent(keyboardEventSource: source, virtualKey: modKeyCode, keyDown: false) {
-            keyUp.flags = []
-            keyUp.post(tap: .cghidEventTap)
-        }
-    }
-    usleep(30_000)
-    
-    // Step 2: Press only the modifier keys required for this shortcut.
-    var activeFlags: CGEventFlags = []
-    for (flag, modKeyCode) in kModifierKeyCodes where modifiers.contains(flag) {
-        activeFlags.insert(flag)
-        if let modDown = CGEvent(keyboardEventSource: source, virtualKey: modKeyCode, keyDown: true) {
-            modDown.flags = activeFlags
-            modDown.post(tap: .cghidEventTap)
-        }
-    }
-    if !activeFlags.isEmpty { usleep(30_000) }
-    
-    // Step 3: Press and release the main key.
-    guard let keyDown = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: true),
-          let keyUp   = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: false) else { return }
-    keyDown.flags = modifiers
-    keyUp.flags   = modifiers
-    keyDown.post(tap: .cghidEventTap)
-    usleep(50_000)
-    keyUp.post(tap: .cghidEventTap)
-    
-    // Step 4: Release modifier keys (reverse order).
-    if !activeFlags.isEmpty {
-        usleep(30_000)
-        for (flag, modKeyCode) in kModifierKeyCodes.reversed() where modifiers.contains(flag) {
-            activeFlags.remove(flag)
-            if let modUp = CGEvent(keyboardEventSource: source, virtualKey: modKeyCode, keyDown: false) {
-                modUp.flags = activeFlags
-                modUp.post(tap: .cghidEventTap)
-            }
-        }
-    }
-}
-
 /// Release all modifier keys (Command, Control, Option, Shift).
-/// Shared by AutomationPlugin, PluginSandbox, and any code that needs
-/// to reset modifier state before posting synthetic keyboard events.
+/// Shared by PluginSandbox and any code that needs to reset modifier state
+/// before posting synthetic keyboard events.
 ///
-/// Uses `.hidSystemState` so the key-up events actually clear the
-/// system-wide modifier state table (not just a private source).
-/// This is important for AppleScript/System Events keyboard sends
-/// that check the global modifier state.
+/// Uses `.privateState` to post key-up events without inheriting physical state.
 func releaseAllModifierKeys() {
-    guard let source = CGEventSource(stateID: .hidSystemState) else { return }
-    source.localEventsSuppressionInterval = 0.25
-    source.setLocalEventsFilterDuringSuppressionState(
-        [.permitLocalMouseEvents],
-        state: .eventSuppressionStateSuppressionInterval
-    )
-    // Release both left and right variants of each modifier
+    guard let source = CGEventSource(stateID: .privateState) else { return }
     let modifierKeys: [(CGKeyCode, CGKeyCode)] = [
         (0x37, 0x36), // Command L/R
         (0x3B, 0x3E), // Control L/R
@@ -232,6 +153,21 @@ func releaseAllModifierKeys() {
         }
     }
     usleep(10_000)
+}
+
+/// Wait until the user has physically released all modifier keys, or until timeout.
+/// Returns true if modifiers were released, false if timed out.
+/// Poll interval ~10ms, default timeout 1 second.
+@discardableResult
+func waitForModifierRelease(timeout: TimeInterval = 1.0) -> Bool {
+    let deadline = Date().addingTimeInterval(timeout)
+    while Date() < deadline {
+        // NSEvent.modifierFlags reflects the real physical keyboard state
+        let held = NSEvent.modifierFlags.intersection([.command, .control, .option, .shift])
+        if held.isEmpty { return true }
+        usleep(10_000) // 10ms poll
+    }
+    return false
 }
 
 // MARK: - Shared Mouse Button Utilities

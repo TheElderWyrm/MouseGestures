@@ -405,6 +405,10 @@ public protocol PluginContext {
     /// Release all currently held modifier keys (call before any synthetic key event that must arrive modifier-free)
     func releaseModifiers()
     
+    /// Wait until the user has physically released all modifier keys, or until timeout.
+    /// Returns true if modifiers were released, false if timed out.
+    func waitForModifierRelease(timeout: TimeInterval) -> Bool
+    
     /// Get list of saved profiles
     func getProfiles() -> [[String: Any]]
     

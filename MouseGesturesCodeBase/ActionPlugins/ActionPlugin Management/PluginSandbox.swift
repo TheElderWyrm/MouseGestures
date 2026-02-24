@@ -59,14 +59,15 @@ public class PluginSandbox {
         
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
-            // Release physically held modifier keys before the action runs.
-            // Uses .hidSystemState to clear the system-wide modifier table.
-            // This ensures AppleScript/System Events key sends arrive clean.
-            // CGEvent-based sendKeyboardShortcut already uses .privateState
-            // for full isolation, but this release helps any remaining paths.
-            releaseAllModifierKeys()
-            // 80 ms: enough to flush HID key-up events before any synthetic key send.
-            usleep(80_000)
+            // Wait for the user to physically release all modifier keys before
+            // the action runs. This is essential for actions that send keyboard
+            // shortcuts (e.g. Ctrl+Arrow via System Events) — held physical
+            // modifiers from gesture triggers would contaminate the shortcut.
+            // The user naturally releases modifiers after the gesture drag ends;
+            // we just need to wait briefly for it to happen.
+            waitForModifierRelease(timeout: 1.0)
+            // Small extra delay to ensure the OS has fully processed the release.
+            usleep(30_000)
             do {
                 try self.plugin.execute(action: action, with: parameters, context: self.sandboxedContext)
             } catch {
@@ -250,7 +251,16 @@ class SandboxedPluginContext: PluginContext {
             log.log("⚠️ Plugin '\(pluginId)' attempted to send keyboard shortcut without permission")
             return
         }
-        postKeyboardShortcut(keyCode: keyCode, modifiers: modifiers)
+        // Use .privateState so the event is independent of physical keyboard state.
+        // Physical modifiers are already released by the sandbox before actions run.
+        guard let source = CGEventSource(stateID: .privateState) else { return }
+        guard let keyDown = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: true),
+              let keyUp   = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: false) else { return }
+        keyDown.flags = modifiers
+        keyUp.flags   = modifiers
+        keyDown.post(tap: .cghidEventTap)
+        usleep(50_000)
+        keyUp.post(tap: .cghidEventTap)
     }
     
     func executeAppleScript(_ script: String) throws {
@@ -476,6 +486,17 @@ class SandboxedPluginContext: PluginContext {
     
     func releaseModifiers() {
         releaseAllModifierKeys()
+    }
+    
+    func waitForModifierRelease(timeout: TimeInterval) -> Bool {
+        // Inline: poll physical modifier state until all released or timeout
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            let held = NSEvent.modifierFlags.intersection([.command, .control, .option, .shift])
+            if held.isEmpty { return true }
+            usleep(10_000)
+        }
+        return false
     }
     
     func getProfiles() -> [[String: Any]] {

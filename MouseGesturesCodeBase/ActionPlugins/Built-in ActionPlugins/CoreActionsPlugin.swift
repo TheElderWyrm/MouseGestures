@@ -572,9 +572,17 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
     }
     
     private func activateAppExpose(context: PluginContext) {
-        // Use CGEvent with .privateState (via sendKeyboardShortcut) as primary method.
-        // .privateState is immune to physically-held modifier keys from gesture triggers.
-        context.sendKeyboardShortcut(keyCode: 125, modifiers: [.maskControl])
+        // Use System Events for reliable App Exposé triggering.
+        // Physical modifiers are already released by the sandbox before we get here.
+        do {
+            try context.executeAppleScript("""
+                tell application "System Events"
+                    key code 125 using {control down}
+                end tell
+            """)
+        } catch {
+            context.sendKeyboardShortcut(keyCode: 125, modifiers: [.maskControl])
+        }
     }
     
     private func cycleWindows(forward: Bool, context: PluginContext) {
@@ -586,10 +594,18 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
     }
     
     private func moveToSpace(next: Bool, context: PluginContext) {
-        // Use CGEvent with .privateState (via sendKeyboardShortcut) as primary method.
-        // .privateState is immune to physically-held modifier keys from gesture triggers.
-        let keyCode: CGKeyCode = next ? 124 : 123 // Right / Left arrow
-        context.sendKeyboardShortcut(keyCode: keyCode, modifiers: [.maskControl])
+        // Use System Events for reliable space switching.
+        // Physical modifiers are already released by the sandbox before we get here.
+        let keyCode = next ? 124 : 123 // Right / Left arrow
+        do {
+            try context.executeAppleScript("""
+                tell application "System Events"
+                    key code \(keyCode) using {control down}
+                end tell
+            """)
+        } catch {
+            context.sendKeyboardShortcut(keyCode: CGKeyCode(keyCode), modifiers: [.maskControl])
+        }
     }
     
     // MARK: - System

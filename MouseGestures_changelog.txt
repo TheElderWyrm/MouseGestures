@@ -3,18 +3,16 @@
 **Fix: Modifier key interference when gesture triggers use modifier keys**
 - Gestures activated with modifier keys (e.g. Ctrl+drag) caused held modifiers to
   bleed into the action's keyboard shortcuts (e.g. switch spaces, App Exposé)
-- Root cause 1: `releaseAllModifierKeys()` used `.privateState` which only cleared a
-  private event source table, not the system-wide HID state.
-- Root cause 2: Keyboard shortcuts only set modifier flags on the main key event but
-  never sent actual modifier key-down events. System-level shortcuts (Ctrl+Arrow for
-  spaces, etc.) check the global modifier state, not just event flags.
-- Fix: Added shared `postKeyboardShortcut()` utility that sends the full sequence:
-  release all modifiers → modifier key-down → main key down/up → modifier key-up.
-  Uses `.hidSystemState` so events update the system-wide modifier state (required for
-  system shortcuts like Ctrl+Arrow). Sets `localEventsSuppressionInterval` to temporarily
-  suppress physical keyboard input so held gesture-trigger keys can't interfere.
-  Switched CoreActionsPlugin `moveToSpace`/`activateAppExpose` from AppleScript to
-  CGEvent path. All keyboard shortcut implementations now use `postKeyboardShortcut()`.
+- Root cause: Gesture-trigger modifier keys are still physically held when the action
+  fires. No amount of synthetic key-up events or suppression can override the hardware
+  state. AppleScript/System Events (the only reliable mechanism for system shortcuts
+  like Ctrl+Arrow) sees the extra physical modifiers and the shortcut is contaminated.
+- Fix: Added `waitForModifierRelease()` that polls `NSEvent.modifierFlags` until all
+  physical modifier keys are released (with 1s timeout). Called in the sandbox before
+  every action execution. Users naturally release modifiers after the gesture drag ends;
+  the poll just waits for that to happen. Kept AppleScript/System Events for
+  `moveToSpace`/`activateAppExpose` (reverted from CGEvent-only, which never worked
+  for system-level shortcuts). CGEvent `.privateState` used for app-level shortcuts.
 
 ## 2026-02-21
 
