@@ -10,9 +10,12 @@
 - Fix: Added `waitForModifierRelease()` that polls `CGEventSource.flagsState(.hidSystemState)`
   (thread-safe, reflects actual HID hardware state) until ALL modifier keys are released.
   Requires two consecutive clean reads ~20ms apart to avoid false positives from
-  sequential key releases (e.g. user lifts Ctrl before Cmd). Called in the sandbox
-  before every action execution. Kept AppleScript/System Events for
-  `moveToSpace`/`activateAppExpose`. CGEvent `.privateState` for app-level shortcuts.
+  sequential key releases (e.g. user lifts Ctrl before Cmd). Checks three state
+  sources (HID, combined session, AppKit) for reliable detection. Called only in
+  the specific actions that need it (`moveToSpace`, `activateAppExpose`) — not
+  globally in the sandbox, so other actions (fullscreen, etc.) execute immediately.
+  Kept AppleScript/System Events for those two actions. CGEvent `.privateState`
+  for app-level shortcuts.
 
 ## 2026-02-21
 

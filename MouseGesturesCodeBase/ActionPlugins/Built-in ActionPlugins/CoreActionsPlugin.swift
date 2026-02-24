@@ -572,8 +572,9 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
     }
     
     private func activateAppExpose(context: PluginContext) {
-        // Use System Events for reliable App Exposé triggering.
-        // Physical modifiers are already released by the sandbox before we get here.
+        // System Events is sensitive to physically-held modifiers;
+        // wait for all modifier keys to be released first.
+        waitForModifierRelease()
         do {
             try context.executeAppleScript("""
                 tell application "System Events"
@@ -594,8 +595,9 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
     }
     
     private func moveToSpace(next: Bool, context: PluginContext) {
-        // Use System Events for reliable space switching.
-        // Physical modifiers are already released by the sandbox before we get here.
+        // System Events is sensitive to physically-held modifiers;
+        // wait for all modifier keys to be released first.
+        waitForModifierRelease()
         let keyCode = next ? 124 : 123 // Right / Left arrow
         do {
             try context.executeAppleScript("""
