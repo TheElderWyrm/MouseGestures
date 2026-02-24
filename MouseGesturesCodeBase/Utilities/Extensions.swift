@@ -131,6 +131,53 @@ extension CGKeyCode {
 
 // MARK: - CGEvent Utilities
 
+/// Synthesize a complete keyboard shortcut with explicit modifier key-down/up events.
+/// Uses `.privateState` so events are immune to physically-held keys from gesture triggers.
+/// System-level shortcuts (e.g. Ctrl+Arrow for spaces) check global modifier state,
+/// so we must send actual modifier key events, not just set flags on the main key.
+func postKeyboardShortcut(keyCode: CGKeyCode, modifiers: CGEventFlags) {
+    guard let source = CGEventSource(stateID: .privateState) else { return }
+    
+    let modifierKeyCodes: [(CGEventFlags, CGKeyCode)] = [
+        (.maskCommand,   0x37),  // Left Command
+        (.maskControl,   0x3B),  // Left Control
+        (.maskAlternate, 0x3A),  // Left Option
+        (.maskShift,     0x38),  // Left Shift
+    ]
+    
+    // Press required modifier keys
+    var activeFlags: CGEventFlags = []
+    for (flag, modKeyCode) in modifierKeyCodes where modifiers.contains(flag) {
+        activeFlags.insert(flag)
+        if let modDown = CGEvent(keyboardEventSource: source, virtualKey: modKeyCode, keyDown: true) {
+            modDown.flags = activeFlags
+            modDown.post(tap: .cghidEventTap)
+        }
+    }
+    if !activeFlags.isEmpty { usleep(30_000) }
+    
+    // Press and release the main key
+    guard let keyDown = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: true),
+          let keyUp   = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: false) else { return }
+    keyDown.flags = modifiers
+    keyUp.flags   = modifiers
+    keyDown.post(tap: .cghidEventTap)
+    usleep(50_000)
+    keyUp.post(tap: .cghidEventTap)
+    
+    // Release modifier keys (reverse order)
+    if !activeFlags.isEmpty {
+        usleep(30_000)
+        for (flag, modKeyCode) in modifierKeyCodes.reversed() where modifiers.contains(flag) {
+            activeFlags.remove(flag)
+            if let modUp = CGEvent(keyboardEventSource: source, virtualKey: modKeyCode, keyDown: false) {
+                modUp.flags = activeFlags
+                modUp.post(tap: .cghidEventTap)
+            }
+        }
+    }
+}
+
 /// Release all modifier keys (Command, Control, Option, Shift).
 /// Shared by AutomationPlugin, PluginSandbox, and any code that needs
 /// to reset modifier state before posting synthetic keyboard events.

@@ -250,17 +250,7 @@ class SandboxedPluginContext: PluginContext {
             log.log("⚠️ Plugin '\(pluginId)' attempted to send keyboard shortcut without permission")
             return
         }
-        // Use .privateState: creates a clean event source completely independent of the
-        // physical keyboard state. This means physically held gesture modifier keys (Cmd, Ctrl,
-        // etc.) cannot bleed into the synthetic event, regardless of what the user is holding.
-        guard let source = CGEventSource(stateID: .privateState) else { return }
-        guard let keyDown = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: true),
-              let keyUp   = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: false) else { return }
-        keyDown.flags = modifiers
-        keyUp.flags   = modifiers
-        keyDown.post(tap: .cghidEventTap)
-        usleep(50_000)
-        keyUp.post(tap: .cghidEventTap)
+        postKeyboardShortcut(keyCode: keyCode, modifiers: modifiers)
     }
     
     func executeAppleScript(_ script: String) throws {
