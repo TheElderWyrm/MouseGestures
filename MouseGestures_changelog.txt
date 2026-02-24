@@ -9,11 +9,12 @@
   never sent actual modifier key-down events. System-level shortcuts (Ctrl+Arrow for
   spaces, etc.) check the global modifier state, not just event flags.
 - Fix: Added shared `postKeyboardShortcut()` utility that sends the full sequence:
-  modifier key-down → main key down/up → modifier key-up, all using `.privateState`.
-  This registers modifiers in the system state while remaining immune to physical keys.
-  Changed `releaseAllModifierKeys()` to `.hidSystemState`. Switched CoreActionsPlugin
-  `moveToSpace`/`activateAppExpose` from AppleScript to CGEvent path. All three
-  keyboard shortcut implementations now use the shared `postKeyboardShortcut()`.
+  release all modifiers → modifier key-down → main key down/up → modifier key-up.
+  Uses `.hidSystemState` so events update the system-wide modifier state (required for
+  system shortcuts like Ctrl+Arrow). Sets `localEventsSuppressionInterval` to temporarily
+  suppress physical keyboard input so held gesture-trigger keys can't interfere.
+  Switched CoreActionsPlugin `moveToSpace`/`activateAppExpose` from AppleScript to
+  CGEvent path. All keyboard shortcut implementations now use `postKeyboardShortcut()`.
 
 ## 2026-02-21
 

@@ -131,23 +131,40 @@ extension CGKeyCode {
 
 // MARK: - CGEvent Utilities
 
+/// Mapping from CGEventFlags modifier bits to their virtual key codes.
+private let kModifierKeyCodes: [(CGEventFlags, CGKeyCode)] = [
+    (.maskCommand,   0x37),  // Left Command
+    (.maskControl,   0x3B),  // Left Control
+    (.maskAlternate, 0x3A),  // Left Option
+    (.maskShift,     0x38),  // Left Shift
+]
+
 /// Synthesize a complete keyboard shortcut with explicit modifier key-down/up events.
-/// Uses `.privateState` so events are immune to physically-held keys from gesture triggers.
-/// System-level shortcuts (e.g. Ctrl+Arrow for spaces) check global modifier state,
-/// so we must send actual modifier key events, not just set flags on the main key.
+///
+/// Uses `.hidSystemState` so events actually update the system-wide modifier state
+/// (required for system-level shortcuts like Ctrl+Arrow for switching spaces).
+/// Sets `localEventsSuppressionInterval` so that physical keyboard input — including
+/// modifier keys the user is still holding from a gesture trigger — is temporarily
+/// suppressed while our synthetic events are processed.
 func postKeyboardShortcut(keyCode: CGKeyCode, modifiers: CGEventFlags) {
-    guard let source = CGEventSource(stateID: .privateState) else { return }
+    guard let source = CGEventSource(stateID: .hidSystemState) else { return }
     
-    let modifierKeyCodes: [(CGEventFlags, CGKeyCode)] = [
-        (.maskCommand,   0x37),  // Left Command
-        (.maskControl,   0x3B),  // Left Control
-        (.maskAlternate, 0x3A),  // Left Option
-        (.maskShift,     0x38),  // Left Shift
-    ]
+    // Suppress physical keyboard events while our synthetic shortcut is processed.
+    // This prevents held gesture-trigger modifier keys from interfering.
+    source.localEventsSuppressionInterval = 0.5
     
-    // Press required modifier keys
+    // Step 1: Release ALL modifier keys to clear any physically-held state.
+    for (_, modKeyCode) in kModifierKeyCodes {
+        if let keyUp = CGEvent(keyboardEventSource: source, virtualKey: modKeyCode, keyDown: false) {
+            keyUp.flags = []
+            keyUp.post(tap: .cghidEventTap)
+        }
+    }
+    usleep(30_000)
+    
+    // Step 2: Press only the modifier keys required for this shortcut.
     var activeFlags: CGEventFlags = []
-    for (flag, modKeyCode) in modifierKeyCodes where modifiers.contains(flag) {
+    for (flag, modKeyCode) in kModifierKeyCodes where modifiers.contains(flag) {
         activeFlags.insert(flag)
         if let modDown = CGEvent(keyboardEventSource: source, virtualKey: modKeyCode, keyDown: true) {
             modDown.flags = activeFlags
@@ -156,7 +173,7 @@ func postKeyboardShortcut(keyCode: CGKeyCode, modifiers: CGEventFlags) {
     }
     if !activeFlags.isEmpty { usleep(30_000) }
     
-    // Press and release the main key
+    // Step 3: Press and release the main key.
     guard let keyDown = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: true),
           let keyUp   = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: false) else { return }
     keyDown.flags = modifiers
@@ -165,10 +182,10 @@ func postKeyboardShortcut(keyCode: CGKeyCode, modifiers: CGEventFlags) {
     usleep(50_000)
     keyUp.post(tap: .cghidEventTap)
     
-    // Release modifier keys (reverse order)
+    // Step 4: Release modifier keys (reverse order).
     if !activeFlags.isEmpty {
         usleep(30_000)
-        for (flag, modKeyCode) in modifierKeyCodes.reversed() where modifiers.contains(flag) {
+        for (flag, modKeyCode) in kModifierKeyCodes.reversed() where modifiers.contains(flag) {
             activeFlags.remove(flag)
             if let modUp = CGEvent(keyboardEventSource: source, virtualKey: modKeyCode, keyDown: false) {
                 modUp.flags = activeFlags
@@ -188,6 +205,8 @@ func postKeyboardShortcut(keyCode: CGKeyCode, modifiers: CGEventFlags) {
 /// that check the global modifier state.
 func releaseAllModifierKeys() {
     guard let source = CGEventSource(stateID: .hidSystemState) else { return }
+    source.localEventsSuppressionInterval = 0.25
+    // Release both left and right variants of each modifier
     let modifierKeys: [(CGKeyCode, CGKeyCode)] = [
         (0x37, 0x36), // Command L/R
         (0x3B, 0x3E), // Control L/R
