@@ -4,15 +4,16 @@
 - Gestures activated with modifier keys (e.g. Ctrl+drag) caused held modifiers to
   bleed into the action's keyboard shortcuts (e.g. switch spaces, App Exposé)
 - Root cause: Gesture-trigger modifier keys are still physically held when the action
-  fires. No amount of synthetic key-up events or suppression can override the hardware
-  state. AppleScript/System Events (the only reliable mechanism for system shortcuts
-  like Ctrl+Arrow) sees the extra physical modifiers and the shortcut is contaminated.
-- Fix: Added `waitForModifierRelease()` that polls `NSEvent.modifierFlags` until all
-  physical modifier keys are released (with 1s timeout). Called in the sandbox before
-  every action execution. Users naturally release modifiers after the gesture drag ends;
-  the poll just waits for that to happen. Kept AppleScript/System Events for
-  `moveToSpace`/`activateAppExpose` (reverted from CGEvent-only, which never worked
-  for system-level shortcuts). CGEvent `.privateState` used for app-level shortcuts.
+  fires. Synthetic key-up events cannot override hardware state. AppleScript/System
+  Events (the only reliable mechanism for system shortcuts like Ctrl+Arrow) sees the
+  extra physical modifiers and the shortcut is contaminated.
+- Fix: Added `ModifierMask` class that installs a CGEvent tap at the HID level to
+  intercept `flagsChanged` events and strip all modifier flags. Posts a clean
+  flagsChanged event to flush state. `ModifierMask.withCleanModifiers { }` wraps
+  action execution in the sandbox — tap is installed before, removed after. This makes
+  the system truly "forget" about held physical modifiers. Kept AppleScript/System
+  Events for `moveToSpace`/`activateAppExpose`. CGEvent `.privateState` for app-level
+  shortcuts.
 
 ## 2026-02-21
 

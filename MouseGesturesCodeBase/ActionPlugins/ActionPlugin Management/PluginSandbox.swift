@@ -59,19 +59,16 @@ public class PluginSandbox {
         
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
-            // Wait for the user to physically release all modifier keys before
-            // the action runs. This is essential for actions that send keyboard
-            // shortcuts (e.g. Ctrl+Arrow via System Events) — held physical
-            // modifiers from gesture triggers would contaminate the shortcut.
-            // The user naturally releases modifiers after the gesture drag ends;
-            // we just need to wait briefly for it to happen.
-            waitForModifierRelease(timeout: 1.0)
-            // Small extra delay to ensure the OS has fully processed the release.
-            usleep(30_000)
-            do {
-                try self.plugin.execute(action: action, with: parameters, context: self.sandboxedContext)
-            } catch {
-                executionError = error
+            // Mask physical modifier keys via a CGEvent tap so that any
+            // keyboard shortcuts sent by the action (e.g. Ctrl+Arrow via
+            // System Events) aren't contaminated by gesture-trigger modifiers
+            // the user may still be holding.
+            ModifierMask.withCleanModifiers {
+                do {
+                    try self.plugin.execute(action: action, with: parameters, context: self.sandboxedContext)
+                } catch {
+                    executionError = error
+                }
             }
             completed.signal()
         }
@@ -486,17 +483,6 @@ class SandboxedPluginContext: PluginContext {
     
     func releaseModifiers() {
         releaseAllModifierKeys()
-    }
-    
-    func waitForModifierRelease(timeout: TimeInterval) -> Bool {
-        // Inline: poll physical modifier state until all released or timeout
-        let deadline = Date().addingTimeInterval(timeout)
-        while Date() < deadline {
-            let held = NSEvent.modifierFlags.intersection([.command, .control, .option, .shift])
-            if held.isEmpty { return true }
-            usleep(10_000)
-        }
-        return false
     }
     
     func getProfiles() -> [[String: Any]] {

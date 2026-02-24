@@ -155,19 +155,113 @@ func releaseAllModifierKeys() {
     usleep(10_000)
 }
 
-/// Wait until the user has physically released all modifier keys, or until timeout.
-/// Returns true if modifiers were released, false if timed out.
-/// Poll interval ~10ms, default timeout 1 second.
-@discardableResult
-func waitForModifierRelease(timeout: TimeInterval = 1.0) -> Bool {
-    let deadline = Date().addingTimeInterval(timeout)
-    while Date() < deadline {
-        // NSEvent.modifierFlags reflects the real physical keyboard state
-        let held = NSEvent.modifierFlags.intersection([.command, .control, .option, .shift])
-        if held.isEmpty { return true }
-        usleep(10_000) // 10ms poll
+// MARK: - Modifier Masking via CGEvent Tap
+
+/// Temporarily masks physical modifier keys by installing a CGEvent tap that
+/// strips modifier flags from `flagsChanged` events at the HID level.
+/// This makes the system "forget" about held physical modifiers so that
+/// AppleScript/System Events keyboard sends arrive with a clean state.
+///
+/// Usage:
+///     ModifierMask.withCleanModifiers {
+///         // AppleScript or other code that needs no physical modifiers
+///     }
+class ModifierMask {
+    
+    /// The installed event tap (CFMachPort). Nil when not active.
+    private static var eventTap: CFMachPort?
+    /// Run loop source for the tap.
+    private static var runLoopSource: CFRunLoopSource?
+    /// Serial queue to protect install/remove.
+    private static let queue = DispatchQueue(label: "com.mousegestures.modifiermask")
+    
+    /// The C callback for the event tap. Strips all modifier flags from flagsChanged events.
+    private static let tapCallback: CGEventTapCallBack = { _, type, event, _ in
+        // If the tap is disabled by the system (e.g. timeout), re-enable it
+        if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
+            if let tap = ModifierMask.eventTap {
+                CGEvent.tapEnable(tap: tap, enable: true)
+            }
+            return Unmanaged.passUnretained(event)
+        }
+        // Strip all modifier key flags so the system sees no modifiers held
+        event.flags = []
+        return Unmanaged.passUnretained(event)
     }
-    return false
+    
+    /// Install the modifier-stripping event tap.
+    private static func install() -> Bool {
+        // Only flagsChanged events need interception
+        let mask: CGEventMask = (1 << CGEventType.flagsChanged.rawValue)
+        
+        guard let tap = CGEvent.tapCreate(
+            tap: .cghidEventTap,
+            place: .headInsertEventTap,
+            options: .defaultTap,
+            eventsOfInterest: mask,
+            callback: tapCallback,
+            userInfo: nil
+        ) else {
+            return false
+        }
+        
+        guard let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0) else {
+            return false
+        }
+        
+        eventTap = tap
+        runLoopSource = source
+        CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
+        CGEvent.tapEnable(tap: tap, enable: true)
+        
+        // Post a clean flagsChanged event to flush the current modifier state.
+        // This makes the system immediately see "no modifiers held".
+        if let src = CGEventSource(stateID: .hidSystemState),
+           let cleanFlags = CGEvent(source: src) {
+            cleanFlags.type = .flagsChanged
+            cleanFlags.flags = []
+            cleanFlags.post(tap: .cghidEventTap)
+        }
+        
+        return true
+    }
+    
+    /// Remove the event tap, restoring normal modifier handling.
+    private static func remove() {
+        if let source = runLoopSource {
+            CFRunLoopRemoveSource(CFRunLoopGetMain(), source, .commonModes)
+        }
+        if let tap = eventTap {
+            CGEvent.tapEnable(tap: tap, enable: false)
+        }
+        eventTap = nil
+        runLoopSource = nil
+    }
+    
+    /// Execute a closure with all physical modifier keys masked.
+    /// Installs a HID-level event tap that strips modifier flags, executes
+    /// the closure, then removes the tap. The brief settle delay ensures
+    /// the system has processed the clean state before the closure runs.
+    static func withCleanModifiers(_ body: () -> Void) {
+        queue.sync {
+            guard install() else {
+                // If tap creation fails (e.g. no accessibility permission),
+                // fall back to running anyway
+                body()
+                return
+            }
+            
+            // Brief settle time for the system to process the clean flagsChanged
+            usleep(50_000)
+            
+            body()
+            
+            // Brief delay before removing so the action's events are fully processed
+            usleep(50_000)
+            
+            remove()
+        }
+    }
 }
 
 // MARK: - Shared Mouse Button Utilities
