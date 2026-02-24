@@ -157,13 +157,33 @@ func releaseAllModifierKeys() {
 
 // MARK: - Modifier Release Waiting
 
-/// The modifier flags we care about for gesture triggers.
-private let kModifierBits: CGEventFlags = [.maskCommand, .maskControl, .maskAlternate, .maskShift]
+/// Check whether ANY modifier key is currently held using multiple state sources.
+/// Returns `true` if at least one modifier is detected as held by any source.
+private func anyModifierHeld() -> Bool {
+    // CGEventFlags mask for the four standard modifiers
+    let cgBits: CGEventFlags = [.maskCommand, .maskControl, .maskAlternate, .maskShift]
+    // NSEvent mask for the same
+    let nsBits: NSEvent.ModifierFlags = [.command, .control, .option, .shift]
+    
+    // Check all three state sources — if ANY reports a modifier held, return true.
+    // .hidSystemState: hardware-level state
+    // .combinedSessionState: merged hardware + synthetic state
+    // NSEvent.modifierFlags: AppKit's view of modifier state
+    let hid = CGEventSource.flagsState(.hidSystemState).intersection(cgBits)
+    if !hid.isEmpty { return true }
+    
+    let combined = CGEventSource.flagsState(.combinedSessionState).intersection(cgBits)
+    if !combined.isEmpty { return true }
+    
+    let appkit = NSEvent.modifierFlags.intersection(nsBits)
+    if !appkit.isEmpty { return true }
+    
+    return false
+}
 
 /// Wait until ALL physical modifier keys are released, or until timeout.
-/// Uses `CGEventSource.flagsState(.hidSystemState)` which is thread-safe and
-/// reflects the actual HID hardware state (unlike NSEvent.modifierFlags which
-/// may be stale on background threads).
+/// Queries three independent state sources (HID, combined session, AppKit)
+/// and requires ALL of them to report no modifiers held.
 ///
 /// Requires two consecutive clean reads separated by a short interval to avoid
 /// false positives from momentary gaps between sequential key releases.
@@ -176,10 +196,7 @@ func waitForModifierRelease(timeout: TimeInterval = 1.5) -> Bool {
     var consecutiveClean = 0
     
     while Date() < deadline {
-        let flags = CGEventSource.flagsState(.hidSystemState)
-        let held = flags.intersection(kModifierBits)
-        
-        if held.isEmpty {
+        if !anyModifierHeld() {
             consecutiveClean += 1
             // Require 2 consecutive clean reads (~20ms apart) to confirm
             if consecutiveClean >= 2 { return true }
