@@ -59,16 +59,18 @@ public class PluginSandbox {
         
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
-            // Mask physical modifier keys via a CGEvent tap so that any
-            // keyboard shortcuts sent by the action (e.g. Ctrl+Arrow via
-            // System Events) aren't contaminated by gesture-trigger modifiers
-            // the user may still be holding.
-            ModifierMask.withCleanModifiers {
-                do {
-                    try self.plugin.execute(action: action, with: parameters, context: self.sandboxedContext)
-                } catch {
-                    executionError = error
-                }
+            // Wait for the user to physically release ALL modifier keys before
+            // the action runs. Actions that send keyboard shortcuts (e.g.
+            // Ctrl+Arrow via System Events) fail if gesture-trigger modifiers
+            // are still held. Uses CGEventSource.flagsState(.hidSystemState)
+            // for accurate hardware state on background threads. Requires two
+            // consecutive clean reads to avoid false positives from sequential
+            // key releases.
+            waitForModifierRelease()
+            do {
+                try self.plugin.execute(action: action, with: parameters, context: self.sandboxedContext)
+            } catch {
+                executionError = error
             }
             completed.signal()
         }

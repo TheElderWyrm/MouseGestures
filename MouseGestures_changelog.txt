@@ -7,13 +7,12 @@
   fires. Synthetic key-up events cannot override hardware state. AppleScript/System
   Events (the only reliable mechanism for system shortcuts like Ctrl+Arrow) sees the
   extra physical modifiers and the shortcut is contaminated.
-- Fix: Added `ModifierMask` class that installs a CGEvent tap at the HID level to
-  intercept `flagsChanged` events and strip all modifier flags. Posts a clean
-  flagsChanged event to flush state. `ModifierMask.withCleanModifiers { }` wraps
-  action execution in the sandbox — tap is installed before, removed after. This makes
-  the system truly "forget" about held physical modifiers. Kept AppleScript/System
-  Events for `moveToSpace`/`activateAppExpose`. CGEvent `.privateState` for app-level
-  shortcuts.
+- Fix: Added `waitForModifierRelease()` that polls `CGEventSource.flagsState(.hidSystemState)`
+  (thread-safe, reflects actual HID hardware state) until ALL modifier keys are released.
+  Requires two consecutive clean reads ~20ms apart to avoid false positives from
+  sequential key releases (e.g. user lifts Ctrl before Cmd). Called in the sandbox
+  before every action execution. Kept AppleScript/System Events for
+  `moveToSpace`/`activateAppExpose`. CGEvent `.privateState` for app-level shortcuts.
 
 ## 2026-02-21
 

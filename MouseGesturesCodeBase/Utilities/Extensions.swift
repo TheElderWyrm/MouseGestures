@@ -155,114 +155,40 @@ func releaseAllModifierKeys() {
     usleep(10_000)
 }
 
-// MARK: - Modifier Masking via CGEvent Tap
+// MARK: - Modifier Release Waiting
 
-/// Temporarily masks physical modifier keys by installing a CGEvent tap that
-/// strips modifier flags from `flagsChanged` events at the HID level.
-/// This makes the system "forget" about held physical modifiers so that
-/// AppleScript/System Events keyboard sends arrive with a clean state.
+/// The modifier flags we care about for gesture triggers.
+private let kModifierBits: CGEventFlags = [.maskCommand, .maskControl, .maskAlternate, .maskShift]
+
+/// Wait until ALL physical modifier keys are released, or until timeout.
+/// Uses `CGEventSource.flagsState(.hidSystemState)` which is thread-safe and
+/// reflects the actual HID hardware state (unlike NSEvent.modifierFlags which
+/// may be stale on background threads).
 ///
-/// IMPORTANT: The event tap callback runs on the run loop where the tap source
-/// is registered. The caller must ensure that run loop is spinning. The
-/// `withCleanModifiers` method handles this by running the tap on the
-/// calling thread's run loop and spinning it manually.
+/// Requires two consecutive clean reads separated by a short interval to avoid
+/// false positives from momentary gaps between sequential key releases.
 ///
-/// Usage:
-///     ModifierMask.withCleanModifiers {
-///         // AppleScript or other code that needs no physical modifiers
-///     }
-class ModifierMask {
+/// - Parameter timeout: Maximum time to wait (default 1.5s).
+/// - Returns: `true` if all modifiers were released, `false` if timed out.
+@discardableResult
+func waitForModifierRelease(timeout: TimeInterval = 1.5) -> Bool {
+    let deadline = Date().addingTimeInterval(timeout)
+    var consecutiveClean = 0
     
-    /// The C callback for the event tap. Strips all modifier flags from flagsChanged events.
-    private static let tapCallback: CGEventTapCallBack = { _, type, event, refcon in
-        // If the tap is disabled by the system (e.g. timeout), re-enable it
-        if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
-            if let refcon = refcon {
-                let tapPtr = Unmanaged<TapState>.fromOpaque(refcon).takeUnretainedValue()
-                if let tap = tapPtr.machPort {
-                    CGEvent.tapEnable(tap: tap, enable: true)
-                }
-            }
-            return Unmanaged.passUnretained(event)
+    while Date() < deadline {
+        let flags = CGEventSource.flagsState(.hidSystemState)
+        let held = flags.intersection(kModifierBits)
+        
+        if held.isEmpty {
+            consecutiveClean += 1
+            // Require 2 consecutive clean reads (~20ms apart) to confirm
+            if consecutiveClean >= 2 { return true }
+        } else {
+            consecutiveClean = 0
         }
-        // Strip all modifier key flags so the system sees no modifiers held
-        event.flags = []
-        return Unmanaged.passUnretained(event)
+        usleep(10_000) // 10ms poll
     }
-    
-    /// Mutable state passed to the tap callback via refcon.
-    private class TapState {
-        var machPort: CFMachPort?
-    }
-    
-    /// Execute a closure with all physical modifier keys masked.
-    /// Installs a HID-level event tap that strips modifier flags, executes
-    /// the closure, then removes the tap.
-    ///
-    /// The tap callback is processed on the CURRENT thread's run loop, which
-    /// is spun manually. This avoids the deadlock that occurs when the main
-    /// thread is blocked (e.g. by a semaphore in the sandbox).
-    static func withCleanModifiers(_ body: () -> Void) {
-        let mask: CGEventMask = (1 << CGEventType.flagsChanged.rawValue)
-        
-        // TapState lets the callback re-enable the tap if the system disables it.
-        let state = TapState()
-        let statePtr = Unmanaged.passRetained(state)
-        
-        guard let tap = CGEvent.tapCreate(
-            tap: .cghidEventTap,
-            place: .headInsertEventTap,
-            options: .defaultTap,
-            eventsOfInterest: mask,
-            callback: tapCallback,
-            userInfo: statePtr.toOpaque()
-        ) else {
-            statePtr.release()
-            // Tap creation failed (no accessibility?), run body anyway
-            body()
-            return
-        }
-        state.machPort = tap
-        
-        guard let rlSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0) else {
-            statePtr.release()
-            body()
-            return
-        }
-        
-        // Add tap to the CURRENT thread's run loop (not main, which may be blocked).
-        let rl = CFRunLoopGetCurrent()
-        CFRunLoopAddSource(rl, rlSource, .commonModes)
-        CGEvent.tapEnable(tap: tap, enable: true)
-        
-        // Spin the run loop briefly to let the tap start processing events.
-        // This ensures the system picks up the tap before we proceed.
-        CFRunLoopRunInMode(.defaultMode, 0.01, false)
-        
-        // Post a clean flagsChanged event to flush the current modifier state.
-        // This event will be intercepted by our tap, which strips its flags,
-        // making the system see "no modifiers held".
-        if let src = CGEventSource(stateID: .hidSystemState),
-           let cleanFlags = CGEvent(source: src) {
-            cleanFlags.type = .flagsChanged
-            cleanFlags.flags = []
-            cleanFlags.post(tap: .cghidEventTap)
-        }
-        
-        // Spin again to process the clean flagsChanged through the tap.
-        CFRunLoopRunInMode(.defaultMode, 0.05, false)
-        
-        // Execute the action.
-        body()
-        
-        // Spin briefly to process any residual events before removing the tap.
-        CFRunLoopRunInMode(.defaultMode, 0.05, false)
-        
-        // Remove the tap, restoring normal modifier handling.
-        CGEvent.tapEnable(tap: tap, enable: false)
-        CFRunLoopRemoveSource(rl, rlSource, .commonModes)
-        statePtr.release()
-    }
+    return false
 }
 
 // MARK: - Shared Mouse Button Utilities
