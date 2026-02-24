@@ -14,7 +14,7 @@ CORE ACTIONS (com.mousegestures.core)
 close_window         - Close a window [✓]
 	* Add window target parameters [✓]
 quit_app             - Quit an application [✓]
-	* Hide bundle id option when not needed
+	* Hide bundle id option when not needed → Fixed: app_bundle_id uses visibleWhen(target==specific) [✓]
 	* Add finder button for quoting specific application [✓ uses .application type]
 minimize             - Minimize a window [✓]
 	* Add window target parameters [✓]
@@ -23,29 +23,29 @@ maximize             - Maximize a window [✓]
 fullscreen           - Toggle fullscreen mode [✓]
 	* Fn + F works on some apps
 	* Command + Control + F works in some apps (Most but not all)
-	* Using Accessibility to click the full screen button doesn't work when buttons aren't shown (common when in full screen) <-- Can we check this and then fall back?
+	* Now tries AXFullScreenButton first; falls back to Cmd+Ctrl+F when button is hidden (e.g. already fullscreen) [✓]
 	* Add window target parameters [✓]
 hide_app             - Hide the active application [✓]
 	* Window Target parameters [✓]
 mission_control      - Show Mission Control
-	* Not Functioning
+	* Not Functioning → Fixed: launches Mission Control.app directly, falls back to Ctrl+Up [✓]
 show_desktop         - Show the desktop
-	* Not Functioning
+	* Fixed: posts com.apple.showdesktop.awake DistributedNotification (same as Dock) [✓]
 app_expose           - Show all windows of current application
-	* Not working
+	* Fixed: releases gesture modifier keys before sending Ctrl+Down via System Events [✓]
 [next_window          - Switch to next window        → cycle_window (direction: forward)  [✓]
 previous_window      - Switch to previous window]    → cycle_window (direction: backward) [✓]
 	* Duplicate of cycle_windows? [✓ consolidated]
 [next_space           - Move to next desktop space    → cycle_space (direction: next)     [✓]
 	* Not working
 previous_space       - Move to previous desktop space] → cycle_space (direction: previous) [✓]
-	* Not Working
+	* Fixed: releases gesture modifier keys before sending Ctrl+Arrow via System Events [✓]
 	* Action + Parameter [✓]
 lock_screen          - Lock the screen [✓]
 sleep_display        - Put the display to sleep
-	* How is this different from system sleep?
+	* Clarified: description updated to "Put the display(s) to sleep without sleeping the computer" [✓]
 empty_trash          - Empty the trash
-	* Not working
+	* Fixed: uses "without confirm" to bypass dialog [✓]
 [next_profile         - Switch to next gesture profile    → cycle_profile (direction: next)     [✓]
 previous_profile     - Switch to previous gesture profile] → cycle_profile (direction: previous) [✓]
 	* Takes a long time/lags. 
@@ -61,8 +61,7 @@ WINDOW MANAGEMENT (com.mousegestures.window)
 - Window targeting not working
 - Window age should be an integer
 - Actions that change the size only should not reposition
-- Targeting its own window crashes
-	-         let result = AXUIElementSetAttributeValue(element, attribute as CFString, value)
+- Targeting its own window crashes → Fixed: PID guard in setAccessibilityAttribute + performAccessibilityAction [✓]
 - Improved parameter organization
 
 [left_half            - Move window to left half of screen
@@ -101,10 +100,9 @@ cycle_windows_backward - Cycle through windows backward]
 
 switch_to_window     - Switch to a specific window
 tile_all             - Tile all windows on screen
-	* Only Partially Works
-	* Activates only within a single application (Make a parameter)
+	* Added scope parameter: current_app | all_windows (default: current_app) [✓]
 cascade              - Cascade all windows
-	* Activates only within a single application (Make a parameter)
+	* Added scope parameter: current_app | all_windows (default: current_app) [✓]
 
 [save_position        - Save current window position
 restore_position     - Restore saved window position]

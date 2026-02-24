@@ -115,7 +115,8 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
                     key: "app_bundle_id",
                     name: "Application",
                     type: .application,
-                    description: "Application to hide when using specific target"
+                    description: "Application to hide when using specific target",
+                    visibleWhen: ParameterVisibilityRule(key: "target", value: "specific")
                 )
             ],
             icon: "eye.slash"
@@ -144,7 +145,8 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
                     key: "app_bundle_id",
                     name: "Application",
                     type: .application,
-                    description: "Application to quit (when targeting specific app)"
+                    description: "Application to quit (when targeting specific app)",
+                    visibleWhen: ParameterVisibilityRule(key: "target", value: "specific")
                 )
             ],
             icon: "xmark.app"
@@ -226,7 +228,7 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
         PluginAction(
             id: "sleep_display",
             name: "Sleep Display",
-            description: "Put the display to sleep",
+            description: "Put the display(s) to sleep without sleeping the computer",
             icon: "moon"
         ),
         PluginAction(
@@ -496,6 +498,12 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
             app.activate(options: [])
             usleep(100_000)
         }
+        // Try pressing the AX full screen button; falls back to keyboard when hidden (e.g. already fullscreen)
+        if let window = resolveTargetWindow(target, context: context),
+           let btnObj = context.getAccessibilityAttribute(window, attribute: "AXFullScreenButton") {
+            let btn = unsafeBitCast(btnObj, to: AXUIElement.self)
+            if context.performAccessibilityAction(btn, action: kAXPressAction as String) { return }
+        }
         context.sendKeyboardShortcut(keyCode: 3, modifiers: [.maskControl, .maskCommand])
     }
     
@@ -546,15 +554,35 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
     // MARK: - System UI
     
     private func activateMissionControl(context: PluginContext) {
-        context.sendKeyboardShortcut(keyCode: 99, modifiers: []) // F3
+        // Launch Mission Control app directly (most reliable across shortcut configurations)
+        let mcURL = URL(fileURLWithPath: "/System/Applications/Mission Control.app")
+        if NSWorkspace.shared.open(mcURL) { return }
+        // Fallback: Ctrl+Up
+        context.sendKeyboardShortcut(keyCode: 126, modifiers: [.maskControl])
     }
     
     private func showDesktop(context: PluginContext) {
-        context.sendKeyboardShortcut(keyCode: 103, modifiers: []) // F11
+        // Most reliable: post the Dock's private "show desktop" distributed notification
+        DistributedNotificationCenter.default().postNotificationName(
+            NSNotification.Name("com.apple.showdesktop.awake"),
+            object: nil,
+            userInfo: nil,
+            deliverImmediately: true
+        )
     }
     
     private func activateAppExpose(context: PluginContext) {
-        context.sendKeyboardShortcut(keyCode: 125, modifiers: [.maskControl]) // Ctrl+Down
+        // Modifiers are already released by ActionExecutionManager before any action runs.
+        // Use System Events so the Ctrl+Down reaches Mission Control reliably
+        do {
+            try context.executeAppleScript("""
+                tell application "System Events"
+                    key code 125 using {control down}
+                end tell
+            """)
+        } catch {
+            context.sendKeyboardShortcut(keyCode: 125, modifiers: [.maskControl])
+        }
     }
     
     private func cycleWindows(forward: Bool, context: PluginContext) {
@@ -566,8 +594,17 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
     }
     
     private func moveToSpace(next: Bool, context: PluginContext) {
-        let keyCode: CGKeyCode = next ? 124 : 123 // Right / Left arrow
-        context.sendKeyboardShortcut(keyCode: keyCode, modifiers: [.maskControl])
+        // Modifiers are already released by ActionExecutionManager before any action runs.
+        let keyCode = next ? 124 : 123 // Right / Left arrow
+        do {
+            try context.executeAppleScript("""
+                tell application "System Events"
+                    key code \(keyCode) using {control down}
+                end tell
+            """)
+        } catch {
+            context.sendKeyboardShortcut(keyCode: CGKeyCode(keyCode), modifiers: [.maskControl])
+        }
     }
     
     // MARK: - System
@@ -581,11 +618,16 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
     }
     
     private func emptyTrash(context: PluginContext) {
-        try? context.executeAppleScript("""
-            tell application "Finder"
-                empty trash
-            end tell
-        """)
+        do {
+            // "without confirm" bypasses the confirmation dialog
+            try context.executeAppleScript("""
+                tell application "Finder"
+                    empty trash without confirm
+                end tell
+            """)
+        } catch {
+            context.logger.log("Failed to empty trash: \(error.localizedDescription)", file: #file, function: #function, line: #line)
+        }
     }
     
     // MARK: - Profile Management

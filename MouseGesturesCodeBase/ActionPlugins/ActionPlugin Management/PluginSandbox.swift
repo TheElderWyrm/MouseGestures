@@ -59,6 +59,13 @@ public class PluginSandbox {
         
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
+            // Release physically held modifier keys on the background thread before the action runs.
+            // This avoids stalling the main thread and is the single authoritative release point.
+            // sendKeyboardShortcut uses .privateState so it's immune to physical key state;
+            // this release primarily ensures AppleScript/System Events key sends arrive clean.
+            releaseAllModifierKeys()
+            // 80 ms: enough to flush HID key-up events before any synthetic key send.
+            usleep(80_000)
             do {
                 try self.plugin.execute(action: action, with: parameters, context: self.sandboxedContext)
             } catch {
@@ -242,22 +249,17 @@ class SandboxedPluginContext: PluginContext {
             log.log("⚠️ Plugin '\(pluginId)' attempted to send keyboard shortcut without permission")
             return
         }
-        
-        // Release all modifiers first (shared utility from Extensions.swift)
-        releaseAllModifierKeys()
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-            guard let source = CGEventSource(stateID: .combinedSessionState) else { return }
-            guard let keyDown = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: true),
-                  let keyUp = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: false) else { return }
-            
-            keyDown.flags = modifiers
-            keyUp.flags = modifiers
-            
-            keyDown.post(tap: .cghidEventTap)
-            usleep(50000)
-            keyUp.post(tap: .cghidEventTap)
-        }
+        // Use .privateState: creates a clean event source completely independent of the
+        // physical keyboard state. This means physically held gesture modifier keys (Cmd, Ctrl,
+        // etc.) cannot bleed into the synthetic event, regardless of what the user is holding.
+        guard let source = CGEventSource(stateID: .privateState) else { return }
+        guard let keyDown = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: true),
+              let keyUp   = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: false) else { return }
+        keyDown.flags = modifiers
+        keyUp.flags   = modifiers
+        keyDown.post(tap: .cghidEventTap)
+        usleep(50_000)
+        keyUp.post(tap: .cghidEventTap)
     }
     
     func executeAppleScript(_ script: String) throws {
@@ -329,7 +331,13 @@ class SandboxedPluginContext: PluginContext {
             log.log("⚠️ Plugin '\(pluginId)' attempted accessibility action without permission")
             return false
         }
-        
+        // Guard against operating on our own process (causes EXC_BREAKPOINT crash)
+        var targetPid: pid_t = 0
+        AXUIElementGetPid(element, &targetPid)
+        if targetPid == ProcessInfo.processInfo.processIdentifier {
+            log.log("⚠️ Plugin '\(pluginId)' skipping performAccessibilityAction on own process window")
+            return false
+        }
         let result = AXUIElementPerformAction(element, action as CFString)
         return result == .success
     }
@@ -339,7 +347,13 @@ class SandboxedPluginContext: PluginContext {
             log.log("⚠️ Plugin '\(pluginId)' attempted to set accessibility attribute without permission")
             return false
         }
-        
+        // Guard against operating on our own process (causes EXC_BREAKPOINT crash)
+        var targetPid: pid_t = 0
+        AXUIElementGetPid(element, &targetPid)
+        if targetPid == ProcessInfo.processInfo.processIdentifier {
+            log.log("⚠️ Plugin '\(pluginId)' skipping setAccessibilityAttribute on own process window")
+            return false
+        }
         let result = AXUIElementSetAttributeValue(element, attribute as CFString, value)
         return result == .success
     }
@@ -467,6 +481,10 @@ class SandboxedPluginContext: PluginContext {
         try? FileManager.default.createDirectory(at: pluginFolder,
                                                 withIntermediateDirectories: true)
         return pluginFolder
+    }
+    
+    func releaseModifiers() {
+        releaseAllModifierKeys()
     }
     
     func getProfiles() -> [[String: Any]] {

@@ -135,7 +135,9 @@ extension CGKeyCode {
 /// Shared by AutomationPlugin, PluginSandbox, and any code that needs
 /// to reset modifier state before posting synthetic keyboard events.
 func releaseAllModifierKeys() {
-    guard let source = CGEventSource(stateID: .combinedSessionState) else { return }
+    // Use .privateState so our key-up events arrive with a clean source state,
+    // preventing any modifier flag inheritance from the physical keyboard.
+    guard let source = CGEventSource(stateID: .privateState) else { return }
     let modifierKeys: [(CGKeyCode, CGKeyCode)] = [
         (0x37, 0x36), // Command L/R
         (0x3B, 0x3E), // Control L/R
@@ -150,7 +152,7 @@ func releaseAllModifierKeys() {
             keyUp.flags = []; keyUp.post(tap: .cghidEventTap)
         }
     }
-    usleep(10000)
+    usleep(10_000)
 }
 
 // MARK: - Shared Mouse Button Utilities

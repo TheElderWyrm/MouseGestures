@@ -288,8 +288,20 @@ struct ActionSelectionView: View {
     
     // MARK: - Parameter Fields
     
+    /// Returns true when the parameter should be displayed given current parameter values
+    private func shouldShow(_ p: ParameterDefinition) -> Bool {
+        guard let rule = p.visibleWhen else { return true }
+        let current = actionParameters[rule.key]?.value as? String ?? ""
+        return current == rule.value
+    }
+
     @ViewBuilder
     private func paramField(for p: ParameterDefinition) -> some View {
+        if shouldShow(p) { paramFieldContent(for: p) }
+    }
+
+    @ViewBuilder
+    private func paramFieldContent(for p: ParameterDefinition) -> some View {
         switch p.type {
         case .string, .path, .url:
             VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
@@ -326,14 +338,30 @@ struct ActionSelectionView: View {
             VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
                 Text(p.name)
                     .font(.system(size: 12, weight: .medium))
-                Picker("", selection: strBinding(p.key, def: "")) {
-                    Text("Select...").tag("")
-                    ForEach(WindowTargeting.getAllRunningApplications(), id: \.bundleId) { app in
-                        Text(app.name).tag(app.bundleId)
+                HStack(spacing: MGStyle.Spacing.sm) {
+                    Picker("", selection: strBinding(p.key, def: "")) {
+                        Text("Select...").tag("")
+                        // Show selected app even if it's not currently running
+                        let current = actionParameters[p.key]?.value as? String ?? ""
+                        if !current.isEmpty && !WindowTargeting.getAllRunningApplications().contains(where: { $0.bundleId == current }) {
+                            let displayName = NSWorkspace.shared.urlForApplication(withBundleIdentifier: current)
+                                .flatMap { Bundle(url: $0)?.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String }
+                                ?? Bundle(url: NSWorkspace.shared.urlForApplication(withBundleIdentifier: current) ?? URL(fileURLWithPath: ""))?.object(forInfoDictionaryKey: "CFBundleName") as? String
+                                ?? current
+                            Text(displayName).tag(current)
+                            Divider()
+                        }
+                        ForEach(WindowTargeting.getAllRunningApplications(), id: \.bundleId) { app in
+                            Text(app.name).tag(app.bundleId)
+                        }
                     }
+                    .pickerStyle(.menu)
+                    .labelsHidden()
+                    Button(action: { browseForApp(paramKey: p.key) }) {
+                        Image(systemName: "folder")
+                    }
+                    .help("Browse for any installed application")
                 }
-                .pickerStyle(.menu)
-                .labelsHidden()
             }
         case .script:
             VStack(alignment: .leading, spacing: MGStyle.Spacing.sm) {
@@ -457,6 +485,28 @@ struct ActionSelectionView: View {
     
     private var selectedSavedAction: SavedAction? {
         SavedActionsManager.shared.savedActions.first { $0.id.uuidString == selectedActionId }
+    }
+    
+    // MARK: - App Browser
+    
+    private func browseForApp(paramKey: String) {
+        let panel = NSOpenPanel()
+        panel.title = "Select Application"
+        panel.canChooseDirectories = false
+        panel.canChooseFiles = true
+        panel.allowsMultipleSelection = false
+        panel.allowedContentTypes = [.application]
+        panel.directoryURL = URL(fileURLWithPath: "/Applications")
+        panel.begin { response in
+            guard response == .OK, let url = panel.url else { return }
+            // Extract bundle ID from the selected .app
+            if let bundle = Bundle(url: url),
+               let bundleId = bundle.bundleIdentifier {
+                DispatchQueue.main.async {
+                    actionParameters[paramKey] = AnyCodable(bundleId)
+                }
+            }
+        }
     }
     
     // MARK: - Parameter Bindings

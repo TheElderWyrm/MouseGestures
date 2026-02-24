@@ -141,6 +141,19 @@ public struct PluginAction: Codable, Equatable {
     }
 }
 
+/// Rule that controls when a parameter is visible based on another parameter's value
+public struct ParameterVisibilityRule: Codable, Equatable {
+    /// The key of the sibling parameter to check
+    public let key: String
+    /// The value that sibling parameter must have for this parameter to be visible
+    public let value: String
+    
+    public init(key: String, value: String) {
+        self.key = key
+        self.value = value
+    }
+}
+
 /// Definition of a parameter that an action can accept
 public struct ParameterDefinition: Codable, Equatable {
     public let key: String
@@ -150,6 +163,8 @@ public struct ParameterDefinition: Codable, Equatable {
     public let defaultValue: AnyCodable?
     public let description: String
     public let validation: ValidationRule?
+    /// When set, this parameter is only shown when the referenced sibling has the specified value
+    public let visibleWhen: ParameterVisibilityRule?
     
     public init(
         key: String,
@@ -158,7 +173,8 @@ public struct ParameterDefinition: Codable, Equatable {
         required: Bool = false,
         defaultValue: AnyCodable? = nil,
         description: String = "",
-        validation: ValidationRule? = nil
+        validation: ValidationRule? = nil,
+        visibleWhen: ParameterVisibilityRule? = nil
     ) {
         self.key = key
         self.name = name
@@ -167,6 +183,7 @@ public struct ParameterDefinition: Codable, Equatable {
         self.defaultValue = defaultValue
         self.description = description
         self.validation = validation
+        self.visibleWhen = visibleWhen
     }
 }
 
@@ -384,6 +401,9 @@ public protocol PluginContext {
     
     /// Delete file from plugin storage
     func deleteFile(_ filename: String) throws
+    
+    /// Release all currently held modifier keys (call before any synthetic key event that must arrive modifier-free)
+    func releaseModifiers()
     
     /// Get list of saved profiles
     func getProfiles() -> [[String: Any]]

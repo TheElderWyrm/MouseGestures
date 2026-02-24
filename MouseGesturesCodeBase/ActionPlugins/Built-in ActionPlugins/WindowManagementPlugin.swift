@@ -381,17 +381,41 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
         PluginAction(
             id: "tile_all",
             name: "Tile All Windows",
-            description: "Tile all windows on screen",
+            description: "Tile windows on screen",
             requiresParameters: true,
-            supportedParameters: windowTargetParameters,
+            supportedParameters: [
+                ParameterDefinition(
+                    key: "scope",
+                    name: "Scope",
+                    type: .selection,
+                    defaultValue: AnyCodable("current_app"),
+                    description: "Which windows to tile",
+                    validation: ValidationRule(allowedValues: [
+                        AnyCodable("current_app"),
+                        AnyCodable("all_windows")
+                    ])
+                )
+            ] + windowTargetParameters,
             icon: "rectangle.split.2x2"
         ),
         PluginAction(
             id: "cascade",
             name: "Cascade Windows",
-            description: "Cascade all windows",
+            description: "Cascade windows",
             requiresParameters: true,
-            supportedParameters: windowTargetParameters,
+            supportedParameters: [
+                ParameterDefinition(
+                    key: "scope",
+                    name: "Scope",
+                    type: .selection,
+                    defaultValue: AnyCodable("current_app"),
+                    description: "Which windows to cascade",
+                    validation: ValidationRule(allowedValues: [
+                        AnyCodable("current_app"),
+                        AnyCodable("all_windows")
+                    ])
+                )
+            ] + windowTargetParameters,
             icon: "rectangle.stack"
         ),
         
@@ -587,9 +611,27 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
             
         // MARK: Tile / Cascade
         case "tile_all":
-            tileAllWindows(target: target, context: context)
+            let tileScope = parameters.string(for: "scope") ?? "current_app"
+            let tileTarget: WindowTargeting.WindowTarget?
+            if tileScope == "all_windows" {
+                var t = WindowTargeting.WindowTarget()
+                t.targetType = .allWindows
+                tileTarget = t
+            } else {
+                tileTarget = target
+            }
+            tileAllWindows(target: tileTarget, context: context)
         case "cascade":
-            cascadeWindows(target: target, context: context)
+            let cascadeScope = parameters.string(for: "scope") ?? "current_app"
+            let cascadeTarget: WindowTargeting.WindowTarget?
+            if cascadeScope == "all_windows" {
+                var t = WindowTargeting.WindowTarget()
+                t.targetType = .allWindows
+                cascadeTarget = t
+            } else {
+                cascadeTarget = target
+            }
+            cascadeWindows(target: cascadeTarget, context: context)
             
         // MARK: Custom Size / Position
         case "set_size":
