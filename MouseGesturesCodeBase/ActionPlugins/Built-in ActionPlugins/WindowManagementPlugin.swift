@@ -1138,6 +1138,8 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
         let sf = screen.visibleFrame
         let offset: CGFloat = 30
         let winSize = CGSize(width: sf.width * 0.6, height: sf.height * 0.6)
+        // Top of visible area in AX coordinates (below menu bar)
+        let topY = NSStatusBar.system.thickness
         
         // Wrap cascade position when it would go off screen
         let maxOffset = min(sf.width - winSize.width, sf.height - winSize.height)
@@ -1148,7 +1150,7 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
             if resize {
                 let frame = CGRect(
                     x: sf.minX + off,
-                    y: sf.maxY - winSize.height - off,
+                    y: topY + off,
                     width: winSize.width, height: winSize.height
                 )
                 setWindowFrame(window, frame: frame, context: context)
@@ -1157,7 +1159,7 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
                 if let currentFrame = getWindowFrame(window, context: context) {
                     let frame = CGRect(
                         x: sf.minX + off,
-                        y: sf.maxY - currentFrame.height - off,
+                        y: topY + off,
                         width: currentFrame.width, height: currentFrame.height
                     )
                     setWindowFrame(window, frame: frame, context: context)

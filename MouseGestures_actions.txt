@@ -29,8 +29,6 @@ cycle_space          - Move to next/previous desktop space (direction parameter)
 lock_screen          - Lock the screen
 sleep_display        - Put display(s) to sleep
 empty_trash          - Empty the trash (confirm parameter) [✓✓]
-	* Confirmation dialog before emptying (default: on)
-	* Without confirmation: suppresses Finder warning dialog
 cycle_profile        - Cycle gesture profiles (direction parameter)
 switch_profile       - Switch to a specific gesture profile (profile_name parameter)
 	* Switch to dropdown selection
@@ -54,10 +52,10 @@ cycle_windows        - Cycle through windows (direction parameter)
 switch_to_window     - Switch to a specific window
 window_position_memory - Save/restore/delete window position (operation + slot parameters)
 window_layout        - Save/restore/delete named window layout (operation + layout_name parameters)
-tile_all             - Tile all windows on screen (scope parameter)
-	* Filters out desktop widgets
+tile_all             - Tile all windows on screen (scope parameter) [✓]
 	* Improve Tiling to fill the full screen with larger windows (If possible)
 	* Add option to resize or not <-- Make best attempt
+	* Some windows have minimum size and this results in overlapping windows (Respect) <-- May or may not be possible
 cascade              - Cascade windows (scope + resize_windows parameters) [✓]
 	* resize_windows parameter (default: on) — resize to uniform size or keep existing sizes
 	* Wraps properly as second stack on overflow
@@ -87,7 +85,7 @@ display_brightness   - Adjust display brightness (direction parameter) [✓]
 keyboard_brightness  - Adjust keyboard brightness (direction parameter) [✓]
 toggle_dark_mode     - Switch between light and dark mode
 toggle_do_not_disturb - Enable/disable Do Not Disturb [!]
-toggle_night_shift   - Enable/disable Night Shift [?]
+toggle_night_shift   - Enable/disable Night Shift [!]
 	* Now uses CoreBrightness CBBlueLightClient via ObjC runtime (no python dependency)
 	* Toggles in background without opening System Settings
 screenshot           - Take a screenshot (type: interactive/full/selection/window + destination: clipboard/desktop/custom folder)[✓✓]
