@@ -1,170 +1,256 @@
-- Make similar actions 1 action + parameter (Example: moving to part of screen)
-
-
 MOUSEGESTURES - ALL AVAILABLE ACTIONS
 ======================================
-Last updated: 2026-02-21
+Last updated: 2026-03-03
+
+Legend: [✓] = Done, [!] = Bug/Issue, [TODO] = Planned change
 
 --------------------------------------
 CORE ACTIONS (com.mousegestures.core)
 --------------------------------------
-* Actions may need to get moved into other bundles
-* Not all system control, should not be labeled as such?
-
-close_window         - Close a window [✓]
-	* Add window target parameters [✓]
-quit_app             - Quit an application [✓]
-	* Hide bundle id option when not needed → Fixed: app_bundle_id uses visibleWhen(target==specific) [✓]
-	* Add finder button for quoting specific application [✓ uses .application type]
-minimize             - Minimize a window [✓]
-	* Add window target parameters [✓]
-maximize             - Maximize a window [✓]
-	* Add window target parameters [✓]
-fullscreen           - Toggle fullscreen mode [✓]
-	* Fn + F works on some apps
-	* Command + Control + F works in some apps (Most but not all)
-	* Now tries AXFullScreenButton first; falls back to Cmd+Ctrl+F when button is hidden (e.g. already fullscreen) [✓]
-	* Add window target parameters [✓]
-hide_app             - Hide the active application [✓]
-	* Window Target parameters [✓]
+close_window         - Close a window
+	* Supports window targeting (frontmost, by_age, by_application, by_title, mouse_position)
+minimize             - Minimize a window
+	* Supports window targeting
+maximize             - Maximize a window
+	* Supports window targeting
+fullscreen           - Toggle fullscreen mode
+	* Supports window targeting
+	* [!] Delay when targeting another app (should not require waiting for modifiers to be released)
+hide_app             - Hide the active application
+	* Supports target: frontmost | specific
+	* [TODO] Add "all except Finder" parameter (like quit_app has)
+quit_app             - Quit an application
+	* Supports target: frontmost | specific | all_except_finder
 mission_control      - Show Mission Control
-	* Not Functioning → Fixed: launches Mission Control.app directly, falls back to Ctrl+Up [✓]
+	* Launches Mission Control.app directly, falls back to Ctrl+Up
 show_desktop         - Show the desktop
-	* Fixed: posts com.apple.showdesktop.awake DistributedNotification (same as Dock) [✓]
+	* Uses DistributedNotificationCenter ("com.apple.showdesktop.awake")
+	* [!] Verify this actually works reliably
 app_expose           - Show all windows of current application
-	* Fixed: releases gesture modifier keys before sending Ctrl+Down via System Events [✓]
-[next_window          - Switch to next window        → cycle_window (direction: forward)  [✓]
-previous_window      - Switch to previous window]    → cycle_window (direction: backward) [✓]
-	* Duplicate of cycle_windows? [✓ consolidated]
-[next_space           - Move to next desktop space    → cycle_space (direction: next)     [✓]
-	* Not working
-previous_space       - Move to previous desktop space] → cycle_space (direction: previous)]
-	* Only partially working. Propper solution requires either private APIs or invisible windows: https://github.com/bigbearlabs/SpaceSwitcher.
-lock_screen          - Lock the screen [✓]
-sleep_display        - Put the display to sleep
-	* Clarified: description updated to "Put the display(s) to sleep without sleeping the computer" [✓]
+	* Uses System Events Ctrl+Down; subject to modifier key interference
+cycle_window         - Switch to next/previous window [✓ consolidated]
+	* Parameters: direction (forward | backward)
+	* Uses Cmd+` / Cmd+Shift+`
+cycle_space          - Move to next/previous desktop space [✓ consolidated]
+	* Parameters: direction (next | previous)
+	* Uses System Events Ctrl+Arrow; subject to modifier key interference
+lock_screen          - Lock the screen
+	* Uses Cmd+Ctrl+Q
+sleep_display        - Put display(s) to sleep
+	* Uses pmset displaysleepnow
 empty_trash          - Empty the trash
-	* Fixed: uses "without confirm" to bypass dialog [✓]
-[next_profile         - Switch to next gesture profile    → cycle_profile (direction: next)     [✓]
-previous_profile     - Switch to previous gesture profile] → cycle_profile (direction: previous) [✓]
-	* Takes a long time/lags. 
-	* Display using simple notification (No custom UI) [✓]
-	* Action + Parameter [✓]
+	* Uses AppleScript "empty trash without confirm"
+	* [!] Verify this works (was previously marked broken)
+cycle_profile        - Cycle gesture profiles [✓ consolidated]
+	* Parameters: direction (next | previous)
+	* Shows notification on switch [✓]
 switch_profile       - Switch to a specific gesture profile [✓]
-	* Use Profile Name not UUID as parameter [✓]
-	* Switch to dropdown
+	* Parameters: profile_name (string) [✓ uses name not UUID]
+	* [TODO] Switch to dropdown selection
+
+General Core Issues:
+	* [TODO] Move window actions (close/minimize/maximize/fullscreen) into Window Management plugin
+	* [!] Modifier key interference on System Events actions (app_expose, cycle_space). See to_do.txt.
 
 ------------------------------------------
 WINDOW MANAGEMENT (com.mousegestures.window)
 ------------------------------------------
-- Window targeting not working
-- Window age should be an integer
-- Actions that change the size only should not reposition
-- Targeting its own window crashes → Fixed: PID guard in setAccessibilityAttribute + performAccessibilityAction [✓]
-- Improved parameter organization
-
-[left_half            - Move window to left half of screen
-right_half           - Move window to right half of screen
-top_half             - Move window to top half of screen
-bottom_half          - Move window to bottom half of screen
-top_left             - Move window to top left quarter
-top_right            - Move window to top right quarter
-bottom_left          - Move window to bottom left quarter
-bottom_right         - Move window to bottom right quarter
-left_third           - Move window to left third of screen
-center_third         - Move window to center third of screen
-right_third          - Move window to right third of screen]
-	→ snap_window (position: left_half | right_half | top_half | bottom_half |
+snap_window          - Move window to a screen region [✓ consolidated from 11 actions]
+	* Parameters: position (left_half | right_half | top_half | bottom_half |
 	               top_left | top_right | bottom_left | bottom_right |
-	               left_third | center_third | right_third) [✓]
-
+	               left_third | center_third | right_third)
+	* Supports window targeting (frontmost, by_age, by_application, by_title,
+	  by_title_contains, all_in_app, all_visible, mouse_position, largest, smallest)
 center               - Center window on screen
-[resize_25            - Resize window to 25% of screen
-resize_50            - Resize window to 50% of screen
-resize_75            - Resize window to 75% of screen]
-	→ resize_to_percent (percent: 1–100) [✓]
-
-[grow                 - Increase window size by 10%
-shrink               - Decrease window size by 10%]
-	→ adjust_size (direction: grow | shrink, percent: 1–100) [✓]
-
-next_display         - Move window to next display
-	* Remove [✓ removed]
-previous_display     - Move window to previous display
-	* Remove [✓ removed]
-
-[cycle_windows_forward  - Cycle through windows forward
-cycle_windows_backward - Cycle through windows backward]
-	→ cycle_windows (direction: forward | backward) [✓]
-
+	* Supports window targeting
+resize_to_percent    - Resize window to % of screen [✓ consolidated from resize_25/50/75]
+	* Parameters: percent (1-100)
+	* Supports window targeting
+adjust_size          - Grow or shrink window [✓ consolidated from grow/shrink]
+	* Parameters: direction (grow | shrink), percent (1-100)
+	* Supports repeat
+	* Supports window targeting
+	* [!] Actions that only change size should not reposition (currently centers after resize)
+cycle_windows        - Cycle through windows [✓ consolidated forward/backward]
+	* Parameters: direction (forward | backward)
+	* Supports window targeting (by_application cycles within that app's windows)
+	* Supports repeat
 switch_to_window     - Switch to a specific window
+	* Supports window targeting
+window_position_memory - Save/restore/delete window position [✓ consolidated]
+	* Parameters: operation (save | restore | delete), slot (name)
+	* Supports window targeting
+window_layout        - Save/restore/delete named window layout [✓ consolidated]
+	* Parameters: operation (save | restore | delete), layout_name, reopen_apps (bool)
 tile_all             - Tile all windows on screen
-	* Added scope parameter: current_app | all_windows (default: current_app) [✓]
-cascade              - Cascade all windows
-	* Added scope parameter: current_app | all_windows (default: current_app) [✓]
-
-[save_position        - Save current window position
-restore_position     - Restore saved window position]
-	→ window_position_memory (operation: save | restore | delete, slot: name) [✓]
-	* Add delete saved position [✓]
-
-[save_layout          - Save all window positions as a named layout
-restore_layout       - Restore a saved window layout
-delete_layout        - Delete a saved window layout]
-	→ window_layout (operation: save | restore | delete, layout_name) [✓]
-
+	* Parameters: scope (current_app | all_windows)
+	* [TODO] Calculate best tiling organization (currently uses sqrt grid)
+	* Supports window targeting
+cascade              - Cascade windows
+	* Parameters: scope (current_app | all_windows) [✓]
+	* [!] Should not affect desktop widgets
+	* [TODO] Option to resize windows or not
+	* [!] Seems to create multiple stacks in weird ways
+	* Supports window targeting
 set_size             - Set custom window size (px or % of screen)
-	* Select Type
-set_position         - Set custom window position (absolute, relative, %, or preset)
-	* Issues with parameter selection
+	* Parameters: width, height, width_percent, height_percent, maintain_aspect_ratio
+	* Supports window targeting
+	* [TODO] Select type UI improvement
+set_position         - Set custom window position
+	* Parameters: position_type (absolute | relative | screen_percentage | preset), x, y, preset
+	* Supports window targeting
+	* [!] Issues with parameter selection UI
+
+Removed:
+	* next_display / previous_display [✓ removed]
+
+General Window Issues:
+	* [!] Window targeting not working for some actions (works for minimize, not for adjust_size)
+	* [!] Window age parameter should be an integer (currently number)
+	* [!] Targeting its own window → Fixed: PID guard [✓]
 
 ------------------------------------------
 MEDIA CONTROL (com.mousegestures.media)
 ------------------------------------------
 play_pause           - Toggle media playback
+	* [!] Uses Space key — only works on active application
 next_track           - Skip to next track
+	* [!] Uses Cmd+Right — only works on active app, mainly Apple Music
 previous_track       - Go to previous track
+	* [!] Uses Cmd+Left — only works on active app, mainly Apple Music
+	* [TODO] Combine next_track + previous_track → 1 action + direction parameter
 volume_up            - Increase volume
+	* Parameters: amount (0-100, default 5)
+	* Uses AppleScript volume control
+	* Supports repeat
 volume_down          - Decrease volume
+	* Parameters: amount (0-100, default 5)
+	* Uses AppleScript volume control
+	* Supports repeat
 mute                 - Toggle mute state
-set_volume           - Set volume to a specific level (0-100)
-fast_forward         - Fast forward playback by N seconds
-rewind               - Rewind playback by N seconds
+	* Uses AppleScript
+set_volume           - Set volume to specific level
+	* Parameters: level (0-100)
+	* Uses AppleScript
+	* [TODO] Combine volume_up + volume_down + mute + set_volume → 1 action + parameter
+fast_forward         - Fast forward playback
+	* Parameters: seconds (1-60, default 10)
+	* [!] Just sends Right arrow — same as next_track, not real fast forward
+	* Supports repeat
+rewind               - Rewind playback
+	* Parameters: seconds (1-60, default 10)
+	* [!] Just sends Left arrow — same as previous_track, not real rewind
+	* Supports repeat
+	* [TODO] Combine fast_forward + rewind → 1 action + direction parameter
+
+General Media Issues:
+	* [!] Media actions use basic keyboard shortcuts, not system media keys (NX_KEYTYPE_*)
+	* [!] Most actions only work when targeting the active application
+	* [!] Track/seek controls only work in Apple Music
 
 ------------------------------------------
 SYSTEM CONTROL (com.mousegestures.system)
 ------------------------------------------
 brightness_up        - Increase display brightness
+	* [!] Not working (uses F2 key code 118, may need NX media keys instead)
+	* Supports repeat
 brightness_down      - Decrease display brightness
+	* [!] Not working (uses F1 key code 119, may need NX media keys instead)
+	* Supports repeat
+	* [TODO] Combine brightness_up + brightness_down → 1 action + direction parameter
 keyboard_brightness_up   - Increase keyboard brightness
+	* [!] Not working (uses F5/F6 key codes, may need NX media keys instead)
+	* Supports repeat
 keyboard_brightness_down - Decrease keyboard brightness
+	* [!] Not working
+	* Supports repeat
+	* [TODO] Combine keyboard_brightness_up + keyboard_brightness_down → 1 action + direction parameter
 toggle_dark_mode     - Switch between light and dark mode
+	* Uses AppleScript System Events
 toggle_do_not_disturb - Enable/disable Do Not Disturb
+	* [!] Doesn't work + gets computer stuck as if with option key held down
+	* Uses System Events option-click on Control Center menu bar item
 toggle_night_shift   - Enable/disable Night Shift
+	* [!] Just toggles dark mode (placeholder implementation, not actual Night Shift)
 screenshot_full      - Take a screenshot of entire screen
+	* Uses Cmd+Shift+3
 screenshot_selection - Take a screenshot of selected area
+	* Uses Cmd+Shift+4
 screenshot_window    - Take a screenshot of a window
-screenshot_clipboard - Take a screenshot to clipboard (full/selection/window)
+	* Uses Cmd+Shift+4 then Space
+screenshot_clipboard - Take a screenshot to clipboard
+	* Parameters: type (full | selection | window)
+	* [TODO] Combine all 4 screenshot actions → 1 action with type + destination toggles
+	* [TODO] Add option to open screenshot mode (let user select area)
 system_sleep         - Put computer to sleep
+	* Uses AppleScript System Events
 restart              - Restart the computer
+	* Parameters: confirm (bool, default true)
 shutdown             - Shut down the computer
+	* Parameters: confirm (bool, default true)
 logout               - Log out current user
+	* Parameters: confirm (bool, default true)
 
 ------------------------------------------
 AUTOMATION (com.mousegestures.automation)
 ------------------------------------------
 keyboard_shortcut    - Trigger a keyboard shortcut
+	* Parameters: shortcut (keyboardShortcut type — keyCode + modifiers)
+	* Uses CGEvent with .privateState (not affected by modifier interference)
+	* [TODO] Add parameter for shortcut selection UI improvements
 run_shortcut         - Run a Shortcuts app shortcut
-run_script           - Execute a script (AppleScript, Shell, JavaScript, Python)
+	* Parameters: shortcut_name, input (optional)
+	* [!] Not working (tries /usr/bin/shortcuts CLI, falls back to Shortcuts Events AppleScript)
+run_script           - Execute a script
+	* Parameters: script_type (applescript | shell | javascript | python), use_file (bool), script_content, script_path
+	* [TODO] Rename "Source" toggle label
+	* [!] Python and JavaScript may not work; add interpreter selection option
+	* [TODO] Add 'display output' toggle
 open_app             - Launch an application
+	* Parameters: app_identifier (bundle ID or path), bring_to_front (bool)
+	* [TODO] Should bring up Finder to select any application (not just running apps)
 open_file            - Open a file or folder
+	* Parameters: file_path, open_with (optional app)
 open_url             - Open a URL in default browser
-clipboard_action     - Manipulate clipboard (copy/paste/cut/clear/set text)
+	* Parameters: url, browser (optional app)
+	* [!] URL detection issues (e.g. "Youtube.com" works in Safari, not Opera)
+	* [TODO] Show only browsers when selecting app
+	* [TODO] Add 'default browser' option at top of browser selection, selected by default
+clipboard_action     - Manipulate clipboard contents
+	* Parameters: action (copy | paste | cut | clear | set_text), text (for set_text)
 
 ------------------------------------------
 BUNDLE ACTIONS (com.mousegestures.bundle)
 ------------------------------------------
 execute_bundle       - Execute a bundle of actions sequentially or in parallel
-conditional_action   - Execute an action based on an if/else condition
-repeat_action        - Repeat an action N times with a configurable delay
-delay                - Insert a timed pause (used within bundles)
+	* Parameters: bundle_actions (JSON array), stop_on_failure (bool), parallel_execution (bool)
+	* Has advanced SwiftUI-based Bundle Editor UI
+	* Supports per-action conditions (BundleConditionGroup)
+	* Supports per-action delays
+conditional_action   - Execute an action based on if/else condition
+	* Parameters: condition (JSON), true_action, true_parameters, false_action, false_parameters
+	* [!] Improve conditional gesture bundle logic (see to_do.txt)
+repeat_action        - Repeat an action N times
+	* Parameters: action_id, parameters, count (default 3), delay (default 0.2s)
+delay                - Insert a timed pause
+	* Parameters: duration (seconds, default 1.0)
+	* [TODO] Hide from action list when not inside a bundle
+
+
+======================================
+CONSOLIDATION ROADMAP (remaining)
+======================================
+These actions should still be merged into single action + parameter:
+
+Media:
+  next_track + previous_track          → track_skip (direction: next | previous)
+  volume_up + volume_down + mute + set_volume → volume_control (operation: up | down | mute | set, amount/level)
+  fast_forward + rewind                → seek (direction: forward | backward, seconds)
+
+System:
+  brightness_up + brightness_down      → brightness (direction: up | down)
+  keyboard_brightness_up + _down       → keyboard_brightness (direction: up | down)
+  screenshot_full + _selection + _window + _clipboard → screenshot (type: full | selection | window, destination: file | clipboard)
+
+Core:
+  [TODO] Move close_window, minimize, maximize, fullscreen to Window Management plugin
