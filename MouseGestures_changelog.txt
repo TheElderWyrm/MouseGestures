@@ -1,3 +1,37 @@
+## 2026-03-03 (Session 2)
+
+### Action Fixes: Screenshot, Night Shift, Empty Trash, Tile/Cascade
+
+**SystemControlPlugin — Screenshot Overhaul**
+- **Fixed save-to-file**: screencapture now generates timestamped filenames (`Screenshot YYYY-MM-DD at HH.MM.SS.png`)
+- Added three destination options: Copy to Clipboard (default), Save to Desktop, Save to Custom Folder
+- Custom folder parameter with path selector, creates directory if needed
+- Default capture type changed to "Screenshot Mode" (interactive/Cmd+Shift+5)
+- Destination parameter now hidden when using interactive mode (not applicable)
+
+**SystemControlPlugin — Night Shift Toggle Rewrite**
+- Replaced python3+pyobjc bridge with native ObjC runtime approach
+- Uses `dlopen` to load CoreBrightness.framework, then `CBBlueLightClient` via `NSClassFromString`
+- Calls `getBlueLightStatus:` / `setEnabled:` directly via `method(for:)` + `unsafeBitCast`
+- No longer opens System Settings as fallback — operates entirely in background
+- Eliminates dependency on python3 having pyobjc installed
+
+**CoreActionsPlugin — Empty Trash Confirmation**
+- Added `confirm` boolean parameter (default: true)
+- With confirmation: shows NSAlert dialog before emptying
+- Without confirmation: suppresses Finder's own warning dialog via `set warns before emptying of trash to false`
+- No longer activates Finder to front when emptying without confirmation
+
+**WindowManagementPlugin — Tile & Cascade Improvements**
+- `tile_all`: Now filters out desktop widget windows (WidgetKit, Notification Center)
+- `cascade`: Added `resize_windows` boolean parameter (default: true)
+  - When true: resizes all windows to 60% of screen (existing behavior)
+  - When false: only repositions windows in cascade pattern, keeping their current sizes
+- Extracted shared `filterOutWidgets()` helper and `widgetBundlePrefixes` constant
+- Removed duplicate widget filtering code from cascade (now uses shared helper)
+
+---
+
 ## 2026-03-03
 
 ### Action Plugin Overhaul: Consolidation, Bug Fixes, and NX Media Key Support

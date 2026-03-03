@@ -7,8 +7,6 @@ MOUSEGESTURES - ALL AVAILABLE ACTIONS
 ======================================
 Last updated: 2026-03-03
 
-* Remove Legacy Aliases
-
 --------------------------------------
 CORE ACTIONS (com.mousegestures.core)
 --------------------------------------
@@ -30,9 +28,9 @@ cycle_space          - Move to next/previous desktop space (direction parameter)
 	* Proper solution requires either private APIs or invisible windows: https://github.com/bigbearlabs/SpaceSwitcher.
 lock_screen          - Lock the screen
 sleep_display        - Put display(s) to sleep
-empty_trash          - Empty the trash
-	* Add parameter with/without confirmation
-	* Remove Shell Fallback
+empty_trash          - Empty the trash (confirm parameter) [✓✓]
+	* Confirmation dialog before emptying (default: on)
+	* Without confirmation: suppresses Finder warning dialog
 cycle_profile        - Cycle gesture profiles (direction parameter)
 switch_profile       - Switch to a specific gesture profile (profile_name parameter)
 	* Switch to dropdown selection
@@ -57,13 +55,13 @@ switch_to_window     - Switch to a specific window
 window_position_memory - Save/restore/delete window position (operation + slot parameters)
 window_layout        - Save/restore/delete named window layout (operation + layout_name parameters)
 tile_all             - Tile all windows on screen (scope parameter)
-	* Ignore widgets
+	* Filters out desktop widgets
 	* Improve Tiling to fill the full screen with larger windows (If possible)
 	* Add option to resize or not <-- Make best attempt
-cascade              - Cascade windows (scope parameter)
-	* Add option to resize windows or not
-	* Remove window target parameter (Keep scope parameter)
+cascade              - Cascade windows (scope + resize_windows parameters) [✓]
+	* resize_windows parameter (default: on) — resize to uniform size or keep existing sizes
 	* Wraps properly as second stack on overflow
+	* Filters out desktop widgets
 set_size             - Set custom window size (px or %)
 	* Select type UI improvement
 set_position         - Set custom window position (absolute/relative/%/preset)
@@ -82,9 +80,6 @@ volume               - Adjust system volume (mode: up/down/mute/set + amount par
 seek                 - Seek forward or backward in playback (direction + seconds parameters) [✓]
 	* Works with Apple Music
 
-Legacy aliases maintained for backward compatibility:
-  next_track, previous_track, volume_up, volume_down, mute, set_volume, fast_forward, rewind
-
 ------------------------------------------
 SYSTEM CONTROL (com.mousegestures.system)
 ------------------------------------------
@@ -92,17 +87,15 @@ display_brightness   - Adjust display brightness (direction parameter) [✓]
 keyboard_brightness  - Adjust keyboard brightness (direction parameter) [✓]
 toggle_dark_mode     - Switch between light and dark mode
 toggle_do_not_disturb - Enable/disable Do Not Disturb [!]
-toggle_night_shift   - Enable/disable Night Shift [!]
-	* Currently Opens settings (Should Not). Act in background or remove.
-	* Should toggle 'Turn on until tomorrow'
-screenshot           - Take a screenshot (type: full/selection/window/interactive + destination: file/clipboard)[✓]
-	* Screenshot mode does not need destination parameters (Screenshot is handled by macOS)
-	* All screenshot modes are enter the mode to take a selection of a screen)
+toggle_night_shift   - Enable/disable Night Shift [?]
+	* Now uses CoreBrightness CBBlueLightClient via ObjC runtime (no python dependency)
+	* Toggles in background without opening System Settings
+screenshot           - Take a screenshot (type: interactive/full/selection/window + destination: clipboard/desktop/custom folder)[✓✓]
+	* Default: Screenshot Mode (interactive) — opens macOS screenshot toolbar
+	* Destination only visible for non-interactive modes
 	* Save to clipboard works
-	* Save to file doesn't work. 
-	* Add save to file sub-options 
-		* Specific Folder (Select from finder or input path)
-		* Select File at screenshot
+	* Save to Desktop (timestamped filename)
+	* Save to Custom Folder (user-specified path, timestamped filename)
 system_sleep         - Put computer to sleep
 restart              - Restart the computer (confirm parameter)
 shutdown             - Shut down the computer (confirm parameter)

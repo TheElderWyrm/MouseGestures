@@ -258,6 +258,16 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
             id: "empty_trash",
             name: "Empty Trash",
             description: "Empty the trash",
+            requiresParameters: true,
+            supportedParameters: [
+                ParameterDefinition(
+                    key: "confirm",
+                    name: "Show Confirmation",
+                    type: .boolean,
+                    defaultValue: AnyCodable(true),
+                    description: "Show confirmation dialog before emptying"
+                )
+            ],
             icon: "trash"
         ),
         
@@ -375,7 +385,8 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
         case "sleep_display":
             sleepDisplay(context: context)
         case "empty_trash":
-            emptyTrash(context: context)
+            let confirm = parameters.bool(for: "confirm") ?? true
+            emptyTrash(showConfirmation: confirm, context: context)
             
         // MARK: Profile
         case "cycle_profile":
@@ -658,20 +669,37 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
         try? context.executeAppleScript("do shell script \"pmset displaysleepnow\"")
     }
     
-    private func emptyTrash(context: PluginContext) {
+    private func emptyTrash(showConfirmation: Bool, context: PluginContext) {
         // Use Finder via AppleScript. The "empty trash" command requires Finder
-        // to be running (it always is). We activate Finder briefly to ensure
-        // the command processes, then re-activate the previous app.
+        // to be running (it always is).
+        if showConfirmation {
+            DispatchQueue.main.async {
+                let alert = NSAlert()
+                alert.messageText = "Empty Trash"
+                alert.informativeText = "Are you sure you want to permanently delete the items in the Trash?"
+                alert.alertStyle = .warning
+                alert.addButton(withTitle: "Empty Trash")
+                alert.addButton(withTitle: "Cancel")
+                guard alert.runModal() == .alertFirstButtonReturn else { return }
+                self.performEmptyTrash(context: context)
+            }
+        } else {
+            performEmptyTrash(context: context)
+        }
+    }
+    
+    private func performEmptyTrash(context: PluginContext) {
         DispatchQueue.global(qos: .userInitiated).async {
             let previousApp = context.getFrontmostApplication()
             do {
+                // Use Finder's AppleScript command with warning suppressed
                 try context.executeAppleScript("""
                     tell application "Finder"
-                        activate
+                        set warns before emptying of trash to false
                         empty trash
+                        set warns before emptying of trash to true
                     end tell
                 """)
-                // Give it a moment to process, then switch back
                 usleep(300_000)
                 if let prev = previousApp {
                     DispatchQueue.main.async {

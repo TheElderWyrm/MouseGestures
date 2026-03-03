@@ -107,32 +107,46 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
                     key: "type",
                     name: "Capture Type",
                     type: .selection,
-                    defaultValue: AnyCodable("full"),
+                    defaultValue: AnyCodable("interactive"),
                     description: "What to capture",
                     validation: ValidationRule(allowedValues: [
+                        AnyCodable("interactive"),
                         AnyCodable("full"),
                         AnyCodable("selection"),
-                        AnyCodable("window"),
-                        AnyCodable("interactive")
+                        AnyCodable("window")
                     ]),
                     displayValues: [
+                        "interactive": "Screenshot Mode",
                         "full": "Full Screen",
                         "selection": "Selection",
-                        "window": "Window",
-                        "interactive": "Screenshot Mode"
+                        "window": "Window"
                     ]
                 ),
                 ParameterDefinition(
                     key: "destination",
                     name: "Destination",
                     type: .selection,
-                    defaultValue: AnyCodable("file"),
+                    defaultValue: AnyCodable("clipboard"),
                     description: "Where to save the screenshot",
                     validation: ValidationRule(allowedValues: [
-                        AnyCodable("file"),
-                        AnyCodable("clipboard")
+                        AnyCodable("clipboard"),
+                        AnyCodable("file_default"),
+                        AnyCodable("file_custom")
                     ]),
-                    displayValues: ["file": "Save to File", "clipboard": "Copy to Clipboard"]
+                    visibleWhen: ParameterVisibilityRule(key: "type", anyOf: ["full", "selection", "window"]),
+                    displayValues: [
+                        "clipboard": "Copy to Clipboard",
+                        "file_default": "Save to Desktop",
+                        "file_custom": "Save to Custom Folder"
+                    ]
+                ),
+                ParameterDefinition(
+                    key: "save_folder",
+                    name: "Save Folder",
+                    type: .path,
+                    defaultValue: AnyCodable("~/Desktop"),
+                    description: "Folder to save screenshots to",
+                    visibleWhen: ParameterVisibilityRule(key: "destination", value: "file_custom")
                 )
             ],
             icon: "camera"
@@ -235,9 +249,10 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
             
         // Consolidated screenshot
         case "screenshot":
-            let type = parameters.string(for: "type") ?? "full"
-            let destination = parameters.string(for: "destination") ?? "file"
-            takeScreenshot(type: type, toClipboard: destination == "clipboard", context: context)
+            let type = parameters.string(for: "type") ?? "interactive"
+            let destination = parameters.string(for: "destination") ?? "clipboard"
+            let saveFolder = parameters.string(for: "save_folder")
+            takeScreenshot(type: type, destination: destination, saveFolder: saveFolder, context: context)
             
 
         // Power management
@@ -362,47 +377,68 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
     }
     
     private func toggleNightShift(context: PluginContext) {
-        // Use the private CoreBrightness framework via python3+pyobjc bridge.
-        // CBBlueLightClient is the macOS Night Shift API.
-        // macOS system python3 (/usr/bin/python3) includes PyObjC.
+        // Use the private CoreBrightness framework via ObjC runtime to toggle Night Shift.
+        // CBBlueLightClient provides the Night Shift API on macOS.
         DispatchQueue.global(qos: .userInitiated).async {
-            let pythonScript = """
-                import objc, ctypes
-                ctypes.cdll.LoadLibrary('/System/Library/PrivateFrameworks/CoreBrightness.framework/CoreBrightness')
-                objc.loadBundle('CoreBrightness', bundle_path='/System/Library/PrivateFrameworks/CoreBrightness.framework', module_globals=globals())
-                c = CBBlueLightClient.alloc().init()
-                status = c.getBlueLightStatus_(None)
-                if status and len(status) > 1 and status[1]:
-                    current = status[1].enabled()
-                    c.setEnabled_(not current)
-                else:
-                    c.setEnabled_(True)
-            """
+            // Load the private CoreBrightness framework
+            let frameworkPath = "/System/Library/PrivateFrameworks/CoreBrightness.framework/CoreBrightness"
+            guard dlopen(frameworkPath, RTLD_NOW) != nil else {
+                context.logger.log("Failed to load CoreBrightness framework", file: #file, function: #function, line: #line)
+                return
+            }
             
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/usr/bin/python3")
-            process.arguments = ["-c", pythonScript]
-            process.standardOutput = FileHandle.nullDevice
-            process.standardError = FileHandle.nullDevice
+            // Get the CBBlueLightClient class
+            guard let clientClass = NSClassFromString("CBBlueLightClient") as? NSObject.Type else {
+                context.logger.log("CBBlueLightClient class not found", file: #file, function: #function, line: #line)
+                return
+            }
             
-            do {
-                try process.run()
-                process.waitUntilExit()
-                if process.terminationStatus != 0 {
-                    // Fallback: open Night Shift pane in System Settings
-                    try? context.executeAppleScript("do shell script \"open 'x-apple.systempreferences:com.apple.Displays-Settings.extension?nightShift'\"")
-                    context.logger.log("Night Shift toggle fell back to System Settings", file: #file, function: #function, line: #line)
-                }
-            } catch {
-                try? context.executeAppleScript("do shell script \"open 'x-apple.systempreferences:com.apple.Displays-Settings.extension?nightShift'\"")
-                context.logger.log("Night Shift toggle failed: \(error.localizedDescription)", file: #file, function: #function, line: #line)
+            let client = clientClass.init()
+            
+            // Get current Night Shift status
+            // CBBlueLightClient responds to getBlueLightStatus: which fills a struct
+            // We use a simpler approach: use the setEnabled: toggle
+            let getStatusSel = NSSelectorFromString("getBlueLightStatus:")
+            let setEnabledSel = NSSelectorFromString("setEnabled:")
+            
+            guard client.responds(to: getStatusSel),
+                  client.responds(to: setEnabledSel) else {
+                context.logger.log("CBBlueLightClient missing expected methods", file: #file, function: #function, line: #line)
+                return
+            }
+            
+            // The status is a struct — use a raw memory approach
+            // CBBlueLightStatus has 'enabled' as first bool field after a small header
+            var status = Data(count: 512) // Allocate enough for the status struct
+            let enabled: Bool = status.withUnsafeMutableBytes { rawBuffer -> Bool in
+                let ptr = rawBuffer.baseAddress!
+                // Call getBlueLightStatus: with pointer to our buffer
+                let imp = client.method(for: getStatusSel)
+                typealias GetStatusFunc = @convention(c) (AnyObject, Selector, UnsafeMutableRawPointer) -> Bool
+                let getStatus = unsafeBitCast(imp, to: GetStatusFunc.self)
+                let success = getStatus(client, getStatusSel, ptr)
+                if !success { return false }
+                // The 'enabled' field is at byte offset 0 in the status struct
+                return ptr.load(as: Bool.self)
+            }
+            
+            // Toggle: call setEnabled: with the opposite value
+            let imp = client.method(for: setEnabledSel)
+            typealias SetEnabledFunc = @convention(c) (AnyObject, Selector, Bool) -> Bool
+            let setEnabled = unsafeBitCast(imp, to: SetEnabledFunc.self)
+            let result = setEnabled(client, setEnabledSel, !enabled)
+            
+            if result {
+                context.logger.log("Night Shift toggled \(!enabled ? "on" : "off")", file: #file, function: #function, line: #line)
+            } else {
+                context.logger.log("Night Shift toggle via CoreBrightness returned false", file: #file, function: #function, line: #line)
             }
         }
     }
     
     // MARK: - Screenshots (consolidated)
     
-    private func takeScreenshot(type: String, toClipboard: Bool, context: PluginContext) {
+    private func takeScreenshot(type: String, destination: String, saveFolder: String?, context: PluginContext) {
         if type == "interactive" {
             // Open the screenshot toolbar (same as Cmd+Shift+5)
             // Destination parameter is ignored — user chooses from the toolbar
@@ -422,13 +458,14 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
         // Use screencapture CLI for specific capture modes
         var args: [String] = []
         
+        let toClipboard = (destination == "clipboard")
+        
         if toClipboard {
             args.append("-c") // Copy to clipboard
         }
         
         switch type {
         case "full":
-            // No additional flags needed for full screen
             break
         case "selection":
             args.append("-s") // Interactive selection
@@ -440,6 +477,26 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
         
         // Suppress the shutter sound
         args.append("-x")
+        
+        // When saving to file, generate a timestamped filename
+        if !toClipboard {
+            let folder: String
+            if destination == "file_custom", let customFolder = saveFolder, !customFolder.isEmpty {
+                folder = NSString(string: customFolder).expandingTildeInPath
+            } else {
+                folder = NSString(string: "~/Desktop").expandingTildeInPath
+            }
+            
+            // Ensure the folder exists
+            try? FileManager.default.createDirectory(atPath: folder, withIntermediateDirectories: true)
+            
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyyy-MM-dd 'at' HH.mm.ss"
+            let timestamp = dateFormatter.string(from: Date())
+            let filename = "Screenshot \(timestamp).png"
+            let filePath = (folder as NSString).appendingPathComponent(filename)
+            args.append(filePath)
+        }
         
         DispatchQueue.global(qos: .userInitiated).async {
             let process = Process()

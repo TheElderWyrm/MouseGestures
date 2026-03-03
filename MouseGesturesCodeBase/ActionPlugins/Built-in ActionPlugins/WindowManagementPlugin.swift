@@ -445,6 +445,13 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
                         AnyCodable("all_windows")
                     ]),
                     displayValues: ["current_app": "Current App", "all_windows": "All Windows"]
+                ),
+                ParameterDefinition(
+                    key: "resize_windows",
+                    name: "Resize Windows",
+                    type: .boolean,
+                    defaultValue: AnyCodable(true),
+                    description: "Resize windows to a uniform size when cascading"
                 )
             ],
             icon: "rectangle.stack"
@@ -674,12 +681,13 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
             tileAllWindows(target: tileTarget, context: context)
         case "cascade":
             let cascadeScope = parameters.string(for: "scope") ?? "current_app"
+            let resizeWindows = parameters.bool(for: "resize_windows") ?? true
             if cascadeScope == "all_windows" {
                 var allTarget = WindowTargeting.WindowTarget()
                 allTarget.targetType = .allWindows
-                cascadeWindows(target: allTarget, context: context)
+                cascadeWindows(target: allTarget, resize: resizeWindows, context: context)
             } else {
-                cascadeWindows(target: nil, context: context)
+                cascadeWindows(target: nil, resize: resizeWindows, context: context)
             }
             
         // MARK: Custom Size / Position
@@ -1052,8 +1060,25 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
         return context.getWindowsForApplication(frontApp.processIdentifier)
     }
     
+    /// Bundle ID prefixes for desktop widgets that should be excluded from tiling and cascading
+    private static let widgetBundlePrefixes = ["com.apple.notificationcenterui", "com.apple.WidgetKit"]
+    
+    /// Filter out desktop widget windows
+    private func filterOutWidgets(_ windows: [AXUIElement], context: PluginContext) -> [AXUIElement] {
+        return windows.filter { window in
+            var pid: pid_t = 0
+            AXUIElementGetPid(window, &pid)
+            if let app = NSRunningApplication(processIdentifier: pid),
+               let bundleId = app.bundleIdentifier {
+                return !Self.widgetBundlePrefixes.contains(where: { bundleId.hasPrefix($0) })
+            }
+            return true
+        }
+    }
+    
     private func tileAllWindows(target: WindowTargeting.WindowTarget? = nil, context: PluginContext) {
-        let windows = getAppWindows(target: target, context: context)
+        let rawWindows = getAppWindows(target: target, context: context)
+        let windows = filterOutWidgets(rawWindows, context: context)
         guard !windows.isEmpty, let screen = NSScreen.main else { return }
         let sf  = screen.visibleFrame
         let cnt = windows.count
@@ -1106,20 +1131,9 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
         context.logger.log("Tiled \(cnt) windows in \(cols)x\(rows) grid", file: #file, function: #function, line: #line)
     }
     
-    private func cascadeWindows(target: WindowTargeting.WindowTarget? = nil, context: PluginContext) {
-        // Filter out desktop widget windows (owned by WidgetKit or Notification Center)
-        let widgetBundlePrefixes = ["com.apple.notificationcenterui", "com.apple.WidgetKit"]
-        let allWindows = getAppWindows(target: target, context: context)
-        let windows = allWindows.filter { window in
-            // Get the PID for this window and check its bundle ID
-            var pid: pid_t = 0
-            AXUIElementGetPid(window, &pid)
-            if let app = NSRunningApplication(processIdentifier: pid),
-               let bundleId = app.bundleIdentifier {
-                return !widgetBundlePrefixes.contains(where: { bundleId.hasPrefix($0) })
-            }
-            return true
-        }
+    private func cascadeWindows(target: WindowTargeting.WindowTarget? = nil, resize: Bool = true, context: PluginContext) {
+        let rawWindows = getAppWindows(target: target, context: context)
+        let windows = filterOutWidgets(rawWindows, context: context)
         guard !windows.isEmpty, let screen = NSScreen.main else { return }
         let sf = screen.visibleFrame
         let offset: CGFloat = 30
@@ -1131,14 +1145,26 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
         for (idx, window) in windows.enumerated() {
             let rawOff = CGFloat(idx) * offset
             let off = rawOff.truncatingRemainder(dividingBy: max(maxOffset, offset))
-            let frame = CGRect(
-                x: sf.minX + off,
-                y: sf.maxY - winSize.height - off,
-                width: winSize.width, height: winSize.height
-            )
-            setWindowFrame(window, frame: frame, context: context)
+            if resize {
+                let frame = CGRect(
+                    x: sf.minX + off,
+                    y: sf.maxY - winSize.height - off,
+                    width: winSize.width, height: winSize.height
+                )
+                setWindowFrame(window, frame: frame, context: context)
+            } else {
+                // Only reposition, keep existing size
+                if let currentFrame = getWindowFrame(window, context: context) {
+                    let frame = CGRect(
+                        x: sf.minX + off,
+                        y: sf.maxY - currentFrame.height - off,
+                        width: currentFrame.width, height: currentFrame.height
+                    )
+                    setWindowFrame(window, frame: frame, context: context)
+                }
+            }
         }
-        context.logger.log("Cascaded \(windows.count) windows", file: #file, function: #function, line: #line)
+        context.logger.log("Cascaded \(windows.count) windows\(resize ? "" : " (no resize)")", file: #file, function: #function, line: #line)
     }
     
     // MARK: - Window Position Memory

@@ -76,3 +76,10 @@ COMPLETED (2026-03-03)
   [✓] Improved cascade (filters desktop widgets, wraps position on overflow)
   [✓] Screenshot consolidated with interactive/screenshot mode option + file/clipboard destination
   [✓] All legacy action IDs maintained as aliases for backward compatibility
+  [✓] Fixed screenshot save-to-file (timestamped filename, Desktop default, custom folder option)
+  [✓] Screenshot destination parameter hidden for interactive mode
+  [✓] Night Shift toggle now uses CoreBrightness ObjC runtime (no python/pyobjc dependency)
+  [✓] empty_trash: added confirmation parameter (dialog or silent)
+  [✓] tile_all: now filters out desktop widgets
+  [✓] cascade: added resize_windows parameter (resize or keep existing sizes)
+  [✓] cascade: widget filtering shared with tile_all
