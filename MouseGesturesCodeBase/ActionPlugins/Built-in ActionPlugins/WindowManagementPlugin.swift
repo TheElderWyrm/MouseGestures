@@ -1144,8 +1144,10 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
         // Wrap cascade position when it would go off screen
         let maxOffset = min(sf.width - winSize.width, sf.height - winSize.height)
         
+        // Reverse offset so the last-placed window (visually frontmost) is at top-left
+        let count = windows.count
         for (idx, window) in windows.enumerated() {
-            let rawOff = CGFloat(idx) * offset
+            let rawOff = CGFloat(count - 1 - idx) * offset
             let off = rawOff.truncatingRemainder(dividingBy: max(maxOffset, offset))
             if resize {
                 let frame = CGRect(
