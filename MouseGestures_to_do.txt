@@ -1,28 +1,58 @@
-- Modifier key interference: AppleScript/System Events actions (e.g. Ctrl+Arrow for spaces) fail when gesture trigger includes modifier keys. Current workaround: waitForModifierRelease() polls until user releases all modifiers (only in affected actions). CGEvent .privateState actions (fullscreen, etc.) are unaffected. Proper fix needs a refactor to mask/suppress physical modifiers during action execution.
+MOUSEGESTURES - TO DO
+=====================
+Action items also in: MouseGestures_actions.txt
 
-- Reduce duplicate code, unify architecture whenever possible
+--------------------------------------
+BUGS
+--------------------------------------
+Main Thread Violations (MenuIcon.swift):
+  - Line 132: NSStatusBarButton.setAppearsDisabled called off main thread
+  - Line 133: NSView.setToolTip called off main thread
+  - Line 139: NSButton.image called off main thread
 
-- Remove Dummy Autoupdate
-- Manage detection plugins under developer mode
-- Use full 'gestures' UI in profiles
-- Trigger Configuration: Configurations not aligned between types.
-- Reduce size of modifier keys trigger configuration.
-- Improve activation system
-- Drag does not need to be a separate trigger configuration than mouse button
-- Profiles: pressing delete should not select the profile check box
-- Hide unnecessary parameters (Example: Specific)
-- Action selection not displaying 'core'
-- Keyboard shortcut detection not working for gestures
-- Reset to default
-- Add reset to template in gestures
+Threading:
+  - PluginSandbox.swift:264 — Priority inversion: User-initiated QoS thread waiting on Default QoS thread
 
-Actions:
-- Advanced configurations should label themselves (Currently just says: "This action requires advanced configuration")
-- For window actions have a 'target' dropdown instead of listing all parameter options
-- Not all actions work.
-- Clean up unneeded actions
-- Open application should bring up finder to select any application
-- Open File parameter should have a button to select from finder
-- Window Actions targeting multiple windows does not work
-- Improve: conditional gesture bundle logic
-Picker: the selection "" is invalid and does not have an associated tag, this will give undefined results.
+Window Targeting:
+  - Does not work for some actions (works for minimize, not for adjust_size)
+  - Targeting multiple windows does not work
+  - Window age parameter should be an integer
+
+UI:
+  - Action selection not displaying 'core' category
+  - Keyboard shortcut detection not working for gestures
+  - Profiles: pressing delete should not select the profile checkbox
+  - Show Zone Labels should show assigned actions, not zone name
+  - Picker: selection "" is invalid / no associated tag — gives undefined results
+
+Trigger Configuration:
+  - Configurations not aligned between trigger types
+  - Modifier key interference: AppleScript/System Events actions fail when gesture trigger includes modifier keys. Workaround: waitForModifierRelease(). Proper fix requires private APIs or invisible windows: https://github.com/bigbearlabs/SpaceSwitcher
+
+--------------------------------------
+IMPROVEMENTS
+--------------------------------------
+Architecture:
+  - Reduce duplicate code, unify architecture whenever possible
+  - Move window actions (close/minimize/maximize/fullscreen) from Core to Window Management plugin
+  - Improve activation system
+  - Drag does not need to be a separate trigger configuration than mouse button
+  - Reduce size of modifier keys trigger configuration
+
+UI:
+  - Use full 'gestures' UI in profiles
+  - Manage detection plugins under developer mode
+  - Open application action should bring up Finder to select any application
+  - Show add-to-bundle button even when a bundle action is selected (choose to add or update)
+  - Make action search not case sensitive
+
+Features:
+  - Reset to default
+  - Add reset to template in gestures
+  - Bundle actions with variables (e.g. Open URL From Clipboard)
+  - Test adding external plugins for detection and actions
+
+Cleanup:
+  - Remove dummy autoupdate
+  - Clean up unneeded actions
+  - Not all actions work (see actions.txt for specifics)
