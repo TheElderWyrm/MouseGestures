@@ -1,29 +1,38 @@
-[✓] = Tested and Fully Working
+[✓✓] = Tested and Fully Working
+[✓] = Working, changes required
 [?] = Unverified (Use this when implementing a fix)
+[!] = Not working
 
 MOUSEGESTURES - ALL AVAILABLE ACTIONS
 ======================================
 Last updated: 2026-03-03
 
+* Remove Legacy Aliases
+
 --------------------------------------
 CORE ACTIONS (com.mousegestures.core)
 --------------------------------------
-close_window         - Close a window [✓]
-minimize             - Minimize a window [✓]
-maximize             - Maximize a window
-fullscreen           - Toggle fullscreen mode [✓ fixed: waitForModifierRelease]
-hide_app             - Hide the active application [✓ added: "all except Finder" parameter]
-quit_app             - Quit an application
-mission_control      - Show Mission Control
-show_desktop         - Show the desktop [✓ fixed: uses F11/Cmd+F3 with fallbacks]
-app_expose           - Show all windows of current application
+close_window         - Close a window [✓✓]
+minimize             - Minimize a window [✓✓]
+maximize             - Maximize a window [✓✓]
+	- Add to Snap Action
+fullscreen           - Toggle fullscreen mode [✓]
+	- Takes a while when targeting another application
+hide_app             - Hide the active application [✓✓]
+quit_app             - Quit an application [✓✓]
+mission_control      - Show Mission Control [✓✓]
+show_desktop         - Show the desktop [✓✓]
+app_expose           - Show all windows of current application [✓✓]
 	* Subject to modifier key interference
-cycle_window         - Switch to next/previous window (direction parameter)
+cycle_window         - Switch to next/previous window (direction parameter) <-- Cycle Window vs Cycle windows duplicate action?
 cycle_space          - Move to next/previous desktop space (direction parameter)
 	* Subject to modifier key interference
+	* Proper solution requires either private APIs or invisible windows: https://github.com/bigbearlabs/SpaceSwitcher.
 lock_screen          - Lock the screen
 sleep_display        - Put display(s) to sleep
-empty_trash          - Empty the trash [✓ fixed: activates Finder, fallback to shell]
+empty_trash          - Empty the trash
+	* Add parameter with/without confirmation
+	* Remove Shell Fallback
 cycle_profile        - Cycle gesture profiles (direction parameter)
 switch_profile       - Switch to a specific gesture profile (profile_name parameter)
 	* Switch to dropdown selection
@@ -37,20 +46,24 @@ General Core Issues:
 ------------------------------------------
 WINDOW MANAGEMENT (com.mousegestures.window)
 ------------------------------------------
-snap_window          - Move window to a screen region (position parameter, 11 regions)
+snap_window          - Move window to a screen region (position parameter, 11 regions) [✓]
+	* Rename
 center               - Center window on screen
+	* Remove
 resize_to_percent    - Resize window to % of screen (percent 1-100)
 adjust_size          - Grow or shrink window (direction + percent parameters)
-	[✓ fixed: no longer repositions window, only changes size]
 cycle_windows        - Cycle through windows (direction parameter)
 switch_to_window     - Switch to a specific window
 window_position_memory - Save/restore/delete window position (operation + slot parameters)
 window_layout        - Save/restore/delete named window layout (operation + layout_name parameters)
 tile_all             - Tile all windows on screen (scope parameter)
-	[✓ improved: optimal aspect-ratio-aware grid, last row fills evenly]
+	* Ignore widgets
+	* Improve Tiling to fill the full screen with larger windows (If possible)
+	* Add option to resize or not <-- Make best attempt
 cascade              - Cascade windows (scope parameter)
-	[✓ improved: filters out desktop widgets, wraps cascade position on overflow]
 	* Add option to resize windows or not
+	* Remove window target parameter (Keep scope parameter)
+	* Wraps properly as second stack on overflow
 set_size             - Set custom window size (px or %)
 	* Select type UI improvement
 set_position         - Set custom window position (absolute/relative/%/preset)
@@ -63,15 +76,11 @@ General Window Issues:
 ------------------------------------------
 MEDIA CONTROL (com.mousegestures.media)
 ------------------------------------------
-play_pause           - Toggle media playback [✓ fixed: uses NX system media keys]
-track_skip           - Skip to next or previous track (direction parameter)
-	[✓ consolidated from: next_track + previous_track]
-	[✓ fixed: uses NX system media keys — works system-wide]
-volume               - Adjust system volume (mode: up/down/mute/set + amount parameter)
-	[✓ consolidated from: volume_up + volume_down + mute + set_volume]
-seek                 - Seek forward or backward in playback (direction + seconds parameters)
-	[✓ consolidated from: fast_forward + rewind]
-	[✓ fixed: uses NX media keys for proper seeking]
+[✓✓]
+track_skip           - Skip to next or previous track (direction parameter) [✓✓]
+volume               - Adjust system volume (mode: up/down/mute/set + amount parameter) [✓✓]
+seek                 - Seek forward or backward in playback (direction + seconds parameters) [✓]
+	* Works with Apple Music
 
 Legacy aliases maintained for backward compatibility:
   next_track, previous_track, volume_up, volume_down, mute, set_volume, fast_forward, rewind
@@ -79,36 +88,32 @@ Legacy aliases maintained for backward compatibility:
 ------------------------------------------
 SYSTEM CONTROL (com.mousegestures.system)
 ------------------------------------------
-display_brightness   - Adjust display brightness (direction parameter)
-	[✓ consolidated from: brightness_up + brightness_down]
-	[✓ fixed: uses NX_KEYTYPE_BRIGHTNESS_UP/DOWN media keys]
-keyboard_brightness  - Adjust keyboard brightness (direction parameter)
-	[✓ consolidated from: keyboard_brightness_up + keyboard_brightness_down]
-	[✓ fixed: uses NX_KEYTYPE_ILLUMINATION_UP/DOWN media keys]
+display_brightness   - Adjust display brightness (direction parameter) [✓]
+keyboard_brightness  - Adjust keyboard brightness (direction parameter) [✓]
 toggle_dark_mode     - Switch between light and dark mode
-toggle_do_not_disturb - Enable/disable Do Not Disturb
-	[✓ fixed: uses defaults command instead of UI scripting — no more stuck modifier keys]
-toggle_night_shift   - Enable/disable Night Shift
-	[✓ fixed: uses CoreBrightness CBBlueLightClient via python bridge, fallback to System Preferences]
-screenshot           - Take a screenshot (type: full/selection/window/interactive + destination: file/clipboard)
-	[✓ consolidated from: screenshot_full + screenshot_selection + screenshot_window + screenshot_clipboard]
-	[✓ improved: uses screencapture CLI, added interactive/screenshot mode option]
+toggle_do_not_disturb - Enable/disable Do Not Disturb [!]
+toggle_night_shift   - Enable/disable Night Shift [!]
+	* Currently Opens settings (Should Not). Act in background or remove.
+	* Should toggle 'Turn on until tomorrow'
+screenshot           - Take a screenshot (type: full/selection/window/interactive + destination: file/clipboard)[✓]
+	* Screenshot mode does not need destination parameters (Screenshot is handled by macOS)
+	* All screenshot modes are enter the mode to take a selection of a screen)
+	* Save to clipboard works
+	* Save to file doesn't work. 
+	* Add save to file sub-options 
+		* Specific Folder (Select from finder or input path)
+		* Select File at screenshot
 system_sleep         - Put computer to sleep
 restart              - Restart the computer (confirm parameter)
 shutdown             - Shut down the computer (confirm parameter)
 logout               - Log out current user (confirm parameter)
 
-Legacy aliases maintained for backward compatibility:
-  brightness_up, brightness_down, keyboard_brightness_up, keyboard_brightness_down,
-  screenshot_full, screenshot_selection, screenshot_window, screenshot_clipboard
-
 ------------------------------------------
 AUTOMATION (com.mousegestures.automation)
 ------------------------------------------
 keyboard_shortcut    - Trigger a keyboard shortcut
-	* Improve shortcut selection UI
+	* Add shortcut selection as parameter
 run_shortcut         - Run a Shortcuts app shortcut
-	[✓ fixed: proper quote escaping, input passthrough on fallback]
 run_script           - Execute a script (applescript/shell/javascript/python)
 	* Rename "Source" toggle label
 	* Python and JavaScript may not work; add interpreter selection option
@@ -117,7 +122,6 @@ open_app             - Launch an application
 	* Should bring up Finder to select any application (not just running apps)
 open_file            - Open a file or folder
 open_url             - Open a URL in default browser
-	[✓ fixed: URL normalization — adds https:// when scheme missing]
 	* Show only browsers when selecting app
 	* Add 'default browser' option at top of browser selection, selected by default
 clipboard_action     - Manipulate clipboard contents

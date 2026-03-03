@@ -218,23 +218,13 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
             let direction = parameters.string(for: "direction") ?? "up"
             adjustBrightness(increase: direction == "up")
             
-        // Legacy aliases for backward compatibility
-        case "brightness_up":
-            adjustBrightness(increase: true)
-        case "brightness_down":
-            adjustBrightness(increase: false)
-            
+
         // Consolidated keyboard brightness
         case "keyboard_brightness":
             let direction = parameters.string(for: "direction") ?? "up"
             adjustKeyboardBrightness(increase: direction == "up")
             
-        // Legacy aliases
-        case "keyboard_brightness_up":
-            adjustKeyboardBrightness(increase: true)
-        case "keyboard_brightness_down":
-            adjustKeyboardBrightness(increase: false)
-            
+
         // System features
         case "toggle_dark_mode":
             toggleDarkMode(context: context)
@@ -249,17 +239,7 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
             let destination = parameters.string(for: "destination") ?? "file"
             takeScreenshot(type: type, toClipboard: destination == "clipboard", context: context)
             
-        // Legacy aliases
-        case "screenshot_full":
-            takeScreenshot(type: "full", toClipboard: false, context: context)
-        case "screenshot_selection":
-            takeScreenshot(type: "selection", toClipboard: false, context: context)
-        case "screenshot_window":
-            takeScreenshot(type: "window", toClipboard: false, context: context)
-        case "screenshot_clipboard":
-            let type = parameters.string(for: "type") ?? "full"
-            takeScreenshot(type: type, toClipboard: true, context: context)
-            
+
         // Power management
         case "system_sleep":
             systemSleep(context: context)
@@ -351,65 +331,95 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
     }
     
     private func toggleDoNotDisturb(context: PluginContext) {
-        // Use the shortcuts CLI to toggle Focus/DND — more reliable than UI scripting
-        // which caused modifier key interference and stuck option keys.
-        // Falls back to defaults-based approach if shortcuts unavailable.
+        // Toggle DND/Focus via Control Center UI scripting.
+        // This is the most reliable cross-version approach for macOS Ventura+
+        // where DND state is managed through the Focus system.
+        waitForModifierRelease()
         DispatchQueue.global(qos: .userInitiated).async {
-            // Primary approach: use defaults to toggle DND assertion
-            // On macOS Monterey+, DND state is stored in com.apple.controlcenter
-            let checkScript = """
-                do shell script "defaults -currentHost read com.apple.notificationcenterui doNotDisturb 2>/dev/null || echo 0"
+            let script = """
+                tell application "System Events"
+                    tell its application process "ControlCenter"
+                        -- Click the Focus menu bar item to open the panel
+                        repeat with mi in menu bar items of menu bar 1
+                            if description of mi contains "Focus" then
+                                click mi
+                                delay 0.4
+                                -- Click the Do Not Disturb toggle
+                                try
+                                    click checkbox 1 of group 1 of window 1
+                                end try
+                                -- Close the panel by pressing Escape
+                                delay 0.1
+                                key code 53
+                                return
+                            end if
+                        end repeat
+                    end tell
+                end tell
             """
-            var error: NSDictionary?
-            if let scriptObj = NSAppleScript(source: checkScript) {
-                let result = scriptObj.executeAndReturnError(&error)
-                let currentState = result.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines) == "1"
-                let newState = currentState ? "false" : "true"
-                
-                let toggleScript = """
-                    do shell script "defaults -currentHost write com.apple.notificationcenterui doNotDisturb -boolean \(newState)"
-                    do shell script "defaults -currentHost write com.apple.notificationcenterui doNotDisturbDate -date '" & (current date) & "'"
-                    do shell script "killall NotificationCenter 2>/dev/null || true; killall ControlCenter 2>/dev/null || true"
-                """
-                if let toggleObj = NSAppleScript(source: toggleScript) {
-                    toggleObj.executeAndReturnError(&error)
-                }
-            }
+            try? context.executeAppleScript(script)
         }
     }
     
     private func toggleNightShift(context: PluginContext) {
         // Use the private CoreBrightness framework via python3+pyobjc bridge.
-        // CBBlueLightClient is the actual Night Shift API on macOS.
-        // Build the python script as a single-line shell argument to avoid
-        // Swift multi-line string indentation issues with embedded Python.
-        let pythonCode = [
-            "import ctypes, objc",
-            "ctypes.cdll.LoadLibrary('/System/Library/PrivateFrameworks/CoreBrightness.framework/CoreBrightness')",
-            "objc.loadBundle('CoreBrightness', bundle_path='/System/Library/PrivateFrameworks/CoreBrightness.framework', module_globals=globals())",
-            "c=CBBlueLightClient.alloc().init()",
-            "s=c.getBlueLightStatus_(None)",
-            "c.setEnabled_(not s[1].enabled() if s else True)"
-        ].joined(separator: "; ")
-        
-        let script = "do shell script \"python3 -c '\(pythonCode)' 2>/dev/null\""
-        
-        // Fallback: open Night Shift pane in System Settings
-        let fallbackScript = "do shell script \"open 'x-apple.systempreferences:com.apple.preference.displays?nightShift'\""
-        
-        do {
-            try context.executeAppleScript(script)
-        } catch {
-            // If the python approach fails, try the fallback
-            try? context.executeAppleScript(fallbackScript)
-            context.logger.log("Night Shift toggle fell back to System Preferences", file: #file, function: #function, line: #line)
+        // CBBlueLightClient is the macOS Night Shift API.
+        // macOS system python3 (/usr/bin/python3) includes PyObjC.
+        DispatchQueue.global(qos: .userInitiated).async {
+            let pythonScript = """
+                import objc, ctypes
+                ctypes.cdll.LoadLibrary('/System/Library/PrivateFrameworks/CoreBrightness.framework/CoreBrightness')
+                objc.loadBundle('CoreBrightness', bundle_path='/System/Library/PrivateFrameworks/CoreBrightness.framework', module_globals=globals())
+                c = CBBlueLightClient.alloc().init()
+                status = c.getBlueLightStatus_(None)
+                if status and len(status) > 1 and status[1]:
+                    current = status[1].enabled()
+                    c.setEnabled_(not current)
+                else:
+                    c.setEnabled_(True)
+            """
+            
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/python3")
+            process.arguments = ["-c", pythonScript]
+            process.standardOutput = FileHandle.nullDevice
+            process.standardError = FileHandle.nullDevice
+            
+            do {
+                try process.run()
+                process.waitUntilExit()
+                if process.terminationStatus != 0 {
+                    // Fallback: open Night Shift pane in System Settings
+                    try? context.executeAppleScript("do shell script \"open 'x-apple.systempreferences:com.apple.Displays-Settings.extension?nightShift'\"")
+                    context.logger.log("Night Shift toggle fell back to System Settings", file: #file, function: #function, line: #line)
+                }
+            } catch {
+                try? context.executeAppleScript("do shell script \"open 'x-apple.systempreferences:com.apple.Displays-Settings.extension?nightShift'\"")
+                context.logger.log("Night Shift toggle failed: \(error.localizedDescription)", file: #file, function: #function, line: #line)
+            }
         }
     }
     
     // MARK: - Screenshots (consolidated)
     
     private func takeScreenshot(type: String, toClipboard: Bool, context: PluginContext) {
-        // Use screencapture CLI for reliability — it handles all modes natively
+        if type == "interactive" {
+            // Open the screenshot toolbar (same as Cmd+Shift+5)
+            // Destination parameter is ignored — user chooses from the toolbar
+            waitForModifierRelease()
+            do {
+                try context.executeAppleScript("""
+                    tell application "System Events"
+                        key code 23 using {command down, shift down}
+                    end tell
+                """)
+            } catch {
+                context.logger.log("Screenshot toolbar failed: \(error.localizedDescription)", file: #file, function: #function, line: #line)
+            }
+            return
+        }
+        
+        // Use screencapture CLI for specific capture modes
         var args: [String] = []
         
         if toClipboard {
@@ -424,14 +434,11 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
             args.append("-s") // Interactive selection
         case "window":
             args.append("-w") // Window capture (click to select)
-        case "interactive":
-            args.append("-i") // Interactive mode (screenshot toolbar)
         default:
             break
         }
         
-        // If saving to file (not clipboard), screencapture saves to desktop by default
-        // Using -x to suppress the shutter sound
+        // Suppress the shutter sound
         args.append("-x")
         
         DispatchQueue.global(qos: .userInitiated).async {

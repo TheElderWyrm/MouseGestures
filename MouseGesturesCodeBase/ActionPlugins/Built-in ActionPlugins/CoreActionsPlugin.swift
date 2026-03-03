@@ -522,8 +522,6 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
             app.activate(options: [])
             usleep(100_000)
         }
-        // Wait for modifier keys to be released so the shortcut isn't contaminated
-        waitForModifierRelease()
         // Try pressing the AX full screen button; falls back to keyboard when hidden (e.g. already fullscreen)
         if let window = resolveTargetWindow(target, context: context),
            let btnObj = context.getAccessibilityAttribute(window, attribute: "AXFullScreenButton") {
@@ -596,26 +594,18 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
     }
     
     private func showDesktop(context: PluginContext) {
-        // Use the Mission Control Show Desktop function key (F11 mapped to Show Desktop)
-        // This is the most reliable approach across macOS versions.
-        // First try: CoreDock private API via shell
-        let script = "do shell script \"open -a 'Mission Control' --args --show-desktop\" "
+        // F11 (key code 103) is mapped to Show Desktop on macOS.
+        // Wait for modifiers to release so F11 isn't interpreted as a modified key.
+        waitForModifierRelease()
         do {
-            try context.executeAppleScript(script)
+            try context.executeAppleScript("""
+                tell application "System Events"
+                    key code 103
+                end tell
+            """)
         } catch {
-            // Fallback: Fn+F11 keyboard shortcut (Show Desktop)
-            // Use System Events to ensure it works regardless of modifier state
-            waitForModifierRelease()
-            do {
-                try context.executeAppleScript("""
-                    tell application "System Events"
-                        key code 103
-                    end tell
-                """)
-            } catch {
-                // Final fallback: Cmd+F3 (older Expose Show Desktop shortcut)
-                context.sendKeyboardShortcut(keyCode: 99, modifiers: [.maskCommand])
-            }
+            // Fallback: Cmd+F3 (older Expose Show Desktop shortcut)
+            context.sendKeyboardShortcut(keyCode: 99, modifiers: [.maskCommand])
         }
     }
     
@@ -689,14 +679,7 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
                     }
                 }
             } catch {
-                // Fallback: use shell command directly
-                do {
-                    try context.executeAppleScript("""
-                        do shell script "osascript -e 'tell application \\\"Finder\\\" to empty trash'" with administrator privileges
-                    """)
-                } catch {
-                    context.logger.log("Failed to empty trash: \(error.localizedDescription)", file: #file, function: #function, line: #line)
-                }
+                context.logger.log("Failed to empty trash: \(error.localizedDescription)", file: #file, function: #function, line: #line)
             }
         }
     }

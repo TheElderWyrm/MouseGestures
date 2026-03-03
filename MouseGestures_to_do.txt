@@ -5,6 +5,8 @@ Action items also in: MouseGestures_actions.txt
 --------------------------------------
 BUGS
 --------------------------------------
+Deselecting a trigger option does not turn it all the way off.
+
 Main Thread Violations (MenuIcon.swift):
   - Line 132: NSStatusBarButton.setAppearsDisabled called off main thread
   - Line 133: NSView.setToolTip called off main thread
@@ -24,11 +26,10 @@ UI:
   - Profiles: pressing delete should not select the profile checkbox
   - Show Zone Labels should show assigned actions, not zone name
   - Picker: selection "" is invalid / no associated tag — gives undefined results
-
-Trigger Configuration:
   - Configurations not aligned between trigger types
-  - Modifier key interference: AppleScript/System Events actions fail when gesture trigger includes modifier keys. Workaround: waitForModifierRelease(). Proper fix requires private APIs or invisible windows: https://github.com/bigbearlabs/SpaceSwitcher
-
+  - Zone Labels do not fit in zone left and right and are cut off
+  - Should not display parameter type in gesture expanded view
+ 
 --------------------------------------
 IMPROVEMENTS
 --------------------------------------
@@ -55,6 +56,7 @@ Features:
   - open_url: Show only browsers when selecting app + add 'default browser' option
   - run_script: add interpreter selection, 'display output' toggle, rename Source label
   - cascade: add option to resize windows or not
+  - Improve templates/default configuration
 
 Cleanup:
   - Remove dummy autoupdate
@@ -66,13 +68,6 @@ COMPLETED (2026-03-03)
   [✓] Consolidated media actions: next_track+previous_track → track_skip, volume_up+volume_down+mute+set_volume → volume, fast_forward+rewind → seek
   [✓] Consolidated system actions: brightness → display_brightness, keyboard brightness → keyboard_brightness, screenshots → screenshot
   [✓] Fixed media controls to use NX system media keys (NX_KEYTYPE_PLAY/NEXT/PREVIOUS) — works system-wide
-  [✓] Fixed brightness controls to use NX media keys (NX_KEYTYPE_BRIGHTNESS_UP/DOWN)
-  [✓] Fixed keyboard brightness to use NX media keys (NX_KEYTYPE_ILLUMINATION_UP/DOWN)
-  [✓] Fixed show_desktop (uses F11/Cmd+F3 with multi-level fallbacks)
-  [✓] Fixed empty_trash (activates Finder for proper execution, shell fallback)
-  [✓] Fixed toggle_do_not_disturb (defaults-based approach, no more stuck modifier keys)
-  [✓] Fixed toggle_night_shift (CoreBrightness CBBlueLightClient, was just toggling dark mode)
-  [✓] Fixed fullscreen delay (added waitForModifierRelease)
   [✓] Fixed run_shortcut (proper quote escaping, input passthrough on AppleScript fallback)
   [✓] Fixed open_url URL detection (normalizes URLs, adds https:// when scheme missing)
   [✓] Added hide_app "all except Finder" parameter

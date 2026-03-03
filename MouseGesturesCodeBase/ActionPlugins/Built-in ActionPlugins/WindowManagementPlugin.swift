@@ -217,6 +217,8 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
                     defaultValue: AnyCodable("left_half"),
                     description: "Region to snap the window to",
                     validation: ValidationRule(allowedValues: [
+                        AnyCodable("maximize"),
+                        AnyCodable("center"),
                         AnyCodable("left_half"),
                         AnyCodable("right_half"),
                         AnyCodable("top_half"),
@@ -230,6 +232,8 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
                         AnyCodable("right_third")
                     ]),
                     displayValues: [
+                        "maximize": "Fill Screen",
+                        "center": "Center",
                         "left_half": "Left Half",
                         "right_half": "Right Half",
                         "top_half": "Top Half",
@@ -245,16 +249,6 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
                 )
             ] + windowTargetParameters,
             icon: "rectangle.split.2x1"
-        ),
-        
-        // Center
-        PluginAction(
-            id: "center",
-            name: "Center Window",
-            description: "Center window on screen",
-            requiresParameters: true,
-            supportedParameters: windowTargetParameters,
-            icon: "rectangle.center.inset.filled"
         ),
         
         // MARK: Resize to Percent (replaces resize_25 / resize_50 / resize_75)
@@ -452,7 +446,7 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
                     ]),
                     displayValues: ["current_app": "Current App", "all_windows": "All Windows"]
                 )
-            ] + windowTargetParameters,
+            ],
             icon: "rectangle.stack"
         ),
         
@@ -613,10 +607,6 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
             let position = parameters.string(for: "position") ?? "left_half"
             snapWindow(to: position, target: target, context: context)
             
-        // Center
-        case "center":
-            centerWindow(target: target, context: context)
-            
         // MARK: Resize
         case "resize_to_percent":
             let percent = parameters.number(for: "percent") ?? 50
@@ -684,15 +674,13 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
             tileAllWindows(target: tileTarget, context: context)
         case "cascade":
             let cascadeScope = parameters.string(for: "scope") ?? "current_app"
-            let cascadeTarget: WindowTargeting.WindowTarget?
             if cascadeScope == "all_windows" {
-                var t = WindowTargeting.WindowTarget()
-                t.targetType = .allWindows
-                cascadeTarget = t
+                var allTarget = WindowTargeting.WindowTarget()
+                allTarget.targetType = .allWindows
+                cascadeWindows(target: allTarget, context: context)
             } else {
-                cascadeTarget = target
+                cascadeWindows(target: nil, context: context)
             }
-            cascadeWindows(target: cascadeTarget, context: context)
             
         // MARK: Custom Size / Position
         case "set_size":
@@ -813,6 +801,10 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
     
     private func snapWindow(to position: String, target: WindowTargeting.WindowTarget?, context: PluginContext) {
         switch position {
+        case "maximize":
+            positionWindowWithTarget(target: target, x: 0, y: 0, width: 1, height: 1, logMessage: "Snapped window to fill screen", context: context)
+        case "center":
+            centerWindow(target: target, context: context)
         case "left_half":
             positionWindowWithTarget(target: target, x: 0,       y: 0,   width: 0.5,     height: 1,   logMessage: "Snapped window to left half", context: context)
         case "right_half":

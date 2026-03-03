@@ -31,20 +31,20 @@ struct DefaultProfiles {
             Gesture(zone: .bottom, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.minimize"),
             
             // Window positioning
-            Gesture(zone: .left, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.window.left_half"),
-            Gesture(zone: .right, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.window.right_half"),
-            Gesture(zone: .topLeft, modifiers: [.command, .option], actionIdentifier: "com.mousegestures.window.top_left"),
-            Gesture(zone: .topRight, modifiers: [.command, .option], actionIdentifier: "com.mousegestures.window.top_right"),
-            Gesture(zone: .bottomLeft, modifiers: [.command, .option], actionIdentifier: "com.mousegestures.window.bottom_left"),
-            Gesture(zone: .bottomRight, modifiers: [.command, .option], actionIdentifier: "com.mousegestures.window.bottom_right"),
+            Gesture(zone: .left, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.window.snap_window", parameters: ["position": AnyCodable("left_half")]),
+            Gesture(zone: .right, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.window.snap_window", parameters: ["position": AnyCodable("right_half")]),
+            Gesture(zone: .topLeft, modifiers: [.command, .option], actionIdentifier: "com.mousegestures.window.snap_window", parameters: ["position": AnyCodable("top_left")]),
+            Gesture(zone: .topRight, modifiers: [.command, .option], actionIdentifier: "com.mousegestures.window.snap_window", parameters: ["position": AnyCodable("top_right")]),
+            Gesture(zone: .bottomLeft, modifiers: [.command, .option], actionIdentifier: "com.mousegestures.window.snap_window", parameters: ["position": AnyCodable("bottom_left")]),
+            Gesture(zone: .bottomRight, modifiers: [.command, .option], actionIdentifier: "com.mousegestures.window.snap_window", parameters: ["position": AnyCodable("bottom_right")]),
             
             // Spaces
-            Gesture(zone: .left, modifiers: [.command, .shift], actionIdentifier: "com.mousegestures.core.previous_space"),
-            Gesture(zone: .right, modifiers: [.command, .shift], actionIdentifier: "com.mousegestures.core.next_space"),
+            Gesture(zone: .left, modifiers: [.command, .shift], actionIdentifier: "com.mousegestures.core.cycle_space", parameters: ["direction": AnyCodable("previous")]),
+            Gesture(zone: .right, modifiers: [.command, .shift], actionIdentifier: "com.mousegestures.core.cycle_space", parameters: ["direction": AnyCodable("next")]),
             
             // Window cycling
-            Gesture(zone: .bottom, modifiers: [.command, .option], actionIdentifier: "com.mousegestures.core.previous_window"),
-            Gesture(zone: .top, modifiers: [.command, .option], actionIdentifier: "com.mousegestures.core.next_window")
+            Gesture(zone: .bottom, modifiers: [.command, .option], actionIdentifier: "com.mousegestures.core.cycle_window", parameters: ["direction": AnyCodable("backward")]),
+            Gesture(zone: .top, modifiers: [.command, .option], actionIdentifier: "com.mousegestures.core.cycle_window", parameters: ["direction": AnyCodable("forward")])
         ]
         
         return ConfigurationProfile(
@@ -59,21 +59,21 @@ struct DefaultProfiles {
         let gestures = [
             // Playback controls
             Gesture(zone: .bottom, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.media.play_pause"),
-            Gesture(zone: .left, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.media.previous_track"),
-            Gesture(zone: .right, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.media.next_track"),
+            Gesture(zone: .left, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.media.track_skip", parameters: ["direction": AnyCodable("previous")]),
+            Gesture(zone: .right, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.media.track_skip", parameters: ["direction": AnyCodable("next")]),
             
             // Volume controls
-            Gesture(zone: .top, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.media.volume_up"),
-            Gesture(zone: .bottom, modifiers: [.command, .option], actionIdentifier: "com.mousegestures.media.volume_down"),
-            Gesture(zone: .topRight, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.media.mute"),
+            Gesture(zone: .top, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.media.volume", parameters: ["mode": AnyCodable("up")]),
+            Gesture(zone: .bottom, modifiers: [.command, .option], actionIdentifier: "com.mousegestures.media.volume", parameters: ["mode": AnyCodable("down")]),
+            Gesture(zone: .topRight, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.media.volume", parameters: ["mode": AnyCodable("mute")]),
             
             // Brightness controls
-            Gesture(zone: .top, modifiers: [.control, .option], actionIdentifier: "com.mousegestures.system.brightness_up"),
-            Gesture(zone: .bottom, modifiers: [.control, .option], actionIdentifier: "com.mousegestures.system.brightness_down"),
+            Gesture(zone: .top, modifiers: [.control, .option], actionIdentifier: "com.mousegestures.system.display_brightness", parameters: ["direction": AnyCodable("up")]),
+            Gesture(zone: .bottom, modifiers: [.control, .option], actionIdentifier: "com.mousegestures.system.display_brightness", parameters: ["direction": AnyCodable("down")]),
             
             // Screenshot
-            Gesture(zone: .topLeft, modifiers: [.command, .shift], actionIdentifier: "com.mousegestures.system.screenshot_full"),
-            Gesture(zone: .topRight, modifiers: [.command, .shift], actionIdentifier: "com.mousegestures.system.screenshot_selection")
+            Gesture(zone: .topLeft, modifiers: [.command, .shift], actionIdentifier: "com.mousegestures.system.screenshot", parameters: ["type": AnyCodable("full")]),
+            Gesture(zone: .topRight, modifiers: [.command, .shift], actionIdentifier: "com.mousegestures.system.screenshot", parameters: ["type": AnyCodable("selection")])
         ]
         
         return ConfigurationProfile(
@@ -89,8 +89,8 @@ struct DefaultProfiles {
             // Mission Control & Spaces
             Gesture(zone: .top, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.mission_control"),
             Gesture(zone: .bottom, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.show_desktop"),
-            Gesture(zone: .left, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.previous_space"),
-            Gesture(zone: .right, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.next_space"),
+            Gesture(zone: .left, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.cycle_space", parameters: ["direction": AnyCodable("previous")]),
+            Gesture(zone: .right, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.cycle_space", parameters: ["direction": AnyCodable("next")]),
             
             // Expose & App Windows
             Gesture(zone: .topLeft, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.app_expose"),
@@ -98,15 +98,15 @@ struct DefaultProfiles {
             
             // Launchpad & Spotlight
             Gesture(zone: .bottomLeft, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.mission_control"),
-            Gesture(zone: .bottomRight, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.automation.search_finder"),
+            Gesture(zone: .bottomRight, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.mission_control"),
             
             // Notification Center & Control Center
             Gesture(zone: .topLeft, modifiers: [.command, .option], actionIdentifier: "com.mousegestures.core.show_desktop"),
             Gesture(zone: .topRight, modifiers: [.command, .option], actionIdentifier: "com.mousegestures.core.mission_control"),
             
             // App Cycling
-            Gesture(zone: .bottom, modifiers: [.command, .option], actionIdentifier: "com.mousegestures.core.previous_window"),
-            Gesture(zone: .top, modifiers: [.command, .option], actionIdentifier: "com.mousegestures.core.next_window")
+            Gesture(zone: .bottom, modifiers: [.command, .option], actionIdentifier: "com.mousegestures.core.cycle_window", parameters: ["direction": AnyCodable("backward")]),
+            Gesture(zone: .top, modifiers: [.command, .option], actionIdentifier: "com.mousegestures.core.cycle_window", parameters: ["direction": AnyCodable("forward")])
         ]
         
         return ConfigurationProfile(
@@ -125,11 +125,11 @@ struct DefaultProfiles {
             Gesture(zone: .bottom, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.minimize"),
             
             // Quick app switching
-            Gesture(zone: .left, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.previous_window"),
-            Gesture(zone: .right, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.next_window"),
+            Gesture(zone: .left, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.cycle_window", parameters: ["direction": AnyCodable("backward")]),
+            Gesture(zone: .right, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.cycle_window", parameters: ["direction": AnyCodable("forward")]),
             
             // System controls
-            Gesture(zone: .topLeft, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.automation.search_finder"),
+            Gesture(zone: .topLeft, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.mission_control"),
             Gesture(zone: .bottomLeft, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.hide_app"),
             Gesture(zone: .bottomRight, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.show_desktop"),
             
@@ -155,8 +155,8 @@ struct DefaultProfiles {
             Gesture(zone: .topLeft, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.close_window"),
             Gesture(zone: .top, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.fullscreen"),
             Gesture(zone: .bottom, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.minimize"),
-            Gesture(zone: .left, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.previous_space"),
-            Gesture(zone: .right, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.next_space")
+            Gesture(zone: .left, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.cycle_space", parameters: ["direction": AnyCodable("previous")]),
+            Gesture(zone: .right, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.cycle_space", parameters: ["direction": AnyCodable("next")])
         ]
         
         return ConfigurationProfile(
@@ -170,26 +170,26 @@ struct DefaultProfiles {
     static func createDeveloperProfile() -> ConfigurationProfile {
         let gestures = [
             // Window management
-            Gesture(zone: .left, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.window.left_half"),
-            Gesture(zone: .right, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.window.right_half"),
+            Gesture(zone: .left, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.window.snap_window", parameters: ["position": AnyCodable("left_half")]),
+            Gesture(zone: .right, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.window.snap_window", parameters: ["position": AnyCodable("right_half")]),
             Gesture(zone: .top, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.maximize"),
             Gesture(zone: .topRight, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.close_window"),
             Gesture(zone: .topLeft, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.quit_app"),
             
             // Quick app switching (Terminal, IDE, Browser)
-            Gesture(zone: .bottomLeft, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.previous_window"),
-            Gesture(zone: .bottomRight, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.next_window"),
+            Gesture(zone: .bottomLeft, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.cycle_window", parameters: ["direction": AnyCodable("backward")]),
+            Gesture(zone: .bottomRight, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.cycle_window", parameters: ["direction": AnyCodable("forward")]),
             
             // Spaces for different projects
-            Gesture(zone: .left, modifiers: [.command, .option], actionIdentifier: "com.mousegestures.core.previous_space"),
-            Gesture(zone: .right, modifiers: [.command, .option], actionIdentifier: "com.mousegestures.core.next_space"),
+            Gesture(zone: .left, modifiers: [.command, .option], actionIdentifier: "com.mousegestures.core.cycle_space", parameters: ["direction": AnyCodable("previous")]),
+            Gesture(zone: .right, modifiers: [.command, .option], actionIdentifier: "com.mousegestures.core.cycle_space", parameters: ["direction": AnyCodable("next")]),
             
             // Mission Control for overview
             Gesture(zone: .top, modifiers: [.command, .option], actionIdentifier: "com.mousegestures.core.mission_control"),
             Gesture(zone: .bottom, modifiers: [.command, .option], actionIdentifier: "com.mousegestures.core.app_expose"),
             
             // Screenshot for documentation
-            Gesture(zone: .topLeft, modifiers: [.command, .shift], actionIdentifier: "com.mousegestures.system.screenshot_selection"),
+            Gesture(zone: .topLeft, modifiers: [.command, .shift], actionIdentifier: "com.mousegestures.system.screenshot", parameters: ["type": AnyCodable("selection")]),
             
             // Hide distractions
             Gesture(zone: .bottomLeft, modifiers: [.command, .option], actionIdentifier: "com.mousegestures.core.show_desktop")

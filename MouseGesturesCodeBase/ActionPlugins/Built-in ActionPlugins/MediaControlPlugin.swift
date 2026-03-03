@@ -150,12 +150,7 @@ class MediaControlPlugin: NSObject, GestureActionPlugin {
             let direction = parameters.string(for: "direction") ?? "next"
             sendMediaKey(direction == "next" ? .nextTrack : .previousTrack)
             
-        // Legacy aliases for backward compatibility
-        case "next_track":
-            sendMediaKey(.nextTrack)
-        case "previous_track":
-            sendMediaKey(.previousTrack)
-            
+
         // Consolidated volume control
         case "volume":
             let mode = parameters.string(for: "mode") ?? "up"
@@ -173,20 +168,7 @@ class MediaControlPlugin: NSObject, GestureActionPlugin {
                 break
             }
             
-        // Legacy aliases for backward compatibility
-        case "volume_up":
-            let amount = parameters.number(for: "amount") ?? 5
-            changeVolume(by: Int(amount), context: context)
-        case "volume_down":
-            let amount = parameters.number(for: "amount") ?? 5
-            changeVolume(by: -Int(amount), context: context)
-        case "mute":
-            toggleMute(context: context)
-        case "set_volume":
-            if let level = parameters.number(for: "level") {
-                setVolume(to: Int(level), context: context)
-            }
-            
+
         // Consolidated seek
         case "seek":
             let direction = parameters.string(for: "direction") ?? "forward"
@@ -197,14 +179,7 @@ class MediaControlPlugin: NSObject, GestureActionPlugin {
                 seekMedia(seconds: Int(seconds), forward: false)
             }
             
-        // Legacy aliases for backward compatibility
-        case "fast_forward":
-            let seconds = parameters.number(for: "seconds") ?? 10
-            seekMedia(seconds: Int(seconds), forward: true)
-        case "rewind":
-            let seconds = parameters.number(for: "seconds") ?? 10
-            seekMedia(seconds: Int(seconds), forward: false)
-            
+
         default:
             throw PluginError.actionNotFound(action.id)
         }
@@ -218,10 +193,6 @@ class MediaControlPlugin: NSObject, GestureActionPlugin {
                 guard parameters.number(for: "amount") != nil else {
                     return ValidationResult.invalid(error: "Volume level is required for Set mode")
                 }
-            }
-        case "set_volume":
-            guard parameters.number(for: "level") != nil else {
-                return ValidationResult.invalid(error: "Volume level is required")
             }
         default:
             break
