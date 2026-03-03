@@ -4,15 +4,17 @@
 
 - Remove Dummy Autoupdate
 - Manage detection plugins under developer mode
-- Use full 'gestures' UI in plugins
+- Use full 'gestures' UI in profiles
 - Trigger Configuration: Configurations not aligned between types.
-- Reduce size of modifier keys.
-- Certain trigger combinations don't work (Example: Shortcut + Mousebutton)
+- Reduce size of modifier keys trigger configuration.
+- Improve activation system
 - Drag does not need to be a separate trigger configuration than mouse button
 - Profiles: pressing delete should not select the profile check box
 - Hide unnecessary parameters (Example: Specific)
 - Action selection not displaying 'core'
-- Keyboard shortcut detection not working
+- Keyboard shortcut detection not working for gestures
+- Reset to default
+- Add reset to template in gestures
 
 Actions:
 - Advanced configurations should label themselves (Currently just says: "This action requires advanced configuration")
@@ -21,10 +23,6 @@ Actions:
 - Clean up unneeded actions
 - Open application should bring up finder to select any application
 - Open File parameter should have a button to select from finder
-- Full screen unreliable.
-	-Fn + F works on some apps
-	-Command + Control + F works in some apps (Most but not all)
-	-Using Accessibility to click the full screen button doesn't work when buttons aren't shown (common when in full screen) 
 - Window Actions targeting multiple windows does not work
 - Improve: conditional gesture bundle logic
 Picker: the selection "" is invalid and does not have an associated tag, this will give undefined results.

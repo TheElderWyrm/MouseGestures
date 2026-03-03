@@ -38,9 +38,8 @@ previous_window      - Switch to previous window]    → cycle_window (direction
 	* Duplicate of cycle_windows? [✓ consolidated]
 [next_space           - Move to next desktop space    → cycle_space (direction: next)     [✓]
 	* Not working
-previous_space       - Move to previous desktop space] → cycle_space (direction: previous) [✓]
-	* Fixed: releases gesture modifier keys before sending Ctrl+Arrow via System Events [✓]
-	* Action + Parameter [✓]
+previous_space       - Move to previous desktop space] → cycle_space (direction: previous)]
+	* Only partially working. Propper solution requires either private APIs or invisible windows: https://github.com/bigbearlabs/SpaceSwitcher.
 lock_screen          - Lock the screen [✓]
 sleep_display        - Put the display to sleep
 	* Clarified: description updated to "Put the display(s) to sleep without sleeping the computer" [✓]
