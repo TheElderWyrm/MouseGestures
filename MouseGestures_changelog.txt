@@ -1,3 +1,58 @@
+## 2026-03-03
+
+### Action Plugin Overhaul: Consolidation, Bug Fixes, and NX Media Key Support
+
+**MediaControlPlugin v2.0 — Consolidated Actions + System Media Keys**
+- Consolidated `next_track` + `previous_track` → `track_skip` (direction parameter)
+- Consolidated `volume_up` + `volume_down` + `mute` + `set_volume` → `volume` (mode: up/down/mute/set + amount)
+- Consolidated `fast_forward` + `rewind` → `seek` (direction + seconds parameters)
+- **Fixed**: All media playback actions now use NX system media keys (NX_KEYTYPE_PLAY/NEXT/PREVIOUS)
+  instead of keyboard shortcuts — works system-wide regardless of focused app
+- **Fixed**: Seek uses NX_KEYTYPE_FAST/REWIND with proportional hold duration
+- All legacy action IDs maintained as aliases for backward compatibility
+
+**SystemControlPlugin v2.0 — Consolidated Actions + NX Key Fixes**
+- Consolidated `brightness_up` + `brightness_down` → `display_brightness` (direction parameter)
+- Consolidated `keyboard_brightness_up` + `keyboard_brightness_down` → `keyboard_brightness` (direction parameter)
+- Consolidated `screenshot_full` + `screenshot_selection` + `screenshot_window` + `screenshot_clipboard`
+  → `screenshot` (type: full/selection/window/interactive + destination: file/clipboard)
+- **Fixed brightness**: Now uses NX_KEYTYPE_BRIGHTNESS_UP/DOWN (was sending wrong F-key codes)
+- **Fixed keyboard brightness**: Now uses NX_KEYTYPE_ILLUMINATION_UP/DOWN
+- **Fixed toggle_do_not_disturb**: Replaced UI scripting (which caused stuck modifier keys)
+  with `defaults -currentHost` approach + killall NotificationCenter/ControlCenter
+- **Fixed toggle_night_shift**: Now uses CoreBrightness CBBlueLightClient via python/objc bridge;
+  was previously just toggling dark mode as a placeholder. Falls back to System Preferences.
+- **Fixed screenshots**: Now uses `screencapture` CLI for all modes (more reliable than keyboard
+  shortcuts). Added "interactive" mode (screenshot toolbar). Supports file or clipboard destination.
+- All legacy action IDs maintained as aliases for backward compatibility
+
+**CoreActionsPlugin — Bug Fixes and Feature Additions**
+- **Fixed show_desktop**: Replaced non-functional DistributedNotification with multi-level
+  fallback: Mission Control --show-desktop → F11 via System Events → Cmd+F3
+- **Fixed empty_trash**: Now activates Finder before running `empty trash` command to ensure
+  the command processes. Falls back to shell-based AppleScript on failure.
+  Restores previous frontmost app after completion.
+- **Fixed fullscreen**: Added `waitForModifierRelease()` before toggling fullscreen to prevent
+  modifier key contamination when gesture trigger includes modifiers
+- **Added**: `hide_app` now supports "All Except Finder" target (matching quit_app's existing option)
+
+**WindowManagementPlugin — Behavior Fixes and Algorithm Improvements**
+- **Fixed adjust_size**: Resize operations no longer reposition the window to center —
+  only the size changes while the top-left position is preserved
+- **Improved tile_all**: Replaced simple sqrt-based grid with aspect-ratio-aware algorithm
+  that finds optimal column count by minimizing cell aspect ratio deviation from screen ratio
+  and wasted space. Last row windows fill evenly rather than leaving gaps.
+- **Improved cascade**: Now filters out desktop widget windows (WidgetKit, NotificationCenter).
+  Cascade position wraps when it would go off-screen instead of creating multiple stacks.
+
+**AutomationPlugin — Bug Fixes**
+- **Fixed run_shortcut**: Corrected double-quote escaping in AppleScript fallback path.
+  Input parameter now properly passed through to AppleScript fallback.
+- **Fixed open_url**: Added URL normalization — automatically prepends `https://` when the
+  URL string contains a dot but no scheme (e.g. "Youtube.com" → "https://Youtube.com").
+
+---
+
 ## 2026-02-24
 
 **Fix: Modifier key interference when gesture triggers use modifier keys**

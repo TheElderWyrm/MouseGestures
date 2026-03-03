@@ -75,26 +75,32 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
                         AnyCodable("shell"),
                         AnyCodable("javascript"),
                         AnyCodable("python")
-                    ])
+                    ]),
+                    displayValues: [
+                        "applescript": "AppleScript",
+                        "shell": "Shell Script",
+                        "javascript": "JavaScript (JXA)",
+                        "python": "Python"
+                    ]
+                ),
+                ParameterDefinition(
+                    key: "use_file",
+                    name: "Source",
+                    type: .boolean,
+                    defaultValue: AnyCodable(false),
+                    description: "Use an external script file instead of inline content"
                 ),
                 ParameterDefinition(
                     key: "script_content",
                     name: "Script",
                     type: .script,
-                    description: "Script content"
+                    description: "Inline script content"
                 ),
                 ParameterDefinition(
                     key: "script_path",
-                    name: "Script Path",
+                    name: "Script File",
                     type: .path,
                     description: "Path to script file"
-                ),
-                ParameterDefinition(
-                    key: "use_file",
-                    name: "Use File",
-                    type: .boolean,
-                    defaultValue: AnyCodable(false),
-                    description: "Whether to use script file instead of content"
                 )
             ],
             icon: "doc.text"
@@ -185,7 +191,14 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
                         AnyCodable("cut"),
                         AnyCodable("clear"),
                         AnyCodable("set_text")
-                    ])
+                    ]),
+                    displayValues: [
+                        "copy": "Copy",
+                        "paste": "Paste",
+                        "cut": "Cut",
+                        "clear": "Clear Clipboard",
+                        "set_text": "Set Custom Text"
+                    ]
                 ),
                 ParameterDefinition(
                     key: "text",
@@ -387,6 +400,7 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
     
     private func runShortcut(name: String, input: String?) {
         DispatchQueue.global(qos: .userInitiated).async {
+            // Primary: use the shortcuts CLI tool
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/usr/bin/shortcuts")
             
@@ -406,21 +420,34 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
                 process.waitUntilExit()
                 
                 if process.terminationStatus != 0 {
-                    // Fallback to AppleScript
-                    self.runShortcutViaAppleScript(name: name)
+                    // Fallback to AppleScript with Shortcuts Events
+                    self.runShortcutViaAppleScript(name: name, input: input)
                 }
             } catch {
-                self.runShortcutViaAppleScript(name: name)
+                self.runShortcutViaAppleScript(name: name, input: input)
             }
         }
     }
     
-    private func runShortcutViaAppleScript(name: String) {
-        let script = """
-            tell application "Shortcuts Events"
-                run shortcut "\(name.replacingOccurrences(of: "\"", with: "\\\\\""))"
-            end tell
-        """
+    private func runShortcutViaAppleScript(name: String, input: String?) {
+        // Escape double quotes in the shortcut name for AppleScript
+        let escapedName = name.replacingOccurrences(of: "\"", with: "\\\"")
+        
+        let script: String
+        if let input = input {
+            let escapedInput = input.replacingOccurrences(of: "\"", with: "\\\"")
+            script = """
+                tell application "Shortcuts Events"
+                    run shortcut "\(escapedName)" with input "\(escapedInput)"
+                end tell
+            """
+        } else {
+            script = """
+                tell application "Shortcuts Events"
+                    run shortcut "\(escapedName)"
+                end tell
+            """
+        }
         
         executeAppleScript(script)
     }
@@ -516,7 +543,16 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
     }
     
     private func openURL(_ urlString: String, with browser: String?, context: PluginContext) {
-        guard let url = URL(string: urlString) else {
+        // Normalize URL: add https:// scheme if missing
+        var normalizedURL = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !normalizedURL.contains("://") {
+            // Check if it looks like a domain (contains a dot but isn't a file path)
+            if normalizedURL.contains(".") && !normalizedURL.hasPrefix("/") {
+                normalizedURL = "https://\(normalizedURL)"
+            }
+        }
+        
+        guard let url = URL(string: normalizedURL) else {
             context.logger.log("Invalid URL: \(urlString)", file: #file, function: #function, line: #line)
             return
         }

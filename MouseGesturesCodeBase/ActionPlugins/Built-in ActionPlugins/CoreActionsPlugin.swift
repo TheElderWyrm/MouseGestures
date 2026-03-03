@@ -32,27 +32,41 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
                     AnyCodable("by_application"),
                     AnyCodable("by_title"),
                     AnyCodable("mouse_position")
-                ])
+                ]),
+                group: "Target",
+                displayValues: [
+                    "frontmost": "Frontmost Window",
+                    "by_age": "By Window Order",
+                    "by_application": "By Application",
+                    "by_title": "By Exact Title",
+                    "mouse_position": "Under Mouse"
+                ]
             ),
             ParameterDefinition(
                 key: "app_bundle_id",
                 name: "Application",
                 type: .application,
-                description: "Application when targeting by app"
+                description: "Application to target",
+                visibleWhen: ParameterVisibilityRule(key: "target", value: "by_application"),
+                group: "Target"
             ),
             ParameterDefinition(
                 key: "window_title",
                 name: "Window Title",
                 type: .string,
-                description: "Title of the window to target"
+                description: "Title of the window to target",
+                visibleWhen: ParameterVisibilityRule(key: "target", value: "by_title"),
+                group: "Target"
             ),
             ParameterDefinition(
                 key: "window_age",
-                name: "Window Age",
+                name: "Window Order",
                 type: .number,
                 defaultValue: AnyCodable(1),
-                description: "Age of window (1 = frontmost, 2 = second, etc.)",
-                validation: ValidationRule(minValue: 1)
+                description: "1 = frontmost, 2 = second, etc.",
+                validation: ValidationRule(minValue: 1),
+                visibleWhen: ParameterVisibilityRule(key: "target", value: "by_age"),
+                group: "Target"
             )
         ]
     }
@@ -108,8 +122,14 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
                     description: "Which application to hide",
                     validation: ValidationRule(allowedValues: [
                         AnyCodable("frontmost"),
-                        AnyCodable("specific")
-                    ])
+                        AnyCodable("specific"),
+                        AnyCodable("all_except_finder")
+                    ]),
+                    displayValues: [
+                        "frontmost": "Frontmost App",
+                        "specific": "Specific App",
+                        "all_except_finder": "All Except Finder"
+                    ]
                 ),
                 ParameterDefinition(
                     key: "app_bundle_id",
@@ -139,7 +159,8 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
                         AnyCodable("frontmost"),
                         AnyCodable("specific"),
                         AnyCodable("all_except_finder")
-                    ])
+                    ]),
+                    displayValues: ["frontmost": "Frontmost App", "specific": "Specific App", "all_except_finder": "All Except Finder"]
                 ),
                 ParameterDefinition(
                     key: "app_bundle_id",
@@ -188,7 +209,8 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
                     validation: ValidationRule(allowedValues: [
                         AnyCodable("forward"),
                         AnyCodable("backward")
-                    ])
+                    ]),
+                    displayValues: ["forward": "Forward", "backward": "Backward"]
                 )
             ],
             supportsRepeat: true,
@@ -211,7 +233,8 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
                     validation: ValidationRule(allowedValues: [
                         AnyCodable("next"),
                         AnyCodable("previous")
-                    ])
+                    ]),
+                    displayValues: ["next": "Next", "previous": "Previous"]
                 )
             ],
             supportsRepeat: true,
@@ -254,7 +277,8 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
                     validation: ValidationRule(allowedValues: [
                         AnyCodable("next"),
                         AnyCodable("previous")
-                    ])
+                    ]),
+                    displayValues: ["next": "Next", "previous": "Previous"]
                 )
             ],
             icon: "person.crop.circle.fill.badge.plus"
@@ -498,6 +522,8 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
             app.activate(options: [])
             usleep(100_000)
         }
+        // Wait for modifier keys to be released so the shortcut isn't contaminated
+        waitForModifierRelease()
         // Try pressing the AX full screen button; falls back to keyboard when hidden (e.g. already fullscreen)
         if let window = resolveTargetWindow(target, context: context),
            let btnObj = context.getAccessibilityAttribute(window, attribute: "AXFullScreenButton") {
@@ -513,6 +539,14 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
             guard let bid = bundleId else { return }
             if let app = context.getRunningApplications().first(where: { $0.bundleIdentifier == bid }) {
                 _ = context.hideApplication(app)
+            }
+        case "all_except_finder":
+            context.getRunningApplications().forEach { app in
+                if app.activationPolicy == .regular,
+                   app.bundleIdentifier != "com.apple.finder",
+                   app.bundleIdentifier != Bundle.main.bundleIdentifier {
+                    _ = context.hideApplication(app)
+                }
             }
         default: // frontmost
             if let app = context.getFrontmostApplication() {
@@ -562,13 +596,27 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
     }
     
     private func showDesktop(context: PluginContext) {
-        // Most reliable: post the Dock's private "show desktop" distributed notification
-        DistributedNotificationCenter.default().postNotificationName(
-            NSNotification.Name("com.apple.showdesktop.awake"),
-            object: nil,
-            userInfo: nil,
-            deliverImmediately: true
-        )
+        // Use the Mission Control Show Desktop function key (F11 mapped to Show Desktop)
+        // This is the most reliable approach across macOS versions.
+        // First try: CoreDock private API via shell
+        let script = "do shell script \"open -a 'Mission Control' --args --show-desktop\" "
+        do {
+            try context.executeAppleScript(script)
+        } catch {
+            // Fallback: Fn+F11 keyboard shortcut (Show Desktop)
+            // Use System Events to ensure it works regardless of modifier state
+            waitForModifierRelease()
+            do {
+                try context.executeAppleScript("""
+                    tell application "System Events"
+                        key code 103
+                    end tell
+                """)
+            } catch {
+                // Final fallback: Cmd+F3 (older Expose Show Desktop shortcut)
+                context.sendKeyboardShortcut(keyCode: 99, modifiers: [.maskCommand])
+            }
+        }
     }
     
     private func activateAppExpose(context: PluginContext) {
@@ -621,15 +669,35 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
     }
     
     private func emptyTrash(context: PluginContext) {
-        do {
-            // "without confirm" bypasses the confirmation dialog
-            try context.executeAppleScript("""
-                tell application "Finder"
-                    empty trash without confirm
-                end tell
-            """)
-        } catch {
-            context.logger.log("Failed to empty trash: \(error.localizedDescription)", file: #file, function: #function, line: #line)
+        // Use Finder via AppleScript. The "empty trash" command requires Finder
+        // to be running (it always is). We activate Finder briefly to ensure
+        // the command processes, then re-activate the previous app.
+        DispatchQueue.global(qos: .userInitiated).async {
+            let previousApp = context.getFrontmostApplication()
+            do {
+                try context.executeAppleScript("""
+                    tell application "Finder"
+                        activate
+                        empty trash
+                    end tell
+                """)
+                // Give it a moment to process, then switch back
+                usleep(300_000)
+                if let prev = previousApp {
+                    DispatchQueue.main.async {
+                        prev.activate(options: [])
+                    }
+                }
+            } catch {
+                // Fallback: use shell command directly
+                do {
+                    try context.executeAppleScript("""
+                        do shell script "osascript -e 'tell application \\\"Finder\\\" to empty trash'" with administrator privileges
+                    """)
+                } catch {
+                    context.logger.log("Failed to empty trash: \(error.localizedDescription)", file: #file, function: #function, line: #line)
+                }
+            }
         }
     }
     

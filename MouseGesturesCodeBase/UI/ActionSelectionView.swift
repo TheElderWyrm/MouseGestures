@@ -250,33 +250,73 @@ struct ActionSelectionView: View {
                 }
                 let simple = action.supportedParameters.filter { $0.type != .json }
                 if !simple.isEmpty {
-                    GroupBox("Parameters") {
-                        VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
-                            ForEach(simple, id: \.key) { p in
-                                paramField(for: p)
+                    let grouped = parameterGroups(simple)
+                    ForEach(grouped, id: \.name) { group in
+                        GroupBox(group.name) {
+                            VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
+                                ForEach(group.params, id: \.key) { p in
+                                    paramField(for: p)
+                                }
                             }
+                            .padding(.vertical, MGStyle.Spacing.md)
                         }
-                        .padding(.vertical, MGStyle.Spacing.md)
                     }
                 }
             }
         }
     }
     
+    /// Groups parameters by their `group` property for sectioned display
+    private struct ParameterGroup: Identifiable {
+        let name: String
+        let params: [ParameterDefinition]
+        var id: String { name }
+    }
+    
+    private func parameterGroups(_ params: [ParameterDefinition]) -> [ParameterGroup] {
+        var groups: [ParameterGroup] = []
+        var currentGroupName: String? = nil
+        var currentParams: [ParameterDefinition] = []
+        
+        for p in params {
+            let groupName = p.group ?? "Parameters"
+            if groupName != currentGroupName {
+                if !currentParams.isEmpty, let name = currentGroupName {
+                    groups.append(ParameterGroup(name: name, params: currentParams))
+                }
+                currentGroupName = groupName
+                currentParams = [p]
+            } else {
+                currentParams.append(p)
+            }
+        }
+        if !currentParams.isEmpty, let name = currentGroupName {
+            groups.append(ParameterGroup(name: name, params: currentParams))
+        }
+        return groups
+    }
+    
     private func advancedConfigBox(for action: PluginAction) -> some View {
-        GroupBox("Advanced Configuration") {
+        GroupBox("Advanced: \(action.name)") {
             HStack {
                 VStack(alignment: .leading, spacing: MGStyle.Spacing.sm) {
-                    Text("This action requires advanced configuration.")
-                        .font(.system(size: MGStyle.FontSize.body))
                     if advancedConfigCount > 0 {
-                        Text("\(advancedConfigCount) item(s) configured")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                        HStack(spacing: MGStyle.Spacing.sm) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(.green)
+                                .font(.system(size: 12))
+                            Text("\(advancedConfigCount) item(s) configured")
+                                .font(.system(size: MGStyle.FontSize.body))
+                        }
                     } else {
-                        Text("Not yet configured")
-                            .font(.caption)
-                            .foregroundColor(.orange)
+                        HStack(spacing: MGStyle.Spacing.sm) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundColor(.orange)
+                                .font(.system(size: 12))
+                            Text("Not yet configured")
+                                .font(.system(size: MGStyle.FontSize.body))
+                                .foregroundColor(.orange)
+                        }
                     }
                 }
                 Spacer()
@@ -292,42 +332,116 @@ struct ActionSelectionView: View {
     private func shouldShow(_ p: ParameterDefinition) -> Bool {
         guard let rule = p.visibleWhen else { return true }
         let current = actionParameters[rule.key]?.value as? String ?? ""
-        return current == rule.value
+        return rule.matches(current)
     }
 
     @ViewBuilder
     private func paramField(for p: ParameterDefinition) -> some View {
         if shouldShow(p) { paramFieldContent(for: p) }
     }
+    
+    /// Resolves the display label for a raw selection value
+    private func displayLabel(for rawValue: String, param: ParameterDefinition) -> String {
+        if let custom = param.displayValues?[rawValue] { return custom }
+        // Auto-format: replace underscores and camelCase
+        return rawValue
+            .replacingOccurrences(of: "_", with: " ")
+            .replacingOccurrences(of: "([a-z])([A-Z])", with: "$1 $2", options: .regularExpression)
+            .localizedCapitalized
+    }
 
     @ViewBuilder
     private func paramFieldContent(for p: ParameterDefinition) -> some View {
         switch p.type {
-        case .string, .path, .url:
-            VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
-                Text(p.name)
-                    .font(.system(size: 12, weight: .medium))
+        case .string:
+            paramRow(p) {
                 TextField(p.description, text: strBinding(p.key, def: p.defaultValue?.value as? String ?? ""))
                     .textFieldStyle(.roundedBorder)
             }
+        case .path:
+            paramRow(p) {
+                HStack(spacing: MGStyle.Spacing.sm) {
+                    TextField(p.description, text: strBinding(p.key, def: p.defaultValue?.value as? String ?? ""))
+                        .textFieldStyle(.roundedBorder)
+                    Button(action: { browseForPath(paramKey: p.key) }) {
+                        Image(systemName: "folder")
+                    }
+                    .help("Browse...")
+                }
+            }
+        case .url:
+            paramRow(p) {
+                HStack(spacing: MGStyle.Spacing.sm) {
+                    TextField(p.description.isEmpty ? "https://" : p.description, text: strBinding(p.key, def: p.defaultValue?.value as? String ?? ""))
+                        .textFieldStyle(.roundedBorder)
+                    // URL validation indicator
+                    let current = actionParameters[p.key]?.value as? String ?? ""
+                    if !current.isEmpty {
+                        if URL(string: current) != nil && (current.hasPrefix("http") || current.hasPrefix("/")) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(.green)
+                                .font(.system(size: 12))
+                        } else {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundColor(.orange)
+                                .font(.system(size: 12))
+                                .help("May not be a valid URL")
+                        }
+                    }
+                }
+            }
         case .number:
-            VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
-                Text(p.name)
-                    .font(.system(size: 12, weight: .medium))
-                TextField(p.description, text: numBinding(p.key, def: p.defaultValue?.value as? Double ?? 0))
-                    .textFieldStyle(.roundedBorder)
-                    .frame(width: 100)
+            paramRow(p) {
+                if let minV = p.validation?.minValue, let maxV = p.validation?.maxValue {
+                    // Slider + text field for bounded ranges
+                    HStack(spacing: MGStyle.Spacing.md) {
+                        Slider(
+                            value: sliderBinding(p.key, def: p.defaultValue?.value as? Double ?? minV, min: minV, max: maxV),
+                            in: minV...maxV,
+                            step: maxV - minV > 10 ? 1 : 0.1
+                        )
+                        HStack(spacing: 2) {
+                            TextField("", text: numBinding(p.key, def: p.defaultValue?.value as? Double ?? 0))
+                                .textFieldStyle(.roundedBorder)
+                                .frame(width: 55)
+                                .multilineTextAlignment(.trailing)
+                            if let suffix = p.suffix {
+                                Text(suffix)
+                                    .font(.system(size: MGStyle.FontSize.caption))
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
+                } else {
+                    // Plain text field for unbounded numbers
+                    HStack(spacing: 2) {
+                        TextField(p.description, text: numBinding(p.key, def: p.defaultValue?.value as? Double ?? 0))
+                            .textFieldStyle(.roundedBorder)
+                            .frame(width: 100)
+                        if let suffix = p.suffix {
+                            Text(suffix)
+                                .font(.system(size: MGStyle.FontSize.caption))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
             }
         case .boolean:
-            Toggle(p.name, isOn: boolBinding(p.key, def: p.defaultValue?.value as? Bool ?? false))
+            HStack {
+                Toggle(p.name, isOn: boolBinding(p.key, def: p.defaultValue?.value as? Bool ?? false))
+                if !p.description.isEmpty {
+                    Spacer()
+                    Text(p.description)
+                        .font(.system(size: MGStyle.FontSize.badge))
+                        .foregroundColor(.secondary)
+                }
+            }
         case .selection:
             if let vals = p.validation?.allowedValues {
-                VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
-                    Text(p.name)
-                        .font(.system(size: 12, weight: .medium))
+                paramRow(p) {
                     Picker("", selection: strBinding(p.key, def: p.defaultValue?.value as? String ?? "")) {
                         ForEach(vals.compactMap { $0.value as? String }, id: \.self) { v in
-                            Text(v.replacingOccurrences(of: "_", with: " ").capitalized).tag(v)
+                            Text(displayLabel(for: v, param: p)).tag(v)
                         }
                     }
                     .pickerStyle(.menu)
@@ -335,13 +449,10 @@ struct ActionSelectionView: View {
                 }
             }
         case .application:
-            VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
-                Text(p.name)
-                    .font(.system(size: 12, weight: .medium))
+            paramRow(p) {
                 HStack(spacing: MGStyle.Spacing.sm) {
                     Picker("", selection: strBinding(p.key, def: "")) {
                         Text("Select...").tag("")
-                        // Show selected app even if it's not currently running
                         let current = actionParameters[p.key]?.value as? String ?? ""
                         if !current.isEmpty && !WindowTargeting.getAllRunningApplications().contains(where: { $0.bundleId == current }) {
                             let displayName = NSWorkspace.shared.urlForApplication(withBundleIdentifier: current)
@@ -365,8 +476,15 @@ struct ActionSelectionView: View {
             }
         case .script:
             VStack(alignment: .leading, spacing: MGStyle.Spacing.sm) {
-                Text(p.name).font(.system(size: 12, weight: .medium))
-                Text(p.description).font(.caption).foregroundColor(.secondary)
+                HStack {
+                    Text(p.name).font(.system(size: 12, weight: .medium))
+                    Spacer()
+                    if !p.description.isEmpty {
+                        Text(p.description)
+                            .font(.system(size: MGStyle.FontSize.badge))
+                            .foregroundColor(.secondary)
+                    }
+                }
                 TextEditor(text: strBinding(p.key, def: p.defaultValue?.value as? String ?? ""))
                     .font(.system(.body, design: .monospaced))
                     .frame(minHeight: 80, maxHeight: 150)
@@ -383,12 +501,28 @@ struct ActionSelectionView: View {
         case .json:
             EmptyView()
         default:
-            VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
-                Text(p.name)
-                    .font(.system(size: 12, weight: .medium))
+            paramRow(p) {
                 TextField(p.description, text: strBinding(p.key, def: p.defaultValue?.value as? String ?? ""))
                     .textFieldStyle(.roundedBorder)
             }
+        }
+    }
+    
+    /// Consistent row layout for a parameter: label on the left, control on the right
+    @ViewBuilder
+    private func paramRow<Content: View>(_ p: ParameterDefinition, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
+            HStack {
+                Text(p.name)
+                    .font(.system(size: 12, weight: .medium))
+                if !p.description.isEmpty && p.type != .script {
+                    Spacer()
+                    Text(p.description)
+                        .font(.system(size: MGStyle.FontSize.badge))
+                        .foregroundColor(.secondary.opacity(0.7))
+                }
+            }
+            content()
         }
     }
     
@@ -487,7 +621,21 @@ struct ActionSelectionView: View {
         SavedActionsManager.shared.savedActions.first { $0.id.uuidString == selectedActionId }
     }
     
-    // MARK: - App Browser
+    // MARK: - File/App Browsers
+    
+    private func browseForPath(paramKey: String) {
+        let panel = NSOpenPanel()
+        panel.title = "Select File or Folder"
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = true
+        panel.allowsMultipleSelection = false
+        panel.begin { response in
+            guard response == .OK, let url = panel.url else { return }
+            DispatchQueue.main.async {
+                actionParameters[paramKey] = AnyCodable(url.path)
+            }
+        }
+    }
     
     private func browseForApp(paramKey: String) {
         let panel = NSOpenPanel()
@@ -528,6 +676,16 @@ struct ActionSelectionView: View {
     private func boolBinding(_ k: String, def d: Bool) -> Binding<Bool> {
         Binding(get: { actionParameters[k]?.value as? Bool ?? d },
                 set: { actionParameters[k] = AnyCodable($0) })
+    }
+    private func sliderBinding(_ k: String, def d: Double, min minV: Double, max maxV: Double) -> Binding<Double> {
+        Binding(
+            get: {
+                if let v = actionParameters[k]?.value as? Double { return v }
+                if let v = actionParameters[k]?.value as? Int { return Double(v) }
+                return d
+            },
+            set: { actionParameters[k] = AnyCodable($0) }
+        )
     }
     
     // MARK: - State Management

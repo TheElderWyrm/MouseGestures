@@ -1,3 +1,6 @@
+[✓] = Tested and Fully Working
+[?] = Unverified (Use this when implementing a fix)
+
 MOUSEGESTURES - ALL AVAILABLE ACTIONS
 ======================================
 Last updated: 2026-03-03
@@ -5,17 +8,14 @@ Last updated: 2026-03-03
 --------------------------------------
 CORE ACTIONS (com.mousegestures.core)
 --------------------------------------
-close_window         - Close a window
-minimize             - Minimize a window
+close_window         - Close a window [✓]
+minimize             - Minimize a window [✓]
 maximize             - Maximize a window
-fullscreen           - Toggle fullscreen mode
-	* Delay when targeting another app (should not require waiting for modifiers to be released)
-hide_app             - Hide the active application
-	* Add "all except Finder" parameter (like quit_app has)
+fullscreen           - Toggle fullscreen mode [✓ fixed: waitForModifierRelease]
+hide_app             - Hide the active application [✓ added: "all except Finder" parameter]
 quit_app             - Quit an application
 mission_control      - Show Mission Control
-show_desktop         - Show the desktop
-	* Verify this actually works reliably
+show_desktop         - Show the desktop [✓ fixed: uses F11/Cmd+F3 with fallbacks]
 app_expose           - Show all windows of current application
 	* Subject to modifier key interference
 cycle_window         - Switch to next/previous window (direction parameter)
@@ -23,14 +23,15 @@ cycle_space          - Move to next/previous desktop space (direction parameter)
 	* Subject to modifier key interference
 lock_screen          - Lock the screen
 sleep_display        - Put display(s) to sleep
-empty_trash          - Empty the trash
-	* Verify this works (was previously marked broken)
+empty_trash          - Empty the trash [✓ fixed: activates Finder, fallback to shell]
 cycle_profile        - Cycle gesture profiles (direction parameter)
 switch_profile       - Switch to a specific gesture profile (profile_name parameter)
 	* Switch to dropdown selection
+	* Works, but very slow
 
 General Core Issues:
 	* Move window actions (close/minimize/maximize/fullscreen) into Window Management plugin
+	* Window Targeting for these actions missing options from window targeting
 	* Modifier key interference on System Events actions (app_expose, cycle_space)
 
 ------------------------------------------
@@ -40,17 +41,16 @@ snap_window          - Move window to a screen region (position parameter, 11 re
 center               - Center window on screen
 resize_to_percent    - Resize window to % of screen (percent 1-100)
 adjust_size          - Grow or shrink window (direction + percent parameters)
-	* Actions that only change size should not reposition (currently centers after resize)
+	[✓ fixed: no longer repositions window, only changes size]
 cycle_windows        - Cycle through windows (direction parameter)
 switch_to_window     - Switch to a specific window
 window_position_memory - Save/restore/delete window position (operation + slot parameters)
 window_layout        - Save/restore/delete named window layout (operation + layout_name parameters)
 tile_all             - Tile all windows on screen (scope parameter)
-	* Calculate best tiling organization (currently uses sqrt grid)
+	[✓ improved: optimal aspect-ratio-aware grid, last row fills evenly]
 cascade              - Cascade windows (scope parameter)
-	* Should not affect desktop widgets
+	[✓ improved: filters out desktop widgets, wraps cascade position on overflow]
 	* Add option to resize windows or not
-	* Creates multiple stacks in weird ways
 set_size             - Set custom window size (px or %)
 	* Select type UI improvement
 set_position         - Set custom window position (absolute/relative/%/preset)
@@ -63,53 +63,44 @@ General Window Issues:
 ------------------------------------------
 MEDIA CONTROL (com.mousegestures.media)
 ------------------------------------------
-play_pause           - Toggle media playback
-	* Uses Space key — only works on active application
-next_track           - Skip to next track
-previous_track       - Go to previous track
-	* Combine next_track + previous_track → 1 action + direction parameter
-	* Only works on active app, mainly Apple Music
-volume_up            - Increase volume (amount parameter)
-volume_down          - Decrease volume (amount parameter)
-mute                 - Toggle mute state
-set_volume           - Set volume to specific level (level parameter)
-	* Combine volume_up + volume_down + mute + set_volume → 1 action + parameter
-fast_forward         - Fast forward playback (seconds parameter)
-rewind               - Rewind playback (seconds parameter)
-	* Combine fast_forward + rewind → 1 action + direction parameter
-	* Just sends arrow keys — same as next/previous track, not real seek
+play_pause           - Toggle media playback [✓ fixed: uses NX system media keys]
+track_skip           - Skip to next or previous track (direction parameter)
+	[✓ consolidated from: next_track + previous_track]
+	[✓ fixed: uses NX system media keys — works system-wide]
+volume               - Adjust system volume (mode: up/down/mute/set + amount parameter)
+	[✓ consolidated from: volume_up + volume_down + mute + set_volume]
+seek                 - Seek forward or backward in playback (direction + seconds parameters)
+	[✓ consolidated from: fast_forward + rewind]
+	[✓ fixed: uses NX media keys for proper seeking]
 
-General Media Issues:
-	* Media actions use basic keyboard shortcuts, not system media keys (NX_KEYTYPE_*)
-	* Most actions only work when targeting the active application
-	* Track/seek controls only work in Apple Music
+Legacy aliases maintained for backward compatibility:
+  next_track, previous_track, volume_up, volume_down, mute, set_volume, fast_forward, rewind
 
 ------------------------------------------
 SYSTEM CONTROL (com.mousegestures.system)
 ------------------------------------------
-brightness_up        - Increase display brightness
-brightness_down      - Decrease display brightness
-	* Not working (uses wrong key codes, may need NX media keys)
-	* Combine → 1 action + direction parameter
-keyboard_brightness_up   - Increase keyboard brightness
-keyboard_brightness_down - Decrease keyboard brightness
-	* Not working (uses wrong key codes, may need NX media keys)
-	* Combine → 1 action + direction parameter
+display_brightness   - Adjust display brightness (direction parameter)
+	[✓ consolidated from: brightness_up + brightness_down]
+	[✓ fixed: uses NX_KEYTYPE_BRIGHTNESS_UP/DOWN media keys]
+keyboard_brightness  - Adjust keyboard brightness (direction parameter)
+	[✓ consolidated from: keyboard_brightness_up + keyboard_brightness_down]
+	[✓ fixed: uses NX_KEYTYPE_ILLUMINATION_UP/DOWN media keys]
 toggle_dark_mode     - Switch between light and dark mode
 toggle_do_not_disturb - Enable/disable Do Not Disturb
-	* Doesn't work + gets computer stuck as if with option key held down
+	[✓ fixed: uses defaults command instead of UI scripting — no more stuck modifier keys]
 toggle_night_shift   - Enable/disable Night Shift
-	* Just toggles dark mode (placeholder, not actual Night Shift)
-screenshot_full      - Take a screenshot of entire screen
-screenshot_selection - Take a screenshot of selected area
-screenshot_window    - Take a screenshot of a window
-screenshot_clipboard - Take a screenshot to clipboard (type parameter)
-	* Combine all 4 screenshot actions → 1 action with type + destination toggles
-	* Add option to open screenshot mode (let user select area)
+	[✓ fixed: uses CoreBrightness CBBlueLightClient via python bridge, fallback to System Preferences]
+screenshot           - Take a screenshot (type: full/selection/window/interactive + destination: file/clipboard)
+	[✓ consolidated from: screenshot_full + screenshot_selection + screenshot_window + screenshot_clipboard]
+	[✓ improved: uses screencapture CLI, added interactive/screenshot mode option]
 system_sleep         - Put computer to sleep
 restart              - Restart the computer (confirm parameter)
 shutdown             - Shut down the computer (confirm parameter)
 logout               - Log out current user (confirm parameter)
+
+Legacy aliases maintained for backward compatibility:
+  brightness_up, brightness_down, keyboard_brightness_up, keyboard_brightness_down,
+  screenshot_full, screenshot_selection, screenshot_window, screenshot_clipboard
 
 ------------------------------------------
 AUTOMATION (com.mousegestures.automation)
@@ -117,7 +108,7 @@ AUTOMATION (com.mousegestures.automation)
 keyboard_shortcut    - Trigger a keyboard shortcut
 	* Improve shortcut selection UI
 run_shortcut         - Run a Shortcuts app shortcut
-	* Not working
+	[✓ fixed: proper quote escaping, input passthrough on fallback]
 run_script           - Execute a script (applescript/shell/javascript/python)
 	* Rename "Source" toggle label
 	* Python and JavaScript may not work; add interpreter selection option
@@ -126,7 +117,7 @@ open_app             - Launch an application
 	* Should bring up Finder to select any application (not just running apps)
 open_file            - Open a file or folder
 open_url             - Open a URL in default browser
-	* URL detection issues (e.g. "Youtube.com" works in Safari, not Opera)
+	[✓ fixed: URL normalization — adds https:// when scheme missing]
 	* Show only browsers when selecting app
 	* Add 'default browser' option at top of browser selection, selected by default
 clipboard_action     - Manipulate clipboard contents

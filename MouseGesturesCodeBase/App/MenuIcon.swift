@@ -297,3 +297,4 @@ protocol MenuIconDelegate: AnyObject {
     /// Requests the current gesture enabled state
     func menuIconRequestsGestureEnabledState() -> Bool
 }
+

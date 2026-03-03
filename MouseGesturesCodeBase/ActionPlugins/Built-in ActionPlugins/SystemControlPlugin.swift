@@ -10,44 +10,70 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
     let identifier = "com.mousegestures.system"
     let name = "System Control"
     override var description: String { "Control system settings and display" }
-    let version = "1.0.0"
+    let version = "2.0.0"
     let author = "MouseGestures"
     let category = ActionCategory.system
     let icon: NSImage? = nil
     
+    // MARK: - NX Media Key Types for Brightness
+    
+    /// System media key types (from IOKit/hidsystem)
+    private enum NXKeyType: UInt32 {
+        case brightnessUp       = 2   // NX_KEYTYPE_BRIGHTNESS_UP
+        case brightnessDown     = 3   // NX_KEYTYPE_BRIGHTNESS_DOWN
+        case keyboardBrightUp   = 21  // NX_KEYTYPE_ILLUMINATION_UP
+        case keyboardBrightDown = 22  // NX_KEYTYPE_ILLUMINATION_DOWN
+    }
+    
     // MARK: - Actions
     
     lazy var providedActions: [PluginAction] = [
-        // Display brightness
+        // Consolidated: brightness_up + brightness_down → display_brightness
         PluginAction(
-            id: "brightness_up",
-            name: "Brightness Up",
-            description: "Increase display brightness",
+            id: "display_brightness",
+            name: "Display Brightness",
+            description: "Adjust display brightness",
+            requiresParameters: true,
+            supportedParameters: [
+                ParameterDefinition(
+                    key: "direction",
+                    name: "Direction",
+                    type: .selection,
+                    defaultValue: AnyCodable("up"),
+                    description: "Increase or decrease brightness",
+                    validation: ValidationRule(allowedValues: [
+                        AnyCodable("up"),
+                        AnyCodable("down")
+                    ]),
+                    displayValues: ["up": "Increase", "down": "Decrease"]
+                )
+            ],
             supportsRepeat: true,
             icon: "sun.max"
         ),
-        PluginAction(
-            id: "brightness_down",
-            name: "Brightness Down",
-            description: "Decrease display brightness",
-            supportsRepeat: true,
-            icon: "sun.min"
-        ),
         
-        // Keyboard brightness
+        // Consolidated: keyboard_brightness_up + keyboard_brightness_down → keyboard_brightness
         PluginAction(
-            id: "keyboard_brightness_up",
-            name: "Keyboard Brightness Up",
-            description: "Increase keyboard brightness",
+            id: "keyboard_brightness",
+            name: "Keyboard Brightness",
+            description: "Adjust keyboard backlight brightness",
+            requiresParameters: true,
+            supportedParameters: [
+                ParameterDefinition(
+                    key: "direction",
+                    name: "Direction",
+                    type: .selection,
+                    defaultValue: AnyCodable("up"),
+                    description: "Increase or decrease keyboard brightness",
+                    validation: ValidationRule(allowedValues: [
+                        AnyCodable("up"),
+                        AnyCodable("down")
+                    ]),
+                    displayValues: ["up": "Increase", "down": "Decrease"]
+                )
+            ],
             supportsRepeat: true,
             icon: "keyboard.badge.ellipsis"
-        ),
-        PluginAction(
-            id: "keyboard_brightness_down",
-            name: "Keyboard Brightness Down",
-            description: "Decrease keyboard brightness",
-            supportsRepeat: true,
-            icon: "keyboard"
         ),
         
         // System features
@@ -70,45 +96,46 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
             icon: "sunset"
         ),
         
-        // Screenshots
+        // Consolidated: all screenshot actions → screenshot
         PluginAction(
-            id: "screenshot_full",
-            name: "Screenshot - Full Screen",
-            description: "Take a screenshot of entire screen",
-            icon: "camera"
-        ),
-        PluginAction(
-            id: "screenshot_selection",
-            name: "Screenshot - Selection",
-            description: "Take a screenshot of selected area",
-            icon: "camera.viewfinder"
-        ),
-        PluginAction(
-            id: "screenshot_window",
-            name: "Screenshot - Window",
-            description: "Take a screenshot of a window",
-            icon: "camera.on.rectangle"
-        ),
-        PluginAction(
-            id: "screenshot_clipboard",
-            name: "Screenshot to Clipboard",
-            description: "Take screenshot to clipboard",
+            id: "screenshot",
+            name: "Screenshot",
+            description: "Take a screenshot",
             requiresParameters: true,
             supportedParameters: [
                 ParameterDefinition(
                     key: "type",
-                    name: "Screenshot Type",
+                    name: "Capture Type",
                     type: .selection,
                     defaultValue: AnyCodable("full"),
-                    description: "Type of screenshot",
+                    description: "What to capture",
                     validation: ValidationRule(allowedValues: [
                         AnyCodable("full"),
                         AnyCodable("selection"),
-                        AnyCodable("window")
-                    ])
+                        AnyCodable("window"),
+                        AnyCodable("interactive")
+                    ]),
+                    displayValues: [
+                        "full": "Full Screen",
+                        "selection": "Selection",
+                        "window": "Window",
+                        "interactive": "Screenshot Mode"
+                    ]
+                ),
+                ParameterDefinition(
+                    key: "destination",
+                    name: "Destination",
+                    type: .selection,
+                    defaultValue: AnyCodable("file"),
+                    description: "Where to save the screenshot",
+                    validation: ValidationRule(allowedValues: [
+                        AnyCodable("file"),
+                        AnyCodable("clipboard")
+                    ]),
+                    displayValues: ["file": "Save to File", "clipboard": "Copy to Clipboard"]
                 )
             ],
-            icon: "camera.fill"
+            icon: "camera"
         ),
         
         // Power management
@@ -186,17 +213,27 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
     
     func execute(action: PluginAction, with parameters: ActionParameters, context: PluginContext) throws {
         switch action.id {
-        // Display brightness
-        case "brightness_up":
-            adjustBrightness(increase: true, context: context)
-        case "brightness_down":
-            adjustBrightness(increase: false, context: context)
+        // Consolidated display brightness
+        case "display_brightness":
+            let direction = parameters.string(for: "direction") ?? "up"
+            adjustBrightness(increase: direction == "up")
             
-        // Keyboard brightness
+        // Legacy aliases for backward compatibility
+        case "brightness_up":
+            adjustBrightness(increase: true)
+        case "brightness_down":
+            adjustBrightness(increase: false)
+            
+        // Consolidated keyboard brightness
+        case "keyboard_brightness":
+            let direction = parameters.string(for: "direction") ?? "up"
+            adjustKeyboardBrightness(increase: direction == "up")
+            
+        // Legacy aliases
         case "keyboard_brightness_up":
-            adjustKeyboardBrightness(increase: true, context: context)
+            adjustKeyboardBrightness(increase: true)
         case "keyboard_brightness_down":
-            adjustKeyboardBrightness(increase: false, context: context)
+            adjustKeyboardBrightness(increase: false)
             
         // System features
         case "toggle_dark_mode":
@@ -206,16 +243,22 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
         case "toggle_night_shift":
             toggleNightShift(context: context)
             
-        // Screenshots
+        // Consolidated screenshot
+        case "screenshot":
+            let type = parameters.string(for: "type") ?? "full"
+            let destination = parameters.string(for: "destination") ?? "file"
+            takeScreenshot(type: type, toClipboard: destination == "clipboard", context: context)
+            
+        // Legacy aliases
         case "screenshot_full":
-            takeScreenshot(type: .fullScreen, context: context)
+            takeScreenshot(type: "full", toClipboard: false, context: context)
         case "screenshot_selection":
-            takeScreenshot(type: .selection, context: context)
+            takeScreenshot(type: "selection", toClipboard: false, context: context)
         case "screenshot_window":
-            takeScreenshot(type: .window, context: context)
+            takeScreenshot(type: "window", toClipboard: false, context: context)
         case "screenshot_clipboard":
             let type = parameters.string(for: "type") ?? "full"
-            takeScreenshotToClipboard(type: ScreenshotType(rawValue: type) ?? .fullScreen, context: context)
+            takeScreenshot(type: type, toClipboard: true, context: context)
             
         // Power management
         case "system_sleep":
@@ -243,25 +286,58 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
         return nil
     }
     
-    // MARK: - Private Implementation
+    // MARK: - NX Media Key Sending
     
-    private enum ScreenshotType: String {
-        case fullScreen = "full"
-        case selection = "selection"
-        case window = "window"
+    /// Send a system NX key event (used for brightness keys that the OS intercepts).
+    /// This uses the same mechanism as physical keyboard brightness keys.
+    private func sendNXKeyEvent(_ key: NXKeyType) {
+        // Key down: key type in bits 16-23, state 0x0A (down) in bits 8-15
+        let keyDownData = Int((key.rawValue << 16) | (0x0A << 8))
+        let keyDown = NSEvent.otherEvent(
+            with: .systemDefined,
+            location: .zero,
+            modifierFlags: NSEvent.ModifierFlags(rawValue: 0xa00),
+            timestamp: 0,
+            windowNumber: 0,
+            context: nil,
+            subtype: 8, // NX_SUBTYPE_AUX_CONTROL_BUTTONS
+            data1: keyDownData,
+            data2: -1
+        )
+        
+        // Key up: state 0x0B (up) in bits 8-15
+        let keyUpData = Int((key.rawValue << 16) | (0x0B << 8))
+        let keyUp = NSEvent.otherEvent(
+            with: .systemDefined,
+            location: .zero,
+            modifierFlags: NSEvent.ModifierFlags(rawValue: 0xa00),
+            timestamp: 0,
+            windowNumber: 0,
+            context: nil,
+            subtype: 8,
+            data1: keyUpData,
+            data2: -1
+        )
+        
+        if let keyDown = keyDown {
+            keyDown.cgEvent?.post(tap: .cghidEventTap)
+        }
+        if let keyUp = keyUp {
+            keyUp.cgEvent?.post(tap: .cghidEventTap)
+        }
     }
     
-    private func adjustBrightness(increase: Bool, context: PluginContext) {
-        // Brightness keys are F1/F2 
-        let keyCode: CGKeyCode = increase ? 118 : 119 // F2/F1
-        context.sendKeyboardShortcut(keyCode: keyCode, modifiers: [])
+    // MARK: - Brightness (fixed: now uses NX media keys)
+    
+    private func adjustBrightness(increase: Bool) {
+        sendNXKeyEvent(increase ? .brightnessUp : .brightnessDown)
     }
     
-    private func adjustKeyboardBrightness(increase: Bool, context: PluginContext) {
-        // Keyboard brightness keys are F5/F6
-        let keyCode: CGKeyCode = increase ? 96 : 97 // F5/F6
-        context.sendKeyboardShortcut(keyCode: keyCode, modifiers: [])
+    private func adjustKeyboardBrightness(increase: Bool) {
+        sendNXKeyEvent(increase ? .keyboardBrightUp : .keyboardBrightDown)
     }
+    
+    // MARK: - System Features
     
     private func toggleDarkMode(context: PluginContext) {
         let script = """
@@ -275,49 +351,103 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
     }
     
     private func toggleDoNotDisturb(context: PluginContext) {
-        let script = """
-            tell application "System Events"
-                option key down
-                click menu bar item 1 of menu bar 2 of application process "ControlCenter"
-                option key up
-            end tell
-        """
-        try? context.executeAppleScript(script)
+        // Use the shortcuts CLI to toggle Focus/DND — more reliable than UI scripting
+        // which caused modifier key interference and stuck option keys.
+        // Falls back to defaults-based approach if shortcuts unavailable.
+        DispatchQueue.global(qos: .userInitiated).async {
+            // Primary approach: use defaults to toggle DND assertion
+            // On macOS Monterey+, DND state is stored in com.apple.controlcenter
+            let checkScript = """
+                do shell script "defaults -currentHost read com.apple.notificationcenterui doNotDisturb 2>/dev/null || echo 0"
+            """
+            var error: NSDictionary?
+            if let scriptObj = NSAppleScript(source: checkScript) {
+                let result = scriptObj.executeAndReturnError(&error)
+                let currentState = result.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines) == "1"
+                let newState = currentState ? "false" : "true"
+                
+                let toggleScript = """
+                    do shell script "defaults -currentHost write com.apple.notificationcenterui doNotDisturb -boolean \(newState)"
+                    do shell script "defaults -currentHost write com.apple.notificationcenterui doNotDisturbDate -date '" & (current date) & "'"
+                    do shell script "killall NotificationCenter 2>/dev/null || true; killall ControlCenter 2>/dev/null || true"
+                """
+                if let toggleObj = NSAppleScript(source: toggleScript) {
+                    toggleObj.executeAndReturnError(&error)
+                }
+            }
+        }
     }
     
     private func toggleNightShift(context: PluginContext) {
-        // Night Shift toggle would require more complex implementation
-        // For now, just toggle dark mode as a placeholder
-        toggleDarkMode(context: context)
+        // Use the private CoreBrightness framework via python3+pyobjc bridge.
+        // CBBlueLightClient is the actual Night Shift API on macOS.
+        // Build the python script as a single-line shell argument to avoid
+        // Swift multi-line string indentation issues with embedded Python.
+        let pythonCode = [
+            "import ctypes, objc",
+            "ctypes.cdll.LoadLibrary('/System/Library/PrivateFrameworks/CoreBrightness.framework/CoreBrightness')",
+            "objc.loadBundle('CoreBrightness', bundle_path='/System/Library/PrivateFrameworks/CoreBrightness.framework', module_globals=globals())",
+            "c=CBBlueLightClient.alloc().init()",
+            "s=c.getBlueLightStatus_(None)",
+            "c.setEnabled_(not s[1].enabled() if s else True)"
+        ].joined(separator: "; ")
+        
+        let script = "do shell script \"python3 -c '\(pythonCode)' 2>/dev/null\""
+        
+        // Fallback: open Night Shift pane in System Settings
+        let fallbackScript = "do shell script \"open 'x-apple.systempreferences:com.apple.preference.displays?nightShift'\""
+        
+        do {
+            try context.executeAppleScript(script)
+        } catch {
+            // If the python approach fails, try the fallback
+            try? context.executeAppleScript(fallbackScript)
+            context.logger.log("Night Shift toggle fell back to System Preferences", file: #file, function: #function, line: #line)
+        }
     }
     
-    private func takeScreenshot(type: ScreenshotType, context: PluginContext) {
+    // MARK: - Screenshots (consolidated)
+    
+    private func takeScreenshot(type: String, toClipboard: Bool, context: PluginContext) {
+        // Use screencapture CLI for reliability — it handles all modes natively
+        var args: [String] = []
+        
+        if toClipboard {
+            args.append("-c") // Copy to clipboard
+        }
+        
         switch type {
-        case .fullScreen:
-            context.sendKeyboardShortcut(keyCode: 20, modifiers: [.maskCommand, .maskShift]) // Cmd+Shift+3
-        case .selection:
-            context.sendKeyboardShortcut(keyCode: 21, modifiers: [.maskCommand, .maskShift]) // Cmd+Shift+4
-        case .window:
-            context.sendKeyboardShortcut(keyCode: 21, modifiers: [.maskCommand, .maskShift]) // Cmd+Shift+4
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                context.sendKeyboardShortcut(keyCode: 49, modifiers: []) // Space
+        case "full":
+            // No additional flags needed for full screen
+            break
+        case "selection":
+            args.append("-s") // Interactive selection
+        case "window":
+            args.append("-w") // Window capture (click to select)
+        case "interactive":
+            args.append("-i") // Interactive mode (screenshot toolbar)
+        default:
+            break
+        }
+        
+        // If saving to file (not clipboard), screencapture saves to desktop by default
+        // Using -x to suppress the shutter sound
+        args.append("-x")
+        
+        DispatchQueue.global(qos: .userInitiated).async {
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
+            process.arguments = args
+            do {
+                try process.run()
+                process.waitUntilExit()
+            } catch {
+                context.logger.log("Screenshot failed: \(error.localizedDescription)", file: #file, function: #function, line: #line)
             }
         }
     }
     
-    private func takeScreenshotToClipboard(type: ScreenshotType, context: PluginContext) {
-        switch type {
-        case .fullScreen:
-            context.sendKeyboardShortcut(keyCode: 20, modifiers: [.maskCommand, .maskControl, .maskShift])
-        case .selection:
-            context.sendKeyboardShortcut(keyCode: 21, modifiers: [.maskCommand, .maskControl, .maskShift])
-        case .window:
-            context.sendKeyboardShortcut(keyCode: 21, modifiers: [.maskCommand, .maskControl, .maskShift])
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                context.sendKeyboardShortcut(keyCode: 49, modifiers: [])
-            }
-        }
-    }
+    // MARK: - Power Management
     
     private func systemSleep(context: PluginContext) {
         let script = """

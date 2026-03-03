@@ -145,12 +145,30 @@ public struct PluginAction: Codable, Equatable {
 public struct ParameterVisibilityRule: Codable, Equatable {
     /// The key of the sibling parameter to check
     public let key: String
-    /// The value that sibling parameter must have for this parameter to be visible
+    /// The value that sibling parameter must have for this parameter to be visible (single match)
     public let value: String
+    /// Multiple acceptable values — parameter is visible if sibling matches ANY of these (OR logic)
+    public let values: [String]?
     
     public init(key: String, value: String) {
         self.key = key
         self.value = value
+        self.values = nil
+    }
+    
+    /// Create a rule that matches any of the given values
+    public init(key: String, anyOf values: [String]) {
+        self.key = key
+        self.value = values.first ?? ""
+        self.values = values
+    }
+    
+    /// Returns true when the given current value satisfies this rule
+    public func matches(_ currentValue: String) -> Bool {
+        if let values = values {
+            return values.contains(currentValue)
+        }
+        return currentValue == value
     }
 }
 
@@ -165,6 +183,12 @@ public struct ParameterDefinition: Codable, Equatable {
     public let validation: ValidationRule?
     /// When set, this parameter is only shown when the referenced sibling has the specified value
     public let visibleWhen: ParameterVisibilityRule?
+    /// Visual group name — parameters with the same group are rendered together under a shared header
+    public let group: String?
+    /// Human-readable labels for selection values (key = raw value, value = display label)
+    public let displayValues: [String: String]?
+    /// Unit suffix shown after number fields (e.g. "%", "px", "s")
+    public let suffix: String?
     
     public init(
         key: String,
@@ -174,7 +198,10 @@ public struct ParameterDefinition: Codable, Equatable {
         defaultValue: AnyCodable? = nil,
         description: String = "",
         validation: ValidationRule? = nil,
-        visibleWhen: ParameterVisibilityRule? = nil
+        visibleWhen: ParameterVisibilityRule? = nil,
+        group: String? = nil,
+        displayValues: [String: String]? = nil,
+        suffix: String? = nil
     ) {
         self.key = key
         self.name = name
@@ -184,6 +211,9 @@ public struct ParameterDefinition: Codable, Equatable {
         self.description = description
         self.validation = validation
         self.visibleWhen = visibleWhen
+        self.group = group
+        self.displayValues = displayValues
+        self.suffix = suffix
     }
 }
 

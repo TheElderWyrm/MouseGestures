@@ -45,14 +45,39 @@ UI:
   - Open application action should bring up Finder to select any application
   - Show add-to-bundle button even when a bundle action is selected (choose to add or update)
   - Make action search not case sensitive
+  - switch_profile: Switch to dropdown selection (currently text input)
 
 Features:
   - Reset to default
   - Add reset to template in gestures
   - Bundle actions with variables (e.g. Open URL From Clipboard)
   - Test adding external plugins for detection and actions
+  - open_url: Show only browsers when selecting app + add 'default browser' option
+  - run_script: add interpreter selection, 'display output' toggle, rename Source label
+  - cascade: add option to resize windows or not
 
 Cleanup:
   - Remove dummy autoupdate
   - Clean up unneeded actions
-  - Not all actions work (see actions.txt for specifics)
+
+--------------------------------------
+COMPLETED (2026-03-03)
+--------------------------------------
+  [✓] Consolidated media actions: next_track+previous_track → track_skip, volume_up+volume_down+mute+set_volume → volume, fast_forward+rewind → seek
+  [✓] Consolidated system actions: brightness → display_brightness, keyboard brightness → keyboard_brightness, screenshots → screenshot
+  [✓] Fixed media controls to use NX system media keys (NX_KEYTYPE_PLAY/NEXT/PREVIOUS) — works system-wide
+  [✓] Fixed brightness controls to use NX media keys (NX_KEYTYPE_BRIGHTNESS_UP/DOWN)
+  [✓] Fixed keyboard brightness to use NX media keys (NX_KEYTYPE_ILLUMINATION_UP/DOWN)
+  [✓] Fixed show_desktop (uses F11/Cmd+F3 with multi-level fallbacks)
+  [✓] Fixed empty_trash (activates Finder for proper execution, shell fallback)
+  [✓] Fixed toggle_do_not_disturb (defaults-based approach, no more stuck modifier keys)
+  [✓] Fixed toggle_night_shift (CoreBrightness CBBlueLightClient, was just toggling dark mode)
+  [✓] Fixed fullscreen delay (added waitForModifierRelease)
+  [✓] Fixed run_shortcut (proper quote escaping, input passthrough on AppleScript fallback)
+  [✓] Fixed open_url URL detection (normalizes URLs, adds https:// when scheme missing)
+  [✓] Added hide_app "all except Finder" parameter
+  [✓] Fixed adjust_size repositioning (now only changes size, keeps window position)
+  [✓] Improved tile_all algorithm (aspect-ratio-aware grid, last row fills evenly)
+  [✓] Improved cascade (filters desktop widgets, wraps position on overflow)
+  [✓] Screenshot consolidated with interactive/screenshot mode option + file/clipboard destination
+  [✓] All legacy action IDs maintained as aliases for backward compatibility

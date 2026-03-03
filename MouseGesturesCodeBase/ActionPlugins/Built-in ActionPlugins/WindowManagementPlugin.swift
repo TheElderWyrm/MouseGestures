@@ -155,27 +155,46 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
                     AnyCodable("mouse_position"),
                     AnyCodable("largest"),
                     AnyCodable("smallest")
-                ])
+                ]),
+                group: "Target",
+                displayValues: [
+                    "frontmost": "Frontmost Window",
+                    "by_age": "By Window Order",
+                    "by_application": "By Application",
+                    "by_title": "By Exact Title",
+                    "by_title_contains": "By Title Contains",
+                    "all_in_app": "All Windows in App",
+                    "all_visible": "All Visible Windows",
+                    "mouse_position": "Under Mouse",
+                    "largest": "Largest Window",
+                    "smallest": "Smallest Window"
+                ]
             ),
             ParameterDefinition(
                 key: "app_bundle_id",
                 name: "Application",
                 type: .application,
-                description: "Application when targeting specific window"
+                description: "Application to target",
+                visibleWhen: ParameterVisibilityRule(key: "target", anyOf: ["by_application", "all_in_app"]),
+                group: "Target"
             ),
             ParameterDefinition(
                 key: "window_title",
                 name: "Window Title",
                 type: .string,
-                description: "Title of the window to target"
+                description: "Title of the window to target",
+                visibleWhen: ParameterVisibilityRule(key: "target", anyOf: ["by_title", "by_title_contains"]),
+                group: "Target"
             ),
             ParameterDefinition(
                 key: "window_age",
-                name: "Window Age",
+                name: "Window Order",
                 type: .number,
                 defaultValue: AnyCodable(1),
-                description: "Age of window (1 = frontmost, 2 = second, etc.)",
-                validation: ValidationRule(minValue: 1)
+                description: "1 = frontmost, 2 = second, etc.",
+                validation: ValidationRule(minValue: 1),
+                visibleWhen: ParameterVisibilityRule(key: "target", value: "by_age"),
+                group: "Target"
             )
         ]
     }
@@ -198,21 +217,31 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
                     defaultValue: AnyCodable("left_half"),
                     description: "Region to snap the window to",
                     validation: ValidationRule(allowedValues: [
-                        // Halves
                         AnyCodable("left_half"),
                         AnyCodable("right_half"),
                         AnyCodable("top_half"),
                         AnyCodable("bottom_half"),
-                        // Quarters
                         AnyCodable("top_left"),
                         AnyCodable("top_right"),
                         AnyCodable("bottom_left"),
                         AnyCodable("bottom_right"),
-                        // Thirds
                         AnyCodable("left_third"),
                         AnyCodable("center_third"),
                         AnyCodable("right_third")
-                    ])
+                    ]),
+                    displayValues: [
+                        "left_half": "Left Half",
+                        "right_half": "Right Half",
+                        "top_half": "Top Half",
+                        "bottom_half": "Bottom Half",
+                        "top_left": "Top Left Quarter",
+                        "top_right": "Top Right Quarter",
+                        "bottom_left": "Bottom Left Quarter",
+                        "bottom_right": "Bottom Right Quarter",
+                        "left_third": "Left Third",
+                        "center_third": "Center Third",
+                        "right_third": "Right Third"
+                    ]
                 )
             ] + windowTargetParameters,
             icon: "rectangle.split.2x1"
@@ -240,8 +269,9 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
                     name: "Percent",
                     type: .number,
                     defaultValue: AnyCodable(50),
-                    description: "Percentage of screen size (1–100)",
-                    validation: ValidationRule(minValue: 1, maxValue: 100)
+                    description: "Percentage of screen size",
+                    validation: ValidationRule(minValue: 1, maxValue: 100),
+                    suffix: "%"
                 )
             ] + windowTargetParameters,
             icon: "arrow.down.right.and.arrow.up.left"
@@ -263,15 +293,17 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
                     validation: ValidationRule(allowedValues: [
                         AnyCodable("grow"),
                         AnyCodable("shrink")
-                    ])
+                    ]),
+                    displayValues: ["grow": "Grow", "shrink": "Shrink"]
                 ),
                 ParameterDefinition(
                     key: "percent",
-                    name: "Percentage",
+                    name: "Amount",
                     type: .number,
                     defaultValue: AnyCodable(10),
-                    description: "Percentage to adjust by (1–100)",
-                    validation: ValidationRule(minValue: 1, maxValue: 100)
+                    description: "Percentage to adjust by",
+                    validation: ValidationRule(minValue: 1, maxValue: 100),
+                    suffix: "%"
                 )
             ] + windowTargetParameters,
             supportsRepeat: true,
@@ -294,7 +326,8 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
                     validation: ValidationRule(allowedValues: [
                         AnyCodable("forward"),
                         AnyCodable("backward")
-                    ])
+                    ]),
+                    displayValues: ["forward": "Forward", "backward": "Backward"]
                 )
             ] + windowTargetParameters,
             supportsRepeat: true,
@@ -327,7 +360,8 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
                         AnyCodable("save"),
                         AnyCodable("restore"),
                         AnyCodable("delete")
-                    ])
+                    ]),
+                    displayValues: ["save": "Save Position", "restore": "Restore Position", "delete": "Delete Saved"]
                 ),
                 ParameterDefinition(
                     key: "slot",
@@ -357,7 +391,8 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
                         AnyCodable("save"),
                         AnyCodable("restore"),
                         AnyCodable("delete")
-                    ])
+                    ]),
+                    displayValues: ["save": "Save Layout", "restore": "Restore Layout", "delete": "Delete Layout"]
                 ),
                 ParameterDefinition(
                     key: "layout_name",
@@ -393,7 +428,8 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
                     validation: ValidationRule(allowedValues: [
                         AnyCodable("current_app"),
                         AnyCodable("all_windows")
-                    ])
+                    ]),
+                    displayValues: ["current_app": "Current App", "all_windows": "All Windows"]
                 )
             ] + windowTargetParameters,
             icon: "rectangle.split.2x2"
@@ -413,7 +449,8 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
                     validation: ValidationRule(allowedValues: [
                         AnyCodable("current_app"),
                         AnyCodable("all_windows")
-                    ])
+                    ]),
+                    displayValues: ["current_app": "Current App", "all_windows": "All Windows"]
                 )
             ] + windowTargetParameters,
             icon: "rectangle.stack"
@@ -432,7 +469,8 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
                     type: .number,
                     required: false,
                     description: "Window width in pixels",
-                    validation: ValidationRule(minValue: 0)
+                    validation: ValidationRule(minValue: 0),
+                    suffix: "px"
                 ),
                 ParameterDefinition(
                     key: "height",
@@ -440,23 +478,26 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
                     type: .number,
                     required: false,
                     description: "Window height in pixels",
-                    validation: ValidationRule(minValue: 0)
+                    validation: ValidationRule(minValue: 0),
+                    suffix: "px"
                 ),
                 ParameterDefinition(
                     key: "width_percent",
-                    name: "Width Percentage",
+                    name: "Width %",
                     type: .number,
                     required: false,
                     description: "Width as percentage of screen",
-                    validation: ValidationRule(minValue: 0, maxValue: 100)
+                    validation: ValidationRule(minValue: 0, maxValue: 100),
+                    suffix: "%"
                 ),
                 ParameterDefinition(
                     key: "height_percent",
-                    name: "Height Percentage",
+                    name: "Height %",
                     type: .number,
                     required: false,
                     description: "Height as percentage of screen",
-                    validation: ValidationRule(minValue: 0, maxValue: 100)
+                    validation: ValidationRule(minValue: 0, maxValue: 100),
+                    suffix: "%"
                 ),
                 ParameterDefinition(
                     key: "maintain_aspect_ratio",
@@ -485,28 +526,36 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
                         AnyCodable("relative"),
                         AnyCodable("screen_percentage"),
                         AnyCodable("preset")
-                    ])
+                    ]),
+                    displayValues: [
+                        "absolute": "Absolute Position",
+                        "relative": "Relative to Current",
+                        "screen_percentage": "Screen Percentage",
+                        "preset": "Preset Position"
+                    ]
                 ),
                 ParameterDefinition(
                     key: "x",
                     name: "X Position",
                     type: .number,
                     required: false,
-                    description: "X coordinate (pixels or percentage)"
+                    description: "X coordinate",
+                    visibleWhen: ParameterVisibilityRule(key: "position_type", anyOf: ["absolute", "relative", "screen_percentage"])
                 ),
                 ParameterDefinition(
                     key: "y",
                     name: "Y Position",
                     type: .number,
                     required: false,
-                    description: "Y coordinate (pixels or percentage)"
+                    description: "Y coordinate",
+                    visibleWhen: ParameterVisibilityRule(key: "position_type", anyOf: ["absolute", "relative", "screen_percentage"])
                 ),
                 ParameterDefinition(
                     key: "preset",
                     name: "Preset Position",
                     type: .selection,
                     required: false,
-                    description: "Preset position when using preset type",
+                    description: "Preset position",
                     validation: ValidationRule(allowedValues: [
                         AnyCodable("topLeft"),
                         AnyCodable("topCenter"),
@@ -517,7 +566,19 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
                         AnyCodable("bottomLeft"),
                         AnyCodable("bottomCenter"),
                         AnyCodable("bottomRight")
-                    ])
+                    ]),
+                    visibleWhen: ParameterVisibilityRule(key: "position_type", value: "preset"),
+                    displayValues: [
+                        "topLeft": "Top Left",
+                        "topCenter": "Top Center",
+                        "topRight": "Top Right",
+                        "middleLeft": "Middle Left",
+                        "center": "Center",
+                        "middleRight": "Middle Right",
+                        "bottomLeft": "Bottom Left",
+                        "bottomCenter": "Bottom Center",
+                        "bottomRight": "Bottom Right"
+                    ]
                 )
             ],
             icon: "arrow.up.and.down.and.arrow.left.and.right"
@@ -909,9 +970,10 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
             guard let currentFrame = getWindowFrame(window, context: context) else { continue }
             let nw = currentFrame.width  * factor
             let nh = currentFrame.height * factor
+            // Keep the window's top-left position — only change size, don't reposition
             let newFrame = CGRect(
-                x: currentFrame.midX - nw / 2,
-                y: currentFrame.midY - nh / 2,
+                x: currentFrame.origin.x,
+                y: currentFrame.origin.y,
                 width: nw, height: nh
             )
             setWindowFrame(window, frame: newFrame, context: context)
@@ -1003,30 +1065,80 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
         guard !windows.isEmpty, let screen = NSScreen.main else { return }
         let sf  = screen.visibleFrame
         let cnt = windows.count
-        let cols = Int(ceil(sqrt(Double(cnt))))
+        
+        // Calculate optimal grid layout that minimizes wasted space
+        // Try different column counts and pick the one with the best aspect ratio fit
+        var bestCols = 1
+        var bestScore = CGFloat.infinity
+        let screenRatio = sf.width / sf.height
+        
+        for cols in 1...cnt {
+            let rows = Int(ceil(Double(cnt) / Double(cols)))
+            let cellW = sf.width / CGFloat(cols)
+            let cellH = sf.height / CGFloat(rows)
+            let cellRatio = cellW / cellH
+            // Prefer layouts where cells have similar aspect ratio to screen
+            // and minimize empty cells in the last row
+            let ratioScore = abs(cellRatio - screenRatio)
+            let wasteScore = CGFloat(cols * rows - cnt) / CGFloat(cnt) * 0.5
+            let score = ratioScore + wasteScore
+            if score < bestScore {
+                bestScore = score
+                bestCols = cols
+            }
+        }
+        
+        let cols = bestCols
         let rows = Int(ceil(Double(cnt) / Double(cols)))
-        let winW = sf.width  / CGFloat(cols)
-        let winH = sf.height / CGFloat(rows)
+        let lastRowCols = cnt - (rows - 1) * cols
+        
         for (idx, window) in windows.enumerated() {
-            let col = idx % cols; let row = idx / cols
+            let row = idx / cols
+            let col = idx % cols
+            let isLastRow = row == rows - 1
+            
+            // Center the last row if it has fewer windows
+            let effectiveCols = isLastRow ? lastRowCols : cols
+            let effectiveCol = isLastRow ? (idx - (rows - 1) * cols) : col
+            let winW = sf.width / CGFloat(effectiveCols)
+            let winH = sf.height / CGFloat(rows)
+            let xOffset = isLastRow ? CGFloat(0) : CGFloat(0) // Last row windows fill evenly
+            
             let frame = CGRect(
-                x: sf.minX + CGFloat(col) * winW,
+                x: sf.minX + CGFloat(effectiveCol) * winW + xOffset,
                 y: sf.minY + sf.height - CGFloat(row + 1) * winH,
                 width: winW, height: winH
             )
             setWindowFrame(window, frame: frame, context: context)
         }
-        context.logger.log("Tiled \(cnt) windows", file: #file, function: #function, line: #line)
+        context.logger.log("Tiled \(cnt) windows in \(cols)x\(rows) grid", file: #file, function: #function, line: #line)
     }
     
     private func cascadeWindows(target: WindowTargeting.WindowTarget? = nil, context: PluginContext) {
-        let windows = getAppWindows(target: target, context: context)
+        // Filter out desktop widget windows (owned by WidgetKit or Notification Center)
+        let widgetBundlePrefixes = ["com.apple.notificationcenterui", "com.apple.WidgetKit"]
+        let allWindows = getAppWindows(target: target, context: context)
+        let windows = allWindows.filter { window in
+            // Get the PID for this window and check its bundle ID
+            var pid: pid_t = 0
+            AXUIElementGetPid(window, &pid)
+            if let app = NSRunningApplication(processIdentifier: pid),
+               let bundleId = app.bundleIdentifier {
+                return !widgetBundlePrefixes.contains(where: { bundleId.hasPrefix($0) })
+            }
+            return true
+        }
         guard !windows.isEmpty, let screen = NSScreen.main else { return }
         let sf = screen.visibleFrame
         let offset: CGFloat = 30
         let winSize = CGSize(width: sf.width * 0.6, height: sf.height * 0.6)
+        
+        // Wrap cascade position when it would go off screen
+        let maxOffset = min(sf.width - winSize.width, sf.height - winSize.height)
+        
         for (idx, window) in windows.enumerated() {
-            let off = CGFloat(idx) * offset
+            let rawOff = CGFloat(idx) * offset
+            let off = rawOff.truncatingRemainder(dividingBy: max(maxOffset, offset))
             let frame = CGRect(
                 x: sf.minX + off,
                 y: sf.maxY - winSize.height - off,
@@ -1246,10 +1358,11 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
         }
         // Fallback for missing required data
         switch target.targetType {
-        case .byApplication, .allWindowsOfApp where target.applicationBundleId == nil: target.targetType = .frontmost
-        case .byWindowTitle where target.windowTitle == nil:                             target.targetType = .frontmost
-        case .byWindowTitleContains where target.windowTitleContains == nil:             target.targetType = .frontmost
-        case .byAge where target.windowAge == nil:                                       target.windowAge = 1
+        case .byApplication where target.applicationBundleId == nil:     target.targetType = .frontmost
+        case .allWindowsOfApp where target.applicationBundleId == nil:   target.targetType = .frontmost
+        case .byWindowTitle where target.windowTitle == nil:             target.targetType = .frontmost
+        case .byWindowTitleContains where target.windowTitleContains == nil: target.targetType = .frontmost
+        case .byAge where target.windowAge == nil:                       target.windowAge = 1
         default: break
         }
         return target
