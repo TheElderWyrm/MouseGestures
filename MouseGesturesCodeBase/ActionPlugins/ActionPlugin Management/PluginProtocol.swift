@@ -78,6 +78,7 @@ extension GestureActionPlugin {
 
 /// Categories for organizing actions in the UI
 public enum ActionCategory: String, CaseIterable, Codable {
+    case core = "Core"
     case window = "Window Management"
     case system = "System Control"
     case media = "Media Control"
@@ -93,6 +94,7 @@ public enum ActionCategory: String, CaseIterable, Codable {
     
     var icon: String {
         switch self {
+        case .core: return "star.circle"
         case .window: return "rectangle.split.3x3"
         case .system: return "gear"
         case .media: return "play.circle"

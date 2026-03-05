@@ -22,22 +22,26 @@ mission_control      - Show Mission Control [✓✓]
 show_desktop         - Show the desktop [✓✓]
 app_expose           - Show all windows of current application [✓✓]
 	* Subject to modifier key interference
-cycle_window         - Switch to next/previous window (direction parameter) <-- Cycle Window vs Cycle windows duplicate action?
-cycle_space          - Move to next/previous desktop space (direction parameter)
+cycle_window         - Switch to next/previous window (direction parameter) <-- Cycle Window vs Cycle windows duplicate action? [✓]
+	* Add application target
+cycle_space          - Move to next/previous desktop space (direction parameter) [✓]
 	* Subject to modifier key interference
 	* Proper solution requires either private APIs or invisible windows: https://github.com/bigbearlabs/SpaceSwitcher.
-lock_screen          - Lock the screen
-sleep_display        - Put display(s) to sleep
+lock_screen          - Lock the screen [✓✓]
+sleep_display        - Put display(s) to sleep [✓✓]
 empty_trash          - Empty the trash (confirm parameter) [✓✓]
-cycle_profile        - Cycle gesture profiles (direction parameter)
-switch_profile       - Switch to a specific gesture profile (profile_name parameter)
-	* Switch to dropdown selection
+[cycle_profile        - Cycle gesture profiles (direction parameter)[✓]
 	* Works, but very slow
+switch_profile       - Switch to a specific gesture profile (profile_name parameter) [✓]
+	* Switch to dropdown selection
+	* Works, but very slow]
+	* Set to action + Parameter
 
 General Core Issues:
 	* Move window actions (close/minimize/maximize/fullscreen) into Window Management plugin
 	* Window Targeting for these actions missing options from window targeting
 	* Modifier key interference on System Events actions (app_expose, cycle_space)
+	* Core category now displays separately from System Control in action selection
 
 ------------------------------------------
 WINDOW MANAGEMENT (com.mousegestures.window)
@@ -57,9 +61,7 @@ tile_all             - Tile all windows on screen (scope parameter) [✓]
 	* Add option to resize or not <-- Make best attempt
 	* Some windows have minimum size and this results in overlapping windows (Respect) <-- May or may not be possible
 cascade              - Cascade windows (scope + resize_windows parameters) [✓]
-	* resize_windows parameter (default: on) — resize to uniform size or keep existing sizes
-	* Wraps properly as second stack on overflow
-	* Filters out desktop widgets
+	* Improved: second stack staggers by half-offset so all title bars visible
 set_size             - Set custom window size (px or %)
 	* Select type UI improvement
 set_position         - Set custom window position (absolute/relative/%/preset)
@@ -84,10 +86,12 @@ SYSTEM CONTROL (com.mousegestures.system)
 display_brightness   - Adjust display brightness (direction parameter) [✓]
 keyboard_brightness  - Adjust keyboard brightness (direction parameter) [✓]
 toggle_dark_mode     - Switch between light and dark mode
-toggle_do_not_disturb - Enable/disable Do Not Disturb [!]
-toggle_night_shift   - Enable/disable Night Shift [!]
-	* Now uses CoreBrightness CBBlueLightClient via ObjC runtime (no python dependency)
-	* Toggles in background without opening System Settings
+toggle_do_not_disturb - Enable/disable Do Not Disturb [?]
+	* Improved: multi-strategy UI scripting (name + description search, named checkbox targeting)
+toggle_night_shift   - Enable/disable Night Shift [?]
+	* Uses CoreBrightness CBBlueLightClient via ObjC runtime (no python dependency)
+	* Fixed: status struct offset (enabled at byte 1, not byte 0)
+	* Added: availability check, verify-after-toggle fallback
 screenshot           - Take a screenshot (type: interactive/full/selection/window + destination: clipboard/desktop/custom folder)[✓✓]
 	* Default: Screenshot Mode (interactive) — opens macOS screenshot toolbar
 	* Destination only visible for non-interactive modes
@@ -106,9 +110,7 @@ keyboard_shortcut    - Trigger a keyboard shortcut
 	* Add shortcut selection as parameter
 run_shortcut         - Run a Shortcuts app shortcut
 run_script           - Execute a script (applescript/shell/javascript/python)
-	* Rename "Source" toggle label
 	* Python and JavaScript may not work; add interpreter selection option
-	* Add 'display output' toggle
 open_app             - Launch an application
 	* Should bring up Finder to select any application (not just running apps)
 open_file            - Open a file or folder

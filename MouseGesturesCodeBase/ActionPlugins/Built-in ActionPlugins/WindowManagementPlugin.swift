@@ -1141,14 +1141,26 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
         // Top of visible area in AX coordinates (below menu bar)
         let topY = NSStatusBar.system.thickness
         
-        // Wrap cascade position when it would go off screen
-        let maxOffset = min(sf.width - winSize.width, sf.height - winSize.height)
+        // Maximum cascade offset before wrapping to a new stack
+        let effectiveWidth = resize ? winSize.width : (windows.compactMap { getWindowFrame($0, context: context)?.width }.max() ?? winSize.width)
+        let effectiveHeight = resize ? winSize.height : (windows.compactMap { getWindowFrame($0, context: context)?.height }.max() ?? winSize.height)
+        let maxOffset = max(offset, min(sf.width - effectiveWidth, sf.height - effectiveHeight))
+        
+        // How many windows fit in one cascade stack
+        let windowsPerStack = max(1, Int(maxOffset / offset))
+        // Stagger offset for subsequent stacks so all title bars remain visible.
+        // Each new stack shifts by half the cascade step, ensuring the previous
+        // stack's title bars peek out from behind the new stack.
+        let stackStagger = offset / 2.0
         
         // Reverse offset so the last-placed window (visually frontmost) is at top-left
         let count = windows.count
         for (idx, window) in windows.enumerated() {
-            let rawOff = CGFloat(count - 1 - idx) * offset
-            let off = rawOff.truncatingRemainder(dividingBy: max(maxOffset, offset))
+            let reverseIdx = count - 1 - idx
+            let stackIndex = reverseIdx / windowsPerStack
+            let posInStack = reverseIdx % windowsPerStack
+            let off = CGFloat(posInStack) * offset + CGFloat(stackIndex) * stackStagger
+            
             if resize {
                 let frame = CGRect(
                     x: sf.minX + off,

@@ -1,3 +1,46 @@
+## 2026-03-04
+
+### Action & UI Fixes: DND, Night Shift, Core Category, Cascade, Run Script
+
+**PluginProtocol — New Core Category**
+- Added `.core` case to `ActionCategory` enum with "star.circle" icon
+- Core actions (close window, minimize, maximize, fullscreen, etc.) now display in their own
+  "Core" category in action selection, separate from "System Control"
+- Updated `CoreActionsPlugin.category` from `.system` to `.core`
+- Added "Core" short label in `ActionSelectionView`
+
+**SystemControlPlugin — DND Toggle Fix**
+- Replaced single-pass description check with multi-strategy element search:
+  1. Searches by `name` and `description` for "Focus" or "Do Not Disturb"
+  2. Iterates checkboxes in panel searching by title/description for "Do Not Disturb"
+  3. Falls back to `checkbox 1 of group 1` if named search fails
+- Added error logging on failure
+
+**SystemControlPlugin — Night Shift Toggle Fix**
+- Fixed `CBBlueLightStatus` struct offset: `enabled` is at byte 1, not byte 0
+  (byte 0 is `available`)
+- Added availability check before toggling
+- Added verify-after-toggle: re-reads status to confirm toggle when `setEnabled:` returns false
+  (handles void-return-cast ambiguity)
+- Replaced `Data` buffer with `[UInt8]` for clearer byte-level access
+
+**WindowManagementPlugin — Cascade Stack Visibility**
+- Second cascade stack no longer lands directly on top of first stack
+- Calculates `windowsPerStack` from available offset space
+- Each overflow stack shifts by `offset / 2` (15px stagger), so title bars from
+  the previous stack remain visible behind the new stack
+- Uses actual window sizes for offset calculation when `resize: false`
+
+**AutomationPlugin — Run Script Improvements**
+- Renamed "Source" toggle label to "Load from File" with clearer description
+- Added "Display Output" boolean parameter:
+  * When enabled, captures stdout/stderr via pipes
+  * Shows script output (or error) in a notification after execution
+  * Truncates output > 200 chars for notification display
+  * Shows exit code when output is empty
+
+---
+
 ## 2026-03-03 (Session 2)
 
 ### Action Fixes: Screenshot, Night Shift, Empty Trash, Tile/Cascade

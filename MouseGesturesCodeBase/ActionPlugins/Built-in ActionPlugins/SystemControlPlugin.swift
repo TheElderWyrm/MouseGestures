@@ -347,32 +347,71 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
     
     private func toggleDoNotDisturb(context: PluginContext) {
         // Toggle DND/Focus via Control Center UI scripting.
-        // This is the most reliable cross-version approach for macOS Ventura+
-        // where DND state is managed through the Focus system.
+        // Uses multiple strategies to find the Focus item and DND toggle
+        // across macOS versions (Ventura, Sonoma, Sequoia).
         waitForModifierRelease()
         DispatchQueue.global(qos: .userInitiated).async {
             let script = """
                 tell application "System Events"
-                    tell its application process "ControlCenter"
-                        -- Click the Focus menu bar item to open the panel
+                    tell application process "ControlCenter"
+                        -- Strategy 1: Find Focus menu bar item by name or description
+                        set focusItem to missing value
                         repeat with mi in menu bar items of menu bar 1
-                            if description of mi contains "Focus" then
-                                click mi
-                                delay 0.4
-                                -- Click the Do Not Disturb toggle
-                                try
-                                    click checkbox 1 of group 1 of window 1
-                                end try
-                                -- Close the panel by pressing Escape
-                                delay 0.1
-                                key code 53
-                                return
-                            end if
+                            try
+                                set itemName to name of mi
+                                set itemDesc to description of mi
+                                if itemName is "Focus" or itemDesc contains "Focus" or itemDesc contains "Do Not Disturb" then
+                                    set focusItem to mi
+                                    exit repeat
+                                end if
+                            end try
                         end repeat
+                        
+                        if focusItem is missing value then
+                            error "Could not find Focus menu bar item"
+                        end if
+                        
+                        click focusItem
+                        delay 0.5
+                        
+                        -- Find and click the Do Not Disturb toggle in the panel
+                        set dndClicked to false
+                        try
+                            -- Try by name first (most reliable on Sonoma+)
+                            tell window 1
+                                repeat with cb in checkboxes of group 1
+                                    try
+                                        if title of cb contains "Do Not Disturb" or description of cb contains "Do Not Disturb" then
+                                            click cb
+                                            set dndClicked to true
+                                            exit repeat
+                                        end if
+                                    end try
+                                end repeat
+                                -- Fallback: click first checkbox in group 1
+                                if not dndClicked then
+                                    click checkbox 1 of group 1
+                                    set dndClicked to true
+                                end if
+                            end tell
+                        on error
+                            -- Last resort: try checkbox in any group
+                            try
+                                click checkbox 1 of group 1 of window 1
+                            end try
+                        end try
+                        
+                        delay 0.15
+                        key code 53 -- Escape to close panel
                     end tell
                 end tell
             """
-            try? context.executeAppleScript(script)
+            do {
+                try context.executeAppleScript(script)
+                context.logger.log("Do Not Disturb toggled via Control Center", file: #file, function: #function, line: #line)
+            } catch {
+                context.logger.log("DND toggle failed: \(error.localizedDescription)", file: #file, function: #function, line: #line)
+            }
         }
     }
     
@@ -395,9 +434,6 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
             
             let client = clientClass.init()
             
-            // Get current Night Shift status
-            // CBBlueLightClient responds to getBlueLightStatus: which fills a struct
-            // We use a simpler approach: use the setEnabled: toggle
             let getStatusSel = NSSelectorFromString("getBlueLightStatus:")
             let setEnabledSel = NSSelectorFromString("setEnabled:")
             
@@ -407,31 +443,52 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
                 return
             }
             
-            // The status is a struct — use a raw memory approach
-            // CBBlueLightStatus has 'enabled' as first bool field after a small header
-            var status = Data(count: 512) // Allocate enough for the status struct
-            let enabled: Bool = status.withUnsafeMutableBytes { rawBuffer -> Bool in
-                let ptr = rawBuffer.baseAddress!
-                // Call getBlueLightStatus: with pointer to our buffer
-                let imp = client.method(for: getStatusSel)
-                typealias GetStatusFunc = @convention(c) (AnyObject, Selector, UnsafeMutableRawPointer) -> Bool
-                let getStatus = unsafeBitCast(imp, to: GetStatusFunc.self)
-                let success = getStatus(client, getStatusSel, ptr)
-                if !success { return false }
-                // The 'enabled' field is at byte offset 0 in the status struct
-                return ptr.load(as: Bool.self)
+            // CBBlueLightStatus struct layout (from reverse engineering):
+            //   offset 0: Bool available    (1 byte)
+            //   offset 1: Bool enabled      (1 byte)
+            //   offset 2: Bool sunSchedulePermitted (1 byte)
+            //   offset 4: Int32 mode        (4 bytes, after padding)
+            //   ... schedule data follows
+            var statusBuffer = [UInt8](repeating: 0, count: 512)
+            
+            let imp = client.method(for: getStatusSel)
+            typealias GetStatusFunc = @convention(c) (AnyObject, Selector, UnsafeMutableRawPointer) -> Bool
+            let getStatus = unsafeBitCast(imp, to: GetStatusFunc.self)
+            let success = getStatus(client, getStatusSel, &statusBuffer)
+            
+            guard success else {
+                context.logger.log("getBlueLightStatus: returned false", file: #file, function: #function, line: #line)
+                return
             }
             
+            let available = statusBuffer[0] != 0
+            let enabled = statusBuffer[1] != 0
+            
+            guard available else {
+                context.logger.log("Night Shift not available on this display", file: #file, function: #function, line: #line)
+                return
+            }
+            
+            context.logger.log("Night Shift currently \(enabled ? "on" : "off"), toggling...", file: #file, function: #function, line: #line)
+            
             // Toggle: call setEnabled: with the opposite value
-            let imp = client.method(for: setEnabledSel)
+            let setImp = client.method(for: setEnabledSel)
             typealias SetEnabledFunc = @convention(c) (AnyObject, Selector, Bool) -> Bool
-            let setEnabled = unsafeBitCast(imp, to: SetEnabledFunc.self)
+            let setEnabled = unsafeBitCast(setImp, to: SetEnabledFunc.self)
             let result = setEnabled(client, setEnabledSel, !enabled)
             
             if result {
                 context.logger.log("Night Shift toggled \(!enabled ? "on" : "off")", file: #file, function: #function, line: #line)
             } else {
-                context.logger.log("Night Shift toggle via CoreBrightness returned false", file: #file, function: #function, line: #line)
+                // setEnabled: may return false even on success (void return cast)
+                // Verify by re-reading status
+                var verifyBuffer = [UInt8](repeating: 0, count: 512)
+                let verifySuccess = getStatus(client, getStatusSel, &verifyBuffer)
+                if verifySuccess && (verifyBuffer[1] != 0) != enabled {
+                    context.logger.log("Night Shift toggled \(!enabled ? "on" : "off") (verified)", file: #file, function: #function, line: #line)
+                } else {
+                    context.logger.log("Night Shift toggle may have failed", file: #file, function: #function, line: #line)
+                }
             }
         }
     }

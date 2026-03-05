@@ -21,7 +21,6 @@ Window Targeting:
   - Window age parameter should be an integer
 
 UI:
-  - Action selection not displaying 'core' category
   - Keyboard shortcut detection not working for gestures
   - Profiles: pressing delete should not select the profile checkbox
   - Show Zone Labels should show assigned actions, not zone name
@@ -39,6 +38,7 @@ Architecture:
   - Improve activation system
   - Drag does not need to be a separate trigger configuration than mouse button
   - Reduce size of modifier keys trigger configuration
+  - Make Action View categories dynamic
 
 UI:
   - Use full 'gestures' UI in profiles
@@ -54,13 +54,23 @@ Features:
   - Bundle actions with variables (e.g. Open URL From Clipboard)
   - Test adding external plugins for detection and actions
   - open_url: Show only browsers when selecting app + add 'default browser' option
-  - run_script: add interpreter selection, 'display output' toggle, rename Source label
+  - run_script: add interpreter selection option
   - cascade: add option to resize windows or not
   - Improve templates/default configuration
 
 Cleanup:
   - Remove dummy autoupdate
   - Clean up unneeded actions
+
+--------------------------------------
+COMPLETED (2026-03-04)
+--------------------------------------
+  [✓] Fixed: Core category now shows separately from System Control in action selection (added .core to ActionCategory)
+  [✓] Fixed: toggle_do_not_disturb improved with multi-strategy element search (name + description, named checkbox)
+  [✓] Fixed: toggle_night_shift CBBlueLightStatus struct offset (enabled at byte 1, not 0), added availability check & verify fallback
+  [✓] Improved: cascade second-stack stagger so all title bars remain visible on overflow
+  [✓] Renamed run_script "Source" toggle to "Load from File" with clearer description
+  [✓] Added run_script "Display Output" toggle (shows script output in notification)
 
 --------------------------------------
 COMPLETED (2026-03-03)

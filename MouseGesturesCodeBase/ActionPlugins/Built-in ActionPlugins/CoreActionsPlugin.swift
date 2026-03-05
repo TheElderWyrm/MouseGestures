@@ -13,7 +13,7 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
     override var description: String { "Essential system and application control actions" }
     let version = "1.1.0"
     let author = "MouseGestures"
-    let category = ActionCategory.system
+    let category = ActionCategory.core
     let icon: NSImage? = nil
     
     // MARK: - Common Parameters

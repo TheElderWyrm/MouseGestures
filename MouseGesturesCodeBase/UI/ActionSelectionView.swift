@@ -228,6 +228,7 @@ struct ActionSelectionView: View {
     
     private func shortLabel(_ label: String) -> String {
         switch label {
+        case "Core": return "Core"
         case "Window Management": return "Window"
         case "System Control": return "System"
         case "Media Control": return "Media"

@@ -85,10 +85,10 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
                 ),
                 ParameterDefinition(
                     key: "use_file",
-                    name: "Source",
+                    name: "Load from File",
                     type: .boolean,
                     defaultValue: AnyCodable(false),
-                    description: "Use an external script file instead of inline content"
+                    description: "Load script from an external file instead of inline"
                 ),
                 ParameterDefinition(
                     key: "script_content",
@@ -101,6 +101,13 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
                     name: "Script File",
                     type: .path,
                     description: "Path to script file"
+                ),
+                ParameterDefinition(
+                    key: "display_output",
+                    name: "Display Output",
+                    type: .boolean,
+                    defaultValue: AnyCodable(false),
+                    description: "Show script output in a notification"
                 )
             ],
             icon: "doc.text"
@@ -245,14 +252,15 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
         case "run_script":
             let scriptType = parameters.string(for: "script_type") ?? "applescript"
             let useFile = parameters.bool(for: "use_file") ?? false
+            let displayOutput = parameters.bool(for: "display_output") ?? false
             
             if useFile {
                 if let path = parameters.string(for: "script_path") {
-                    runScriptFile(at: path, type: scriptType, context: context)
+                    runScriptFile(at: path, type: scriptType, displayOutput: displayOutput, context: context)
                 }
             } else {
                 if let content = parameters.string(for: "script_content") {
-                    runScriptContent(content, type: scriptType, context: context)
+                    runScriptContent(content, type: scriptType, displayOutput: displayOutput, context: context)
                 }
             }
             
@@ -452,7 +460,7 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
         executeAppleScript(script)
     }
     
-    private func runScriptContent(_ content: String, type: String, context: PluginContext) {
+    private func runScriptContent(_ content: String, type: String, displayOutput: Bool = false, context: PluginContext) {
         DispatchQueue.global(qos: .userInitiated).async {
             let process = Process()
             
@@ -477,16 +485,49 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
                 return
             }
             
+            let outputPipe = Pipe()
+            let errorPipe = Pipe()
+            if displayOutput {
+                process.standardOutput = outputPipe
+                process.standardError = errorPipe
+            }
+            
             do {
                 try process.run()
                 process.waitUntilExit()
+                
+                if displayOutput {
+                    let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
+                    let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+                    let output = String(data: outputData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                    let errorOutput = String(data: errorData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                    
+                    let displayText: String
+                    if process.terminationStatus != 0 && !errorOutput.isEmpty {
+                        displayText = "Error: \(errorOutput)"
+                    } else if !output.isEmpty {
+                        // Truncate long output for notification display
+                        displayText = output.count > 200 ? String(output.prefix(200)) + "…" : output
+                    } else {
+                        displayText = "Script completed (exit code \(process.terminationStatus))"
+                    }
+                    
+                    context.showNotification(
+                        title: "Script Output",
+                        message: displayText,
+                        style: process.terminationStatus == 0 ? .info : .warning
+                    )
+                }
             } catch {
-            context.logger.log("Error executing script: \(error)", file: #file, function: #function, line: #line)
+                context.logger.log("Error executing script: \(error)", file: #file, function: #function, line: #line)
+                if displayOutput {
+                    context.showNotification(title: "Script Error", message: error.localizedDescription, style: .error)
+                }
             }
         }
     }
     
-    private func runScriptFile(at path: String, type: String, context: PluginContext) {
+    private func runScriptFile(at path: String, type: String, displayOutput: Bool = false, context: PluginContext) {
         guard FileManager.default.fileExists(atPath: path) else {
             context.logger.log("Script file not found: \(path)", file: #file, function: #function, line: #line)
             return
@@ -494,7 +535,7 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
         
         do {
             let content = try String(contentsOfFile: path)
-            runScriptContent(content, type: type, context: context)
+            runScriptContent(content, type: type, displayOutput: displayOutput, context: context)
         } catch {
             context.logger.log("Error reading script file: \(error)", file: #file, function: #function, line: #line)
         }
