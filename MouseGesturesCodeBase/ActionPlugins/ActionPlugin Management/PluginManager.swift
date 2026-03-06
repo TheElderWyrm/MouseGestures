@@ -208,6 +208,18 @@ public class PluginManager: NSObject {
         }
     }
     
+    // MARK: - Plugin Action Refresh
+    
+    /// Re-register a plugin's actions without re-instantiating the plugin.
+    /// Use when a plugin's action definitions change dynamically (e.g. parameter lists).
+    public func refreshPluginActions(identifier: String) {
+        guard let plugin = loadedPlugins[identifier] else { return }
+        for action in plugin.providedActions {
+            let actionId = "\(plugin.identifier).\(action.id)"
+            actionRegistry[actionId] = (plugin, action)
+        }
+    }
+    
     // MARK: - Plugin Reload
     
     /// Reload a built-in plugin by re-instantiating and re-registering it

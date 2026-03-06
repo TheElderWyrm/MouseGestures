@@ -71,9 +71,34 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
         ]
     }
     
+    deinit {
+        if let observer = _profileObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
+    }
+    
     // MARK: - Actions
     
+    private var _cachedActions: [PluginAction]?
+    private var _profileObserver: Any?
+    
     var providedActions: [PluginAction] {
+        if let cached = _cachedActions { return cached }
+        let actions = buildActions()
+        _cachedActions = actions
+        // Invalidate cache when profiles change so dropdown stays current
+        if _profileObserver == nil {
+            _profileObserver = NotificationCenter.default.addObserver(
+                forName: .profilesDidChange, object: nil, queue: .main
+            ) { [weak self] _ in
+                self?._cachedActions = nil
+                PluginManager.shared.refreshPluginActions(identifier: "com.mousegestures.core")
+            }
+        }
+        return actions
+    }
+    
+    private func buildActions() -> [PluginAction] {
         return [
         // MARK: Window Actions (with target support)
         PluginAction(
