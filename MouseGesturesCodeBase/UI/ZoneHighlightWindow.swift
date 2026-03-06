@@ -434,8 +434,8 @@ class ZoneHighlightManager {
             }
             
             let isActive = gesture != nil
-            // Show assigned action name when modifiers are held
-            let label = getLabel(for: gesture) ?? zone.rawValue
+            // Show assigned action name only for zones with matching gestures
+            let label: String? = isActive ? getLabel(for: gesture) : nil
             
             window.updateState(isActive: isActive, label: label)
             // Cancel any running fade-out animation before making visible
@@ -485,16 +485,23 @@ class ZoneHighlightManager {
     private func getLabel(for gesture: Gesture?) -> String? {
         guard let gesture = gesture else { return nil }
         
+        // Special case: show shortcut name for run_shortcut
         if gesture.actionIdentifier == "com.mousegestures.automation.run_shortcut",
            let name = gesture.parameters["shortcut_name"]?.value as? String {
             return name
         }
         
+        // Look up action name from plugin registry
         if let (_, action) = PluginManager.shared.getAction(identifier: gesture.actionIdentifier) {
             return action.name
         }
         
-        return nil
+        // Fallback: extract readable name from action identifier
+        // e.g. "com.mousegestures.core.close_window" -> "Close Window"
+        let lastComponent = gesture.actionIdentifier.split(separator: ".").last.map(String.init) ?? gesture.actionIdentifier
+        return lastComponent
+            .replacingOccurrences(of: "_", with: " ")
+            .localizedCapitalized
     }
     
     private func refreshZoneStates() {
