@@ -267,6 +267,7 @@ class DetectionPluginManager: NSObject {
     // MARK: - Configuration
     
     @objc private func configurationChanged() {
+        let t = CFAbsoluteTimeGetCurrent()
         log.log("Detection plugins received configuration change")
         
         // Notify all plugins of configuration change
@@ -276,6 +277,7 @@ class DetectionPluginManager: NSObject {
         
         // Coordinator also listens for this, but ensure dependencies are rebuilt
         ActivationCoordinator.shared.rebuildDependencies()
+        NSLog("[PROFILE-DEBUG] DetectionPluginManager.configurationChanged: %.1fms", (CFAbsoluteTimeGetCurrent() - t) * 1000)
     }
     
     // MARK: - Settings Management

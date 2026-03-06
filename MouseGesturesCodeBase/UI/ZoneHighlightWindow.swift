@@ -166,7 +166,9 @@ class ZoneHighlightManager {
             object: nil,
             queue: .main
         ) { [weak self] _ in
+            let t = CFAbsoluteTimeGetCurrent()
             self?.refreshZoneStates()
+            NSLog("[PROFILE-DEBUG] ZoneHighlightManager.configChanged: %.1fms", (CFAbsoluteTimeGetCurrent() - t) * 1000)
         }
         
         // Listen for modifier state changes from ModifierKeyDetectorPlugin

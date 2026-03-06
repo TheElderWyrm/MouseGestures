@@ -394,7 +394,10 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
             
         case "switch_profile":
             if let name = parameters.string(for: "profile_name") {
+                let execStart = CFAbsoluteTimeGetCurrent()
+                NSLog("[PROFILE-DEBUG] === switch_profile START ===")
                 switchToProfileByName(name, context: context)
+                NSLog("[PROFILE-DEBUG] === switch_profile END total=%.1fms ===", (CFAbsoluteTimeGetCurrent() - execStart) * 1000)
             }
             
         default:
@@ -713,6 +716,15 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
     
     // MARK: - Profile Management
     
+    private let profileDebugStart = { () -> () -> TimeInterval in
+        var start = CFAbsoluteTimeGetCurrent()
+        return {
+            let elapsed = (CFAbsoluteTimeGetCurrent() - start) * 1000
+            start = CFAbsoluteTimeGetCurrent()
+            return elapsed
+        }
+    }
+    
     private func cycleProfile(forward: Bool, context: PluginContext) {
         let profiles = context.getProfiles()
         guard !profiles.isEmpty else { return }
@@ -727,28 +739,40 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
         if let idStr = targetProfile["id"] as? String,
            let profileId = UUID(uuidString: idStr),
            let profileName = targetProfile["name"] as? String {
+            let lap = profileDebugStart()
             context.applyProfile(profileId: profileId)
+            NSLog("[PROFILE-DEBUG] cycleProfile applyProfile: %.1fms", lap())
             context.saveConfiguration()
+            NSLog("[PROFILE-DEBUG] cycleProfile saveConfiguration: %.1fms", lap())
             context.postNotification(name: NSNotification.Name("GestureConfigurationChanged"), userInfo: nil)
+            NSLog("[PROFILE-DEBUG] cycleProfile postNotification(GestureConfigChanged): %.1fms", lap())
             showProfileNotification(profileName: profileName, context: context)
+            NSLog("[PROFILE-DEBUG] cycleProfile showNotification: %.1fms", lap())
         }
     }
     
     private func switchToProfileByName(_ name: String, context: PluginContext) {
+        let lap = profileDebugStart()
         let profiles = context.getProfiles()
+        NSLog("[PROFILE-DEBUG] switchToProfileByName getProfiles: %.1fms (%d profiles)", lap(), profiles.count)
         guard let targetProfile = profiles.first(where: {
             ($0["name"] as? String)?.lowercased() == name.lowercased()
         }) else {
             context.logger.log("No profile found with name: \(name)", file: #file, function: #function, line: #line)
             return
         }
+        NSLog("[PROFILE-DEBUG] switchToProfileByName findProfile: %.1fms", lap())
         if let idStr = targetProfile["id"] as? String,
            let profileId = UUID(uuidString: idStr),
            let profileName = targetProfile["name"] as? String {
             context.applyProfile(profileId: profileId)
+            NSLog("[PROFILE-DEBUG] switchToProfileByName applyProfile: %.1fms", lap())
             context.saveConfiguration()
+            NSLog("[PROFILE-DEBUG] switchToProfileByName saveConfiguration: %.1fms", lap())
             context.postNotification(name: NSNotification.Name("GestureConfigurationChanged"), userInfo: nil)
+            NSLog("[PROFILE-DEBUG] switchToProfileByName postNotification(GestureConfigChanged): %.1fms", lap())
             showProfileNotification(profileName: profileName, context: context)
+            NSLog("[PROFILE-DEBUG] switchToProfileByName showNotification: %.1fms", lap())
         }
     }
     

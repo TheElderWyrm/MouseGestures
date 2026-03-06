@@ -27,6 +27,11 @@ public class PluginSandbox {
     
     /// Execute an action within the sandbox
     func executeAction(_ action: PluginAction, with parameters: ActionParameters) throws {
+        let sandboxStart = CFAbsoluteTimeGetCurrent()
+        NSLog("[PROFILE-DEBUG] Sandbox.executeAction START: %@.%@", identifier, action.id)
+        defer {
+            NSLog("[PROFILE-DEBUG] Sandbox.executeAction END: %@.%@ total=%.1fms", identifier, action.id, (CFAbsoluteTimeGetCurrent() - sandboxStart) * 1000)
+        }
         // Check if plugin has permission for this type of action
         guard permissions.canExecuteAction(action) else {
             throw PluginSandboxError.permissionDenied("Plugin lacks permission to execute action: \(action.id)")
@@ -173,7 +178,9 @@ class SandboxedPluginContext: PluginContext {
         var enrichedUserInfo = userInfo ?? [:]
         enrichedUserInfo["pluginId"] = pluginId
         
+        let t = CFAbsoluteTimeGetCurrent()
         NotificationCenter.default.post(name: name, object: nil, userInfo: enrichedUserInfo)
+        NSLog("[PROFILE-DEBUG] postNotification(%@) sync handlers took %.1fms (thread: %@)", name.rawValue, (CFAbsoluteTimeGetCurrent() - t) * 1000, Thread.current.description)
     }
     
     func preference(for key: String) -> Any? {

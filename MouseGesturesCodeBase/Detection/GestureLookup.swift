@@ -43,6 +43,7 @@ class GestureLookup {
     
     /// Rebuilds the lookup table from current configuration
     func rebuild() {
+        let t = CFAbsoluteTimeGetCurrent()
         lookupTable.removeAll()
         
         let gestures = Configuration.shared.gestures
@@ -62,9 +63,7 @@ class GestureLookup {
             }
         }
         
-        if log.isDebugEnabled {
-            log.log("GestureLookup: Rebuilt table with \(lookupTable.count) unique combinations, \(addedCount) total gestures")
-        }
+        NSLog("[PROFILE-DEBUG] GestureLookup.rebuild: %.1fms (%d combos, %d gestures)", (CFAbsoluteTimeGetCurrent() - t) * 1000, lookupTable.count, addedCount)
     }
     
     /// Clears the lookup table

@@ -261,6 +261,7 @@ class MenuIcon: NSObject {
     }
     
     @objc private func configurationChanged() {
+        let t = CFAbsoluteTimeGetCurrent()
         // Update visibility based on configuration
         updateVisibility()
         
@@ -273,6 +274,7 @@ class MenuIcon: NSObject {
             updateGestureToggleState()
             updateAppearance()
         }
+        NSLog("[PROFILE-DEBUG] MenuIcon.configurationChanged: %.1fms", (CFAbsoluteTimeGetCurrent() - t) * 1000)
     }
     
     @objc private func profileChanged() {
