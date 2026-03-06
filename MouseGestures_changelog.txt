@@ -25,8 +25,9 @@
 - Removed unused `parameterTypeHint()` method
 
 **CoreActionsPlugin.swift — Dynamic Profile Selection**
-- `switch_profile` action now uses dropdown selection populated from ProfileManager
-- Changed `providedActions` from `lazy var` to computed `var` so profile list stays current
+- Added `.profile` parameter type (mirrors `.application` pattern)
+- `switch_profile` uses static `.profile` type; UI dynamically queries ProfileManager at render time
+- `providedActions` stays as `lazy var` for O(1) access after initialization
 
 **CoreActionsPlugin.swift / WindowManagementPlugin.swift — Integer Window Age**
 - `window_age` parameter now has `maxValue: 20`, showing as an integer slider (step=1)
