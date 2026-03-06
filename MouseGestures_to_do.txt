@@ -34,7 +34,6 @@ UI:
 
 
 Features:
-  - Reset to default
   - Add reset to template in gestures
   - Bundle actions with variables (e.g. Open URL From Clipboard)
   - Test adding external plugins for detection and actions

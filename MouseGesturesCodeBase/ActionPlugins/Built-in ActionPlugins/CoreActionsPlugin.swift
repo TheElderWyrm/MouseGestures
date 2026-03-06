@@ -1,5 +1,6 @@
 import Cocoa
 import Carbon
+import UserNotifications
 
 // MARK: - Core Actions Plugin
 
@@ -288,6 +289,13 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
                         AnyCodable("previous")
                     ]),
                     displayValues: ["next": "Next", "previous": "Previous"]
+                ),
+                ParameterDefinition(
+                    key: "show_notification",
+                    name: "Show Notification",
+                    type: .boolean,
+                    defaultValue: AnyCodable(true),
+                    description: "Show notification when profile switches"
                 )
             ],
             icon: "person.crop.circle.fill.badge.plus"
@@ -306,6 +314,13 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
                     type: .profile,
                     required: true,
                     description: "Select profile to switch to"
+                ),
+                ParameterDefinition(
+                    key: "show_notification",
+                    name: "Show Notification",
+                    type: .boolean,
+                    defaultValue: AnyCodable(true),
+                    description: "Show notification when profile switches"
                 )
             ],
             icon: "person.crop.circle.fill"
@@ -390,11 +405,13 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
         // MARK: Profile
         case "cycle_profile":
             let forward = (parameters.string(for: "direction") ?? "next") == "next"
-            cycleProfile(forward: forward, context: context)
+            let showNotification = parameters.bool(for: "show_notification") ?? true
+            cycleProfile(forward: forward, showNotification: showNotification, context: context)
             
         case "switch_profile":
             if let name = parameters.string(for: "profile_name") {
-                switchToProfileByName(name, context: context)
+                let showNotification = parameters.bool(for: "show_notification") ?? true
+                switchToProfileByName(name, showNotification: showNotification, context: context)
             }
             
         default:
@@ -713,7 +730,7 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
     
     // MARK: - Profile Management
     
-    private func cycleProfile(forward: Bool, context: PluginContext) {
+    private func cycleProfile(forward: Bool, showNotification: Bool, context: PluginContext) {
         let profiles = context.getProfiles()
         guard !profiles.isEmpty else { return }
         let currentId = context.getActiveProfileId()
@@ -730,11 +747,13 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
             context.applyProfile(profileId: profileId)
             context.saveConfiguration()
             context.postNotification(name: NSNotification.Name("GestureConfigurationChanged"), userInfo: nil)
-            showProfileNotification(profileName: profileName, context: context)
+            if showNotification {
+                sendProfileNotification(profileName: profileName)
+            }
         }
     }
     
-    private func switchToProfileByName(_ name: String, context: PluginContext) {
+    private func switchToProfileByName(_ name: String, showNotification: Bool, context: PluginContext) {
         let profiles = context.getProfiles()
         guard let targetProfile = profiles.first(where: {
             ($0["name"] as? String)?.lowercased() == name.lowercased()
@@ -748,15 +767,34 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
             context.applyProfile(profileId: profileId)
             context.saveConfiguration()
             context.postNotification(name: NSNotification.Name("GestureConfigurationChanged"), userInfo: nil)
-            showProfileNotification(profileName: profileName, context: context)
+            if showNotification {
+                sendProfileNotification(profileName: profileName)
+            }
         }
     }
     
-    private func showProfileNotification(profileName: String, context: PluginContext) {
-        context.showNotification(
-            title: "Profile Switched",
-            message: "Active profile: \(profileName)",
-            style: .info
+    /// Send a native macOS notification for profile switch
+    private func sendProfileNotification(profileName: String) {
+        let content = UNMutableNotificationContent()
+        content.title = "Profile Switched"
+        content.body = profileName
+        content.sound = nil
+        
+        let request = UNNotificationRequest(
+            identifier: "profile-switch-\(UUID().uuidString)",
+            content: content,
+            trigger: nil
         )
+        
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                log.log("Failed to show profile notification: \(error)")
+            }
+        }
+        
+        // Auto-dismiss after 2 seconds
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: [request.identifier])
+        }
     }
 }

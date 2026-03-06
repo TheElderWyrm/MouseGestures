@@ -204,12 +204,9 @@ class SandboxedPluginContext: PluginContext {
             return
         }
         
-        // Add plugin attribution to notification
-        let attributedTitle = "[\(pluginId)] \(title)"
-        
         DispatchQueue.main.async {
             PluginManager.shared.showPluginNotification(
-                title: attributedTitle,
+                title: title,
                 message: message,
                 style: style,
                 pluginId: self.pluginId

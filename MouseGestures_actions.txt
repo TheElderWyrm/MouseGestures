@@ -12,10 +12,7 @@ CORE ACTIONS (com.mousegestures.core)
 --------------------------------------
 close_window         - Close a window [✓✓]
 minimize             - Minimize a window [✓✓]
-maximize             - Maximize a window [✓✓]
-	- Add to Snap Action
-fullscreen           - Toggle fullscreen mode [✓]
-	- Takes a while when targeting another application
+fullscreen           - Toggle fullscreen mode [✓✓]
 hide_app             - Hide the active application [✓✓]
 quit_app             - Quit an application [✓✓]
 mission_control      - Show Mission Control [✓✓]
@@ -23,7 +20,7 @@ show_desktop         - Show the desktop [✓✓]
 app_expose           - Show all windows of current application [✓✓]
 	* Subject to modifier key interference
 cycle_window         - Switch to next/previous window (direction parameter) <-- Cycle Window vs Cycle windows duplicate action? [✓]
-	* Add application target
+	* Add application target (Specific application or all applications)
 cycle_space          - Move to next/previous desktop space (direction parameter) [✓]
 	* Subject to modifier key interference
 	* Proper solution requires either private APIs or invisible windows: https://github.com/bigbearlabs/SpaceSwitcher.
@@ -31,11 +28,11 @@ lock_screen          - Lock the screen [✓✓]
 sleep_display        - Put display(s) to sleep [✓✓]
 empty_trash          - Empty the trash (confirm parameter) [✓✓]
 [cycle_profile        - Cycle gesture profiles (direction parameter)[✓]
-	* Works, but very slow
-switch_profile       - Switch to a specific gesture profile (profile_name parameter) [✓]
-	* Switch to dropdown selection
-	* Works, but very slow]
-	* Set to action + Parameter
+switch_profile       - Switch to a specific gesture profile (profile_name parameter) [✓]]
+	* Set to action: Switch Profile + Parameter
+	* Option to show/hide profile switch notification 
+	* Remove the profile string (com.mousegestures.core) from switch notification
+	* switch to using a notification instead a custom banner
 
 General Core Issues:
 	* Move window actions (close/minimize/maximize/fullscreen) into Window Management plugin
@@ -48,14 +45,13 @@ WINDOW MANAGEMENT (com.mousegestures.window)
 ------------------------------------------
 snap_window          - Move window to a screen region (position parameter, 11 regions) [✓]
 	* Rename
-center               - Center window on screen
-	* Remove
 resize_to_percent    - Resize window to % of screen (percent 1-100)
 adjust_size          - Grow or shrink window (direction + percent parameters)
 cycle_windows        - Cycle through windows (direction parameter)
 switch_to_window     - Switch to a specific window
 window_position_memory - Save/restore/delete window position (operation + slot parameters)
 window_layout        - Save/restore/delete named window layout (operation + layout_name parameters)
+	* Reopen applications should be hidden for saving layout.
 tile_all             - Tile all windows on screen (scope parameter) [✓]
 	* Improve Tiling to fill the full screen with larger windows (If possible)
 	* Add option to resize or not <-- Make best attempt
@@ -74,7 +70,7 @@ General Window Issues:
 ------------------------------------------
 MEDIA CONTROL (com.mousegestures.media)
 ------------------------------------------
-[✓✓]
+Play/pause           - Plays/pauses the running track
 track_skip           - Skip to next or previous track (direction parameter) [✓✓]
 volume               - Adjust system volume (mode: up/down/mute/set + amount parameter) [✓✓]
 seek                 - Seek forward or backward in playback (direction + seconds parameters) [✓]
