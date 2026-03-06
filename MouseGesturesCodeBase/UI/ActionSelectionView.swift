@@ -475,6 +475,17 @@ struct ActionSelectionView: View {
                     .help("Browse for any installed application")
                 }
             }
+        case .profile:
+            paramRow(p) {
+                Picker("", selection: strBinding(p.key, def: "")) {
+                    Text("Select...").tag("")
+                    ForEach(ProfileManager.shared.sortedProfiles, id: \.name) { profile in
+                        Text(profile.name).tag(profile.name)
+                    }
+                }
+                .pickerStyle(.menu)
+                .labelsHidden()
+            }
         case .script:
             VStack(alignment: .leading, spacing: MGStyle.Spacing.sm) {
                 HStack {

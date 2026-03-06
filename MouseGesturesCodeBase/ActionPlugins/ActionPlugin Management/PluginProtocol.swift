@@ -235,6 +235,7 @@ public enum ParameterType: String, Codable {
     case application
     case coordinate
     case size
+    case profile
 }
 
 /// Validation rules for parameters

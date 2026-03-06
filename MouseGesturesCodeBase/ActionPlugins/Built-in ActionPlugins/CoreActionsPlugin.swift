@@ -71,35 +71,9 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
         ]
     }
     
-    deinit {
-        if let observer = _profileObserver {
-            NotificationCenter.default.removeObserver(observer)
-        }
-    }
-    
     // MARK: - Actions
     
-    private var _cachedActions: [PluginAction]?
-    private var _profileObserver: Any?
-    
-    var providedActions: [PluginAction] {
-        if let cached = _cachedActions { return cached }
-        let actions = buildActions()
-        _cachedActions = actions
-        // Invalidate cache when profiles change so dropdown stays current
-        if _profileObserver == nil {
-            _profileObserver = NotificationCenter.default.addObserver(
-                forName: .profilesDidChange, object: nil, queue: .main
-            ) { [weak self] _ in
-                self?._cachedActions = nil
-                PluginManager.shared.refreshPluginActions(identifier: "com.mousegestures.core")
-            }
-        }
-        return actions
-    }
-    
-    private func buildActions() -> [PluginAction] {
-        return [
+    lazy var providedActions: [PluginAction] = [
         // MARK: Window Actions (with target support)
         PluginAction(
             id: "close_window",
@@ -325,23 +299,18 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
             name: "Switch to Profile",
             description: "Switch to a specific gesture profile by name",
             requiresParameters: true,
-            supportedParameters: {
-                let profileNames = ProfileManager.shared.sortedProfiles.map { $0.name }
-                return [
-                    ParameterDefinition(
-                        key: "profile_name",
-                        name: "Profile",
-                        type: profileNames.isEmpty ? .string : .selection,
-                        required: true,
-                        description: profileNames.isEmpty ? "Name of the profile to switch to" : "Select profile",
-                        validation: profileNames.isEmpty ? nil : ValidationRule(allowedValues: profileNames.map { AnyCodable($0) })
-                    )
-                ]
-            }(),
+            supportedParameters: [
+                ParameterDefinition(
+                    key: "profile_name",
+                    name: "Profile",
+                    type: .profile,
+                    required: true,
+                    description: "Select profile to switch to"
+                )
+            ],
             icon: "person.crop.circle.fill"
         )
     ]
-    }
     
     // MARK: - Plugin Lifecycle
     
