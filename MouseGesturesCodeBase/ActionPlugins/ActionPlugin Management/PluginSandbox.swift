@@ -27,11 +27,6 @@ public class PluginSandbox {
     
     /// Execute an action within the sandbox
     func executeAction(_ action: PluginAction, with parameters: ActionParameters) throws {
-        let sandboxStart = CFAbsoluteTimeGetCurrent()
-        NSLog("[PROFILE-DEBUG] Sandbox.executeAction START: %@.%@", identifier, action.id)
-        defer {
-            NSLog("[PROFILE-DEBUG] Sandbox.executeAction END: %@.%@ total=%.1fms", identifier, action.id, (CFAbsoluteTimeGetCurrent() - sandboxStart) * 1000)
-        }
         // Check if plugin has permission for this type of action
         guard permissions.canExecuteAction(action) else {
             throw PluginSandboxError.permissionDenied("Plugin lacks permission to execute action: \(action.id)")
@@ -57,30 +52,12 @@ public class PluginSandbox {
         // Check resource limits
         try resourceMonitor.checkLimits()
         
-        // Execute the action with timeout
-        let timeout: TimeInterval = permissions.executionTimeout
-        let completed = DispatchSemaphore(value: 0)
-        var executionError: Error?
-        
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            guard let self = self else { return }
-            do {
-                try self.plugin.execute(action: action, with: parameters, context: self.sandboxedContext)
-            } catch {
-                executionError = error
-            }
-            completed.signal()
-        }
-        
-        let result = completed.wait(timeout: .now() + timeout)
-        
-        if result == .timedOut {
-            throw PluginSandboxError.executionTimeout("Action execution timed out after \(timeout) seconds")
-        }
-        
-        if let error = executionError {
-            throw error
-        }
+        // Execute the action directly on the calling thread.
+        // Previously used a semaphore + background dispatch for timeout protection,
+        // but that causes deadlocks when called from the main thread: the plugin's
+        // notification handlers trigger AppKit operations that need main, while main
+        // is blocked on the semaphore.
+        try plugin.execute(action: action, with: parameters, context: sandboxedContext)
     }
     
     /// Validate an action within the sandbox
@@ -178,9 +155,7 @@ class SandboxedPluginContext: PluginContext {
         var enrichedUserInfo = userInfo ?? [:]
         enrichedUserInfo["pluginId"] = pluginId
         
-        let t = CFAbsoluteTimeGetCurrent()
         NotificationCenter.default.post(name: name, object: nil, userInfo: enrichedUserInfo)
-        NSLog("[PROFILE-DEBUG] postNotification(%@) sync handlers took %.1fms (thread: %@)", name.rawValue, (CFAbsoluteTimeGetCurrent() - t) * 1000, Thread.current.description)
     }
     
     func preference(for key: String) -> Any? {

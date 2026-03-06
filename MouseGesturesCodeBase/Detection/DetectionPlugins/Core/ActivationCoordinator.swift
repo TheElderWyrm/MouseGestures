@@ -291,12 +291,8 @@ class ActivationCoordinator {
     }
     
     func rebuildDependencies() {
-        let t = CFAbsoluteTimeGetCurrent()
         lock.lock()
-        defer {
-            lock.unlock()
-            NSLog("[PROFILE-DEBUG] ActivationCoordinator.rebuildDependencies: %.1fms", (CFAbsoluteTimeGetCurrent() - t) * 1000)
-        }
+        defer { lock.unlock() }
         
         dependencies.removeAll()
         gateGroups.removeAll()

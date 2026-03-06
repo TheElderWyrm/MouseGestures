@@ -129,13 +129,11 @@ public class UIServices: ObservableObject {
     // MARK: - Data Loading
     
     func loadData() {
-        let t = CFAbsoluteTimeGetCurrent()
         let update = {
             self.profiles = self.configuration.profiles
             self.activeProfileId = self.configuration.activeProfileId
             self.gestures = self.configuration.gestures
             self.savedActions = SavedActionsManager.shared.savedActions
-            NSLog("[PROFILE-DEBUG] UIServices.loadData: %.1fms (thread: %@)", (CFAbsoluteTimeGetCurrent() - t) * 1000, Thread.current.description)
         }
         if Thread.isMainThread { update() } else { DispatchQueue.main.async { update() } }
     }

@@ -191,7 +191,7 @@ public class Configuration: Codable {
             guard let self = self, self.pendingSave else { return }
             
             self.pendingSave = false
-            let saveStart = CFAbsoluteTimeGetCurrent()
+            
             log.log("Saving configuration to disk. Mappings count: \(self.appProfileMappings.count)")
             
             do {
@@ -201,12 +201,9 @@ public class Configuration: Codable {
                 }
                 
                 try data.write(to: Configuration.configurationURL)
-                NSLog("[PROFILE-DEBUG] Configuration.performSave encode+write: %.1fms (%d bytes)", (CFAbsoluteTimeGetCurrent() - saveStart) * 1000, data.count)
                 
                 DispatchQueue.main.async {
-                    let nt = CFAbsoluteTimeGetCurrent()
                     NotificationCenter.default.post(name: NSNotification.Name("GestureConfigurationChanged"), object: nil)
-                    NSLog("[PROFILE-DEBUG] Configuration.performSave GestureConfigChanged notification dispatch: %.1fms", (CFAbsoluteTimeGetCurrent() - nt) * 1000)
                 }
             } catch {
                 log.log("Error saving configuration: \(error)")

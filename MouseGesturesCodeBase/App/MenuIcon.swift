@@ -261,30 +261,26 @@ class MenuIcon: NSObject {
     }
     
     @objc private func configurationChanged() {
-        let t = CFAbsoluteTimeGetCurrent()
-        // Update visibility based on configuration
-        updateVisibility()
-        
-        // Only update menu if it exists
-        if statusItem != nil {
-            // Update the profiles menu when configuration changes
-            updateProfilesMenu()
-            
-            // Update gesture enabled state
-            updateGestureToggleState()
-            updateAppearance()
+        let work = { [weak self] in
+            guard let self = self else { return }
+            self.updateVisibility()
+            if self.statusItem != nil {
+                self.updateProfilesMenu()
+                self.updateGestureToggleState()
+                self.updateAppearance()
+            }
         }
-        NSLog("[PROFILE-DEBUG] MenuIcon.configurationChanged: %.1fms", (CFAbsoluteTimeGetCurrent() - t) * 1000)
+        if Thread.isMainThread { work() } else { DispatchQueue.main.async(execute: work) }
     }
     
     @objc private func profileChanged() {
-        // Update menu checkmarks when profile changes
-        updateProfilesMenu()
+        let work: () -> Void = { [weak self] in self?.updateProfilesMenu() }
+        if Thread.isMainThread { work() } else { DispatchQueue.main.async(execute: work) }
     }
     
     @objc private func profilesListChanged() {
-        // Update menu when profiles list changes
-        updateProfilesMenu()
+        let work: () -> Void = { [weak self] in self?.updateProfilesMenu() }
+        if Thread.isMainThread { work() } else { DispatchQueue.main.async(execute: work) }
     }
 }
 
