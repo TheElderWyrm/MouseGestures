@@ -102,9 +102,18 @@ struct Gesture: Codable, Equatable {
     
     // MARK: - Computed Properties (derived from components)
     
-    var zone: ScreenZone { components.screenZone?.zone ?? .topRight }
-    var modifiers: NSEvent.ModifierFlags { components.modifierKey?.modifiers ?? [] }
-    var dragModifier: DragModifier { components.dragType?.dragType ?? .none }
+    var zone: ScreenZone {
+        guard components.screenZone?.isEnabled == true else { return .topRight }
+        return components.screenZone?.zone ?? .topRight
+    }
+    var modifiers: NSEvent.ModifierFlags {
+        guard components.modifierKey?.isEnabled == true else { return [] }
+        return components.modifierKey?.modifiers ?? []
+    }
+    var dragModifier: DragModifier {
+        guard components.dragType?.isEnabled == true else { return .none }
+        return components.dragType?.dragType ?? .none
+    }
     
     var isEnabled: Bool {
         get { genericActivation.isEnabled }
@@ -112,12 +121,18 @@ struct Gesture: Codable, Equatable {
     }
     
     var keyboardTrigger: KeyboardTrigger? {
-        get { genericActivation.keyboardTrigger }
+        get {
+            guard components.keyboardShortcut?.isEnabled == true else { return nil }
+            return genericActivation.keyboardTrigger
+        }
         set { genericActivation.setKeyboardTrigger(newValue) }
     }
     
     var mouseButtonTrigger: MouseButtonTrigger? {
-        get { genericActivation.mouseButtonTrigger }
+        get {
+            guard components.mouseButton?.isEnabled == true else { return nil }
+            return genericActivation.mouseButtonTrigger
+        }
         set { genericActivation.setMouseButtonTrigger(newValue) }
     }
     

@@ -419,7 +419,6 @@ struct GestureCardView: View {
     private func parameterDetailLine(key: String, value: AnyCodable) -> some View {
         let label = formatParameterKey(key)
         let display = formatParameterValue(value)
-        let typeHint = parameterTypeHint(value)
         
         HStack(alignment: .firstTextBaseline, spacing: MGStyle.Spacing.md) {
             Text(label)
@@ -430,16 +429,6 @@ struct GestureCardView: View {
             Text(display)
                 .font(.system(size: MGStyle.FontSize.caption, weight: .medium))
                 .lineLimit(1)
-            
-            if let hint = typeHint {
-                Text(hint)
-                    .font(.system(size: MGStyle.FontSize.badge, design: .monospaced))
-                    .foregroundColor(.secondary.opacity(0.5))
-                    .padding(.horizontal, MGStyle.Spacing.sm)
-                    .padding(.vertical, 1)
-                    .background(Color.secondary.opacity(0.08))
-                    .cornerRadius(MGStyle.Corner.xs)
-            }
         }
     }
     
@@ -474,20 +463,6 @@ struct GestureCardView: View {
         }
     }
     
-    /// Return a compact type hint for the parameter format
-    private func parameterTypeHint(_ value: AnyCodable) -> String? {
-        if value.value is String { return "text" }
-        if value.value is Bool { return "bool" }
-        if let num = value.value as? NSNumber {
-            // Distinguish int from float
-            let t = String(cString: num.objCType)
-            if t == "d" || t == "f" { return "number" }
-            return "int"
-        }
-        if value.value is [Any] { return "list" }
-        if value.value is [String: Any] { return "json" }
-        return nil
-    }
 }
 
 // MARK: - Profile Picker Sheet (kept for potential reuse)

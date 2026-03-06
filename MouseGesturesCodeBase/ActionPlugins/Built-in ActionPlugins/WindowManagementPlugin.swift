@@ -192,7 +192,7 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
                 type: .number,
                 defaultValue: AnyCodable(1),
                 description: "1 = frontmost, 2 = second, etc.",
-                validation: ValidationRule(minValue: 1),
+                validation: ValidationRule(minValue: 1, maxValue: 20),
                 visibleWhen: ParameterVisibilityRule(key: "target", value: "by_age"),
                 group: "Target"
             )

@@ -112,7 +112,7 @@ class SandboxedPluginContext: PluginContext {
     private let permissions: PluginPermissions
     private var notificationObservers: [NSObjectProtocol] = []
     private var isExecuting = false
-    private let accessQueue = DispatchQueue(label: "com.mousegestures.sandbox.context", attributes: .concurrent)
+    private let accessQueue = DispatchQueue(label: "com.mousegestures.sandbox.context", qos: .userInitiated, attributes: .concurrent)
     
     init(pluginId: String, permissions: PluginPermissions) {
         self.pluginId = pluginId

@@ -5,29 +5,15 @@ Action items also in: MouseGestures_actions.txt
 --------------------------------------
 BUGS
 --------------------------------------
-Deselecting a trigger option does not turn it all the way off.
-
-Main Thread Violations (MenuIcon.swift):
-  - Line 132: NSStatusBarButton.setAppearsDisabled called off main thread
-  - Line 133: NSView.setToolTip called off main thread
-  - Line 139: NSButton.image called off main thread
-
-Threading:
-  - PluginSandbox.swift:264 — Priority inversion: User-initiated QoS thread waiting on Default QoS thread
-
 Window Targeting:
   - Does not work for some actions (works for minimize, not for adjust_size)
   - Targeting multiple windows does not work
-  - Window age parameter should be an integer
 
 UI:
   - Keyboard shortcut detection not working for gestures
   - Profiles: pressing delete should not select the profile checkbox
-  - Show Zone Labels should show assigned actions, not zone name
   - Picker: selection "" is invalid / no associated tag — gives undefined results
   - Configurations not aligned between trigger types
-  - Zone Labels do not fit in zone left and right and are cut off
-  - Should not display parameter type in gesture expanded view
  
 --------------------------------------
 IMPROVEMENTS
@@ -45,8 +31,7 @@ UI:
   - Manage detection plugins under developer mode
   - Open application action should bring up Finder to select any application
   - Show add-to-bundle button even when a bundle action is selected (choose to add or update)
-  - Make action search not case sensitive
-  - switch_profile: Switch to dropdown selection (currently text input)
+
 
 Features:
   - Reset to default
@@ -61,6 +46,18 @@ Features:
 Cleanup:
   - Remove dummy autoupdate
   - Clean up unneeded actions
+
+--------------------------------------
+COMPLETED (2026-03-05)
+--------------------------------------
+  [✓] Fixed: Deselecting a trigger option now fully disables it (zone/modifiers/drag/keyboard/mouse respect isEnabled)
+  [✓] Fixed: Main thread violations in MenuIcon.swift (wrapped UI updates with main thread dispatch)
+  [✓] Fixed: PluginSandbox priority inversion (matched accessQueue QoS to userInitiated)
+  [✓] Fixed: Window age parameter now shows as integer slider (1–20)
+  [✓] Fixed: Zone labels now show assigned action names instead of zone names
+  [✓] Fixed: Zone labels in narrow zones (left/right) now rotate vertically to fit
+  [✓] Fixed: Parameter type hints removed from gesture expanded view
+  [✓] Improved: switch_profile now uses dropdown selection populated from current profiles
 
 --------------------------------------
 COMPLETED (2026-03-04)

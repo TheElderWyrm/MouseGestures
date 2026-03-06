@@ -1,3 +1,38 @@
+## 2026-03-05
+
+### Bug Fixes: Trigger Deselection, Thread Safety, Zone Labels, UI Polish
+
+**Gesture.swift — Trigger Deselection Fix**
+- Computed properties (zone, modifiers, dragModifier, keyboardTrigger, mouseButtonTrigger) now respect component `isEnabled` flags
+- Previously, disabling a trigger component left its value active in the detection system
+- Fixes the bug where deselecting a trigger option didn't fully turn it off
+
+**MenuIcon.swift — Main Thread Safety**
+- Wrapped `updateAppearance()`, `updateAccessibilityState()`, and `updateGestureToggleState()` with main thread dispatch
+- Fixes NSStatusBarButton/NSView/NSButton accessed from background threads
+
+**PluginSandbox.swift — Priority Inversion Fix**
+- Set `accessQueue` QoS to `.userInitiated` to match the execution queue
+- Eliminates priority inversion warning
+
+**ZoneHighlightWindow.swift — Zone Label Improvements**
+- Zone labels now display assigned action names instead of zone names
+- Added vertical text rotation for narrow zones (left/right edges) so labels fit
+- Uses `getLabel()` to show action name with fallback to zone name
+
+**GesturesView.swift — Cleaner Expanded View**
+- Removed parameter type hints (text/bool/int badges) from gesture expanded detail view
+- Removed unused `parameterTypeHint()` method
+
+**CoreActionsPlugin.swift — Dynamic Profile Selection**
+- `switch_profile` action now uses dropdown selection populated from ProfileManager
+- Changed `providedActions` from `lazy var` to computed `var` so profile list stays current
+
+**CoreActionsPlugin.swift / WindowManagementPlugin.swift — Integer Window Age**
+- `window_age` parameter now has `maxValue: 20`, showing as an integer slider (step=1)
+
+---
+
 ## 2026-03-04
 
 ### Action & UI Fixes: DND, Night Shift, Core Category, Cascade, Run Script

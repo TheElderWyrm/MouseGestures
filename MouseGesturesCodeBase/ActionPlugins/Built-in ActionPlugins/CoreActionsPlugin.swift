@@ -64,7 +64,7 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
                 type: .number,
                 defaultValue: AnyCodable(1),
                 description: "1 = frontmost, 2 = second, etc.",
-                validation: ValidationRule(minValue: 1),
+                validation: ValidationRule(minValue: 1, maxValue: 20),
                 visibleWhen: ParameterVisibilityRule(key: "target", value: "by_age"),
                 group: "Target"
             )
@@ -73,8 +73,8 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
     
     // MARK: - Actions
     
-    lazy var providedActions: [PluginAction] = [
-        
+    var providedActions: [PluginAction] {
+        return [
         // MARK: Window Actions (with target support)
         PluginAction(
             id: "close_window",
@@ -300,18 +300,23 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
             name: "Switch to Profile",
             description: "Switch to a specific gesture profile by name",
             requiresParameters: true,
-            supportedParameters: [
-                ParameterDefinition(
-                    key: "profile_name",
-                    name: "Profile Name",
-                    type: .string,
-                    required: true,
-                    description: "Name of the profile to switch to"
-                )
-            ],
+            supportedParameters: {
+                let profileNames = ProfileManager.shared.sortedProfiles.map { $0.name }
+                return [
+                    ParameterDefinition(
+                        key: "profile_name",
+                        name: "Profile",
+                        type: profileNames.isEmpty ? .string : .selection,
+                        required: true,
+                        description: profileNames.isEmpty ? "Name of the profile to switch to" : "Select profile",
+                        validation: profileNames.isEmpty ? nil : ValidationRule(allowedValues: profileNames.map { AnyCodable($0) })
+                    )
+                ]
+            }(),
             icon: "person.crop.circle.fill"
         )
     ]
+    }
     
     // MARK: - Plugin Lifecycle
     

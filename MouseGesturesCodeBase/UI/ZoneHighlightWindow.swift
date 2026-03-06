@@ -90,23 +90,54 @@ class ZoneView: NSView {
                 .foregroundColor: NSColor.white
             ]
             let size = label.size(withAttributes: attrs)
-            
-            // Clamp label position within bounds with padding
             let pad: CGFloat = 3
-            let labelW = min(size.width, bounds.width - pad * 2)
-            let labelH = size.height
-            let x = max(pad, min((bounds.width - labelW) / 2, bounds.width - labelW - pad))
-            let y = max(pad, min((bounds.height - labelH) / 2, bounds.height - labelH - pad))
             
-            // Draw background pill for readability
-            let pillRect = NSRect(x: x - 3, y: y - 1, width: labelW + 6, height: labelH + 2)
-            let pill = NSBezierPath(roundedRect: pillRect, xRadius: 3, yRadius: 3)
-            NSColor.black.withAlphaComponent(0.5).setFill()
-            pill.fill()
+            // Rotate text for narrow vertical zones (left/right edges)
+            let needsRotation = bounds.width < 50 && bounds.height > bounds.width * 2
             
-            // Draw text clipped to zone
-            let drawRect = NSRect(x: x, y: y, width: labelW, height: labelH)
-            label.draw(with: drawRect, options: [.usesLineFragmentOrigin, .truncatesLastVisibleLine], attributes: attrs, context: nil)
+            if needsRotation {
+                // Draw rotated: use height as available width for text
+                let availableW = bounds.height - pad * 2
+                let labelW = min(size.width, availableW)
+                let labelH = size.height
+                
+                let ctx = NSGraphicsContext.current!.cgContext
+                ctx.saveGState()
+                
+                // Translate to center, rotate 90° CCW, then offset
+                let cx = bounds.width / 2
+                let cy = bounds.height / 2
+                ctx.translateBy(x: cx, y: cy)
+                ctx.rotate(by: .pi / 2)
+                
+                // Draw pill background
+                let pillRect = NSRect(x: -labelW / 2 - 3, y: -labelH / 2 - 1, width: labelW + 6, height: labelH + 2)
+                let pill = NSBezierPath(roundedRect: pillRect, xRadius: 3, yRadius: 3)
+                NSColor.black.withAlphaComponent(0.5).setFill()
+                pill.fill()
+                
+                // Draw text
+                let drawRect = NSRect(x: -labelW / 2, y: -labelH / 2, width: labelW, height: labelH)
+                label.draw(with: drawRect, options: [.usesLineFragmentOrigin, .truncatesLastVisibleLine], attributes: attrs, context: nil)
+                
+                ctx.restoreGState()
+            } else {
+                // Normal horizontal drawing
+                let labelW = min(size.width, bounds.width - pad * 2)
+                let labelH = size.height
+                let x = max(pad, min((bounds.width - labelW) / 2, bounds.width - labelW - pad))
+                let y = max(pad, min((bounds.height - labelH) / 2, bounds.height - labelH - pad))
+                
+                // Draw background pill for readability
+                let pillRect = NSRect(x: x - 3, y: y - 1, width: labelW + 6, height: labelH + 2)
+                let pill = NSBezierPath(roundedRect: pillRect, xRadius: 3, yRadius: 3)
+                NSColor.black.withAlphaComponent(0.5).setFill()
+                pill.fill()
+                
+                // Draw text clipped to zone
+                let drawRect = NSRect(x: x, y: y, width: labelW, height: labelH)
+                label.draw(with: drawRect, options: [.usesLineFragmentOrigin, .truncatesLastVisibleLine], attributes: attrs, context: nil)
+            }
         }
     }
 }
@@ -403,8 +434,8 @@ class ZoneHighlightManager {
             }
             
             let isActive = gesture != nil
-            // Show zone name (not action name) when modifiers are held
-            let label = zone.rawValue
+            // Show assigned action name when modifiers are held
+            let label = getLabel(for: gesture) ?? zone.rawValue
             
             window.updateState(isActive: isActive, label: label)
             // Cancel any running fade-out animation before making visible

@@ -119,48 +119,58 @@ class MenuIcon: NSObject {
     
     /// Updates the appearance of the menu bar icon based on current state
     func updateAppearance() {
-        guard let button = statusItem?.button else { return }
-        
-        let hasPermission = delegate?.menuIconRequestsAccessibilityStatus() ?? false
-        let gesturesEnabled = delegate?.menuIconRequestsGestureEnabledState() ?? false
-        
-        if !hasPermission {
-            // Show warning state if no permissions
-            button.appearsDisabled = true
-            button.toolTip = "MouseGestures requires accessibility permissions"
-        } else if gesturesEnabled {
-            button.appearsDisabled = false
-            button.toolTip = "MouseGestures - Gestures Enabled"
-        } else {
-            button.appearsDisabled = true
-            button.toolTip = "MouseGestures - Gestures Disabled"
+        let work = { [weak self] in
+            guard let self = self, let button = self.statusItem?.button else { return }
+            
+            let hasPermission = self.delegate?.menuIconRequestsAccessibilityStatus() ?? false
+            let gesturesEnabled = self.delegate?.menuIconRequestsGestureEnabledState() ?? false
+            
+            if !hasPermission {
+                // Show warning state if no permissions
+                button.appearsDisabled = true
+                button.toolTip = "MouseGestures requires accessibility permissions"
+            } else if gesturesEnabled {
+                button.appearsDisabled = false
+                button.toolTip = "MouseGestures - Gestures Enabled"
+            } else {
+                button.appearsDisabled = true
+                button.toolTip = "MouseGestures - Gestures Disabled"
+            }
+            // Keep template mode
+            button.image?.isTemplate = true
         }
-        // Keep template mode
-        button.image?.isTemplate = true
+        if Thread.isMainThread { work() } else { DispatchQueue.main.async(execute: work) }
     }
     
     /// Updates the state of menu items based on accessibility permissions
     func updateAccessibilityState(hasPermission: Bool) {
-        guard let menu = statusItem?.menu else { return }
-        
-        // Enable/disable the toggle gestures item based on permission
-        if let toggleItem = menu.item(withTitle: "Enable Gestures") {
-            toggleItem.isEnabled = hasPermission
-            if !hasPermission {
-                toggleItem.state = .off
+        let work = { [weak self] in
+            guard let self = self, let menu = self.statusItem?.menu else { return }
+            
+            // Enable/disable the toggle gestures item based on permission
+            if let toggleItem = menu.item(withTitle: "Enable Gestures") {
+                toggleItem.isEnabled = hasPermission
+                if !hasPermission {
+                    toggleItem.state = .off
+                }
             }
+            
+            self.updateAppearance()
         }
-        
-        updateAppearance()
+        if Thread.isMainThread { work() } else { DispatchQueue.main.async(execute: work) }
     }
     
     /// Updates the gesture toggle menu item state
     func updateGestureToggleState() {
-        guard let menu = statusItem?.menu,
-              let toggleItem = menu.item(withTitle: "Enable Gestures") else { return }
-        
-        let isEnabled = delegate?.menuIconRequestsGestureEnabledState() ?? false
-        toggleItem.state = isEnabled ? .on : .off
+        let work = { [weak self] in
+            guard let self = self,
+                  let menu = self.statusItem?.menu,
+                  let toggleItem = menu.item(withTitle: "Enable Gestures") else { return }
+            
+            let isEnabled = self.delegate?.menuIconRequestsGestureEnabledState() ?? false
+            toggleItem.state = isEnabled ? .on : .off
+        }
+        if Thread.isMainThread { work() } else { DispatchQueue.main.async(execute: work) }
     }
     
     // MARK: - Private Methods
