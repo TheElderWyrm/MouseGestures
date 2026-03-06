@@ -1,6 +1,12 @@
 ## 2026-03-05
 
-### Bug Fixes: Trigger Deselection, Thread Safety, Zone Labels, UI Polish
+### Bug Fixes: Deadlock, Trigger Deselection, Thread Safety, Zone Labels, UI Polish
+
+**PluginSandbox.swift — Deadlock Fix (Profile Switching)**
+- Root cause: sandbox used semaphore+dispatch that blocked main thread while plugin
+  notifications triggered AppKit operations (NSMenu) that also needed main thread
+- Removed semaphore pattern; actions now execute directly on calling thread
+- MenuIcon notification handlers dispatch to main thread for safe AppKit access
 
 **Gesture.swift — Trigger Deselection Fix**
 - Computed properties (zone, modifiers, dragModifier, keyboardTrigger, mouseButtonTrigger) now respect component `isEnabled` flags
