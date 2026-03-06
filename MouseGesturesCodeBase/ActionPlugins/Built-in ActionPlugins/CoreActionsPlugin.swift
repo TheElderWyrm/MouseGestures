@@ -386,15 +386,9 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
             emptyTrash(showConfirmation: confirm, context: context)
             
         // MARK: Profile
-        case "switch_profile", "cycle_profile": // cycle_profile kept as legacy alias
+        case "switch_profile":
             let showNotification = parameters.bool(for: "show_notification") ?? true
-            // Determine mode: legacy cycle_profile maps direction to mode
-            let mode: String
-            if action.id == "cycle_profile" {
-                mode = parameters.string(for: "direction") ?? "next"
-            } else {
-                mode = parameters.string(for: "mode") ?? "specific"
-            }
+            let mode = parameters.string(for: "mode") ?? "specific"
             switchProfile(mode: mode, profileName: parameters.string(for: "profile_name"), showNotification: showNotification, context: context)
             
         default:
