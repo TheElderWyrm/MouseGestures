@@ -271,49 +271,32 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
             icon: "trash"
         ),
         
-        // MARK: Cycle Profile (replaces next_profile / previous_profile)
+        // MARK: Switch Profile
         PluginAction(
-            id: "cycle_profile",
-            name: "Cycle Profile",
-            description: "Switch to the next or previous gesture profile",
+            id: "switch_profile",
+            name: "Switch Profile",
+            description: "Switch to a specific, next, or previous gesture profile",
             requiresParameters: true,
             supportedParameters: [
                 ParameterDefinition(
-                    key: "direction",
-                    name: "Direction",
+                    key: "mode",
+                    name: "Mode",
                     type: .selection,
-                    defaultValue: AnyCodable("next"),
-                    description: "Which direction to cycle",
+                    defaultValue: AnyCodable("specific"),
+                    description: "How to select the target profile",
                     validation: ValidationRule(allowedValues: [
+                        AnyCodable("specific"),
                         AnyCodable("next"),
                         AnyCodable("previous")
                     ]),
-                    displayValues: ["next": "Next", "previous": "Previous"]
+                    displayValues: ["specific": "Specific Profile", "next": "Next Profile", "previous": "Previous Profile"]
                 ),
-                ParameterDefinition(
-                    key: "show_notification",
-                    name: "Show Notification",
-                    type: .boolean,
-                    defaultValue: AnyCodable(true),
-                    description: "Show notification when profile switches"
-                )
-            ],
-            icon: "person.crop.circle.fill.badge.plus"
-        ),
-        
-        // Switch to Profile (by name)
-        PluginAction(
-            id: "switch_profile",
-            name: "Switch to Profile",
-            description: "Switch to a specific gesture profile by name",
-            requiresParameters: true,
-            supportedParameters: [
                 ParameterDefinition(
                     key: "profile_name",
                     name: "Profile",
                     type: .profile,
-                    required: true,
-                    description: "Select profile to switch to"
+                    description: "Select profile to switch to",
+                    visibleWhen: ParameterVisibilityRule(key: "mode", value: "specific")
                 ),
                 ParameterDefinition(
                     key: "show_notification",
@@ -403,16 +386,16 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
             emptyTrash(showConfirmation: confirm, context: context)
             
         // MARK: Profile
-        case "cycle_profile":
-            let forward = (parameters.string(for: "direction") ?? "next") == "next"
+        case "switch_profile", "cycle_profile": // cycle_profile kept as legacy alias
             let showNotification = parameters.bool(for: "show_notification") ?? true
-            cycleProfile(forward: forward, showNotification: showNotification, context: context)
-            
-        case "switch_profile":
-            if let name = parameters.string(for: "profile_name") {
-                let showNotification = parameters.bool(for: "show_notification") ?? true
-                switchToProfileByName(name, showNotification: showNotification, context: context)
+            // Determine mode: legacy cycle_profile maps direction to mode
+            let mode: String
+            if action.id == "cycle_profile" {
+                mode = parameters.string(for: "direction") ?? "next"
+            } else {
+                mode = parameters.string(for: "mode") ?? "specific"
             }
+            switchProfile(mode: mode, profileName: parameters.string(for: "profile_name"), showNotification: showNotification, context: context)
             
         default:
             throw PluginError.actionNotFound(action.id)
@@ -430,8 +413,9 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
                 return .invalid(error: "An application must be specified")
             }
         case "switch_profile":
-            if parameters.string(for: "profile_name") == nil {
-                return .invalid(error: "Profile name is required")
+            let mode = parameters.string(for: "mode") ?? "specific"
+            if mode == "specific" && (parameters.string(for: "profile_name") ?? "").isEmpty {
+                return .invalid(error: "A profile must be selected")
             }
         default:
             break
@@ -730,45 +714,45 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
     
     // MARK: - Profile Management
     
-    private func cycleProfile(forward: Bool, showNotification: Bool, context: PluginContext) {
+    private func switchProfile(mode: String, profileName: String?, showNotification: Bool, context: PluginContext) {
         let profiles = context.getProfiles()
         guard !profiles.isEmpty else { return }
-        let currentId = context.getActiveProfileId()
-        let currentIndex = profiles.firstIndex(where: {
-            ($0["id"] as? String).flatMap(UUID.init(uuidString:)) == currentId
-        }) ?? 0
-        let targetIndex = forward
-            ? (currentIndex + 1) % profiles.count
-            : (currentIndex > 0 ? currentIndex - 1 : profiles.count - 1)
-        let targetProfile = profiles[targetIndex]
-        if let idStr = targetProfile["id"] as? String,
-           let profileId = UUID(uuidString: idStr),
-           let profileName = targetProfile["name"] as? String {
-            context.applyProfile(profileId: profileId)
-            context.saveConfiguration()
-            context.postNotification(name: NSNotification.Name("GestureConfigurationChanged"), userInfo: nil)
-            if showNotification {
-                sendProfileNotification(profileName: profileName)
+        
+        let targetProfile: [String: Any]?
+        
+        switch mode {
+        case "next", "previous":
+            let currentId = context.getActiveProfileId()
+            let currentIndex = profiles.firstIndex(where: {
+                ($0["id"] as? String).flatMap(UUID.init(uuidString:)) == currentId
+            }) ?? 0
+            let targetIndex = mode == "next"
+                ? (currentIndex + 1) % profiles.count
+                : (currentIndex > 0 ? currentIndex - 1 : profiles.count - 1)
+            targetProfile = profiles[targetIndex]
+        default: // "specific"
+            guard let name = profileName, !name.isEmpty else {
+                context.logger.log("switch_profile: no profile name specified", file: #file, function: #function, line: #line)
+                return
+            }
+            targetProfile = profiles.first(where: {
+                ($0["name"] as? String)?.lowercased() == name.lowercased()
+            })
+            if targetProfile == nil {
+                context.logger.log("No profile found with name: \(name)", file: #file, function: #function, line: #line)
+                return
             }
         }
-    }
-    
-    private func switchToProfileByName(_ name: String, showNotification: Bool, context: PluginContext) {
-        let profiles = context.getProfiles()
-        guard let targetProfile = profiles.first(where: {
-            ($0["name"] as? String)?.lowercased() == name.lowercased()
-        }) else {
-            context.logger.log("No profile found with name: \(name)", file: #file, function: #function, line: #line)
-            return
-        }
-        if let idStr = targetProfile["id"] as? String,
+        
+        if let target = targetProfile,
+           let idStr = target["id"] as? String,
            let profileId = UUID(uuidString: idStr),
-           let profileName = targetProfile["name"] as? String {
+           let name = target["name"] as? String {
             context.applyProfile(profileId: profileId)
             context.saveConfiguration()
             context.postNotification(name: NSNotification.Name("GestureConfigurationChanged"), userInfo: nil)
             if showNotification {
-                sendProfileNotification(profileName: profileName)
+                sendProfileNotification(profileName: name)
             }
         }
     }

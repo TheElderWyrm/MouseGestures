@@ -31,6 +31,7 @@ UI:
   - Manage detection plugins under developer mode
   - Open application action should bring up Finder to select any application
   - Show add-to-bundle button even when a bundle action is selected (choose to add or update)
+  - Setting to display notification on action activation
 
 
 Features:
