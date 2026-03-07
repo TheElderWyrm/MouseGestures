@@ -1,3 +1,39 @@
+## 2026-03-07
+
+### Fix: Bundle Execution, Keyboard Shortcut UI, DND Toggle, Night Shift Removal, Delay Hidden
+
+**BundleActionsPlugin.swift — Fixed Bundle/Repeat/Conditional Execution**
+- Root cause: plugin lookup compared full qualified IDs (e.g. `com.mousegestures.core.close_window`) against short action IDs (`close_window`), so the plugin was never found
+- All three execution methods (sequential, parallel, conditional, repeat) now route through `PluginManager.shared.executeAction(identifier:)` which handles lookup correctly via the action registry
+
+**ActionSelectionView.swift — Keyboard Shortcut Parameter UI**
+- `.keyboardShortcut` parameter type now renders a proper `KeyboardShortcutFieldView` capture field instead of placeholder text
+- Stores captured shortcut as dictionary (keyCode, modifiers, displayString) in action parameters
+- Added clear button to reset captured shortcut
+
+**SystemControlPlugin.swift — DND Toggle Rewrite**
+- Replaced fragile Control Center UI scripting with F6 key simulation via CGEvent
+- F6 is the system DND toggle shortcut on macOS Monterey+
+
+**SystemControlPlugin.swift — Night Shift Removed**
+- Removed `toggle_night_shift` action (unreliable private API approach)
+- Removed CoreBrightness framework integration code
+
+**PluginProtocol.swift — Hidden Actions Support**
+- Added `hidden: Bool` property to `PluginAction` (defaults to false)
+- Hidden actions are excluded from action selection UI but remain available programmatically
+
+**BundleActionsPlugin.swift — Delay Hidden**
+- `delay` action marked as hidden; no longer appears in action picker but still usable in bundles
+
+**AutomationPlugin.swift — Clipboard Text Visibility**
+- `text` parameter on `clipboard_action` now uses `visibleWhen` rule to only show when action is "set_text"
+
+**AutomationPlugin.swift — Open URL Web Search Fallback**
+- `open_url` now treats non-URL input (no dots, no protocol) as a Google search query
+
+---
+
 ## 2026-03-05
 
 ### Bug Fixes: Deadlock, Trigger Deselection, Thread Safety, Zone Labels, UI Polish

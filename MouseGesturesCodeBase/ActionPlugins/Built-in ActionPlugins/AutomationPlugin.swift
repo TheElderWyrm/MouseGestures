@@ -211,7 +211,8 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
                     key: "text",
                     name: "Text",
                     type: .string,
-                    description: "Text to set (for set_text action)"
+                    description: "Text to set on clipboard",
+                    visibleWhen: ParameterVisibilityRule(key: "action", value: "set_text")
                 )
             ],
             icon: "doc.on.clipboard"
@@ -590,6 +591,10 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
             // Check if it looks like a domain (contains a dot but isn't a file path)
             if normalizedURL.contains(".") && !normalizedURL.hasPrefix("/") {
                 normalizedURL = "https://\(normalizedURL)"
+            } else if !normalizedURL.isEmpty {
+                // Doesn't look like a URL — treat as a web search query
+                let encoded = normalizedURL.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? normalizedURL
+                normalizedURL = "https://www.google.com/search?q=\(encoded)"
             }
         }
         

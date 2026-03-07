@@ -200,7 +200,8 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
                     description: "Delay duration in seconds"
                 )
             ],
-            icon: "clock"
+            icon: "clock",
+            hidden: true
         )
     ]
     
@@ -406,17 +407,10 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
             context.logger.log("Executing action \(index + 1)/\(actions.count): \(bundledAction.actionIdentifier)", file: #file, function: #function, line: #line)
             
             do {
-                if let (_, action) = PluginManager.shared.getAction(identifier: bundledAction.actionIdentifier) {
-                    if let plugin = PluginManager.shared.getAllPlugins().first(where: { plugin in
-                        plugin.providedActions.contains(where: { $0.id == bundledAction.actionIdentifier })
-                    }) {
-                        try plugin.execute(
-                            action: action,
-                            with: ActionParameters(values: bundledAction.parameters),
-                            context: context
-                        )
-                    }
-                }
+                try PluginManager.shared.executeAction(
+                    identifier: bundledAction.actionIdentifier,
+                    parameters: ActionParameters(values: bundledAction.parameters)
+                )
             } catch {
                 context.logger.log("Failed to execute action \(bundledAction.actionIdentifier): \(error)", file: #file, function: #function, line: #line)
                 if stopOnFailure {
@@ -452,17 +446,10 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
                 context.logger.log("Executing action (parallel): \(bundledAction.actionIdentifier)", file: #file, function: #function, line: #line)
                 
                 do {
-                    if let (_, action) = PluginManager.shared.getAction(identifier: bundledAction.actionIdentifier) {
-                        if let plugin = PluginManager.shared.getAllPlugins().first(where: { plugin in
-                            plugin.providedActions.contains(where: { $0.id == bundledAction.actionIdentifier })
-                        }) {
-                            try plugin.execute(
-                                action: action,
-                                with: ActionParameters(values: bundledAction.parameters),
-                                context: context
-                            )
-                        }
-                    }
+                    try PluginManager.shared.executeAction(
+                        identifier: bundledAction.actionIdentifier,
+                        parameters: ActionParameters(values: bundledAction.parameters)
+                    )
                 } catch {
                     context.logger.log("Failed to execute action \(bundledAction.actionIdentifier): \(error)", file: #file, function: #function, line: #line)
                 }
@@ -509,17 +496,10 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
             return
         }
         
-        if let (_, action) = PluginManager.shared.getAction(identifier: finalActionId) {
-            if let plugin = PluginManager.shared.getAllPlugins().first(where: { plugin in
-                plugin.providedActions.contains(where: { $0.id == finalActionId })
-            }) {
-                try plugin.execute(
-                    action: action,
-                    with: ActionParameters(values: actionParams),
-                    context: context
-                )
-            }
-        }
+        try PluginManager.shared.executeAction(
+            identifier: finalActionId,
+            parameters: ActionParameters(values: actionParams)
+        )
     }
     
     private func executeRepeat(parameters: ActionParameters, context: PluginContext) throws {
@@ -534,10 +514,7 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
         
         context.logger.log("Repeating action \(actionId) \(count) times with \(delay)s delay", file: #file, function: #function, line: #line)
         
-        guard let (_, action) = PluginManager.shared.getAction(identifier: actionId),
-              let plugin = PluginManager.shared.getAllPlugins().first(where: { plugin in
-                  plugin.providedActions.contains(where: { $0.id == actionId })
-              }) else {
+        guard PluginManager.shared.getAction(identifier: actionId) != nil else {
             context.logger.log("Action not found: \(actionId)", file: #file, function: #function, line: #line)
             return
         }
@@ -550,10 +527,9 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
             
             context.logger.log("Repeat \(i)/\(count)", file: #file, function: #function, line: #line)
             
-            try plugin.execute(
-                action: action,
-                with: ActionParameters(values: actionParams),
-                context: context
+            try PluginManager.shared.executeAction(
+                identifier: actionId,
+                parameters: ActionParameters(values: actionParams)
             )
             
             if i < count && delay > 0 {

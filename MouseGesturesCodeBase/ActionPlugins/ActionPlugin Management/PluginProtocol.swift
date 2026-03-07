@@ -121,6 +121,8 @@ public struct PluginAction: Codable, Equatable {
     public let supportsLongPress: Bool
     public let supportsRepeat: Bool
     public let icon: String? // SF Symbol name
+    /// When true, this action is hidden from the action selection UI but still available for programmatic use (e.g. bundles)
+    public let hidden: Bool
     
     public init(
         id: String,
@@ -130,7 +132,8 @@ public struct PluginAction: Codable, Equatable {
         supportedParameters: [ParameterDefinition] = [],
         supportsLongPress: Bool = false,
         supportsRepeat: Bool = false,
-        icon: String? = nil
+        icon: String? = nil,
+        hidden: Bool = false
     ) {
         self.id = id
         self.name = name
@@ -140,6 +143,7 @@ public struct PluginAction: Codable, Equatable {
         self.supportsLongPress = supportsLongPress
         self.supportsRepeat = supportsRepeat
         self.icon = icon
+        self.hidden = hidden
     }
 }
 

@@ -504,11 +504,52 @@ struct ActionSelectionView: View {
                     .cornerRadius(MGStyle.Corner.sm)
             }
         case .keyboardShortcut:
-            VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
-                Text(p.name)
-                    .font(.system(size: 12, weight: .medium))
-                Text("Configure via Activation settings")
-                    .font(.caption).foregroundColor(.secondary)
+            paramRow(p) {
+                HStack(spacing: MGStyle.Spacing.md) {
+                    KeyboardShortcutFieldView(shortcut: Binding(
+                        get: {
+                            // Read from actionParameters dictionary
+                            guard let dict = actionParameters[p.key]?.value as? [String: Any],
+                                  let keyCode = dict["keyCode"] as? UInt16,
+                                  let modifiers = dict["modifiers"] as? UInt,
+                                  let displayString = dict["displayString"] as? String else {
+                                return nil
+                            }
+                            var mods = NSEvent.ModifierFlags()
+                            let flags = CGEventFlags(rawValue: UInt64(modifiers))
+                            if flags.contains(.maskCommand) { mods.insert(.command) }
+                            if flags.contains(.maskControl) { mods.insert(.control) }
+                            if flags.contains(.maskAlternate) { mods.insert(.option) }
+                            if flags.contains(.maskShift) { mods.insert(.shift) }
+                            return KeyboardTrigger(keyCode: keyCode, modifiers: mods, displayString: displayString)
+                        },
+                        set: { trigger in
+                            if let t = trigger {
+                                var cgFlags: CGEventFlags = []
+                                if t.modifiers.contains(.command) { cgFlags.insert(.maskCommand) }
+                                if t.modifiers.contains(.control) { cgFlags.insert(.maskControl) }
+                                if t.modifiers.contains(.option) { cgFlags.insert(.maskAlternate) }
+                                if t.modifiers.contains(.shift) { cgFlags.insert(.maskShift) }
+                                let dict: [String: Any] = [
+                                    "keyCode": t.keyCode,
+                                    "modifiers": UInt(cgFlags.rawValue),
+                                    "displayString": t.displayString
+                                ]
+                                actionParameters[p.key] = AnyCodable(dict)
+                            } else {
+                                actionParameters.removeValue(forKey: p.key)
+                            }
+                        }
+                    ))
+                    .frame(width: 200, height: 24)
+                    
+                    Button(action: { actionParameters.removeValue(forKey: p.key) }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Clear shortcut")
+                }
             }
         case .json:
             EmptyView()
@@ -560,19 +601,21 @@ struct ActionSelectionView: View {
     // MARK: - Data Sources
     
     private var allActionEntries: [ActionEntry] {
-        PluginManager.shared.getAllActions().map { item in
-            let fullId = item.pluginId + "." + item.action.id
-            let cat = PluginManager.shared.getPlugin(identifier: item.pluginId)?.category ?? .custom
-            return ActionEntry(
-                id: fullId,
-                name: item.action.name,
-                description: item.action.description,
-                icon: item.action.icon,
-                category: cat,
-                categoryLabel: cat.rawValue,
-                isSaved: false
-            )
-        }
+        PluginManager.shared.getAllActions()
+            .filter { !$0.action.hidden }
+            .map { item in
+                let fullId = item.pluginId + "." + item.action.id
+                let cat = PluginManager.shared.getPlugin(identifier: item.pluginId)?.category ?? .custom
+                return ActionEntry(
+                    id: fullId,
+                    name: item.action.name,
+                    description: item.action.description,
+                    icon: item.action.icon,
+                    category: cat,
+                    categoryLabel: cat.rawValue,
+                    isSaved: false
+                )
+            }
     }
     
     private var savedActionEntries: [ActionEntry] {
