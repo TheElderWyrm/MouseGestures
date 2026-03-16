@@ -12,7 +12,7 @@ Window Targeting:
   - Targeting multiple windows does not work
 
 UI:
-  - Keyboard shortcut detection not working for gestures
+  - Keyboard shortcut detection not working for gestures [FIXED 2026-03-15]
   - Profiles: pressing delete should not select the profile checkbox
   - Picker: selection "" is invalid / no associated tag — gives undefined results
   - Configurations not aligned between trigger types

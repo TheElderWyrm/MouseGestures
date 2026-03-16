@@ -354,24 +354,8 @@ class SandboxedPluginContext: PluginContext {
             log.log("⚠️ Plugin '\(pluginId)' attempted to get target window without permission")
             return nil
         }
-        
-        // Parse params to create WindowTarget
-        var target = WindowTargeting.WindowTarget()
-        
-        if let targetType = params["targetType"] as? String {
-            target.targetType = WindowTargeting.TargetType(rawValue: targetType) ?? .frontmost
-        }
-        if let bundleId = params["bundleId"] as? String {
-            target.applicationBundleId = bundleId
-        }
-        if let title = params["windowTitle"] as? String {
-            target.windowTitle = title
-        }
-        if let age = params["windowAge"] as? Int {
-            target.windowAge = age
-        }
-        
-        return WindowTargeting.getTargetWindow(target)
+
+        return WindowTargeting.getTargetWindow(parseWindowTarget(from: params))
     }
     
     func getTargetWindows(_ params: [String: Any]) -> [(AXUIElement, pid_t)] {
@@ -379,7 +363,12 @@ class SandboxedPluginContext: PluginContext {
             log.log("⚠️ Plugin '\(pluginId)' attempted to get target windows without permission")
             return []
         }
-        
+
+        return WindowTargeting.getTargetWindows(parseWindowTarget(from: params))
+    }
+
+    /// Shared helper to reconstruct a WindowTarget from a parameter dictionary.
+    private func parseWindowTarget(from params: [String: Any]) -> WindowTargeting.WindowTarget {
         var target = WindowTargeting.WindowTarget()
         if let targetType = params["targetType"] as? String {
             target.targetType = WindowTargeting.TargetType(rawValue: targetType) ?? .frontmost
@@ -396,8 +385,7 @@ class SandboxedPluginContext: PluginContext {
         if let age = params["windowAge"] as? Int {
             target.windowAge = age
         }
-        
-        return WindowTargeting.getTargetWindows(target)
+        return target
     }
     
     func getAllVisibleWindows() -> [(window: AXUIElement, pid: pid_t)] {

@@ -561,8 +561,20 @@ struct GestureConfigurationSheet: View {
     }
     
     private func saveGesture() {
+        // Build a gesture that syncs component trigger data (keyboard shortcut,
+        // mouse button) into genericActivation so detection plugins can find it.
+        var activation = GenericActivation(isEnabled: isEnabled)
+        if components.keyboardShortcut?.isEnabled == true {
+            activation.setKeyboardTrigger(components.keyboardShortcut?.keyboardTrigger)
+        }
+        if components.mouseButton?.isEnabled == true,
+           let button = components.mouseButton?.button, button != .none {
+            activation.setMouseButtonTrigger(MouseButtonTrigger(button: button, modifiers: []))
+        }
+
         let gesture = Gesture(
             components: components,
+            genericActivation: activation,
             actionIdentifier: selectedActionId,
             timing: timing,
             parameters: actionParameters

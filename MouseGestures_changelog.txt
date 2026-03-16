@@ -1,5 +1,17 @@
 ## 2026-03-15
 
+### Fix: Keyboard Shortcut Detection, Window Targeting
+
+**GestureConfigurationSheet.swift — Keyboard Shortcut Trigger Data Now Synced**
+- Root cause: `saveGesture()` created a `Gesture` with default empty `GenericActivation`, never transferring keyboard/mouse trigger data from the component system
+- Detection plugins read triggers from `genericActivation`, not components, so they always found nil
+- Fix: `saveGesture()` now builds a `GenericActivation` that syncs keyboard trigger and mouse button data from components before creating the gesture
+- The orphaned `updatingComponents()` helper performed this sync but was never called
+
+**PluginSandbox.swift — Window Targeting Parameter Reconstruction**
+- `getTargetWindow()` was missing `windowTitleContains` parameter when reconstructing `WindowTarget` from the params dictionary, causing "title contains" targeting to silently fall back to frontmost
+- Extracted shared `parseWindowTarget(from:)` helper used by both `getTargetWindow()` and `getTargetWindows()` to eliminate the inconsistency
+
 ### Fix: Actions Freeze App When Running
 
 **ActionExecutionManager.swift — Async Action Execution**
