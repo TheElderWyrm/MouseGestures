@@ -1,5 +1,14 @@
 ## 2026-03-15
 
+### Fix: Trigger Configuration UI Alignment
+
+**GestureConfigurationSheet.swift — Consistent Component Config Layout**
+- All 5 trigger configuration views now share the same label+content layout pattern
+- Modifier keys config: added 80px label column ("Keys:") to match other components
+- Standardized all picker/field widths to 180px (was 160px for pickers, 200px for keyboard)
+- Added `.labelsHidden()` to drag type and mouse button pickers (was missing)
+- Reduced modifier toggle spacing from `lg` to `sm` to fit label+content pattern
+
 ### Improvement: Haptic Feedback Timing, Autoupdate Removal, Action Cleanup
 
 **ActionExecutionManager.swift — Haptic Feedback on Activation**

@@ -279,8 +279,12 @@ struct GestureConfigurationSheet: View {
     // MARK: - Component Configuration Views
     
     private var modifierKeyConfigView: some View {
-        VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
-            HStack(spacing: MGStyle.Spacing.lg) {
+        HStack {
+            Text("Keys:")
+                .font(.system(size: MGStyle.FontSize.caption))
+                .foregroundColor(.secondary)
+                .frame(width: 80, alignment: .trailing)
+            HStack(spacing: MGStyle.Spacing.sm) {
                 ModifierToggle(label: "⌘", name: "Command", flag: .command, modifiers: Binding(
                     get: { components.modifierKey?.modifiers ?? [] },
                     set: { components.modifierKey?.modifiers = $0 }
@@ -298,14 +302,14 @@ struct GestureConfigurationSheet: View {
                     set: { components.modifierKey?.modifiers = $0 }
                 ))
             }
-            
+            Spacer()
         }
         .padding(.leading, MGStyle.Spacing.xxl)
         .padding(MGStyle.Spacing.md)
         .background(MGStyle.Colors.subtleOverlay)
         .cornerRadius(MGStyle.Corner.md)
     }
-    
+
     private var screenZoneConfigView: some View {
         HStack {
             Text("Zone:")
@@ -321,7 +325,7 @@ struct GestureConfigurationSheet: View {
                 }
             }
             .pickerStyle(.menu)
-            .frame(width: 160)
+            .frame(width: 180)
             .labelsHidden()
             Spacer()
         }
@@ -330,7 +334,7 @@ struct GestureConfigurationSheet: View {
         .background(MGStyle.Colors.subtleOverlay)
         .cornerRadius(MGStyle.Corner.md)
     }
-    
+
     private var dragTypeConfigView: some View {
         HStack {
             Text("Drag Type:")
@@ -346,7 +350,8 @@ struct GestureConfigurationSheet: View {
                 }
             }
             .pickerStyle(.menu)
-            .frame(width: 160)
+            .frame(width: 180)
+            .labelsHidden()
             Spacer()
         }
         .padding(.leading, MGStyle.Spacing.xxl)
@@ -354,7 +359,7 @@ struct GestureConfigurationSheet: View {
         .background(MGStyle.Colors.subtleOverlay)
         .cornerRadius(MGStyle.Corner.md)
     }
-    
+
     private var mouseButtonConfigView: some View {
         HStack {
             Text("Button:")
@@ -370,7 +375,8 @@ struct GestureConfigurationSheet: View {
                 }
             }
             .pickerStyle(.menu)
-            .frame(width: 160)
+            .frame(width: 180)
+            .labelsHidden()
             Spacer()
         }
         .padding(.leading, MGStyle.Spacing.xxl)
@@ -378,7 +384,7 @@ struct GestureConfigurationSheet: View {
         .background(MGStyle.Colors.subtleOverlay)
         .cornerRadius(MGStyle.Corner.md)
     }
-    
+
     private var keyboardShortcutConfigView: some View {
         HStack {
             Text("Shortcut:")
@@ -389,8 +395,8 @@ struct GestureConfigurationSheet: View {
                 get: { components.keyboardShortcut?.keyboardTrigger },
                 set: { components.keyboardShortcut?.keyboardTrigger = $0 }
             ))
-            .frame(width: 200, height: 24)
-            
+            .frame(width: 180, height: 24)
+
             if components.keyboardShortcut?.isEnabled == true && components.keyboardShortcut?.keyboardTrigger == nil {
                 Image(systemName: "exclamationmark.circle.fill")
                     .foregroundColor(.orange)

@@ -9,7 +9,7 @@ BUGS
 - Actions are repeating when held even if not selected (Works only with zone activation) [FIXED 2026-03-15]
 
 UI:
-  - Activation parameters not aligned between trigger types
+  - Activation parameters not aligned between trigger types [FIXED 2026-03-15]
 
 --------------------------------------
 IMPROVEMENTS
