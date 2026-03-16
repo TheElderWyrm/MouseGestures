@@ -128,12 +128,16 @@ class SandboxedPluginContext: PluginContext {
         let observer = NotificationCenter.default.addObserver(
             forName: name,
             object: nil,
-            queue: .main
+            queue: nil
         ) { [weak self] notification in
-            // Ensure plugin is still valid before calling handler
-            self?.accessQueue.sync {
+            // Read isExecuting concurrently (no barrier needed for reads on concurrent queue).
+            // Dispatching async avoids blocking the posting thread if a barrier write is in flight.
+            self?.accessQueue.async {
                 guard self?.isExecuting ?? false else { return }
-                handler(notification)
+                // Route handler to main thread for safe AppKit access
+                DispatchQueue.main.async {
+                    handler(notification)
+                }
             }
         }
         

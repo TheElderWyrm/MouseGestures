@@ -5,7 +5,7 @@ Action items also in: MouseGestures_actions.txt
 --------------------------------------
 BUGS
 --------------------------------------
-- Actions freeze app when running
+- Actions freeze app when running [FIXED 2026-03-15]
 
 Window Targeting:
   - Does not work for some actions (works for minimize, not for adjust_size)
@@ -28,6 +28,7 @@ Architecture:
   - Drag does not need to be a separate trigger configuration than mouse button
   - Reduce size of modifier keys trigger configuration
   - Make Action View categories dynamic
+  - Haptic feedback on activation not finish
 
 UI:
   - Use full 'gestures' UI in profiles
@@ -45,6 +46,7 @@ Features:
   - run_script: add interpreter selection option
   - cascade: add option to resize windows or not
   - Improve templates/default configuration
+  - 'Tab Navigation' template
 
 Cleanup:
   - Remove dummy autoupdate

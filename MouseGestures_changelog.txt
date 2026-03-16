@@ -1,3 +1,19 @@
+## 2026-03-15
+
+### Fix: Actions Freeze App When Running
+
+**ActionExecutionManager.swift — Async Action Execution**
+- Root cause: `executeActionWithoutDebounce()` ran plugin actions synchronously on the calling thread (main thread or detection thread), so any blocking operation (AppleScript, Process.waitUntilExit, accessibility calls) froze the entire app
+- Fix: wrapped plugin execution in `DispatchQueue.global(qos: .userInitiated).async` so blocking operations never stall the main thread
+- All downstream code (PluginManager → PluginSandbox → plugin.execute) now runs on a background thread
+
+**PluginSandbox.swift — Notification Observer Deadlock Fix**
+- Notification handler used `accessQueue.sync` on the main queue, risking deadlock when a barrier write was in-flight
+- Changed to `accessQueue.async` with handler dispatched to main thread, eliminating the deadlock window
+- Removed forced `.main` queue for observer delivery (was unnecessary and compounded the issue)
+
+---
+
 ## 2026-03-07
 
 ### Fix: Bundle Execution, Keyboard Shortcut UI, DND Toggle, Night Shift Removal, Delay Hidden

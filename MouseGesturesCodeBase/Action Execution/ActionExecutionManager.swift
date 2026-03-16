@@ -301,31 +301,35 @@ class ActionExecutionManager {
                                              context: ActionExecutionContext) {
         let executionId = UUID()
         let startTime = Date()
-        
+
         // Track active execution
         executionQueue.async(flags: .barrier) {
             self.activeExecutions.insert(executionId)
         }
-        
+
         // Notify delegates - will execute
         notifyDelegatesWillExecute(actionId: actionId, context: context)
-        
+
         // Log execution start
         log.log("Executing action: \(actionId) from source: \(context.source)")
-        
-        // Execute through the plugin system
-        do {
-            try pluginManager.executeAction(identifier: actionId, parameters: parameters)
-            
-            let result = ActionExecutionResult(
-                success: true,
-                actionId: actionId,
-                executionTime: Date().timeIntervalSince(startTime)
-            )
-            
-            handleExecutionSuccess(actionId: actionId, result: result, context: context, executionId: executionId)
-        } catch {
-            handleExecutionFailure(actionId: actionId, error: error, context: context, executionId: executionId, startTime: startTime)
+
+        // Dispatch plugin execution to a background queue so blocking operations
+        // (AppleScript, Process.waitUntilExit, accessibility calls, etc.) never
+        // freeze the main thread or the detection thread that triggered the gesture.
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                try self.pluginManager.executeAction(identifier: actionId, parameters: parameters)
+
+                let result = ActionExecutionResult(
+                    success: true,
+                    actionId: actionId,
+                    executionTime: Date().timeIntervalSince(startTime)
+                )
+
+                self.handleExecutionSuccess(actionId: actionId, result: result, context: context, executionId: executionId)
+            } catch {
+                self.handleExecutionFailure(actionId: actionId, error: error, context: context, executionId: executionId, startTime: startTime)
+            }
         }
     }
     
