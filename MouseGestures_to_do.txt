@@ -5,21 +5,11 @@ Action items also in: MouseGestures_actions.txt
 --------------------------------------
 BUGS
 --------------------------------------
-- Actions freeze app when running [FIXED 2026-03-15]
 - Gesture Cooldown (Remove) [FIXED 2026-03-15]
 - Actions are repeating when held even if not selected (Works only with zone activation) [FIXED 2026-03-15]
-- Mouse button activation not working [FIXED 2026-03-15]
-
-Window Targeting:
-  - Does not work for some actions (works for minimize, not for adjust_size)
-  - Targeting multiple windows does not work
 
 UI:
-  - Keyboard shortcut detection not working for gestures [FIXED 2026-03-15]
-  - Profiles: pressing delete should not select the profile checkbox [FIXED 2026-03-15]
-  - Picker: selection "" is invalid / no associated tag — gives undefined results [FIXED 2026-03-15]
-  - Configurations not aligned between trigger types
-  - Action search a bit weird (Maybe showing off the top of the action list, reset scroll?) [FIXED 2026-03-15] 
+  - Activation parameters not aligned between trigger types
 
 --------------------------------------
 IMPROVEMENTS

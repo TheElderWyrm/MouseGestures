@@ -232,11 +232,6 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
     // MARK: - Action Execution
     
     func execute(action: PluginAction, with parameters: ActionParameters, context: PluginContext) throws {
-        guard ActionDebounce.shared.shouldExecute(action: "\(identifier).\(action.id)") else {
-            context.logger.log("Action debounced: \(action.name)", file: #file, function: #function, line: #line)
-            return
-        }
-        
         switch action.id {
         case "keyboard_shortcut":
             if let shortcutData = parameters.dictionary(for: "shortcut"),

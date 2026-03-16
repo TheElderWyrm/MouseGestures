@@ -12,6 +12,12 @@
 - Cooldown prevented legitimate re-triggers when switching between zones quickly
 - The ActionDebounce layer in ActionExecutionManager still prevents true double-fires
 
+**ActionExecutionManager / AutomationPlugin / CoreActionsPlugin — ActionDebounce Removed**
+- Removed the `ActionDebounce` class (hard-coded 0.5s cooldown per action+source key)
+- Removed debounce guards from `AutomationPlugin.execute()` and `CoreActionsPlugin.execute()`
+- Removed `enableDebouncing` flag, `setDebouncing()` method, and `debouncer` property
+- Unified `executeAction` and `executeActionWithoutDebounce` into a single code path
+
 **ScreenZoneDetectorPlugin.swift — Zone Re-trigger and Repeat Hold Fixes**
 - Root cause of spurious re-triggers: `processZoneEntry()` compared raw modifier flags which include transient system flags (capsLock, numericPad, function) that flicker during mouse movement
 - Fix: normalize modifiers (keep only ⌘⌃⌥⇧) before comparing with last-triggered state, matching the normalization already used by GestureLookup

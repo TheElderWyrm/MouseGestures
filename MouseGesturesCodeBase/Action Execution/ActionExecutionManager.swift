@@ -92,7 +92,6 @@ class ActionExecutionManager {
     // MARK: - Properties
     
     private let pluginManager = PluginManager.shared
-    private let debouncer = ActionDebounce.shared
     
     // Execution tracking
     private var activeExecutions: Set<UUID> = []
@@ -105,7 +104,6 @@ class ActionExecutionManager {
     
     // Configuration
     private var maxHistorySize = 100
-    private var enableDebouncing = true
     private var enableHapticFeedback = true
     
     // Statistics
@@ -215,10 +213,9 @@ class ActionExecutionManager {
             modifiers: gesture.modifiers
         )
         
-        // Skip debouncing for repeated actions
-        executeActionWithoutDebounce(gesture.actionIdentifier, 
-                                    parameters: ActionParameters(values: gesture.parameters),
-                                    context: context)
+        executeAction(gesture.actionIdentifier,
+                     parameters: ActionParameters(values: gesture.parameters),
+                     context: context)
     }
     
     /// Execute bundled actions
@@ -281,24 +278,9 @@ class ActionExecutionManager {
     
     // MARK: - Core Execution Logic
     
-    private func executeAction(_ actionId: String, 
+    private func executeAction(_ actionId: String,
                               parameters: ActionParameters,
                               context: ActionExecutionContext) {
-        // Check debouncing
-        if enableDebouncing {
-            let actionKey = "\(actionId)_\(context.source)"
-            guard debouncer.shouldExecute(action: actionKey) else {
-                log.log("Action debounced: \(actionId)")
-                return
-            }
-        }
-        
-        executeActionWithoutDebounce(actionId, parameters: parameters, context: context)
-    }
-    
-    private func executeActionWithoutDebounce(_ actionId: String,
-                                             parameters: ActionParameters,
-                                             context: ActionExecutionContext) {
         let executionId = UUID()
         let startTime = Date()
 
@@ -489,10 +471,6 @@ class ActionExecutionManager {
     
     // MARK: - Configuration
     
-    func setDebouncing(enabled: Bool) {
-        enableDebouncing = enabled
-    }
-    
     func setHapticFeedback(enabled: Bool) {
         enableHapticFeedback = enabled
     }
@@ -562,30 +540,3 @@ struct ActionExecutionStatistics {
 }
 }
 
-// MARK: - Action Debounce
-
-class ActionDebounce {
-    static let shared = ActionDebounce()
-    private var lastExecutionTimes: [String: Date] = [:]
-    private let cooldownInterval: TimeInterval = 0.5
-    private let queue = DispatchQueue(label: "com.mousegestures.debounce")
-    
-    private init() {}
-    
-    func shouldExecute(action: String) -> Bool {
-        return queue.sync {
-            if let lastTime = lastExecutionTimes[action],
-               Date().timeIntervalSince(lastTime) < cooldownInterval {
-                return false
-            }
-            lastExecutionTimes[action] = Date()
-            return true
-        }
-    }
-    
-    func reset() {
-        queue.sync {
-            lastExecutionTimes.removeAll()
-        }
-    }
-}
