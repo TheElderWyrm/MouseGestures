@@ -33,7 +33,6 @@ General Core Issues:
 	* Move window actions (close/minimize/maximize/fullscreen) into Window Management plugin
 	* Window Targeting for these actions missing options from window targeting
 	* Modifier key interference on System Events actions (app_expose, cycle_space)
-	* Core category now displays separately from System Control in action selection
 
 ------------------------------------------
 WINDOW MANAGEMENT (com.mousegestures.window)
@@ -65,11 +64,6 @@ set_position         - Set custom window position (absolute/relative/%/preset)] 
 	* Preset positions not working
 	* Relative position not working
 
-
-General Window Issues:
-	* Window targeting not working for some actions (works for minimize, not for adjust_size)
-	* Window age parameter should be an integer (currently number)
-
 ------------------------------------------
 MEDIA CONTROL (com.mousegestures.media)
 ------------------------------------------
@@ -84,10 +78,11 @@ SYSTEM CONTROL (com.mousegestures.system)
 ------------------------------------------
    - Adjust display brightness (direction parameter) [✓]
 	* Add 'set brightness' option
+	* Add increase/decrease amount 
 keyboard_brightness  - Adjust keyboard brightness (direction parameter) [✓]
 	* Add 'set brightness' option
 toggle_dark_mode     - Switch between light and dark mode [✓✓]
-toggle_do_not_disturb - Enable/disable Do Not Disturb [?]
+toggle_do_not_disturb - Enable/disable Do Not Disturb [!]
 	* Uses F6 key simulation via CGEvent
 screenshot           - Take a screenshot (type: interactive/full/selection/window + destination: clipboard/desktop/custom folder)[✓✓]
 restart              - Restart the computer (confirm parameter) [✓✓]
@@ -97,24 +92,23 @@ logout               - Log out current user (confirm parameter) [✓✓]
 ------------------------------------------
 AUTOMATION (com.mousegestures.automation)
 ------------------------------------------
-keyboard_shortcut    - Trigger a keyboard shortcut [?]
-	* Shortcut capture field added as parameter UI
+keyboard_shortcut    - Trigger a keyboard shortcut [✓]
+	* Text on shortcut field too long, move note about not working on system shortcuts elsewhere or remove
 run_shortcut         - Run a Shortcuts app shortcut [✓✓]
-run_script           - Execute a script (applescript/shell/javascript/python)
-	* Python and JavaScript may not work; add interpreter selection option
+run_script           - Execute a script (applescript/shell/javascript/python) [✓]
+	* Python and JavaScript may not work
+	* Add interpreter selection option
 open_app             - Launch an application [✓✓]
 open_file            - Open a file or folder [✓]
-	* Use 'Default' instead of select
-open_url             - Open a URL in default browser [?]
-	* Falls back to Google search when input is not a URL
-clipboard_action     - Manipulate clipboard contents [?]
-	* Text input now only visible when 'Set Custom Text' is selected
+	* Use 'Default App' instead of 'select'
+open_url             - Open a URL in default browser [✓]
+	* Have a 'default browser' option instead of 'select'
+clipboard_action     - Manipulate clipboard contents [✓✓]
 
 ------------------------------------------
 BUNDLE ACTIONS (com.mousegestures.bundle)
 ------------------------------------------
-execute_bundle       - Execute a bundle of actions sequentially or in parallel [?]
-	* Fixed: actions now execute through PluginManager.executeAction (was failing due to ID mismatch)
+execute_bundle       - Execute a bundle of actions sequentially or in parallel [✓]
 	* Improve conditional gesture bundle logic
 conditional_action   - Execute an action based on if/else condition
 	* Condition not selectable

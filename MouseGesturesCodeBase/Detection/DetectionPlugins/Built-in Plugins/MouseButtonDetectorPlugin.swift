@@ -69,7 +69,7 @@ class MouseButtonDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
                 description: "Only detect click-triggered gestures when modifier keys are held",
                 category: .detection,
                 type: .toggle(label: "Enabled"),
-                defaultValue: true,
+                defaultValue: false,
                 isAdvanced: false
             ),
             PluginSettingDefinition(
@@ -91,7 +91,7 @@ class MouseButtonDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     // MARK: - Computed Settings
     
     private var requireModifiers: Bool {
-        settings.getBool(SettingKeys.requireModifiers, default: true)
+        settings.getBool(SettingKeys.requireModifiers, default: false)
     }
     
     private var allowedButtons: String {

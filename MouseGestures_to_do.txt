@@ -6,6 +6,9 @@ Action items also in: MouseGestures_actions.txt
 BUGS
 --------------------------------------
 - Actions freeze app when running [FIXED 2026-03-15]
+- Gesture Cooldown (Remove) [FIXED 2026-03-15]
+- Actions are repeating when held even if not selected (Works only with zone activation) [FIXED 2026-03-15]
+- Mouse button activation not working [FIXED 2026-03-15]
 
 Window Targeting:
   - Does not work for some actions (works for minimize, not for adjust_size)
@@ -22,13 +25,15 @@ UI:
 IMPROVEMENTS
 --------------------------------------
 Architecture:
-  - Reduce duplicate code, unify architecture whenever possible
+  - General: Reduce duplicate code, unify architecture whenever possible
+
+
   - Move window actions (close/minimize/maximize/fullscreen) from Core to Window Management plugin
-  - Improve activation system
+  - Improve activation system UI
   - Drag does not need to be a separate trigger configuration than mouse button
   - Reduce size of modifier keys trigger configuration
   - Make Action View categories dynamic
-  - Haptic feedback on activation not finish
+  - Haptic feedback is happening on finish instead of activation
 
 UI:
   - Use full 'gestures' UI in profiles
@@ -36,6 +41,7 @@ UI:
   - Open application action should bring up Finder to select any application
   - Show add-to-bundle button even when a bundle action is selected (choose to add or update)
   - Setting to display notification on action activation
+  - Option to 'replace gesture' when adding gesture with identical configuration
 
 
 Features:

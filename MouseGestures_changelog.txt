@@ -1,5 +1,22 @@
 ## 2026-03-15
 
+### Fix: Mouse Button Activation, Cooldown Removal, Zone Re-trigger Prevention
+
+**MouseButtonDetectorPlugin.swift — Mouse Button Triggers Now Work By Default**
+- `requireModifiers` setting defaulted to `true`, which silently blocked all mouse button triggers that didn't require modifier keys
+- Changed default to `false` so mouse button gestures work out of the box
+- Users can still enable the safety setting if they want to require modifiers
+
+**ScreenZoneDetectorPlugin.swift — Cooldown Removed**
+- Removed the zone gesture cooldown system entirely (settings, state, and enforcement)
+- Cooldown prevented legitimate re-triggers when switching between zones quickly
+- The ActionDebounce layer in ActionExecutionManager still prevents true double-fires
+
+**ScreenZoneDetectorPlugin.swift — Zone Re-trigger and Repeat Hold Fixes**
+- Root cause of spurious re-triggers: `processZoneEntry()` compared raw modifier flags which include transient system flags (capsLock, numericPad, function) that flicker during mouse movement
+- Fix: normalize modifiers (keep only ⌘⌃⌥⇧) before comparing with last-triggered state, matching the normalization already used by GestureLookup
+- `shouldContinueRepeating()` now verifies the mouse is still in the gesture's zone and the gesture is still enabled, stopping repeat timers that should no longer fire
+
 ### Fix: Three UI Bugs (Profile Delete, Picker Tags, Action Search Scroll)
 
 **ProfilesView.swift — Delete Button No Longer Selects Checkbox**

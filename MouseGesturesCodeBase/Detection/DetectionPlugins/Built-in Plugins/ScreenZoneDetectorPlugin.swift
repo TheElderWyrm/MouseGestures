@@ -26,8 +26,6 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         static let showZoneLabels = "showZoneLabels"
         static let zoneHighlightColor = "zoneHighlightColor"
         static let mouseTrackingThrottle = "mouseTrackingThrottle"
-        static let enableCooldown = "enableCooldown"
-        static let cooldownPeriod = "cooldownPeriod"
     }
     
     // MARK: - Properties
@@ -122,25 +120,6 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
                 isAdvanced: true,
                 validation: .init(rule: .range(min: 8, max: 50), errorMessage: "Update rate must be between 8 and 50 ms")
             ),
-            PluginSettingDefinition(
-                key: SettingKeys.enableCooldown,
-                displayName: "Enable Cooldown",
-                description: "Prevent rapid re-triggering of zone gestures",
-                category: .detection,
-                type: .toggle(label: "Enabled"),
-                defaultValue: true,
-                isAdvanced: false
-            ),
-            PluginSettingDefinition(
-                key: SettingKeys.cooldownPeriod,
-                displayName: "Cooldown Duration",
-                description: "Time to wait before allowing new zone gestures (in seconds)",
-                category: .detection,
-                type: .slider(min: 0.1, max: 2.0, step: 0.1, unit: "sec"),
-                defaultValue: 0.5,
-                isAdvanced: true,
-                dependsOn: .init(key: SettingKeys.enableCooldown, condition: .isTrue)
-            )
         ]
     }
     
@@ -156,14 +135,6 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     
     var cornerBuffer: CGFloat {
         settings.getCGFloat(SettingKeys.cornerBuffer, default: 50)
-    }
-    
-    private var cooldownEnabled: Bool {
-        settings.getBool(SettingKeys.enableCooldown, default: true)
-    }
-    
-    private var cooldownPeriod: TimeInterval {
-        settings.getDouble(SettingKeys.cooldownPeriod, default: 0.5)
     }
     
     // Event monitors
@@ -183,9 +154,6 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     // Cached system state to avoid repeated queries
     private var cachedDragModifier: DragModifier = .none
     private var cachedModifiers: NSEvent.ModifierFlags = []
-    
-    // Cooldown tracking
-    private var lastActionTime: Date?
     
     // Performance optimizations
     private var lastProcessedMouseTime = Date()
@@ -298,7 +266,6 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         lastTriggeredZone = nil
         lastTriggeredDrag = .none
         lastTriggeredModifiers = []
-        lastActionTime = nil
         zoneBoundsCache.removeAll()
         super.stop()
     }
@@ -454,9 +421,11 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     
     private func processZoneEntry(_ zone: ScreenZone) {
         // Use cached state from handleMousePosition (single query per mouse event)
-        let currentModifiers = cachedModifiers
+        // Normalize modifiers to only track user-meaningful keys (⌘⌃⌥⇧),
+        // preventing spurious re-triggers from transient system flags
+        let currentModifiers = cachedModifiers.normalized
         let currentDrag = cachedDragModifier
-        
+
         let isNewTrigger = lastTriggeredZone != zone ||
                            lastTriggeredDrag != currentDrag ||
                            lastTriggeredModifiers != currentModifiers
@@ -485,10 +454,8 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     }
     
     private func detectGesture(zone: ScreenZone, dragModifier: DragModifier) {
-        // Use cached modifiers (already queried in handleMousePosition)
-        let modifiers = cachedModifiers
-        
-        if isInCooldownPeriod { return }
+        // Use cached modifiers, normalized to match GestureLookup key format
+        let modifiers = cachedModifiers.normalized
         
         guard let lookup = gestureLookup else { return }
         let matching = lookup.findMatchingGestures(zone: zone, dragModifier: dragModifier, modifiers: modifiers)
@@ -500,24 +467,11 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
                 source: .screenZone(zone: zone, dragState: dragModifier),
                 modifiers: modifiers, timestamp: Date()
             ))
-            markActionExecuted()
             
             if gesture.repeatOnHold && gesture.repeatInterval > 0 {
                 startRepeatTimer(for: gesture)
             }
         }
-    }
-    
-    // MARK: - Cooldown Management
-    
-    private func markActionExecuted() {
-        lastActionTime = Date()
-    }
-    
-    private var isInCooldownPeriod: Bool {
-        guard cooldownEnabled else { return false }
-        guard let lastTime = lastActionTime else { return false }
-        return Date().timeIntervalSince(lastTime) < cooldownPeriod
     }
     
     // MARK: - Repeat Timer
@@ -566,16 +520,24 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     /// Queries system state once per check (timer-based, not per-event).
     private func shouldContinueRepeating() -> Bool {
         guard let gesture = currentRepeatingGesture else { return false }
-        
+
+        // Check gesture is still enabled
+        guard gesture.isEnabled else { return false }
+
+        // Check mouse is still in the correct zone
+        let mouseLocation = NSEvent.mouseLocation
+        let currentZone = detectZoneFromCache(point: mouseLocation)
+        guard currentZone == gesture.zone else { return false }
+
         // Query system state (this is timer-based, not per-mouse-event, so overhead is acceptable)
         let mods = NSEvent.ModifierFlags.currentSystem
         let drag = DragModifier.currentSystem
-        
+
         // Check drag requirement
         if gesture.dragModifier != .none {
             guard drag == gesture.dragModifier else { return false }
         }
-        
+
         // Check modifier requirement
         let required = gesture.modifiers
         if required.isEmpty {
@@ -727,8 +689,7 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
                 "dragMonitorsActive": isDragMonitorInstalled,
                 "hasDragGestures": hasDragGestures,
                 "currentZone": lastTriggeredZone?.rawValue ?? "none",
-                "zoneCacheSize": zoneBoundsCache.count,
-                "inCooldown": isInCooldownPeriod
+                "zoneCacheSize": zoneBoundsCache.count
             ]
         )
     }
