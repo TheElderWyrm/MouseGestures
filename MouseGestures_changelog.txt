@@ -1,5 +1,22 @@
 ## 2026-03-15
 
+### Improvement: Haptic Feedback Timing, Autoupdate Removal, Action Cleanup
+
+**ActionExecutionManager.swift — Haptic Feedback on Activation**
+- Moved `provideHapticFeedback()` from `handleExecutionSuccess()` (after action completes) to `executeAction()` (before dispatch to background)
+- Haptic now fires immediately when the gesture is recognized, not after the action finishes
+
+**UpdateCheckService — Removed Dummy Autoupdate**
+- Deleted `UpdateCheckService.swift` (simulated 2s delay with fake "up to date" response)
+- Removed `UpdateCheckServicePlugin` from `DeveloperServicePlugins.swift`
+- Removed registration from `ServicePluginManager`, accessor from `ServicePluginAdapter` and `UIServices`
+- Removed "Check for Updates" UI section from `AboutSettingsView`
+
+**WindowManagementPlugin.swift — Removed Duplicate cycle_windows Action**
+- `cycle_windows` (com.mousegestures.window) was a duplicate of `cycle_window` (com.mousegestures.core)
+- Removed action definition, execution case, and `cycleWindows()`/`cycleWindowsStandard()` methods
+- `cycle_window` in CoreActionsPlugin remains (used by all default profiles)
+
 ### Fix: Mouse Button Activation, Cooldown Removal, Zone Re-trigger Prevention
 
 **MouseButtonDetectorPlugin.swift — Mouse Button Triggers Now Work By Default**

@@ -42,8 +42,6 @@ snap_window          - Move window to a screen region (position parameter, 11 re
 resize_to_percent    - Resize window to % of screen (percent 1-100) [✓]
 adjust_size          - Grow or shrink window (direction + percent parameters)]
 	* Parameter to grow by pixels instead of percent
-cycle_windows        - Cycle through windows (direction parameter)
-	* Duplicate of cycle_window, remove
 switch_to_window     - Switch to a specific window [✓✓]
 window_position_memory - Save/restore/delete window position (operation + slot parameters) [✓]
 	* For restore or delete add a dropdown for saved layouts (Typing layout should come from selecting 'other'

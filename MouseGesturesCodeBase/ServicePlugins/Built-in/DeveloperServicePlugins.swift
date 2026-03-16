@@ -111,39 +111,6 @@ class DebugLoggingServicePlugin: BaseServicePlugin {
     }
 }
 
-// MARK: - Update Check Service Plugin (has custom configuration options)
-class UpdateCheckServicePlugin: BaseServicePlugin {
-    override var identifier: String { "com.mousegestures.service.updatecheck" }
-    override var name: String { "Update Check Service" }
-    override var description: String { "Checks for application updates" }
-    override var category: ServiceCategory { .system }
-    override var requiredPermissions: ServicePermissions { ServicePermissions(requiresNetworkAccess: true) }
-    
-    private var service: UpdateCheckService?
-    
-    override func initialize() throws {
-        service = UpdateCheckService.shared
-        log.log("UpdateCheckServicePlugin: Initialized")
-    }
-    
-    override func cleanup() {
-        service = nil
-        log.log("UpdateCheckServicePlugin: Cleaned up")
-    }
-    
-    override func getServiceInstance() -> Any? { return service }
-    
-    override func getConfigurationOptions() -> [ServiceConfigOption] {
-        [
-            ServiceConfigOption(key: "autoCheck", label: "Automatic Update Check", type: .boolean,
-                              defaultValue: true, description: "Automatically check for updates on launch"),
-            ServiceConfigOption(key: "checkInterval", label: "Check Interval (days)",
-                              type: .integer(min: 1, max: 30),
-                              defaultValue: 7, description: "Days between automatic update checks")
-        ]
-    }
-}
-
 // MARK: - Performance Monitor Service Plugin (has custom cleanup + configuration)
 class PerformanceMonitorServicePlugin: BaseServicePlugin {
     override var identifier: String { "com.mousegestures.service.perfmonitor" }

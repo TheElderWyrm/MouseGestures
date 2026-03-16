@@ -57,7 +57,6 @@ public class ServicePluginManager: ObservableObject {
             MenuBarVisibilityServicePlugin(),
             ZoneVisualizationServicePlugin(),
             DebugLoggingServicePlugin(),
-            UpdateCheckServicePlugin(),
             PerformanceMonitorServicePlugin(),
             // Simple singleton wrappers via factory
             GestureServicePluginFactory.gestureConfiguration(),

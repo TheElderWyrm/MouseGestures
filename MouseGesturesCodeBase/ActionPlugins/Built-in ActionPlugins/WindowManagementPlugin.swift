@@ -304,30 +304,6 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
             icon: "arrow.up.backward.and.arrow.down.forward"
         ),
         
-        // MARK: Cycle Windows (replaces cycle_windows_forward / cycle_windows_backward)
-        PluginAction(
-            id: "cycle_windows",
-            name: "Cycle Windows",
-            description: "Cycle through windows",
-            requiresParameters: true,
-            supportedParameters: [
-                ParameterDefinition(
-                    key: "direction",
-                    name: "Direction",
-                    type: .selection,
-                    defaultValue: AnyCodable("forward"),
-                    description: "Which direction to cycle",
-                    validation: ValidationRule(allowedValues: [
-                        AnyCodable("forward"),
-                        AnyCodable("backward")
-                    ]),
-                    displayValues: ["forward": "Forward", "backward": "Backward"]
-                )
-            ] + windowTargetParameters,
-            supportsRepeat: true,
-            icon: "arrow.clockwise.circle"
-        ),
-        
         PluginAction(
             id: "switch_to_window",
             name: "Switch to Window",
@@ -629,10 +605,6 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
             resizeWindowByFactor(factor, target: target, logMessage: msg, context: context)
             
         // MARK: Window Navigation
-        case "cycle_windows":
-            let forward = (parameters.string(for: "direction") ?? "forward") == "forward"
-            cycleWindows(forward: forward, target: target, context: context)
-            
         case "switch_to_window":
             switchToWindow(target: target, context: context)
             
@@ -982,54 +954,7 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
     }
     
     // MARK: - Window Navigation
-    
-    private func cycleWindows(forward: Bool, target: WindowTargeting.WindowTarget? = nil, context: PluginContext) {
-        if let target = target {
-            switch target.targetType {
-            case .byApplication, .allWindowsOfApp:
-                let targetWindows = context.getAllVisibleWindows().filter { (_, pid) in
-                    if let bundleId = target.applicationBundleId,
-                       let app = NSRunningApplication(processIdentifier: pid) {
-                        return app.bundleIdentifier == bundleId
-                    }
-                    return true
-                }
-                guard !targetWindows.isEmpty else { return }
-                var currentIndex: Int?
-                for (index, (window, _)) in targetWindows.enumerated() {
-                    if let v = context.getAccessibilityAttribute(window, attribute: kAXFocusedAttribute as String),
-                       let focused = v as? Bool, focused {
-                        currentIndex = index; break
-                    }
-                }
-                let nextIndex: Int
-                if let cur = currentIndex {
-                    nextIndex = forward ? (cur + 1) % targetWindows.count : (cur > 0 ? cur - 1 : targetWindows.count - 1)
-                } else {
-                    nextIndex = forward ? 0 : targetWindows.count - 1
-                }
-                _ = context.performAccessibilityAction(targetWindows[nextIndex].0, action: kAXRaiseAction as String)
-                context.logger.log("Cycled to \(forward ? "next" : "previous") window", file: #file, function: #function, line: #line)
-            default:
-                cycleWindowsStandard(forward: forward, context: context)
-            }
-        } else {
-            cycleWindowsStandard(forward: forward, context: context)
-        }
-    }
-    
-    private func cycleWindowsStandard(forward: Bool, context: PluginContext) {
-        guard let source = CGEventSource(stateID: .combinedSessionState) else { return }
-        let keyCode: CGKeyCode = 50
-        let modifiers: CGEventFlags = forward ? [.maskCommand] : [.maskCommand, .maskShift]
-        guard let keyDown = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: true),
-              let keyUp   = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: false) else { return }
-        keyDown.flags = modifiers; keyUp.flags = modifiers
-        keyDown.post(tap: .cghidEventTap)
-        usleep(50000)
-        keyUp.post(tap: .cghidEventTap)
-    }
-    
+
     private func switchToWindow(target: WindowTargeting.WindowTarget?, context: PluginContext) {
         guard let target = target,
               let (window, _) = getTargetWindow(target, context: context) else { return }

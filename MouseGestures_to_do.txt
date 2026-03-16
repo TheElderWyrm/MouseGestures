@@ -5,7 +5,7 @@ Action items also in: MouseGestures_actions.txt
 --------------------------------------
 BUGS
 --------------------------------------
-- Gesture Cooldown (Remove) [FIXED 2026-03-15]
+- Gesture Cooldown (Remove) [FIXED 2026-03-15] (zone + execution layers)
 - Actions are repeating when held even if not selected (Works only with zone activation) [FIXED 2026-03-15]
 
 UI:
@@ -23,7 +23,7 @@ Architecture:
   - Drag does not need to be a separate trigger configuration than mouse button
   - Reduce size of modifier keys trigger configuration
   - Make Action View categories dynamic
-  - Haptic feedback is happening on finish instead of activation
+  - Haptic feedback is happening on finish instead of activation [FIXED 2026-03-15]
 
 UI:
   - Use full 'gestures' UI in profiles
@@ -45,5 +45,5 @@ Features:
   - 'Tab Navigation' template
 
 Cleanup:
-  - Remove dummy autoupdate
-  - Clean up unneeded actions
+  - Remove dummy autoupdate [DONE 2026-03-15]
+  - Clean up unneeded actions [DONE 2026-03-15] (removed duplicate cycle_windows)

@@ -292,6 +292,9 @@ class ActionExecutionManager {
         // Notify delegates - will execute
         notifyDelegatesWillExecute(actionId: actionId, context: context)
 
+        // Haptic feedback on activation (immediate, not after execution completes)
+        provideHapticFeedback()
+
         // Log execution start
         log.log("Executing action: \(actionId) from source: \(context.source)")
 
@@ -319,9 +322,6 @@ class ActionExecutionManager {
                                        result: ActionExecutionResult,
                                        context: ActionExecutionContext,
                                        executionId: UUID) {
-        // Provide haptic feedback
-        provideHapticFeedback()
-        
         // Update statistics
         executionStats.recordSuccess(actionId: actionId, executionTime: result.executionTime)
         

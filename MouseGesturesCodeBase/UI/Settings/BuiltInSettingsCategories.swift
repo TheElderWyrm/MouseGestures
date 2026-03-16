@@ -324,9 +324,6 @@ struct DataManagementSettingsView: View {
 // MARK: - About View
 
 struct AboutSettingsView: View {
-    @State private var isCheckingForUpdates = false
-    @State private var updateMessage: String?
-    
     var body: some View {
         VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {
             VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
@@ -342,33 +339,6 @@ struct AboutSettingsView: View {
                         .font(.system(size: MGStyle.FontSize.body, weight: .medium))
                 }
             }
-            
-            Divider()
-            
-            VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
-                Text("Check for Updates").font(.system(size: MGStyle.FontSize.heading, weight: .semibold))
-                Text("Check for the latest version of MouseGestures").font(.caption).foregroundColor(.secondary)
-                HStack {
-                    Button(action: checkForUpdates) {
-                        if isCheckingForUpdates {
-                            ProgressView().progressViewStyle(CircularProgressViewStyle()).scaleEffect(0.8).frame(width: 16, height: 16)
-                            Text("Checking...")
-                        } else {
-                            Label("Check Now", systemImage: "arrow.clockwise")
-                        }
-                    }
-                    .buttonStyle(.borderedProminent).disabled(isCheckingForUpdates)
-                    if let msg = updateMessage { Text(msg).font(.caption).foregroundColor(.secondary) }
-                }
-            }
-        }
-    }
-    
-    private func checkForUpdates() {
-        isCheckingForUpdates = true; updateMessage = nil
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-            isCheckingForUpdates = false; updateMessage = "You are running the latest version"
-            DispatchQueue.main.asyncAfter(deadline: .now() + 5) { updateMessage = nil }
         }
     }
 }

@@ -42,9 +42,6 @@ public class UIServices: ObservableObject {
     private var applicationResetService: ApplicationResetService {
         serviceAdapter.getApplicationResetService()
     }
-    private var updateCheckService: UpdateCheckService {
-        serviceAdapter.getUpdateCheckService()
-    }
     private var accessibilityPermissionService: AccessibilityPermissionService {
         serviceAdapter.getAccessibilityPermissionService()
     }
@@ -469,14 +466,6 @@ public class UIServices: ObservableObject {
     func resetAppToDefaults() {
         applicationResetService.resetToDefaults()
         loadData()
-    }
-    
-    func checkForUpdates() {
-        updateCheckService.checkForUpdates { result in
-            DispatchQueue.main.async { [weak self] in
-                self?.errorMessage = result.message
-            }
-        }
     }
     
     // MARK: - Developer Tools Management

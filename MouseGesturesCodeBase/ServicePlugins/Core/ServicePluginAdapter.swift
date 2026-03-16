@@ -52,10 +52,6 @@ public class ServicePluginAdapter {
         getService(identifier: "com.mousegestures.service.appreset", fallback: ApplicationResetService.shared)
     }
     
-    func getUpdateCheckService() -> UpdateCheckService {
-        getService(identifier: "com.mousegestures.service.updatecheck", fallback: UpdateCheckService.shared)
-    }
-    
     func getAccessibilityPermissionService() -> AccessibilityPermissionService {
         getService(identifier: "com.mousegestures.service.accessibility", fallback: AccessibilityPermissionService.shared)
     }
