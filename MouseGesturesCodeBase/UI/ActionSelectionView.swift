@@ -55,6 +55,9 @@ struct ActionSelectionView: View {
                         get: { selectedActionId.isEmpty ? nil : selectedActionId },
                         set: { if let v = $0 { selectedActionId = v } }
                     )) {
+                        // Invisible anchor for scroll-to-top
+                        EmptyView().id("__search_top__")
+
                         if isSearching {
                             searchResultsContent
                         } else if selectedCategory == "Saved" {
@@ -69,6 +72,13 @@ struct ActionSelectionView: View {
                         if !newId.isEmpty {
                             withAnimation { proxy.scrollTo(newId, anchor: .center) }
                         }
+                    }
+                    .onChange(of: searchText) { _ in
+                        // Reset scroll to top when search text changes
+                        proxy.scrollTo("__search_top__", anchor: .top)
+                    }
+                    .onChange(of: selectedCategory) { _ in
+                        proxy.scrollTo("__search_top__", anchor: .top)
                     }
                 }
                 
@@ -439,9 +449,14 @@ struct ActionSelectionView: View {
             }
         case .selection:
             if let vals = p.validation?.allowedValues {
+                let options = vals.compactMap { $0.value as? String }
+                let defaultVal = (p.defaultValue?.value as? String).flatMap({ options.contains($0) ? $0 : nil }) ?? options.first ?? ""
                 paramRow(p) {
-                    Picker("", selection: strBinding(p.key, def: p.defaultValue?.value as? String ?? "")) {
-                        ForEach(vals.compactMap { $0.value as? String }, id: \.self) { v in
+                    Picker("", selection: strBinding(p.key, def: defaultVal)) {
+                        if !options.contains("") {
+                            Text("Select...").tag("")
+                        }
+                        ForEach(options, id: \.self) { v in
                             Text(displayLabel(for: v, param: p)).tag(v)
                         }
                     }

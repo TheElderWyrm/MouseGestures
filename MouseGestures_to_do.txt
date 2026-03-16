@@ -13,10 +13,10 @@ Window Targeting:
 
 UI:
   - Keyboard shortcut detection not working for gestures [FIXED 2026-03-15]
-  - Profiles: pressing delete should not select the profile checkbox
-  - Picker: selection "" is invalid / no associated tag — gives undefined results
+  - Profiles: pressing delete should not select the profile checkbox [FIXED 2026-03-15]
+  - Picker: selection "" is invalid / no associated tag — gives undefined results [FIXED 2026-03-15]
   - Configurations not aligned between trigger types
-  - Action search a bit weird (Maybe showing off the top of the action list, reset scroll?) 
+  - Action search a bit weird (Maybe showing off the top of the action list, reset scroll?) [FIXED 2026-03-15] 
 
 --------------------------------------
 IMPROVEMENTS

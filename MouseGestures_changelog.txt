@@ -1,5 +1,19 @@
 ## 2026-03-15
 
+### Fix: Three UI Bugs (Profile Delete, Picker Tags, Action Search Scroll)
+
+**ProfilesView.swift — Delete Button No Longer Selects Checkbox**
+- Row delete button was setting `selectedProfileIds = [profile.id]` to track which profile to delete, which had the side effect of checking the profile's checkbox
+- Added `singleDeleteProfileId` state; row delete uses that instead, and a `profilesToDelete` computed property unifies both paths for the alert/deletion logic
+
+**ActionSelectionView.swift — Selection Picker Empty Tag Fix**
+- `.selection` parameter pickers used default `""` when no value was set, but the allowed values list didn't include `""`, causing SwiftUI "no associated tag" warning and undefined behavior
+- Added `Text("Select...").tag("")` placeholder when `""` isn't a valid option, ensuring the binding always has a matching tag
+
+**ActionSelectionView.swift — Action Search Scroll Reset**
+- Switching between search results and categorized content caused the list to show from an unpredictable scroll position
+- Added scroll-to-top anchor and `onChange` handlers for `searchText` and `selectedCategory` changes
+
 ### Fix: Keyboard Shortcut Detection, Window Targeting
 
 **GestureConfigurationSheet.swift — Keyboard Shortcut Trigger Data Now Synced**

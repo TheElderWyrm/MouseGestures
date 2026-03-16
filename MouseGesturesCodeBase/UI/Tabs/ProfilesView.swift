@@ -22,6 +22,7 @@ struct ProfilesView: View {
     }
     @State private var activeSheet: ActiveSheet?
     @State private var showingDeleteConfirmation = false
+    @State private var singleDeleteProfileId: UUID?  // Set when deleting via row button (avoids selecting checkbox)
     @State private var searchText = ""
     @State private var showSearch = false
     @State private var importError: String?
@@ -41,6 +42,12 @@ struct ProfilesView: View {
     }
     
     private var anySelected: Bool { selectedProfileIds.count > 0 }
+
+    /// IDs to delete: single row delete takes priority over multi-select
+    private var profilesToDelete: Set<UUID> {
+        if let id = singleDeleteProfileId { return [id] }
+        return selectedProfileIds
+    }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -139,13 +146,14 @@ struct ProfilesView: View {
                 AddProfileGestureSheet(profileId: profileId)
             }
         }
-        .alert("Delete Profile\(selectedProfileIds.count > 1 ? "s" : "")", isPresented: $showingDeleteConfirmation) {
-            Button("Cancel", role: .cancel) {}
-            Button("Delete", role: .destructive) { deleteSelectedProfiles() }
+        .alert("Delete Profile\(profilesToDelete.count > 1 ? "s" : "")", isPresented: $showingDeleteConfirmation) {
+            Button("Cancel", role: .cancel) { singleDeleteProfileId = nil }
+            Button("Delete", role: .destructive) { deleteSelectedProfiles(); singleDeleteProfileId = nil }
         } message: {
-            let count = selectedProfileIds.count
-            let hasActive = selectedProfileIds.contains(uiServices.activeProfileId ?? UUID())
-            if count == 1, let profile = uiServices.profiles.first(where: { selectedProfileIds.contains($0.id) }) {
+            let ids = profilesToDelete
+            let count = ids.count
+            let hasActive = ids.contains(uiServices.activeProfileId ?? UUID())
+            if count == 1, let profile = uiServices.profiles.first(where: { ids.contains($0.id) }) {
                 if hasActive {
                     Text("Are you sure you want to delete the active profile '\(profile.name)'? A new profile will be activated automatically.")
                 } else {
@@ -256,7 +264,7 @@ struct ProfilesView: View {
                             onSetActive: { setActiveProfile(profile.id) },
                             onDuplicate: { duplicateProfile(profile.id) },
                             onDelete: {
-                                selectedProfileIds = [profile.id]
+                                singleDeleteProfileId = profile.id
                                 showingDeleteConfirmation = true
                             }
                         )
@@ -310,7 +318,7 @@ struct ProfilesView: View {
     }
     
     private func deleteSelectedProfiles() {
-        var toDelete = Array(selectedProfileIds)
+        var toDelete = Array(profilesToDelete)
         if let activeId = uiServices.activeProfileId, toDelete.contains(activeId) {
             let remaining = uiServices.profiles.filter { !toDelete.contains($0.id) }
             if let next = remaining.first {
