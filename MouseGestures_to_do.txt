@@ -22,13 +22,13 @@ Architecture:
   - Improve activation system UI
   - Drag does not need to be a separate trigger configuration than mouse button
   - Reduce size of modifier keys trigger configuration
-  - Make Action View categories dynamic
+  - Make Action View categories dynamic [FIXED 2026-03-23] (shortLabel now auto-abbreviates)
   - Haptic feedback is happening on finish instead of activation [FIXED 2026-03-15]
   - Full screen not working when full screen button not visible (Fall back to shortcut) [DONE] (fallback to Ctrl+Cmd+F already present in code)
 
 UI:
   - Use full 'gestures' UI in profiles
-  - Manage detection plugins under developer mode
+  - Manage detection plugins under developer mode [FIXED 2026-03-23] (Detection Plugins section in Developer tab)
   - Open application action should bring up Finder to select any application [DONE] (folder browse button already present in application picker)
   - Show add-to-bundle button even when a bundle action is selected (choose to add or update) [FIXED 2026-03-23]
   - Setting to display notification on action activation [FIXED 2026-03-23]
@@ -37,7 +37,7 @@ UI:
 
 
 Features:
-  - Add reset to template in gestures
+  - Add reset to template in gestures [FIXED 2026-03-23] (Reset to Template... menu item in GesturesView)
   - Bundle actions with variables (e.g. Open URL From Clipboard)
   - Test adding external plugins for detection and actions
   - open_url: Show only browsers when selecting app + add 'default browser' option [FIXED 2026-03-23] (browser-only filter now uses installed browsers)

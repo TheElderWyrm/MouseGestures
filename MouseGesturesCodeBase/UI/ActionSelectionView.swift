@@ -237,18 +237,11 @@ struct ActionSelectionView: View {
     }
     
     private func shortLabel(_ label: String) -> String {
-        switch label {
-        case "Core": return "Core"
-        case "Window Management": return "Window"
-        case "System Control": return "System"
-        case "Media Control": return "Media"
-        case "Application": return "App"
-        case "File Operations": return "File"
-        case "Automation": return "Auto"
-        case "Productivity": return "Productivity"
-        case "Development": return "Dev"
-        default: return label
-        }
+        let maxLen = 10
+        if label.count <= maxLen { return label }
+        // Take the first word if it's descriptive enough, otherwise truncate
+        let first = label.split(separator: " ").first.map(String.init) ?? label
+        return first.count <= maxLen ? first : String(label.prefix(maxLen))
     }
     
     // MARK: - Parameter Section

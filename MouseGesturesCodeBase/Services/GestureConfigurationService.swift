@@ -76,6 +76,12 @@ class GestureConfigurationService {
         configuration.save()
         log.log("Cleared all gestures")
     }
+
+    func replaceAllGestures(_ gestures: [Gesture]) {
+        configuration.gestures = gestures
+        configuration.save()
+        log.log("Replaced gestures with \(gestures.count) template gestures")
+    }
     
     func isGestureConflicting(_ gesture: Gesture) -> Bool {
         return configuration.gestures.contains { $0.triggerKey == gesture.triggerKey }

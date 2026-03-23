@@ -211,6 +211,25 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
                         AnyCodable("backward")
                     ]),
                     displayValues: ["forward": "Forward", "backward": "Backward"]
+                ),
+                ParameterDefinition(
+                    key: "scope",
+                    name: "Application",
+                    type: .selection,
+                    defaultValue: AnyCodable("current"),
+                    description: "Which app's windows to cycle",
+                    validation: ValidationRule(allowedValues: [
+                        AnyCodable("current"),
+                        AnyCodable("specific")
+                    ]),
+                    displayValues: ["current": "Current App", "specific": "Specific App"]
+                ),
+                ParameterDefinition(
+                    key: "app_bundle_id",
+                    name: "Application",
+                    type: .application,
+                    description: "Application whose windows to cycle",
+                    visibleWhen: ParameterVisibilityRule(key: "scope", value: "specific")
                 )
             ],
             supportsRepeat: true,
@@ -364,7 +383,9 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
         // MARK: Cycle Window
         case "cycle_window":
             let forward = (parameters.string(for: "direction") ?? "forward") == "forward"
-            cycleWindows(forward: forward, context: context)
+            let scope = parameters.string(for: "scope") ?? "current"
+            let appBundleId = scope == "specific" ? parameters.string(for: "app_bundle_id") : nil
+            cycleWindows(forward: forward, appBundleId: appBundleId, context: context)
             
         // MARK: Cycle Space
         case "cycle_space":
@@ -624,7 +645,13 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
         }
     }
     
-    private func cycleWindows(forward: Bool, context: PluginContext) {
+    private func cycleWindows(forward: Bool, appBundleId: String? = nil, context: PluginContext) {
+        // Activate specific app first if requested
+        if let bundleId = appBundleId,
+           let app = context.getRunningApplications().first(where: { $0.bundleIdentifier == bundleId }) {
+            app.activate(options: [.activateIgnoringOtherApps])
+            usleep(150_000)
+        }
         if forward {
             context.sendKeyboardShortcut(keyCode: 50, modifiers: [.maskCommand])           // Cmd+`
         } else {

@@ -17,6 +17,8 @@ struct GesturesView: View {
     }
     @State private var activeSheet: ActiveSheet?
     @State private var showingResetConfirmation = false
+    @State private var showingResetToTemplate = false
+    @State private var pendingTemplateType: DefaultProfileType?
     @State private var searchText = ""
     @State private var showSearch = false
     @State private var expandedGesture: String?
@@ -41,6 +43,9 @@ struct GesturesView: View {
             MGCompactHeader(
                 "Gestures",
                 menuItems: [
+                    MGMenuItem("Reset to Template...", icon: "doc.badge.arrow.up") {
+                        showingResetToTemplate = true
+                    },
                     MGMenuItem("Reset to Defaults", icon: "arrow.counterclockwise", destructive: true) {
                         showingResetConfirmation = true
                     },
@@ -122,6 +127,28 @@ struct GesturesView: View {
             Button("Reset", role: .destructive) { uiServices.resetToDefaultProfiles() }
         } message: {
             Text("This will reset the current profile's gestures to factory defaults. This action cannot be undone.")
+        }
+        .confirmationDialog("Reset to Template", isPresented: $showingResetToTemplate, titleVisibility: .visible) {
+            ForEach(DefaultProfileType.allCases, id: \.self) { type in
+                Button(type.rawValue) { pendingTemplateType = type }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Replace all gestures in the current profile with those from a template. This cannot be undone.")
+        }
+        .alert("Replace Gestures?", isPresented: Binding(
+            get: { pendingTemplateType != nil },
+            set: { if !$0 { pendingTemplateType = nil } }
+        )) {
+            Button("Cancel", role: .cancel) { pendingTemplateType = nil }
+            Button("Replace", role: .destructive) {
+                if let type = pendingTemplateType {
+                    uiServices.resetCurrentProfileToTemplate(type)
+                }
+                pendingTemplateType = nil
+            }
+        } message: {
+            Text("Replace current gestures with the \"\(pendingTemplateType?.rawValue ?? "")\" template?")
         }
         .onAppear { uiServices.loadData() }
     }

@@ -1,3 +1,57 @@
+## 2026-03-23 (3)
+
+### Feature: tile_all resize_windows Option
+
+**WindowManagementPlugin.swift**
+- Added `resize_windows` (bool, default true) parameter to `tile_all`
+- When false, windows are moved to grid positions but keep their existing sizes
+
+### Feature: adjust_size Pixel Mode
+
+**WindowManagementPlugin.swift**
+- Added `unit` parameter (percent/pixels) to `adjust_size`
+- Added `pixels` number parameter (visible when unit=pixels)
+- Added `resizeWindowByPixels` helper that grows/shrinks by a fixed pixel delta (minimum size clamped to 100px)
+
+### Fix: window_layout reopen_apps Visibility
+
+**WindowManagementPlugin.swift**
+- `reopen_apps` parameter now uses `visibleWhen: restore` so it only shows for the Restore operation
+
+### Feature: cycle_window Application Target
+
+**CoreActionsPlugin.swift**
+- Added `scope` parameter (current/specific) and `app_bundle_id` (visible for specific scope)
+- When specific app is selected, that app is activated first before cycling its windows
+
+### Feature: Detection Plugins in Developer Tab
+
+**DeveloperView.swift**
+- Added "Detection Plugins" section to Developer Tools
+- Shows all loaded detection plugins with name, description, version, and priority
+- Toggle switches call `DetectionPluginManager.shared.setPluginEnabled()` to enable/disable detection at runtime
+
+### Feature: Reset to Template in Gestures
+
+**GesturesView.swift, GestureConfigurationService.swift, UIServices.swift**
+- Added "Reset to Template..." menu item in Gestures tab header
+- Shows a confirmation dialog with all available template types
+- On confirm, replaces current profile's gestures with the selected template's gestures
+- Added `replaceAllGestures` to `GestureConfigurationService` and `resetCurrentProfileToTemplate` to `UIServices`
+
+### Improvement: Action Category Short Labels Dynamic
+
+**ActionSelectionView.swift**
+- Replaced hardcoded `shortLabel()` switch with a generic abbreviation: labels ≤10 chars unchanged, longer labels use the first word (or truncate)
+
+### Fix: run_script Python Path Resolution + Interpreter Override
+
+**AutomationPlugin.swift**
+- Python execution now probes `/usr/local/bin/python3`, `/opt/homebrew/bin/python3`, `/usr/bin/python3` in order (homebrew/local take priority over macOS stub)
+- Added `python_interpreter` parameter for a custom executable path override (visible when script_type=python)
+
+---
+
 ## 2026-03-23 (2)
 
 ### Fix: set_position Preset and Relative Modes

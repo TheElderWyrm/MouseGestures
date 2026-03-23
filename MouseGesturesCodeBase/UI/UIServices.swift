@@ -213,6 +213,13 @@ public class UIServices: ObservableObject {
         profileManagementService.resetToDefaults()
         loadData()
     }
+
+    /// Replace the current profile's gestures with those from the given template
+    func resetCurrentProfileToTemplate(_ type: DefaultProfileType) {
+        guard let template = DefaultProfiles.getProfile(for: type) else { return }
+        gestureService.replaceAllGestures(template.gestures)
+        loadData()
+    }
     
     func validateProfileName(_ name: String, excludingId: UUID? = nil) -> ProfileNameValidation {
         return profileManagementService.validateProfileName(name, excludingId: excludingId)

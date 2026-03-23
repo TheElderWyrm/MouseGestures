@@ -291,13 +291,33 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
                     displayValues: ["grow": "Grow", "shrink": "Shrink"]
                 ),
                 ParameterDefinition(
+                    key: "unit",
+                    name: "Unit",
+                    type: .selection,
+                    defaultValue: AnyCodable("percent"),
+                    description: "How to measure the adjustment",
+                    validation: ValidationRule(allowedValues: [AnyCodable("percent"), AnyCodable("pixels")]),
+                    displayValues: ["percent": "Percent", "pixels": "Pixels"]
+                ),
+                ParameterDefinition(
                     key: "percent",
                     name: "Amount",
                     type: .number,
                     defaultValue: AnyCodable(10),
-                    description: "Percentage to adjust by",
-                    validation: ValidationRule(minValue: 1, maxValue: 100),
+                    description: "Amount to adjust",
+                    validation: ValidationRule(minValue: 1),
+                    visibleWhen: ParameterVisibilityRule(key: "unit", value: "percent"),
                     suffix: "%"
+                ),
+                ParameterDefinition(
+                    key: "pixels",
+                    name: "Pixels",
+                    type: .number,
+                    defaultValue: AnyCodable(50),
+                    description: "Amount to adjust in pixels",
+                    validation: ValidationRule(minValue: 1),
+                    visibleWhen: ParameterVisibilityRule(key: "unit", value: "pixels"),
+                    suffix: "px"
                 )
             ] + windowTargetParameters,
             supportsRepeat: true,
@@ -376,7 +396,8 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
                     name: "Reopen Apps",
                     type: .boolean,
                     defaultValue: AnyCodable(true),
-                    description: "Launch apps that aren't running (restore only)"
+                    description: "Launch apps that aren't running when restoring",
+                    visibleWhen: ParameterVisibilityRule(key: "operation", value: "restore")
                 )
             ],
             icon: "rectangle.3.group"
@@ -400,6 +421,13 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
                         AnyCodable("all_windows")
                     ]),
                     displayValues: ["current_app": "Current App", "all_windows": "All Windows"]
+                ),
+                ParameterDefinition(
+                    key: "resize_windows",
+                    name: "Resize Windows",
+                    type: .boolean,
+                    defaultValue: AnyCodable(true),
+                    description: "Resize windows to fill the tiled grid"
                 )
             ] + windowTargetParameters,
             icon: "rectangle.split.2x2"
@@ -597,12 +625,20 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
             
         case "adjust_size":
             let direction = parameters.string(for: "direction") ?? "grow"
-            let percent = parameters.number(for: "percent") ?? 10
-            let factor: CGFloat = direction == "grow"
-                ? 1.0 + (percent / 100.0)
-                : 1.0 - (percent / 100.0)
-            let msg = direction == "grow" ? "Grew window by \(Int(percent))%" : "Shrank window by \(Int(percent))%"
-            resizeWindowByFactor(factor, target: target, logMessage: msg, context: context)
+            let unit = parameters.string(for: "unit") ?? "percent"
+            if unit == "pixels" {
+                let px = CGFloat(parameters.number(for: "pixels") ?? 50)
+                let delta = direction == "grow" ? px : -px
+                let msg = direction == "grow" ? "Grew window by \(Int(px))px" : "Shrank window by \(Int(px))px"
+                resizeWindowByPixels(delta, target: target, logMessage: msg, context: context)
+            } else {
+                let percent = parameters.number(for: "percent") ?? 10
+                let factor: CGFloat = direction == "grow"
+                    ? 1.0 + (percent / 100.0)
+                    : 1.0 - (percent / 100.0)
+                let msg = direction == "grow" ? "Grew window by \(Int(percent))%" : "Shrank window by \(Int(percent))%"
+                resizeWindowByFactor(factor, target: target, logMessage: msg, context: context)
+            }
             
         // MARK: Window Navigation
         case "switch_to_window":
@@ -642,6 +678,7 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
         // MARK: Tile / Cascade
         case "tile_all":
             let tileScope = parameters.string(for: "scope") ?? "current_app"
+            let tileResize = parameters.bool(for: "resize_windows") ?? true
             let tileTarget: WindowTargeting.WindowTarget?
             if tileScope == "all_windows" {
                 var t = WindowTargeting.WindowTarget()
@@ -650,7 +687,7 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
             } else {
                 tileTarget = target
             }
-            tileAllWindows(target: tileTarget, context: context)
+            tileAllWindows(target: tileTarget, resize: tileResize, context: context)
         case "cascade":
             let cascadeScope = parameters.string(for: "scope") ?? "current_app"
             let resizeWindows = parameters.bool(for: "resize_windows") ?? true
@@ -946,12 +983,19 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
             guard let currentFrame = getWindowFrame(window, context: context) else { continue }
             let nw = currentFrame.width  * factor
             let nh = currentFrame.height * factor
-            // Keep the window's top-left position — only change size, don't reposition
-            let newFrame = CGRect(
-                x: currentFrame.origin.x,
-                y: currentFrame.origin.y,
-                width: nw, height: nh
-            )
+            let newFrame = CGRect(x: currentFrame.origin.x, y: currentFrame.origin.y, width: nw, height: nh)
+            setWindowFrame(window, frame: newFrame, context: context)
+        }
+        context.logger.log(logMessage, file: #file, function: #function, line: #line)
+    }
+
+    private func resizeWindowByPixels(_ delta: CGFloat, target: WindowTargeting.WindowTarget?, logMessage: String, context: PluginContext) {
+        let windows = getTargetWindows(target, context: context)
+        for (window, _) in windows {
+            guard let currentFrame = getWindowFrame(window, context: context) else { continue }
+            let nw = max(100, currentFrame.width  + delta)
+            let nh = max(100, currentFrame.height + delta)
+            let newFrame = CGRect(x: currentFrame.origin.x, y: currentFrame.origin.y, width: nw, height: nh)
             setWindowFrame(window, frame: newFrame, context: context)
         }
         context.logger.log(logMessage, file: #file, function: #function, line: #line)
@@ -1005,7 +1049,7 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
         }
     }
     
-    private func tileAllWindows(target: WindowTargeting.WindowTarget? = nil, context: PluginContext) {
+    private func tileAllWindows(target: WindowTargeting.WindowTarget? = nil, resize: Bool = true, context: PluginContext) {
         let rawWindows = getAppWindows(target: target, context: context)
         let windows = filterOutWidgets(rawWindows, context: context)
         guard !windows.isEmpty, let screen = NSScreen.main else { return }
@@ -1050,12 +1094,19 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
             let winH = sf.height / CGFloat(rows)
             let xOffset = isLastRow ? CGFloat(0) : CGFloat(0) // Last row windows fill evenly
             
-            let frame = CGRect(
+            let origin = CGPoint(
                 x: sf.minX + CGFloat(effectiveCol) * winW + xOffset,
-                y: sf.minY + sf.height - CGFloat(row + 1) * winH,
-                width: winW, height: winH
+                y: sf.minY + sf.height - CGFloat(row + 1) * winH
             )
-            setWindowFrame(window, frame: frame, context: context)
+            if resize {
+                setWindowFrame(window, frame: CGRect(origin: origin, size: CGSize(width: winW, height: winH)), context: context)
+            } else {
+                // Move only — keep existing size
+                if var f = getWindowFrame(window, context: context) {
+                    f.origin = origin
+                    setWindowFrame(window, frame: f, context: context)
+                }
+            }
         }
         context.logger.log("Tiled \(cnt) windows in \(cols)x\(rows) grid", file: #file, function: #function, line: #line)
     }

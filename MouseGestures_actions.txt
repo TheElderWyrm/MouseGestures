@@ -19,8 +19,8 @@ mission_control      - Show Mission Control [✓✓]
 show_desktop         - Show the desktop [✓✓]
 app_expose           - Show all windows of current application [✓✓]
 	* Subject to modifier key interference
-cycle_window         - Switch to next/previous window (direction parameter) <-- Cycle Window vs Cycle windows duplicate action? [✓]
-	* Add application target (Specific application or all applications)
+cycle_window         - Switch to next/previous window (direction + scope parameters) [✓]
+	* Add application target (Specific application or all applications) [FIXED 2026-03-23] (scope: current/specific + app picker)
 cycle_space          - Move to next/previous desktop space (direction parameter) [✓]
 	* Subject to modifier key interference
 	* Proper solution requires either private APIs or invisible windows: https://github.com/bigbearlabs/SpaceSwitcher.
@@ -40,18 +40,17 @@ WINDOW MANAGEMENT (com.mousegestures.window)
 snap_window          - Move window to a screen region (position parameter, 11 regions) [✓✓]
 	* Rename
 resize_to_percent    - Resize window to % of screen (percent 1-100) [✓]
-adjust_size          - Grow or shrink window (direction + percent parameters)]
-	* Parameter to grow by pixels instead of percent
+adjust_size          - Grow or shrink window (direction + unit + amount parameters) [✓]
+	* Parameter to grow by pixels instead of percent [FIXED 2026-03-23] (unit: percent/pixels)
 switch_to_window     - Switch to a specific window [✓✓]
 window_position_memory - Save/restore/delete window position (operation + slot parameters) [✓]
 	* For restore or delete add a dropdown for saved layouts (Typing layout should come from selecting 'other'
 window_layout        - Save/restore/delete named window layout (operation + layout_name parameters) [✓]
-	* Reopen applications should be hidden for saving layout.
-	* For restore or delete add a dropdown for saved layouts (Typing layout should come from selecting 'other'
-tile_all             - Tile all windows on screen (scope parameter) [✓]
-	* Improve Tiling to fill the full screen with larger windows (If possible)
-	* Add option to resize or not <-- Make best attempt
-	* Some windows have minimum size and this results in overlapping windows (Respect) <-- May or may not be possible
+	* Reopen applications should be hidden for saving layout [FIXED 2026-03-23] (visibleWhen restore only)
+	* For restore or delete add a dropdown for saved layouts (pending — requires runtime data access)
+tile_all             - Tile all windows on screen (scope + resize_windows parameters) [✓]
+	* Add option to resize or not [FIXED 2026-03-23] (resize_windows bool added; move-only mode keeps existing sizes)
+	* Some windows have minimum size and this results in overlapping windows (best-effort)
 cascade              - Cascade windows (scope + resize_windows parameters) [✓]
 	* Improved: second stack staggers by half-offset so all title bars visible
 set_size             - Set custom window size (px or %) [✓]
@@ -94,8 +93,8 @@ keyboard_shortcut    - Trigger a keyboard shortcut [✓]
 	* Text on shortcut field too long, move note about not working on system shortcuts elsewhere or remove
 run_shortcut         - Run a Shortcuts app shortcut [✓✓]
 run_script           - Execute a script (applescript/shell/javascript/python) [✓]
-	* Python and JavaScript may not work
-	* Add interpreter selection option [FIXED 2026-03-23] (shell_interpreter: sh/bash/zsh)
+	* Python path auto-detected (local/homebrew/system) + custom override [FIXED 2026-03-23]
+	* Add interpreter selection option [FIXED 2026-03-23] (shell_interpreter: sh/bash/zsh; python_interpreter custom path)
 open_app             - Launch an application [✓✓]
 open_file            - Open a file or folder [✓]
 	* Use 'Default App' instead of 'select' [FIXED 2026-03-22]

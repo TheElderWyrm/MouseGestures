@@ -50,15 +50,17 @@ struct DeveloperView: View {
         case settings = "Developer Settings"
         case logging = "Logging"
         case plugins = "Plugin Management"
+        case detectionPlugins = "Detection Plugins"
         case services = "Services"
         case performance = "Performance"
         case diagnostics = "Diagnostics"
-        
+
         var icon: String {
             switch self {
             case .settings: return "gearshape"
             case .logging: return "doc.text"
             case .plugins: return "puzzlepiece.extension"
+            case .detectionPlugins: return "hand.tap"
             case .services: return "gearshape.2"
             case .performance: return "speedometer"
             case .diagnostics: return "stethoscope"
@@ -86,6 +88,7 @@ struct DeveloperView: View {
                     case .settings: developerSettingsSection
                     case .logging: loggingSection
                     case .plugins: pluginsSection
+                    case .detectionPlugins: detectionPluginsSection
                     case .services: servicesSection
                     case .performance: performanceSection
                     case .diagnostics: diagnosticsSection
@@ -313,6 +316,55 @@ struct DeveloperView: View {
         }
     }
     
+    // MARK: - Detection Plugins Section
+
+    private var detectionPluginsSection: some View {
+        VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {
+            MGSectionHeader("Detection Plugins")
+
+            MGContentCard {
+                Text("Detection plugins listen for input events and trigger gesture recognition. Disabling a plugin stops that input method.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            let detectionPlugins = DetectionPluginManager.shared.getAllPlugins()
+            MGContentCard {
+                VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
+                    ForEach(detectionPlugins, id: \.identifier) { plugin in
+                        detectionPluginRow(plugin)
+                    }
+                }
+            }
+        }
+    }
+
+    private func detectionPluginRow(_ plugin: DetectionPlugin) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
+                    Text(plugin.name)
+                        .font(.system(size: MGStyle.FontSize.body, weight: .medium))
+                    Text(plugin.description)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Text("v\(plugin.version) · Priority \(plugin.priority)")
+                        .font(.caption2)
+                        .foregroundColor(.secondary.opacity(0.7))
+                }
+                Spacer()
+                Toggle("", isOn: Binding(
+                    get: { plugin.isEnabled },
+                    set: { DetectionPluginManager.shared.setPluginEnabled(plugin.identifier, enabled: $0) }
+                ))
+                .toggleStyle(.switch)
+                .labelsHidden()
+            }
+            .padding(.vertical, MGStyle.Spacing.sm)
+            Divider()
+        }
+    }
+
     private func pluginRow(_ plugin: PluginInfo) -> some View {
         VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
             HStack {
