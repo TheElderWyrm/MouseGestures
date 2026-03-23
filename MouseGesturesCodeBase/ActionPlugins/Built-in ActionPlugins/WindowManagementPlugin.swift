@@ -202,7 +202,13 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
     // MARK: - Actions
     
     lazy var providedActions: [PluginAction] = [
-        
+
+        // MARK: Window Controls (moved from Core for architectural clarity)
+        PluginAction(id: "close_window",   name: "Close Window",      description: "Close a window",           requiresParameters: true, supportedParameters: windowTargetParameters, icon: "xmark.circle"),
+        PluginAction(id: "minimize",       name: "Minimize Window",   description: "Minimize a window",        requiresParameters: true, supportedParameters: windowTargetParameters, icon: "minus.circle"),
+        PluginAction(id: "maximize",       name: "Maximize Window",   description: "Fill screen (not fullscreen)", requiresParameters: true, supportedParameters: windowTargetParameters, icon: "plus.circle"),
+        PluginAction(id: "fullscreen",     name: "Toggle Fullscreen", description: "Toggle fullscreen mode",   requiresParameters: true, supportedParameters: windowTargetParameters, icon: "arrow.up.left.and.arrow.down.right"),
+
         // MARK: Snap Window (replaces individual half/quarter/third actions)
         PluginAction(
             id: "snap_window",
@@ -614,7 +620,42 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
         let target = parseWindowTarget(from: parameters)
         
         switch action.id {
-            
+
+        // MARK: Window Controls (moved from Core)
+        case "close_window":
+            if let (window, _) = getTargetWindow(target, context: context) {
+                if let btnObj = context.getAccessibilityAttribute(window, attribute: kAXCloseButtonAttribute as String) {
+                    _ = context.performAccessibilityAction(unsafeBitCast(btnObj, to: AXUIElement.self), action: kAXPressAction as String)
+                } else {
+                    context.sendKeyboardShortcut(keyCode: 13, modifiers: [.maskCommand])
+                }
+            } else {
+                context.sendKeyboardShortcut(keyCode: 13, modifiers: [.maskCommand])
+            }
+
+        case "minimize":
+            if let (window, _) = getTargetWindow(target, context: context) {
+                _ = context.setAccessibilityAttribute(window, attribute: kAXMinimizedAttribute as String, value: true as CFBoolean)
+            } else {
+                context.sendKeyboardShortcut(keyCode: 46, modifiers: [.maskCommand])
+            }
+
+        case "maximize":
+            if let (window, _) = getTargetWindow(target, context: context), let screen = NSScreen.main {
+                var origin = CGPoint(x: screen.visibleFrame.minX, y: screen.visibleFrame.minY)
+                var size   = CGSize(width: screen.visibleFrame.width, height: screen.visibleFrame.height)
+                if let p = AXValueCreate(.cgPoint, &origin) { _ = context.setAccessibilityAttribute(window, attribute: kAXPositionAttribute as String, value: p) }
+                if let s = AXValueCreate(.cgSize,  &size)   { _ = context.setAccessibilityAttribute(window, attribute: kAXSizeAttribute  as String, value: s) }
+            }
+
+        case "fullscreen":
+            if let (window, _) = getTargetWindow(target, context: context),
+               let btnObj = context.getAccessibilityAttribute(window, attribute: "AXFullScreenButton") {
+                let btn = unsafeBitCast(btnObj, to: AXUIElement.self)
+                if context.performAccessibilityAction(btn, action: kAXPressAction as String) { break }
+            }
+            context.sendKeyboardShortcut(keyCode: 3, modifiers: [.maskControl, .maskCommand])
+
         // MARK: Snap Window
         case "snap_window":
             let position = parameters.string(for: "position") ?? "left_half"

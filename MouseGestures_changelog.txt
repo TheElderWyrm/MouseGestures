@@ -1,3 +1,14 @@
+## 2026-03-23 (9)
+
+### Refactor: Window Actions Moved to Window Management Plugin
+
+**WindowManagementPlugin.swift, CoreActionsPlugin.swift, DefaultProfiles.swift**
+- Added `close_window`, `minimize`, `maximize`, `fullscreen` to `com.mousegestures.window` with fresh implementations using WM's existing window-targeting infrastructure
+- Marked the `com.mousegestures.core` versions as `hidden: true` so they remain functional for existing saved gestures but no longer appear in the action picker
+- Updated all DefaultProfiles templates to reference the new `com.mousegestures.window.*` IDs
+
+---
+
 ## 2026-03-23 (8)
 
 ### Feature: Unified Mouse Input Trigger

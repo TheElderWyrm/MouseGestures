@@ -75,39 +75,11 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
     // MARK: - Actions
     
     lazy var providedActions: [PluginAction] = [
-        // MARK: Window Actions (with target support)
-        PluginAction(
-            id: "close_window",
-            name: "Close Window",
-            description: "Close a window",
-            requiresParameters: true,
-            supportedParameters: windowTargetParameters,
-            icon: "xmark.circle"
-        ),
-        PluginAction(
-            id: "minimize",
-            name: "Minimize Window",
-            description: "Minimize a window",
-            requiresParameters: true,
-            supportedParameters: windowTargetParameters,
-            icon: "minus.circle"
-        ),
-        PluginAction(
-            id: "maximize",
-            name: "Maximize Window",
-            description: "Maximize a window",
-            requiresParameters: true,
-            supportedParameters: windowTargetParameters,
-            icon: "plus.circle"
-        ),
-        PluginAction(
-            id: "fullscreen",
-            name: "Toggle Fullscreen",
-            description: "Toggle fullscreen mode",
-            requiresParameters: true,
-            supportedParameters: windowTargetParameters,
-            icon: "arrow.up.left.and.arrow.down.right"
-        ),
+        // MARK: Window Actions — hidden: moved to com.mousegestures.window (backward-compat aliases)
+        PluginAction(id: "close_window", name: "Close Window",      description: "Close a window",           requiresParameters: true, supportedParameters: windowTargetParameters, icon: "xmark.circle",                                   hidden: true),
+        PluginAction(id: "minimize",     name: "Minimize Window",   description: "Minimize a window",        requiresParameters: true, supportedParameters: windowTargetParameters, icon: "minus.circle",                                    hidden: true),
+        PluginAction(id: "maximize",     name: "Maximize Window",   description: "Maximize a window",        requiresParameters: true, supportedParameters: windowTargetParameters, icon: "plus.circle",                                     hidden: true),
+        PluginAction(id: "fullscreen",   name: "Toggle Fullscreen", description: "Toggle fullscreen mode",   requiresParameters: true, supportedParameters: windowTargetParameters, icon: "arrow.up.left.and.arrow.down.right",              hidden: true),
         PluginAction(
             id: "hide_app",
             name: "Hide Application",

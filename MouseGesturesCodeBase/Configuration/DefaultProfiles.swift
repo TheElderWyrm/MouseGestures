@@ -14,7 +14,7 @@ import Foundation
 // let gesture = Gesture(
 //     zone: .topRight,
 //     modifiers: [.command],
-//     actionIdentifier: "com.mousegestures.core.close_window",
+//     actionIdentifier: "com.mousegestures.window.close_window",
 //     keyboardTrigger: KeyboardTrigger(keyCode: 17, modifiers: [.command], displayString: "⌘T"),
 //     mouseButtonTrigger: MouseButtonTrigger(button: .middle, modifiers: [])
 // )
@@ -25,10 +25,10 @@ struct DefaultProfiles {
     static func createWindowManagementProfile() -> ConfigurationProfile {
         let gestures = [
             // Window sizing
-            Gesture(zone: .topLeft, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.maximize"),
-            Gesture(zone: .topRight, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.close_window"),
-            Gesture(zone: .top, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.fullscreen"),
-            Gesture(zone: .bottom, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.minimize"),
+            Gesture(zone: .topLeft, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.window.maximize"),
+            Gesture(zone: .topRight, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.window.close_window"),
+            Gesture(zone: .top, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.window.fullscreen"),
+            Gesture(zone: .bottom, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.window.minimize"),
             
             // Window positioning
             Gesture(zone: .left, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.window.snap_window", parameters: ["position": AnyCodable("left_half")]),
@@ -120,9 +120,9 @@ struct DefaultProfiles {
     static func createProductivityProfile() -> ConfigurationProfile {
         let gestures = [
             // Window management essentials
-            Gesture(zone: .topRight, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.close_window"),
-            Gesture(zone: .top, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.fullscreen"),
-            Gesture(zone: .bottom, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.minimize"),
+            Gesture(zone: .topRight, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.window.close_window"),
+            Gesture(zone: .top, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.window.fullscreen"),
+            Gesture(zone: .bottom, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.window.minimize"),
             
             // Quick app switching
             Gesture(zone: .left, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.cycle_window", parameters: ["direction": AnyCodable("backward")]),
@@ -152,9 +152,9 @@ struct DefaultProfiles {
     static func createMinimalProfile() -> ConfigurationProfile {
         let gestures = [
             Gesture(zone: .topRight, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.quit_app"),
-            Gesture(zone: .topLeft, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.close_window"),
-            Gesture(zone: .top, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.fullscreen"),
-            Gesture(zone: .bottom, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.minimize"),
+            Gesture(zone: .topLeft, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.window.close_window"),
+            Gesture(zone: .top, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.window.fullscreen"),
+            Gesture(zone: .bottom, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.window.minimize"),
             Gesture(zone: .left, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.cycle_space", parameters: ["direction": AnyCodable("previous")]),
             Gesture(zone: .right, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.cycle_space", parameters: ["direction": AnyCodable("next")])
         ]
@@ -172,8 +172,8 @@ struct DefaultProfiles {
             // Window management
             Gesture(zone: .left, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.window.snap_window", parameters: ["position": AnyCodable("left_half")]),
             Gesture(zone: .right, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.window.snap_window", parameters: ["position": AnyCodable("right_half")]),
-            Gesture(zone: .top, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.maximize"),
-            Gesture(zone: .topRight, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.close_window"),
+            Gesture(zone: .top, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.window.maximize"),
+            Gesture(zone: .topRight, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.window.close_window"),
             Gesture(zone: .topLeft, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.quit_app"),
             
             // Quick app switching (Terminal, IDE, Browser)
