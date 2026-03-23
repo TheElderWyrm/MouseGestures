@@ -21,7 +21,7 @@ Architecture:
   - Move window actions (close/minimize/maximize/fullscreen) from Core to Window Management plugin
   - Improve activation system UI
   - Drag does not need to be a separate trigger configuration than mouse button
-  - Reduce size of modifier keys trigger configuration
+  - Reduce size of modifier keys trigger configuration [FIXED 2026-03-23] (compact horizontal pill style)
   - Make Action View categories dynamic [FIXED 2026-03-23] (shortLabel now auto-abbreviates)
   - Haptic feedback is happening on finish instead of activation [FIXED 2026-03-15]
   - Full screen not working when full screen button not visible (Fall back to shortcut) [DONE] (fallback to Ctrl+Cmd+F already present in code)
@@ -38,7 +38,7 @@ UI:
 
 Features:
   - Add reset to template in gestures [FIXED 2026-03-23] (Reset to Template... menu item in GesturesView)
-  - Bundle actions with variables (e.g. Open URL From Clipboard)
+  - Bundle actions with variables (e.g. Open URL From Clipboard) [FIXED 2026-03-23] (token substitution: {clipboard}, {frontmost_app}, {frontmost_app_name})
   - Test adding external plugins for detection and actions
   - open_url: Show only browsers when selecting app + add 'default browser' option [FIXED 2026-03-23] (browser-only filter now uses installed browsers)
   - run_script: add interpreter selection option [FIXED 2026-03-23] (shell_interpreter param: sh/bash/zsh, visible for shell scripts)

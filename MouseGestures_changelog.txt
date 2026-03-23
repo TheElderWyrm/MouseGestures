@@ -1,3 +1,20 @@
+## 2026-03-23 (4)
+
+### Feature: Parameter Token Substitution (Bundle Variables)
+
+**ActionExecutionManager.swift**
+- Added `resolveTokens(in:)` that replaces tokens in all string-valued parameters before plugin dispatch
+- Supported tokens: `{clipboard}` (NSPasteboard string), `{frontmost_app}` (bundle ID), `{frontmost_app_name}` (localized name)
+- Works in any action parameter — e.g. `open_url` URL = `{clipboard}` opens the clipboard URL
+
+### Improvement: Compact Modifier Key Toggles
+
+**GestureConfigurationSheet.swift — ModifierToggle**
+- Changed from large vertical tile (64×44px, stacked symbol+name) to a compact horizontal pill (symbol + short name inline)
+- Reduces the vertical footprint of the modifier key configuration row
+
+---
+
 ## 2026-03-23 (3)
 
 ### Feature: tile_all resize_windows Option

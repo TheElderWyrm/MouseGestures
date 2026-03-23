@@ -303,12 +303,15 @@ class ActionExecutionManager {
         // Log execution start
         log.log("Executing action: \(actionId) from source: \(context.source)")
 
+        // Resolve parameter tokens ({clipboard}, {frontmost_app}, etc.) before dispatch
+        let resolvedParameters = resolveTokens(in: parameters)
+
         // Dispatch plugin execution to a background queue so blocking operations
         // (AppleScript, Process.waitUntilExit, accessibility calls, etc.) never
         // freeze the main thread or the detection thread that triggered the gesture.
         DispatchQueue.global(qos: .userInitiated).async {
             do {
-                try self.pluginManager.executeAction(identifier: actionId, parameters: parameters)
+                try self.pluginManager.executeAction(identifier: actionId, parameters: resolvedParameters)
 
                 let result = ActionExecutionResult(
                     success: true,
@@ -381,6 +384,30 @@ class ActionExecutionManager {
         DispatchQueue.main.async {
             NSHapticFeedbackManager.defaultPerformer.perform(.generic, performanceTime: .now)
         }
+    }
+
+    // MARK: - Token Substitution
+
+    /// Supported tokens:
+    ///   {clipboard}           — current pasteboard string
+    ///   {frontmost_app}       — bundle ID of frontmost app
+    ///   {frontmost_app_name}  — localised name of frontmost app
+    private func resolveTokens(in parameters: ActionParameters) -> ActionParameters {
+        let tokens: [String: () -> String] = [
+            "{clipboard}":          { NSPasteboard.general.string(forType: .string) ?? "" },
+            "{frontmost_app}":      { NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "" },
+            "{frontmost_app_name}": { NSWorkspace.shared.frontmostApplication?.localizedName ?? "" },
+        ]
+
+        var resolved = parameters
+        for key in parameters.keys {
+            guard var str = parameters.string(for: key), str.contains("{") else { continue }
+            for (token, resolver) in tokens where str.contains(token) {
+                str = str.replacingOccurrences(of: token, with: resolver())
+            }
+            resolved[key] = AnyCodable(str)
+        }
+        return resolved
     }
 
     private func showActivationNotification(actionId: String, gesture: Gesture?) {

@@ -532,15 +532,16 @@ struct GestureConfigurationSheet: View {
             Button(action: {
                 if isActive { modifiers.remove(flag) } else { modifiers.insert(flag) }
             }) {
-                VStack(spacing: 2) {
+                HStack(spacing: MGStyle.Spacing.xs) {
                     Text(label)
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(.system(size: 15, weight: .semibold, design: .monospaced))
                     if !name.isEmpty {
                         Text(name)
-                            .font(.system(size: 9))
+                            .font(.system(size: MGStyle.FontSize.caption, weight: .medium))
                     }
                 }
-                .frame(width: 64, height: 44)
+                .padding(.horizontal, MGStyle.Spacing.md)
+                .padding(.vertical, MGStyle.Spacing.sm)
                 .background(
                     RoundedRectangle(cornerRadius: MGStyle.Corner.md)
                         .fill(isActive ? Color.accentColor : Color(NSColor.controlBackgroundColor))
