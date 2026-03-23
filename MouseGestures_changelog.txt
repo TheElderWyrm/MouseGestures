@@ -1,3 +1,15 @@
+## 2026-03-23 (6)
+
+### Improvement: Gestures Empty State + snap_window Rename
+
+**GesturesView.swift**
+- Replaced single-button empty state with a two-button layout: "Add Gesture" and "Import Template" (triggers the template picker)
+
+**WindowManagementPlugin.swift**
+- Renamed `snap_window` display name from "Snap Window" to "Snap to Region"
+
+---
+
 ## 2026-03-23 (5)
 
 ### Feature: Dynamic Option Dropdowns for window_layout and window_position_memory

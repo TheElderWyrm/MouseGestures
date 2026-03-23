@@ -88,13 +88,11 @@ struct GesturesView: View {
             
             // Main Content
             if filteredGestures.isEmpty {
-                MGEmptyState(
-                    icon: searchText.isEmpty ? "hand.draw" : "magnifyingglass",
-                    title: searchText.isEmpty ? "No gestures configured" : "No matching gestures",
-                    description: searchText.isEmpty ? "Add gestures to trigger actions with mouse zones, modifier keys, and more." : nil,
-                    actionLabel: searchText.isEmpty ? "Add Your First Gesture" : nil,
-                    action: searchText.isEmpty ? { activeSheet = .addGesture } : nil
-                )
+                if searchText.isEmpty {
+                    gestureEmptyState
+                } else {
+                    MGEmptyState(icon: "magnifyingglass", title: "No matching gestures")
+                }
             } else {
                 ScrollView {
                     LazyVStack(spacing: MGStyle.Spacing.sm) {
@@ -153,6 +151,38 @@ struct GesturesView: View {
         .onAppear { uiServices.loadData() }
     }
     
+    // MARK: - Empty State
+
+    private var gestureEmptyState: some View {
+        VStack(spacing: MGStyle.Spacing.xl) {
+            Spacer()
+            Image(systemName: "hand.draw")
+                .font(.system(size: 48, weight: .thin))
+                .foregroundColor(.secondary.opacity(0.5))
+            VStack(spacing: MGStyle.Spacing.sm) {
+                Text("No gestures configured")
+                    .font(.system(size: MGStyle.FontSize.heading, weight: .medium))
+                Text("Add gestures to trigger actions with mouse zones, modifier keys, and more.")
+                    .font(.system(size: MGStyle.FontSize.caption))
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+            HStack(spacing: MGStyle.Spacing.lg) {
+                Button(action: { activeSheet = .addGesture }) {
+                    Label("Add Gesture", systemImage: "plus")
+                }
+                .buttonStyle(.borderedProminent)
+
+                Button(action: { showingResetToTemplate = true }) {
+                    Label("Import Template", systemImage: "doc.badge.arrow.up")
+                }
+            }
+            Spacer()
+        }
+        .padding(MGStyle.Spacing.xxl)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
     // MARK: - Inline Profile Switcher
     
     private var profileSwitcher: some View {

@@ -38,7 +38,7 @@ General Core Issues:
 WINDOW MANAGEMENT (com.mousegestures.window)
 ------------------------------------------
 snap_window          - Move window to a screen region (position parameter, 11 regions) [✓✓]
-	* Rename
+	* Rename [FIXED 2026-03-23] (display name changed to "Snap to Region")
 resize_to_percent    - Resize window to % of screen (percent 1-100) [✓]
 adjust_size          - Grow or shrink window (direction + unit + amount parameters) [✓]
 	* Parameter to grow by pixels instead of percent [FIXED 2026-03-23] (unit: percent/pixels)
@@ -89,8 +89,8 @@ logout               - Log out current user (confirm parameter) [✓✓]
 ------------------------------------------
 AUTOMATION (com.mousegestures.automation)
 ------------------------------------------
-keyboard_shortcut    - Trigger a keyboard shortcut [✓]
-	* Text on shortcut field too long, move note about not working on system shortcuts elsewhere or remove
+keyboard_shortcut    - Trigger a keyboard shortcut [✓✓]
+	* Text on shortcut field too long [FIXED 2026-03-22] ('System shortcuts disabled' text removed)
 run_shortcut         - Run a Shortcuts app shortcut [✓✓]
 run_script           - Execute a script (applescript/shell/javascript/python) [✓]
 	* Python path auto-detected (local/homebrew/system) + custom override [FIXED 2026-03-23]

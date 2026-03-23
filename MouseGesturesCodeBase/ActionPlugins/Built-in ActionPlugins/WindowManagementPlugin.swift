@@ -206,7 +206,7 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
         // MARK: Snap Window (replaces individual half/quarter/third actions)
         PluginAction(
             id: "snap_window",
-            name: "Snap Window",
+            name: "Snap to Region",
             description: "Move window to a screen region",
             requiresParameters: true,
             supportedParameters: [

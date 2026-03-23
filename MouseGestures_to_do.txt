@@ -43,7 +43,7 @@ Features:
   - open_url: Show only browsers when selecting app + add 'default browser' option [FIXED 2026-03-23] (browser-only filter now uses installed browsers)
   - run_script: add interpreter selection option [FIXED 2026-03-23] (shell_interpreter param: sh/bash/zsh, visible for shell scripts)
   - cascade: add option to resize windows or not [DONE] (resize_windows bool parameter already present)
-  - Improve templates/default configuration
+  - Improve templates/default configuration [IMPROVED 2026-03-23] (empty state now offers Import Template; 7 templates available)
   - 'Tab Navigation' template [FIXED 2026-03-23] (added as importable template profile)
 
 Cleanup:
