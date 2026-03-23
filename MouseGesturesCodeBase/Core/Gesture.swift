@@ -179,6 +179,7 @@ struct Gesture: Codable, Equatable {
          dragModifier: DragModifier = .none,
          actionIdentifier: String,
          parameters: [String: AnyCodable] = [:],
+         name: String? = nil,
          keyboardTrigger: KeyboardTrigger? = nil,
          mouseButtonTrigger: MouseButtonTrigger? = nil,
          isEnabled: Bool = true,
@@ -210,7 +211,7 @@ struct Gesture: Codable, Equatable {
         self.actionIdentifier = actionIdentifier
         self.timing = timing
         self.parameters = parameters
-        self.name = nil
+        self.name = name
         self.longPressActionIdentifier = longPressActionIdentifier
         self.longPressParameters = longPressParameters
     }

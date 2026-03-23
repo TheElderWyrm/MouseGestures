@@ -288,24 +288,24 @@ struct GestureCardView: View {
                 
                 // Info block
                 VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
-                    let displayName = gesture.name?.isEmpty == false ? gesture.name! : (actionDef?.name ?? gesture.actionIdentifier)
+                    let hasName = gesture.name?.isEmpty == false
+                    let displayName = hasName ? gesture.name! : (actionDef?.name ?? gesture.actionIdentifier)
                     Text(displayName)
                         .font(.system(size: MGStyle.FontSize.body, weight: .medium))
                         .lineLimit(1)
                         .opacity(isEnabled ? 1 : 0.5)
-                    HStack(spacing: MGStyle.Spacing.sm) {
-                        if gesture.name?.isEmpty == false {
-                            Text(actionDef?.name ?? gesture.actionIdentifier)
-                                .font(.system(size: MGStyle.FontSize.badge))
-                                .foregroundColor(.secondary.opacity(0.6))
-                                .lineLimit(1)
-                        }
-                        Text(triggerSummary)
+                    // Subtitle: action name (if custom name) + separator + trigger
+                    let subtitleParts: [String] = [
+                        hasName ? (actionDef?.name ?? gesture.actionIdentifier) : nil,
+                        triggerSummary.isEmpty ? nil : triggerSummary
+                    ].compactMap { $0 }
+                    if !subtitleParts.isEmpty {
+                        Text(subtitleParts.joined(separator: " | "))
                             .font(.system(size: MGStyle.FontSize.caption))
                             .foregroundColor(.secondary)
                             .lineLimit(1)
+                            .opacity(isEnabled ? 0.8 : 0.4)
                     }
-                    .opacity(isEnabled ? 0.8 : 0.4)
                 }
                 
                 Spacer()

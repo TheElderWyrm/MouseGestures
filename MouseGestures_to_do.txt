@@ -62,3 +62,17 @@ Cleanup:
 - Add 'none' and 'any' to mouse input selection. [FIXED 2026-03-23] (Any Drag, Any Click added; detection logic handles .any)
 - Minimize (and possibly others) not working with multiple window targets [FIXED 2026-03-23] (uses getTargetWindows plural)
 - When a parameter has a default state be specific instead of showing select (Example: All Windows instead of 'select' for cycle window.) [FIXED 2026-03-23] ("Select..." only shown when no defaultValue defined)
+
+- Close window not targeting multiple windows. Fix for all actions with this issue. [FIXED 2026-03-23] (close/maximize/fullscreen all use getTargetWindows)
+- Updating bundle action should deselect (but not adding) [FIXED 2026-03-23]
+- Label name field: 'Name:' [FIXED 2026-03-23]
+- Don't display the action as dimmer then the activation criteria when a name is selected. Also separate the small text with ' | ' [FIXED 2026-03-23]
+- Reduce size of activation toggle in gesture edit, also label what it does. [FIXED 2026-03-23] (small switch + Enabled/Disabled label)
+- There is a large space at the top of the action list selection box. [FIXED 2026-03-23] (removed row anchor, scroll to first item)
+- Improve trigger configuration UI [IMPROVED 2026-03-23] (mouse input: Click|Drag segmented + button picker; No Mouse option)
+- Add 'No Mouse' option to disable when any mouse button is pressed. [FIXED 2026-03-23] (requireNoMouse component + ScreenZone check)
+- Turn mouse input into a selection with a toggle between click and drag [FIXED 2026-03-23] (segmented Click|Drag + button picker)
+- Everything dealing with plugins should be fully dynamic [PARTIAL 2026-03-23] (trigger sections skip disabled plugins; full plugin-driven UI pending)
+- Add names to all template actions [FIXED 2026-03-23] (all 6 profiles have gesture names)
+- Ensure all window actions accept multiple windows [FIXED 2026-03-23] (close/maximize/fullscreen iterate all targets)
+- Add action to switch a window's display [FIXED 2026-03-23] (move_to_display: next/previous/display 1-4)

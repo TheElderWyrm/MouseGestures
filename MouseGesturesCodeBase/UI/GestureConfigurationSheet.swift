@@ -63,11 +63,22 @@ struct GestureConfigurationSheet: View {
                 VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {
                     // Name + Enable toggle
                     HStack(spacing: MGStyle.Spacing.lg) {
-                        Toggle("Enabled", isOn: $isEnabled)
-                            .toggleStyle(.switch)
-                            .labelsHidden()
-                        TextField("Custom name (optional)", text: $gestureName)
-                            .textFieldStyle(.roundedBorder)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Toggle("", isOn: $isEnabled)
+                                .toggleStyle(.switch)
+                                .controlSize(.small)
+                                .labelsHidden()
+                            Text(isEnabled ? "Enabled" : "Disabled")
+                                .font(.system(size: 9))
+                                .foregroundColor(isEnabled ? .green : .secondary)
+                        }
+                        HStack(spacing: MGStyle.Spacing.sm) {
+                            Text("Name:")
+                                .font(.system(size: MGStyle.FontSize.caption, weight: .medium))
+                                .foregroundColor(.secondary)
+                            TextField("Optional", text: $gestureName)
+                                .textFieldStyle(.roundedBorder)
+                        }
                         Spacer()
                     }
 
@@ -211,7 +222,6 @@ struct GestureConfigurationSheet: View {
                             get: { (components.dragType?.isEnabled ?? false) || (components.mouseButton?.isEnabled ?? false) },
                             set: { enabled in
                                 if enabled {
-                                    // Default: left drag (most common)
                                     if components.dragType == nil { components.dragType = DragTypeConfig(isEnabled: false, dragType: .leftDrag) }
                                     if components.mouseButton == nil { components.mouseButton = MouseButtonConfig(isEnabled: false, button: .left) }
                                     components.dragType?.isEnabled = true
@@ -227,6 +237,17 @@ struct GestureConfigurationSheet: View {
                     if (components.dragType?.isEnabled ?? false) || (components.mouseButton?.isEnabled ?? false) {
                         mouseInputConfigView
                     }
+
+                    // No Mouse option
+                    ComponentToggleCard(
+                        icon: "computermouse.slash",
+                        title: "No Mouse Button",
+                        description: "Only fire when no mouse button is held",
+                        isEnabled: Binding(
+                            get: { components.requireNoMouse },
+                            set: { components.requireNoMouse = $0 }
+                        )
+                    )
                     } // end mouse plugin guard
 
                     // Keyboard Shortcut Component
@@ -401,37 +422,89 @@ struct GestureConfigurationSheet: View {
         }
     }
 
+    private var isDragMode: Bool {
+        components.dragType?.isEnabled == true
+    }
+
     private var mouseInputConfigView: some View {
-        HStack {
-            Text("Type:")
-                .font(.system(size: MGStyle.FontSize.caption))
-                .foregroundColor(.secondary)
-                .frame(width: 80, alignment: .trailing)
-            Picker("", selection: Binding(
-                get: { currentMouseInputType() },
-                set: { applyMouseInputType($0) }
-            )) {
-                Group {
-                    Text("Any Drag").tag(MouseInputType.anyDrag)
-                    Text("Left Drag").tag(MouseInputType.leftDrag)
-                    Text("Right Drag").tag(MouseInputType.rightDrag)
-                    Text("Middle Drag").tag(MouseInputType.middleDrag)
-                    Divider()
-                    Text("Any Click").tag(MouseInputType.anyClick)
-                    Text("Left Click").tag(MouseInputType.leftClick)
-                    Text("Right Click").tag(MouseInputType.rightClick)
-                    Text("Middle Click").tag(MouseInputType.middleClick)
+        VStack(alignment: .leading, spacing: MGStyle.Spacing.sm) {
+            HStack {
+                Text("Type:")
+                    .font(.system(size: MGStyle.FontSize.caption))
+                    .foregroundColor(.secondary)
+                    .frame(width: 80, alignment: .trailing)
+                Picker("", selection: Binding(
+                    get: { isDragMode ? "drag" : "click" },
+                    set: { mode in
+                        if mode == "drag" {
+                            components.dragType = DragTypeConfig(isEnabled: true, dragType: currentMouseInputType() == .anyDrag ? .anyDrag : .leftDrag)
+                            components.mouseButton?.isEnabled = false
+                        } else {
+                            components.dragType?.isEnabled = false
+                            components.mouseButton = MouseButtonConfig(isEnabled: true, button: currentMouseInputType() == .anyClick ? .any : .left)
+                        }
+                    }
+                )) {
+                    Text("Click").tag("click")
+                    Text("Drag").tag("drag")
                 }
+                .pickerStyle(.segmented)
+                .frame(width: 120)
+                .labelsHidden()
+                Spacer()
             }
-            .pickerStyle(.menu)
-            .frame(width: 180)
-            .labelsHidden()
-            Spacer()
+
+            HStack {
+                Text("Button:")
+                    .font(.system(size: MGStyle.FontSize.caption))
+                    .foregroundColor(.secondary)
+                    .frame(width: 80, alignment: .trailing)
+                Picker("", selection: Binding(
+                    get: { isDragMode
+                        ? (components.dragType?.dragType ?? .leftDrag)
+                        : buttonToDragMirror(components.mouseButton?.button ?? .left)
+                    },
+                    set: { val in
+                        if isDragMode {
+                            components.dragType?.dragType = val
+                        } else {
+                            components.mouseButton?.button = dragMirrorToButton(val)
+                        }
+                    }
+                )) {
+                    Text("Any").tag(DragModifier.anyDrag)
+                    Text("Left").tag(DragModifier.leftDrag)
+                    Text("Right").tag(DragModifier.rightDrag)
+                    Text("Middle").tag(DragModifier.middleDrag)
+                }
+                .pickerStyle(.menu)
+                .frame(width: 100)
+                .labelsHidden()
+                Spacer()
+            }
         }
         .padding(.leading, MGStyle.Spacing.xxl)
         .padding(MGStyle.Spacing.md)
         .background(MGStyle.Colors.subtleOverlay)
         .cornerRadius(MGStyle.Corner.md)
+    }
+
+    // Mirror between DragModifier and MouseButton (any/left/right/middle)
+    private func buttonToDragMirror(_ button: MouseButtonTrigger.MouseButton) -> DragModifier {
+        switch button {
+        case .any: return .anyDrag
+        case .right: return .rightDrag
+        case .middle: return .middleDrag
+        default: return .leftDrag
+        }
+    }
+    private func dragMirrorToButton(_ drag: DragModifier) -> MouseButtonTrigger.MouseButton {
+        switch drag {
+        case .anyDrag: return .any
+        case .rightDrag: return .right
+        case .middleDrag: return .middle
+        default: return .left
+        }
     }
 
     private var dragTypeConfigView: some View {

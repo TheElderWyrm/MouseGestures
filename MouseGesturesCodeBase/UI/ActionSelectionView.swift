@@ -55,9 +55,6 @@ struct ActionSelectionView: View {
                         get: { selectedActionId.isEmpty ? nil : selectedActionId },
                         set: { if let v = $0 { selectedActionId = v } }
                     )) {
-                        // Invisible anchor for scroll-to-top
-                        Color.clear.frame(height: 0).id("__search_top__")
-
                         if isSearching {
                             searchResultsContent
                         } else if selectedCategory == "Saved" {
@@ -74,11 +71,14 @@ struct ActionSelectionView: View {
                         }
                     }
                     .onChange(of: searchText) { _ in
-                        // Reset scroll to top when search text changes
-                        proxy.scrollTo("__search_top__", anchor: .top)
+                        let firstId = isSearching
+                            ? searchFilteredEntries.first?.id
+                            : (allActionEntries.first?.id ?? savedActionEntries.first?.id)
+                        if let id = firstId { proxy.scrollTo(id, anchor: .top) }
                     }
                     .onChange(of: selectedCategory) { _ in
-                        proxy.scrollTo("__search_top__", anchor: .top)
+                        let firstId = displayEntries.first?.id
+                        if let id = firstId { proxy.scrollTo(id, anchor: .top) }
                     }
                 }
                 

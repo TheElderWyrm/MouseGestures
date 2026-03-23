@@ -89,7 +89,9 @@ struct GestureActivationComponents: Codable, Equatable {
     var dragType: DragTypeConfig? = nil
     var mouseButton: MouseButtonConfig? = nil
     var keyboardShortcut: KeyboardShortcutConfig? = nil
-    
+    /// When true, the gesture will NOT fire if any mouse button is currently pressed
+    var requireNoMouse: Bool = false
+
     /// Default initializer
     init() {}
     

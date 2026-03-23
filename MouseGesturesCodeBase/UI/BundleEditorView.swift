@@ -362,6 +362,7 @@ struct BundleEditorView: View {
         bundledActions[idx].actionIdentifier = editorActionId
         bundledActions[idx].parameters = editorParams
         bundledActions[idx].delayAfter = Double(editorDelay) ?? 0.2
+        selection = nil   // Deselect after update so user sees the result in the list
     }
     
     // MARK: - List Manipulation

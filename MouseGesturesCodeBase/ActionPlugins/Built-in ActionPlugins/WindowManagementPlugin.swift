@@ -209,6 +209,40 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
         PluginAction(id: "maximize",       name: "Maximize Window",   description: "Fill screen (not fullscreen)", requiresParameters: true, supportedParameters: windowTargetParameters, icon: "plus.circle"),
         PluginAction(id: "fullscreen",     name: "Toggle Fullscreen", description: "Toggle fullscreen mode",   requiresParameters: true, supportedParameters: windowTargetParameters, icon: "arrow.up.left.and.arrow.down.right"),
 
+        // MARK: Move to Display
+        PluginAction(
+            id: "move_to_display",
+            name: "Move to Display",
+            description: "Move a window to a different display",
+            requiresParameters: true,
+            supportedParameters: windowTargetParameters + [
+                ParameterDefinition(
+                    key: "display",
+                    name: "Display",
+                    type: .selection,
+                    defaultValue: AnyCodable("next"),
+                    description: "Which display to move the window to",
+                    validation: ValidationRule(allowedValues: [
+                        AnyCodable("next"),
+                        AnyCodable("previous"),
+                        AnyCodable("1"),
+                        AnyCodable("2"),
+                        AnyCodable("3"),
+                        AnyCodable("4")
+                    ]),
+                    displayValues: [
+                        "next": "Next Display",
+                        "previous": "Previous Display",
+                        "1": "Display 1",
+                        "2": "Display 2",
+                        "3": "Display 3",
+                        "4": "Display 4"
+                    ]
+                )
+            ],
+            icon: "display.2"
+        ),
+
         // MARK: Snap Window (replaces individual half/quarter/third actions)
         PluginAction(
             id: "snap_window",
@@ -623,14 +657,15 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
 
         // MARK: Window Controls (moved from Core)
         case "close_window":
-            if let (window, _) = getTargetWindow(target, context: context) {
-                if let btnObj = context.getAccessibilityAttribute(window, attribute: kAXCloseButtonAttribute as String) {
-                    _ = context.performAccessibilityAction(unsafeBitCast(btnObj, to: AXUIElement.self), action: kAXPressAction as String)
-                } else {
-                    context.sendKeyboardShortcut(keyCode: 13, modifiers: [.maskCommand])
-                }
-            } else {
+            let closeTargets = getTargetWindows(target, context: context)
+            if closeTargets.isEmpty {
                 context.sendKeyboardShortcut(keyCode: 13, modifiers: [.maskCommand])
+            } else {
+                for (window, _) in closeTargets {
+                    if let btnObj = context.getAccessibilityAttribute(window, attribute: kAXCloseButtonAttribute as String) {
+                        _ = context.performAccessibilityAction(unsafeBitCast(btnObj, to: AXUIElement.self), action: kAXPressAction as String)
+                    }
+                }
             }
 
         case "minimize":
@@ -644,20 +679,34 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
             }
 
         case "maximize":
-            if let (window, _) = getTargetWindow(target, context: context), let screen = NSScreen.main {
-                var origin = CGPoint(x: screen.visibleFrame.minX, y: screen.visibleFrame.minY)
-                var size   = CGSize(width: screen.visibleFrame.width, height: screen.visibleFrame.height)
+            for (window, _) in getTargetWindows(target, context: context) {
+                let screen = getScreenForWindow(window, context: context) ?? NSScreen.main
+                guard let sf = screen?.visibleFrame else { continue }
+                var origin = CGPoint(x: sf.minX, y: sf.minY)
+                var size   = CGSize(width: sf.width, height: sf.height)
                 if let p = AXValueCreate(.cgPoint, &origin) { _ = context.setAccessibilityAttribute(window, attribute: kAXPositionAttribute as String, value: p) }
                 if let s = AXValueCreate(.cgSize,  &size)   { _ = context.setAccessibilityAttribute(window, attribute: kAXSizeAttribute  as String, value: s) }
             }
 
         case "fullscreen":
-            if let (window, _) = getTargetWindow(target, context: context),
-               let btnObj = context.getAccessibilityAttribute(window, attribute: "AXFullScreenButton") {
-                let btn = unsafeBitCast(btnObj, to: AXUIElement.self)
-                if context.performAccessibilityAction(btn, action: kAXPressAction as String) { break }
+            let fsTargets = getTargetWindows(target, context: context)
+            if fsTargets.isEmpty {
+                context.sendKeyboardShortcut(keyCode: 3, modifiers: [.maskControl, .maskCommand])
+            } else {
+                for (window, _) in fsTargets {
+                    if let btnObj = context.getAccessibilityAttribute(window, attribute: "AXFullScreenButton") {
+                        let btn = unsafeBitCast(btnObj, to: AXUIElement.self)
+                        _ = context.performAccessibilityAction(btn, action: kAXPressAction as String)
+                    } else {
+                        context.sendKeyboardShortcut(keyCode: 3, modifiers: [.maskControl, .maskCommand])
+                    }
+                }
             }
-            context.sendKeyboardShortcut(keyCode: 3, modifiers: [.maskControl, .maskCommand])
+
+        // MARK: Move to Display
+        case "move_to_display":
+            let displayParam = parameters.string(for: "display") ?? "next"
+            moveToDisplay(displayParam, target: target, context: context)
 
         // MARK: Snap Window
         case "snap_window":
@@ -1033,6 +1082,53 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
             setWindowFrame(window, frame: newFrame, context: context)
         }
         context.logger.log(logMessage, file: #file, function: #function, line: #line)
+    }
+
+    private func moveToDisplay(_ displayParam: String, target: WindowTargeting.WindowTarget?, context: PluginContext) {
+        let screens = NSScreen.screens
+        guard screens.count > 1 else {
+            context.logger.log("move_to_display: only one display found", file: #file, function: #function, line: #line)
+            return
+        }
+        for (window, _) in getTargetWindows(target, context: context) {
+            guard let currentScreen = getScreenForWindow(window, context: context),
+                  let currentFrame  = getWindowFrame(window, context: context) else { continue }
+
+            let currentIdx = screens.firstIndex(of: currentScreen) ?? 0
+            let targetScreen: NSScreen?
+            switch displayParam {
+            case "next":
+                targetScreen = screens[(currentIdx + 1) % screens.count]
+            case "previous":
+                targetScreen = screens[(currentIdx - 1 + screens.count) % screens.count]
+            default:
+                if let idx = Int(displayParam), idx >= 1 && idx <= screens.count {
+                    targetScreen = screens[idx - 1]
+                } else {
+                    targetScreen = nil
+                }
+            }
+            guard let dst = targetScreen, dst != currentScreen else { continue }
+
+            // Translate window position proportionally to the new screen
+            let src = currentScreen.visibleFrame
+            let dstF = dst.visibleFrame
+            let xRatio = (currentFrame.minX - src.minX) / src.width
+            let yRatio = (currentFrame.minY - src.minY) / src.height
+            let newOrigin = CGPoint(
+                x: dstF.minX + xRatio * dstF.width,
+                y: dstF.minY + yRatio * dstF.height
+            )
+            // Clamp size so window fits on destination screen
+            let newSize = CGSize(
+                width:  min(currentFrame.width,  dstF.width),
+                height: min(currentFrame.height, dstF.height)
+            )
+            var o = newOrigin; var s = newSize
+            if let pv = AXValueCreate(.cgPoint, &o) { _ = context.setAccessibilityAttribute(window, attribute: kAXPositionAttribute as String, value: pv) }
+            if let sv = AXValueCreate(.cgSize,  &s) { _ = context.setAccessibilityAttribute(window, attribute: kAXSizeAttribute  as String, value: sv) }
+        }
+        context.logger.log("Moved window(s) to display: \(displayParam)", file: #file, function: #function, line: #line)
     }
 
     private func resizeWindowByPixels(_ delta: CGFloat, target: WindowTargeting.WindowTarget?, logMessage: String, context: PluginContext) {

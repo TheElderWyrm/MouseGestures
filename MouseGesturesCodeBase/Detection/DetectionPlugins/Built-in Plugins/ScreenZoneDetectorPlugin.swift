@@ -533,6 +533,9 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         let mods = NSEvent.ModifierFlags.currentSystem
         let drag = DragModifier.currentSystem
 
+        // Check "No Mouse" requirement — reject if any mouse button is held
+        if gesture.components.requireNoMouse && drag != DragModifier.none { return false }
+
         // Check drag requirement
         if gesture.dragModifier != .none {
             if gesture.dragModifier == .anyDrag {
