@@ -98,10 +98,10 @@ struct GestureActivationComponents: Codable, Equatable {
         var types = Set<ActivationType>()
         if modifierKey?.isEnabled == true { types.insert(.modifierKey) }
         if screenZone?.isEnabled == true { types.insert(.screenZone) }
-        if dragType?.isEnabled == true && dragType?.dragType != .none {
+        if dragType?.isEnabled == true && dragType?.dragType != DragModifier.none {
             types.insert(.mouseButton) // Drag requires button hold
         }
-        if mouseButton?.isEnabled == true && mouseButton?.button != .none {
+        if mouseButton?.isEnabled == true && mouseButton?.button != MouseButtonTrigger.MouseButton.none {
             types.insert(.mouseButton)
         }
         if keyboardShortcut?.isEnabled == true && keyboardShortcut?.keyboardTrigger != nil {

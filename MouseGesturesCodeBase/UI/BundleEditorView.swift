@@ -266,16 +266,6 @@ struct BundleEditorView: View {
                 Spacer()
                 
                 if isEditing {
-                    Button(action: addActionToBundle) {
-                        HStack(spacing: MGStyle.Spacing.sm) {
-                            Image(systemName: "plus.circle.fill")
-                                .font(.system(size: 12))
-                            Text("Add to Bundle")
-                                .font(.system(size: MGStyle.FontSize.body, weight: .medium))
-                        }
-                    }
-                    .controlSize(.large)
-                    .disabled(editorActionId.isEmpty)
                     Button(action: applyEdits) {
                         HStack(spacing: MGStyle.Spacing.sm) {
                             Image(systemName: "checkmark.square.fill")
@@ -287,6 +277,16 @@ struct BundleEditorView: View {
                     .controlSize(.large)
                     .disabled(editorActionId.isEmpty)
                     .buttonStyle(.borderedProminent)
+                    Button(action: addActionToBundle) {
+                        HStack(spacing: MGStyle.Spacing.sm) {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.system(size: 12))
+                            Text("Add to Bundle")
+                                .font(.system(size: MGStyle.FontSize.body, weight: .medium))
+                        }
+                    }
+                    .controlSize(.large)
+                    .disabled(editorActionId.isEmpty)
                 } else {
                     Button(action: addActionToBundle) {
                         HStack(spacing: MGStyle.Spacing.sm) {
@@ -352,7 +352,7 @@ struct BundleEditorView: View {
             delayAfter: Double(editorDelay) ?? 0.2
         )
         bundledActions.append(action)
-        selection = nil
+        // Do NOT clear selection — user may want to add multiple copies or continue editing
     }
     
     private func applyEdits() {

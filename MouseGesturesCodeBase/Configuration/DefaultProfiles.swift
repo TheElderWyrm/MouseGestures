@@ -217,34 +217,23 @@ struct DefaultProfiles {
             ["shortcut": AnyCodable(["keyCode": keyCode, "modifiers": mods, "displayString": display] as [String: Any])]
         }
 
+        func gest(zone: ScreenZone, name: String, keyCode: UInt16, mods: UInt, display: String) -> Gesture {
+            var g = Gesture(zone: zone, modifiers: [.command, .shift],
+                            actionIdentifier: "com.mousegestures.automation.keyboard_shortcut",
+                            parameters: shortcut(keyCode: keyCode, mods: mods, display: display))
+            g.name = name
+            return g
+        }
+
         let gestures = [
-            // Next / previous tab  (Ctrl+Tab / Ctrl+Shift+Tab)
-            Gesture(zone: .right,  modifiers: [.command, .shift], actionIdentifier: "com.mousegestures.automation.keyboard_shortcut",
-                    parameters: shortcut(keyCode: 48, mods: ctrlMask,            display: "⌃⇥")),
-            Gesture(zone: .left,   modifiers: [.command, .shift], actionIdentifier: "com.mousegestures.automation.keyboard_shortcut",
-                    parameters: shortcut(keyCode: 48, mods: ctrlMask | shiftMask, display: "⌃⇧⇥")),
-
-            // New tab  (Cmd+T)
-            Gesture(zone: .top,    modifiers: [.command, .shift], actionIdentifier: "com.mousegestures.automation.keyboard_shortcut",
-                    parameters: shortcut(keyCode: 17, mods: cmdMask,             display: "⌘T")),
-
-            // Close tab  (Cmd+W)
-            Gesture(zone: .bottom, modifiers: [.command, .shift], actionIdentifier: "com.mousegestures.automation.keyboard_shortcut",
-                    parameters: shortcut(keyCode: 13, mods: cmdMask,             display: "⌘W")),
-
-            // Reopen closed tab  (Cmd+Shift+T)
-            Gesture(zone: .topRight, modifiers: [.command, .shift], actionIdentifier: "com.mousegestures.automation.keyboard_shortcut",
-                    parameters: shortcut(keyCode: 17, mods: cmdMask | shiftMask, display: "⌘⇧T")),
-
-            // Back / Forward  (Cmd+[ / Cmd+])
-            Gesture(zone: .topLeft,    modifiers: [.command, .shift], actionIdentifier: "com.mousegestures.automation.keyboard_shortcut",
-                    parameters: shortcut(keyCode: 33, mods: cmdMask,             display: "⌘[")),
-            Gesture(zone: .bottomRight, modifiers: [.command, .shift], actionIdentifier: "com.mousegestures.automation.keyboard_shortcut",
-                    parameters: shortcut(keyCode: 30, mods: cmdMask,             display: "⌘]")),
-
-            // Focus address bar  (Cmd+L)
-            Gesture(zone: .bottomLeft, modifiers: [.command, .shift], actionIdentifier: "com.mousegestures.automation.keyboard_shortcut",
-                    parameters: shortcut(keyCode: 37, mods: cmdMask,             display: "⌘L")),
+            gest(zone: .right,       name: "Next Tab",         keyCode: 48, mods: ctrlMask,            display: "⌃⇥"),
+            gest(zone: .left,        name: "Previous Tab",     keyCode: 48, mods: ctrlMask | shiftMask, display: "⌃⇧⇥"),
+            gest(zone: .top,         name: "New Tab",          keyCode: 17, mods: cmdMask,             display: "⌘T"),
+            gest(zone: .bottom,      name: "Close Tab",        keyCode: 13, mods: cmdMask,             display: "⌘W"),
+            gest(zone: .topRight,    name: "Reopen Tab",       keyCode: 17, mods: cmdMask | shiftMask, display: "⌘⇧T"),
+            gest(zone: .topLeft,     name: "Back",             keyCode: 33, mods: cmdMask,             display: "⌘["),
+            gest(zone: .bottomRight, name: "Forward",          keyCode: 30, mods: cmdMask,             display: "⌘]"),
+            gest(zone: .bottomLeft,  name: "Focus Address Bar",keyCode: 37, mods: cmdMask,             display: "⌘L"),
         ]
 
         return ConfigurationProfile(name: "Tab Navigation", gestures: gestures, isDefault: false)

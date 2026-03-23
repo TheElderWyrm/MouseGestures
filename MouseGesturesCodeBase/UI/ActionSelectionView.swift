@@ -56,7 +56,7 @@ struct ActionSelectionView: View {
                         set: { if let v = $0 { selectedActionId = v } }
                     )) {
                         // Invisible anchor for scroll-to-top
-                        EmptyView().id("__search_top__")
+                        Color.clear.frame(height: 0).id("__search_top__")
 
                         if isSearching {
                             searchResultsContent

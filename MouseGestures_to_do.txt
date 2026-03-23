@@ -49,3 +49,16 @@ Features:
 Cleanup:
   - Remove dummy autoupdate [DONE 2026-03-15]
   - Clean up unneeded actions [DONE 2026-03-15] (removed duplicate cycle_windows)
+
+
+- Use the template selection screen when resetting to template [FIXED 2026-03-23] (ResetToTemplateSheet with TemplateProfileCard UI)
+- Notifications should be actual macOS notifications, app should not create it's own. [FIXED 2026-03-23] (UNUserNotificationCenter)
+- Option to name gestures (Currently just shows action name. Defaults to this if no name). [FIXED 2026-03-23]
+	- Add name to gestures in tab navigation [FIXED 2026-03-23]
+- Detection mode tab should be created dynamically from installed detection plugins [FIXED 2026-03-23] (trigger components hidden when plugin disabled)
+- Issue with action search. Searched actions sometimes appear scrolled above the selection box. Should reset scroll to zero when searching. [FIXED 2026-03-23] (Color.clear anchor instead of EmptyView)
+- In bundles switch add to bundle and update button [FIXED 2026-03-23] (Update is primary/left, Add to Bundle secondary)
+- In bundles clicking add to bundle when an action is selected should not deselect that action. [FIXED 2026-03-23]
+- Add 'none' and 'any' to mouse input selection. [FIXED 2026-03-23] (Any Drag, Any Click added; detection logic handles .any)
+- Minimize (and possibly others) not working with multiple window targets [FIXED 2026-03-23] (uses getTargetWindows plural)
+- When a parameter has a default state be specific instead of showing select (Example: All Windows instead of 'select' for cycle window.) [PENDING - investigate specific cases]

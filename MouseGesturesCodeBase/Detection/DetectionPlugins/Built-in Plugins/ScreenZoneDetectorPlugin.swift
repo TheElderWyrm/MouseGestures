@@ -535,7 +535,11 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
 
         // Check drag requirement
         if gesture.dragModifier != .none {
-            guard drag == gesture.dragModifier else { return false }
+            if gesture.dragModifier == .anyDrag {
+                guard drag != .none else { return false }
+            } else {
+                guard drag == gesture.dragModifier else { return false }
+            }
         }
 
         // Check modifier requirement

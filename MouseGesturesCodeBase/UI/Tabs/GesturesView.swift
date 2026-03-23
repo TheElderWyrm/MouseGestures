@@ -18,7 +18,6 @@ struct GesturesView: View {
     @State private var activeSheet: ActiveSheet?
     @State private var showingResetConfirmation = false
     @State private var showingResetToTemplate = false
-    @State private var pendingTemplateType: DefaultProfileType?
     @State private var searchText = ""
     @State private var showSearch = false
     @State private var expandedGesture: String?
@@ -126,27 +125,10 @@ struct GesturesView: View {
         } message: {
             Text("This will reset the current profile's gestures to factory defaults. This action cannot be undone.")
         }
-        .confirmationDialog("Reset to Template", isPresented: $showingResetToTemplate, titleVisibility: .visible) {
-            ForEach(DefaultProfileType.allCases, id: \.self) { type in
-                Button(type.rawValue) { pendingTemplateType = type }
+        .sheet(isPresented: $showingResetToTemplate) {
+            ResetToTemplateSheet { type in
+                uiServices.resetCurrentProfileToTemplate(type)
             }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("Replace all gestures in the current profile with those from a template. This cannot be undone.")
-        }
-        .alert("Replace Gestures?", isPresented: Binding(
-            get: { pendingTemplateType != nil },
-            set: { if !$0 { pendingTemplateType = nil } }
-        )) {
-            Button("Cancel", role: .cancel) { pendingTemplateType = nil }
-            Button("Replace", role: .destructive) {
-                if let type = pendingTemplateType {
-                    uiServices.resetCurrentProfileToTemplate(type)
-                }
-                pendingTemplateType = nil
-            }
-        } message: {
-            Text("Replace current gestures with the \"\(pendingTemplateType?.rawValue ?? "")\" template?")
         }
         .onAppear { uiServices.loadData() }
     }
@@ -306,16 +288,24 @@ struct GestureCardView: View {
                 
                 // Info block
                 VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
-                    Text(actionDef?.name ?? gesture.actionIdentifier)
+                    let displayName = gesture.name?.isEmpty == false ? gesture.name! : (actionDef?.name ?? gesture.actionIdentifier)
+                    Text(displayName)
                         .font(.system(size: MGStyle.FontSize.body, weight: .medium))
                         .lineLimit(1)
                         .opacity(isEnabled ? 1 : 0.5)
-                    
-                    Text(triggerSummary)
-                        .font(.system(size: MGStyle.FontSize.caption))
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
-                        .opacity(isEnabled ? 0.8 : 0.4)
+                    HStack(spacing: MGStyle.Spacing.sm) {
+                        if gesture.name?.isEmpty == false {
+                            Text(actionDef?.name ?? gesture.actionIdentifier)
+                                .font(.system(size: MGStyle.FontSize.badge))
+                                .foregroundColor(.secondary.opacity(0.6))
+                                .lineLimit(1)
+                        }
+                        Text(triggerSummary)
+                            .font(.system(size: MGStyle.FontSize.caption))
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                    }
+                    .opacity(isEnabled ? 0.8 : 0.4)
                 }
                 
                 Spacer()
@@ -589,5 +579,47 @@ struct ProfileRow: View {
         }
         .mgListRow(isSelected: isSelected, isHovered: false)
         .onTapGesture { onSelect() }
+    }
+}
+
+// MARK: - Reset to Template Sheet
+
+struct ResetToTemplateSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var selectedType: DefaultProfileType?
+    @State private var showingConfirm = false
+    let onReset: (DefaultProfileType) -> Void
+
+    var body: some View {
+        VStack(spacing: 0) {
+            MGSheetHeader("Reset to Template", subtitle: "Replace current gestures with a template")
+
+            ScrollView {
+                VStack(spacing: MGStyle.Spacing.lg) {
+                    ForEach(DefaultProfileType.allCases, id: \.self) { type in
+                        TemplateProfileCard(
+                            type: type,
+                            isSelected: selectedType == type,
+                            onSelect: { selectedType = selectedType == type ? nil : type }
+                        )
+                    }
+                }
+                .padding(MGStyle.Spacing.xl)
+            }
+
+            MGSheetFooter("Replace", disabled: selectedType == nil, action: {
+                showingConfirm = true
+            }, cancel: { dismiss() })
+        }
+        .frame(width: 540, height: 560)
+        .alert("Replace Gestures?", isPresented: $showingConfirm) {
+            Button("Cancel", role: .cancel) {}
+            Button("Replace", role: .destructive) {
+                if let type = selectedType { onReset(type) }
+                dismiss()
+            }
+        } message: {
+            Text("This will replace all gestures in the current profile with the \"\(selectedType?.rawValue ?? "")\" template. This cannot be undone.")
+        }
     }
 }

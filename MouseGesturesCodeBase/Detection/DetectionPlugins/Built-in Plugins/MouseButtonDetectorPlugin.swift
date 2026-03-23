@@ -325,7 +325,7 @@ class MouseButtonDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         
         for gesture in enabledGestures {
             guard let trigger = gesture.mouseButtonTrigger else { continue }
-            if trigger.button == button && trigger.modifiers.normalized == modifiers {
+            if (trigger.button == .any || trigger.button == button) && trigger.modifiers.normalized == modifiers {
                 clicksTriggered += 1
                 lastTriggerTime = Date()
                 

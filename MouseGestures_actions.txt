@@ -21,6 +21,8 @@ app_expose           - Show all windows of current application [✓✓]
 	* Subject to modifier key interference
 cycle_window         - Switch to next/previous window (direction + scope parameters) [✓]
 	* Add application target (Specific application or all applications) [FIXED 2026-03-23] (scope: current/specific + app picker)
+	* Add 'all windows' target (from all applications) [FIXED 2026-03-23] (scope: all_apps cycles visible windows across apps)
+	* Use as default instead of select [pending - initDefaults should set scope="current"]
 cycle_space          - Move to next/previous desktop space (direction parameter) [✓]
 	* Subject to modifier key interference
 	* Proper solution requires either private APIs or invisible windows: https://github.com/bigbearlabs/SpaceSwitcher.
@@ -32,7 +34,7 @@ switch_profile       - Switch to a specific gesture profile (profile_name parame
 General Core Issues:
 	* Move window actions (close/minimize/maximize/fullscreen) into Window Management plugin [FIXED 2026-03-23]
 	* Window Targeting for these actions missing options from window targeting [FIXED 2026-03-23] (WM versions have full window targeting)
-	* Modifier key interference on System Events actions (app_expose, cycle_space) — system limitation, no fix available
+	* Modifier key interference on System Events actions (app_expose, cycle_space) — Karabiner uses Karabiner-Elements driver at kernel level; a kext/dext would be needed, not feasible here.
 
 ------------------------------------------
 WINDOW MANAGEMENT (com.mousegestures.window)

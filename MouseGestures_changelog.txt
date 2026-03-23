@@ -1,3 +1,64 @@
+## 2026-03-23 (10)
+
+### Fix: Real macOS Notifications via UNUserNotificationCenter
+
+**PluginManager.swift**
+- Replaced custom NSWindow overlay notification with `UNUserNotificationCenter.current().add(request)` — now uses the macOS Notification Center like all other apps
+- Warning/error styles add ⚠️/❌ subtitle prefix
+
+### Fix: Bundle Editor Button Order + No Deselect on Add
+
+**BundleEditorView.swift**
+- "Update" button is now primary (left/prominent) and "Add to Bundle" is secondary when editing
+- "Add to Bundle" no longer clears the selection — user stays on the selected item after adding
+
+### Fix: Action Search Scroll Reset
+
+**ActionSelectionView.swift**
+- Replaced `EmptyView()` scroll anchor with `Color.clear.frame(height: 0)` so `scrollTo` reliably scrolls to the top when search text or category changes
+
+### Fix: Minimize (and close/maximize/fullscreen) with Multiple Window Targets
+
+**WindowManagementPlugin.swift**
+- `minimize` case now uses `getTargetWindows` (plural) and minimizes all matching windows; fallback keyboard shortcut only if no windows found
+
+### Feature: Any Click / Any Drag in Mouse Input
+
+**DragModifier.swift, ScreenZoneDetectorPlugin.swift, MouseButtonDetectorPlugin.swift, GestureConfigurationSheet.swift**
+- Added `DragModifier.anyDrag` — matches any active drag regardless of button
+- `MouseButton.any` was already defined; detection logic updated to match any button
+- `mouseInputConfigView` picker now includes "Any Drag" and "Any Click" options
+
+### Feature: Gesture Names
+
+**Gesture.swift, GestureConfigurationSheet.swift, GesturesView.swift, DefaultProfiles.swift**
+- Added optional `name: String?` field to `Gesture` (Codable with `decodeIfPresent`)
+- GestureConfigurationSheet shows a "Custom name (optional)" text field
+- GestureCardView shows the custom name as the primary label (falls back to action name)
+- Tab Navigation template gestures now have descriptive names
+
+### Feature: Template Selection Screen for Reset
+
+**GesturesView.swift**
+- Added `ResetToTemplateSheet` using `TemplateProfileCard` for visual template browsing
+- Replaces the previous `confirmationDialog` plain list with a proper sheet matching the Profiles > Import Templates UI
+
+### Feature: Detection Plugin-Aware Trigger Configuration
+
+**GestureConfigurationSheet.swift**
+- Modifier Keys section hidden when `ModifierKeyDetectorPlugin` is disabled
+- Screen Zone hidden when `ScreenZoneDetectorPlugin` is disabled
+- Mouse Input hidden when `MouseButtonDetectorPlugin` is disabled
+- Keyboard Shortcut hidden when `KeyboardShortcutDetectorPlugin` is disabled
+
+### Feature: cycle_window — All Windows Scope
+
+**CoreActionsPlugin.swift**
+- Added `scope: all_apps` option to `cycle_window`
+- Uses `context.getAllVisibleWindows()` to enumerate all windows, finds the frontmost, and cycles to the next/previous using `kAXRaiseAction`
+
+---
+
 ## 2026-03-23 (9)
 
 ### Refactor: Window Actions Moved to Window Management Plugin

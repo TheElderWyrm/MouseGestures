@@ -634,10 +634,13 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
             }
 
         case "minimize":
-            if let (window, _) = getTargetWindow(target, context: context) {
-                _ = context.setAccessibilityAttribute(window, attribute: kAXMinimizedAttribute as String, value: true as CFBoolean)
-            } else {
+            let minimizeTargets = getTargetWindows(target, context: context)
+            if minimizeTargets.isEmpty {
                 context.sendKeyboardShortcut(keyCode: 46, modifiers: [.maskCommand])
+            } else {
+                for (window, _) in minimizeTargets {
+                    _ = context.setAccessibilityAttribute(window, attribute: kAXMinimizedAttribute as String, value: true as CFBoolean)
+                }
             }
 
         case "maximize":

@@ -1,4 +1,5 @@
 import Cocoa
+import UserNotifications
 
 // MARK: - Plugin Manager
 
@@ -352,79 +353,23 @@ public class PluginManager: NSObject {
     
     /// Show a notification from a plugin
     internal func showPluginNotification(title: String, message: String, style: NotificationStyle, pluginId: String) {
-        // This is called from SandboxedPluginContext to show notifications
-        DispatchQueue.main.async {
-            let notification = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 400, height: 100),
-                styleMask: [.borderless],
-                backing: .buffered,
-                defer: false
-            )
-            
-            notification.isOpaque = false
-            
-            // Set background color based on style
-            switch style {
-            case .info:
-                notification.backgroundColor = NSColor.systemBlue.withAlphaComponent(0.9)
-            case .success:
-                notification.backgroundColor = NSColor.systemGreen.withAlphaComponent(0.9)
-            case .warning:
-                notification.backgroundColor = NSColor.systemOrange.withAlphaComponent(0.9)
-            case .error:
-                notification.backgroundColor = NSColor.systemRed.withAlphaComponent(0.9)
-            }
-            
-            notification.level = .floating
-            notification.hasShadow = true
-            notification.isReleasedWhenClosed = false
-            notification.ignoresMouseEvents = true
-            
-            // Title label (includes plugin attribution)
-            let titleLabel = NSTextField(frame: NSRect(x: 20, y: 50, width: 360, height: 25))
-            titleLabel.stringValue = title
-            titleLabel.font = NSFont.systemFont(ofSize: 16, weight: .semibold)
-            titleLabel.textColor = .white
-            titleLabel.backgroundColor = .clear
-            titleLabel.isBordered = false
-            titleLabel.isEditable = false
-            
-            // Message label
-            let messageLabel = NSTextField(frame: NSRect(x: 20, y: 20, width: 360, height: 25))
-            messageLabel.stringValue = message
-            messageLabel.font = NSFont.systemFont(ofSize: 14)
-            messageLabel.textColor = .white
-            messageLabel.backgroundColor = .clear
-            messageLabel.isBordered = false
-            messageLabel.isEditable = false
-            
-            notification.contentView?.addSubview(titleLabel)
-            notification.contentView?.addSubview(messageLabel)
-            
-            // Center on screen
-            if let screen = NSScreen.main {
-                let screenFrame = screen.visibleFrame
-                let x = screenFrame.midX - notification.frame.width / 2
-                let y = screenFrame.maxY - notification.frame.height - 50
-                notification.setFrameOrigin(NSPoint(x: x, y: y))
-            }
-            
-            // Show and fade out
-            notification.orderFront(nil)
-            notification.alphaValue = 0
-            
-            NSAnimationContext.runAnimationGroup({ context in
-                context.duration = 0.2
-                notification.animator().alphaValue = 1.0
-            }) {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                    NSAnimationContext.runAnimationGroup({ context in
-                        context.duration = 0.3
-                        notification.animator().alphaValue = 0
-                    }) {
-                        notification.close()
-                    }
-                }
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = message
+        // Map style to a subtitle note (optional)
+        switch style {
+        case .warning: content.subtitle = "⚠️"
+        case .error:   content.subtitle = "❌"
+        default: break
+        }
+        let request = UNNotificationRequest(
+            identifier: UUID().uuidString,
+            content: content,
+            trigger: nil   // nil = deliver immediately
+        )
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                log.log("Notification delivery failed: \(error.localizedDescription)")
             }
         }
     }

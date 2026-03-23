@@ -192,9 +192,10 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
                     description: "Which app's windows to cycle",
                     validation: ValidationRule(allowedValues: [
                         AnyCodable("current"),
-                        AnyCodable("specific")
+                        AnyCodable("specific"),
+                        AnyCodable("all_apps")
                     ]),
-                    displayValues: ["current": "Current App", "specific": "Specific App"]
+                    displayValues: ["current": "Current App", "specific": "Specific App", "all_apps": "All Windows"]
                 ),
                 ParameterDefinition(
                     key: "app_bundle_id",
@@ -356,8 +357,12 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
         case "cycle_window":
             let forward = (parameters.string(for: "direction") ?? "forward") == "forward"
             let scope = parameters.string(for: "scope") ?? "current"
-            let appBundleId = scope == "specific" ? parameters.string(for: "app_bundle_id") : nil
-            cycleWindows(forward: forward, appBundleId: appBundleId, context: context)
+            if scope == "all_apps" {
+                cycleAcrossAllWindows(forward: forward, context: context)
+            } else {
+                let appBundleId = scope == "specific" ? parameters.string(for: "app_bundle_id") : nil
+                cycleWindows(forward: forward, appBundleId: appBundleId, context: context)
+            }
             
         // MARK: Cycle Space
         case "cycle_space":
@@ -617,6 +622,25 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
         }
     }
     
+    private func cycleAcrossAllWindows(forward: Bool, context: PluginContext) {
+        // Get all visible windows sorted by front-to-back order and find the current frontmost
+        let allWindows = context.getAllVisibleWindows()
+        guard !allWindows.isEmpty else { return }
+        // Find current frontmost window
+        let frontPid = context.getFrontmostApplication()?.processIdentifier
+        let currentIdx = allWindows.firstIndex { _, pid in pid == frontPid } ?? 0
+        let nextIdx = forward
+            ? (currentIdx + 1) % allWindows.count
+            : (currentIdx - 1 + allWindows.count) % allWindows.count
+        let (nextWindow, nextPid) = allWindows[nextIdx]
+        // Activate the target app
+        if let app = context.getRunningApplications().first(where: { $0.processIdentifier == nextPid }) {
+            app.activate(options: [.activateIgnoringOtherApps])
+        }
+        // Raise the window
+        _ = context.performAccessibilityAction(nextWindow, action: kAXRaiseAction as String)
+    }
+
     private func cycleWindows(forward: Bool, appBundleId: String? = nil, context: PluginContext) {
         // Activate specific app first if requested
         if let bundleId = appBundleId,

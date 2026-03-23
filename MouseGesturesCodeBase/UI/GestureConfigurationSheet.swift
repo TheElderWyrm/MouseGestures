@@ -17,6 +17,7 @@ struct GestureConfigurationSheet: View {
     @State private var actionParameters: [String: AnyCodable]
     @State private var timing: TimingSettings
     @State private var isEnabled: Bool
+    @State private var gestureName: String
     
     // UI State
     @State private var showingConflictAlert = false
@@ -40,6 +41,7 @@ struct GestureConfigurationSheet: View {
             _actionParameters = State(initialValue: g.parameters)
             _timing = State(initialValue: g.timing)
             _isEnabled = State(initialValue: g.isEnabled)
+            _gestureName = State(initialValue: g.name ?? "")
         } else {
             var defaultComponents = GestureActivationComponents()
             defaultComponents.modifierKey = ModifierKeyConfig(isEnabled: true, modifiers: [.command, .control])
@@ -49,6 +51,7 @@ struct GestureConfigurationSheet: View {
             _actionParameters = State(initialValue: [:])
             _timing = State(initialValue: TimingSettings())
             _isEnabled = State(initialValue: true)
+            _gestureName = State(initialValue: "")
         }
     }
     
@@ -58,13 +61,16 @@ struct GestureConfigurationSheet: View {
             
             ScrollView {
                 VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {
-                    // Enable toggle
-                    HStack {
+                    // Name + Enable toggle
+                    HStack(spacing: MGStyle.Spacing.lg) {
                         Toggle("Enabled", isOn: $isEnabled)
                             .toggleStyle(.switch)
+                            .labelsHidden()
+                        TextField("Custom name (optional)", text: $gestureName)
+                            .textFieldStyle(.roundedBorder)
                         Spacer()
                     }
-                    
+
                     activationComponentsSection
                     actionSection
                     timingSettingsSection
@@ -129,13 +135,20 @@ struct GestureConfigurationSheet: View {
         return "\(trigger) \u{2192} \(actionName)"
     }
     
+    // MARK: - Detection Plugin Availability
+
+    private func isPluginEnabled(_ id: String) -> Bool {
+        DetectionPluginManager.shared.getAllPlugins().first { $0.identifier == id }?.isEnabled ?? true
+    }
+
     // MARK: - Activation Components Section
-    
+
     private var activationComponentsSection: some View {
         GroupBox("Trigger Configuration") {
             VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
                 VStack(spacing: MGStyle.Spacing.sm) {
                     // Modifier Keys Component
+                    if isPluginEnabled(ModifierKeyDetectorPlugin.pluginIdentifier) {
                     ComponentToggleCard(
                         icon: "command.square",
                         title: "Modifier Keys",
@@ -159,8 +172,10 @@ struct GestureConfigurationSheet: View {
                     if components.modifierKey?.isEnabled == true {
                         modifierKeyConfigView
                     }
-                    
+                    } // end modifier plugin guard
+
                     // Screen Zone Component
+                    if isPluginEnabled(ScreenZoneDetectorPlugin.pluginIdentifier) {
                     ComponentToggleCard(
                         icon: "square.grid.3x3",
                         title: "Screen Zone",
@@ -184,8 +199,10 @@ struct GestureConfigurationSheet: View {
                     if components.screenZone?.isEnabled == true {
                         screenZoneConfigView
                     }
-                    
+                    } // end screenzone plugin guard
+
                     // Mouse Input Component (combines Drag Type + Mouse Button)
+                    if isPluginEnabled(MouseButtonDetectorPlugin.pluginIdentifier) {
                     ComponentToggleCard(
                         icon: "computermouse",
                         title: "Mouse Input",
@@ -210,8 +227,10 @@ struct GestureConfigurationSheet: View {
                     if (components.dragType?.isEnabled ?? false) || (components.mouseButton?.isEnabled ?? false) {
                         mouseInputConfigView
                     }
-                    
+                    } // end mouse plugin guard
+
                     // Keyboard Shortcut Component
+                    if isPluginEnabled(KeyboardShortcutDetectorPlugin.pluginIdentifier) {
                     ComponentToggleCard(
                         icon: "keyboard",
                         title: "Keyboard Shortcut",
@@ -235,6 +254,7 @@ struct GestureConfigurationSheet: View {
                     if components.keyboardShortcut?.isEnabled == true {
                         keyboardShortcutConfigView
                     }
+                    } // end keyboard plugin guard
                 }
                 
                 // Validation hint
@@ -315,13 +335,15 @@ struct GestureConfigurationSheet: View {
     // MARK: Unified Mouse Input (replaces separate Drag + Button sections)
 
     private enum MouseInputType: Equatable {
-        case leftDrag, rightDrag, middleDrag
-        case leftClick, rightClick, middleClick
+        case anyDrag, leftDrag, rightDrag, middleDrag
+        case anyClick, leftClick, rightClick, middleClick
         var displayName: String {
             switch self {
-            case .leftDrag: return "Left Drag"
+            case .anyDrag:   return "Any Drag"
+            case .leftDrag:  return "Left Drag"
             case .rightDrag: return "Right Drag"
             case .middleDrag: return "Middle Drag"
+            case .anyClick:  return "Any Click"
             case .leftClick: return "Left Click"
             case .rightClick: return "Right Click"
             case .middleClick: return "Middle Click"
@@ -332,14 +354,16 @@ struct GestureConfigurationSheet: View {
     private func currentMouseInputType() -> MouseInputType {
         if let drag = components.dragType, drag.isEnabled {
             switch drag.dragType {
-            case .leftDrag:   return .leftDrag
-            case .rightDrag:  return .rightDrag
+            case .anyDrag:   return .anyDrag
+            case .leftDrag:  return .leftDrag
+            case .rightDrag: return .rightDrag
             case .middleDrag: return .middleDrag
-            default:          return .leftDrag
+            default:         return .leftDrag
             }
         }
         if let btn = components.mouseButton, btn.isEnabled {
             switch btn.button {
+            case .any:    return .anyClick
             case .right:  return .rightClick
             case .middle: return .middleClick
             default:      return .leftClick
@@ -350,6 +374,9 @@ struct GestureConfigurationSheet: View {
 
     private func applyMouseInputType(_ type: MouseInputType) {
         switch type {
+        case .anyDrag:
+            components.dragType = DragTypeConfig(isEnabled: true, dragType: .anyDrag)
+            components.mouseButton?.isEnabled = false
         case .leftDrag:
             components.dragType = DragTypeConfig(isEnabled: true, dragType: .leftDrag)
             components.mouseButton?.isEnabled = false
@@ -359,6 +386,9 @@ struct GestureConfigurationSheet: View {
         case .middleDrag:
             components.dragType = DragTypeConfig(isEnabled: true, dragType: .middleDrag)
             components.mouseButton?.isEnabled = false
+        case .anyClick:
+            components.dragType?.isEnabled = false
+            components.mouseButton = MouseButtonConfig(isEnabled: true, button: .any)
         case .leftClick:
             components.dragType?.isEnabled = false
             components.mouseButton = MouseButtonConfig(isEnabled: true, button: .left)
@@ -382,10 +412,12 @@ struct GestureConfigurationSheet: View {
                 set: { applyMouseInputType($0) }
             )) {
                 Group {
+                    Text("Any Drag").tag(MouseInputType.anyDrag)
                     Text("Left Drag").tag(MouseInputType.leftDrag)
                     Text("Right Drag").tag(MouseInputType.rightDrag)
                     Text("Middle Drag").tag(MouseInputType.middleDrag)
                     Divider()
+                    Text("Any Click").tag(MouseInputType.anyClick)
                     Text("Left Click").tag(MouseInputType.leftClick)
                     Text("Right Click").tag(MouseInputType.rightClick)
                     Text("Middle Click").tag(MouseInputType.middleClick)
@@ -646,13 +678,14 @@ struct GestureConfigurationSheet: View {
             activation.setMouseButtonTrigger(MouseButtonTrigger(button: button, modifiers: []))
         }
 
-        let gesture = Gesture(
+        var gesture = Gesture(
             components: components,
             genericActivation: activation,
             actionIdentifier: selectedActionId,
             timing: timing,
             parameters: actionParameters
         )
+        gesture.name = gestureName.trimmingCharacters(in: .whitespaces).isEmpty ? nil : gestureName.trimmingCharacters(in: .whitespaces)
         
         if mode == .add || existingGesture?.triggerKey != gesture.triggerKey {
             if uiServices.isGestureConflicting(gesture) {

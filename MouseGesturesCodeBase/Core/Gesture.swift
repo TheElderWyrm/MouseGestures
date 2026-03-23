@@ -42,18 +42,21 @@ struct Gesture: Codable, Equatable {
     var actionIdentifier: String
     var timing: TimingSettings
     var parameters: [String: AnyCodable]
-    
+    /// User-defined name. If nil, the UI falls back to the action's display name.
+    var name: String?
+
     var longPressActionIdentifier: String?
     var longPressParameters: [String: AnyCodable]?
-    
+
     // MARK: - Coding Keys
-    
+
     enum CodingKeys: String, CodingKey {
         case genericActivation
         case components
         case actionIdentifier
         case timing
         case parameters
+        case name
         case longPressActionIdentifier
         case longPressParameters
     }
@@ -66,6 +69,7 @@ struct Gesture: Codable, Equatable {
         actionIdentifier = try c.decode(String.self, forKey: .actionIdentifier)
         timing = try c.decode(TimingSettings.self, forKey: .timing)
         parameters = try c.decode([String: AnyCodable].self, forKey: .parameters)
+        name = try c.decodeIfPresent(String.self, forKey: .name)
         longPressActionIdentifier = try c.decodeIfPresent(String.self, forKey: .longPressActionIdentifier)
         longPressParameters = try c.decodeIfPresent([String: AnyCodable].self, forKey: .longPressParameters)
         genericActivation = try c.decode(GenericActivation.self, forKey: .genericActivation)
@@ -79,6 +83,7 @@ struct Gesture: Codable, Equatable {
         try c.encode(actionIdentifier, forKey: .actionIdentifier)
         try c.encode(timing, forKey: .timing)
         try c.encode(parameters, forKey: .parameters)
+        try c.encodeIfPresent(name, forKey: .name)
         try c.encodeIfPresent(longPressActionIdentifier, forKey: .longPressActionIdentifier)
         try c.encodeIfPresent(longPressParameters, forKey: .longPressParameters)
     }
@@ -155,6 +160,7 @@ struct Gesture: Codable, Equatable {
          actionIdentifier: String,
          timing: TimingSettings = TimingSettings(),
          parameters: [String: AnyCodable] = [:],
+         name: String? = nil,
          longPressActionIdentifier: String? = nil,
          longPressParameters: [String: AnyCodable]? = nil) {
         self.components = components
@@ -162,6 +168,7 @@ struct Gesture: Codable, Equatable {
         self.actionIdentifier = actionIdentifier
         self.timing = timing
         self.parameters = parameters
+        self.name = name
         self.longPressActionIdentifier = longPressActionIdentifier
         self.longPressParameters = longPressParameters
     }
@@ -203,6 +210,7 @@ struct Gesture: Codable, Equatable {
         self.actionIdentifier = actionIdentifier
         self.timing = timing
         self.parameters = parameters
+        self.name = nil
         self.longPressActionIdentifier = longPressActionIdentifier
         self.longPressParameters = longPressParameters
     }
@@ -212,7 +220,7 @@ struct Gesture: Codable, Equatable {
     func updatingComponents(_ newComponents: GestureActivationComponents) -> Gesture {
         var newActivation = genericActivation
         newActivation.setKeyboardTrigger(newComponents.keyboardShortcut?.keyboardTrigger)
-        let mouseTrigger: MouseButtonTrigger? = (newComponents.mouseButton?.button != .none && newComponents.mouseButton?.button != nil)
+        let mouseTrigger: MouseButtonTrigger? = (newComponents.mouseButton?.button != MouseButtonTrigger.MouseButton.none && newComponents.mouseButton?.button != nil)
             ? MouseButtonTrigger(button: newComponents.mouseButton!.button, modifiers: [])
             : nil
         newActivation.setMouseButtonTrigger(mouseTrigger)
