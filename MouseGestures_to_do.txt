@@ -20,7 +20,7 @@ Architecture:
 
   - Move window actions (close/minimize/maximize/fullscreen) from Core to Window Management plugin
   - Improve activation system UI
-  - Drag does not need to be a separate trigger configuration than mouse button
+  - Drag does not need to be a separate trigger configuration than mouse button [FIXED 2026-03-23] (unified "Mouse Input" section replaces separate Drag/Button sections)
   - Reduce size of modifier keys trigger configuration [FIXED 2026-03-23] (compact horizontal pill style)
   - Make Action View categories dynamic [FIXED 2026-03-23] (shortLabel now auto-abbreviates)
   - Haptic feedback is happening on finish instead of activation [FIXED 2026-03-15]

@@ -1,3 +1,15 @@
+## 2026-03-23 (8)
+
+### Feature: Unified Mouse Input Trigger
+
+**GestureConfigurationSheet.swift**
+- Combined "Drag Type" and "Mouse Button" sections into a single "Mouse Input" component
+- Single picker offers: Left/Right/Middle Drag + Left/Right/Middle Click
+- On load, derives current type from whichever component is active (drag takes priority)
+- On change, updates `dragType` or `mouseButton` component accordingly; the inactive one is disabled
+
+---
+
 ## 2026-03-23 (7)
 
 ### Feature: Full Gesture Card UI in Profiles

@@ -185,54 +185,30 @@ struct GestureConfigurationSheet: View {
                         screenZoneConfigView
                     }
                     
-                    // Drag Type Component
-                    ComponentToggleCard(
-                        icon: "hand.draw",
-                        title: "Drag Type",
-                        description: "Require dragging with a specific mouse button",
-                        isEnabled: Binding(
-                            get: { components.dragType?.isEnabled ?? false },
-                            set: { enabled in
-                                if enabled {
-                                    if components.dragType == nil {
-                                        components.dragType = DragTypeConfig(isEnabled: true, dragType: .leftDrag)
-                                    } else {
-                                        components.dragType?.isEnabled = true
-                                    }
-                                } else {
-                                    components.dragType?.isEnabled = false
-                                }
-                            }
-                        )
-                    )
-                    
-                    if components.dragType?.isEnabled == true {
-                        dragTypeConfigView
-                    }
-                    
-                    // Mouse Button Component
+                    // Mouse Input Component (combines Drag Type + Mouse Button)
                     ComponentToggleCard(
                         icon: "computermouse",
-                        title: "Mouse Button",
-                        description: "Activate with a mouse button click",
+                        title: "Mouse Input",
+                        description: "Activate with a click or drag gesture",
                         isEnabled: Binding(
-                            get: { components.mouseButton?.isEnabled ?? false },
+                            get: { (components.dragType?.isEnabled ?? false) || (components.mouseButton?.isEnabled ?? false) },
                             set: { enabled in
                                 if enabled {
-                                    if components.mouseButton == nil {
-                                        components.mouseButton = MouseButtonConfig(isEnabled: true, button: .left)
-                                    } else {
-                                        components.mouseButton?.isEnabled = true
-                                    }
+                                    // Default: left drag (most common)
+                                    if components.dragType == nil { components.dragType = DragTypeConfig(isEnabled: false, dragType: .leftDrag) }
+                                    if components.mouseButton == nil { components.mouseButton = MouseButtonConfig(isEnabled: false, button: .left) }
+                                    components.dragType?.isEnabled = true
+                                    components.mouseButton?.isEnabled = false
                                 } else {
+                                    components.dragType?.isEnabled = false
                                     components.mouseButton?.isEnabled = false
                                 }
                             }
                         )
                     )
-                    
-                    if components.mouseButton?.isEnabled == true {
-                        mouseButtonConfigView
+
+                    if (components.dragType?.isEnabled ?? false) || (components.mouseButton?.isEnabled ?? false) {
+                        mouseInputConfigView
                     }
                     
                     // Keyboard Shortcut Component
@@ -323,6 +299,96 @@ struct GestureConfigurationSheet: View {
             )) {
                 ForEach(ScreenZone.allCases, id: \.self) { zone in
                     Text(zone.displayName).tag(zone)
+                }
+            }
+            .pickerStyle(.menu)
+            .frame(width: 180)
+            .labelsHidden()
+            Spacer()
+        }
+        .padding(.leading, MGStyle.Spacing.xxl)
+        .padding(MGStyle.Spacing.md)
+        .background(MGStyle.Colors.subtleOverlay)
+        .cornerRadius(MGStyle.Corner.md)
+    }
+
+    // MARK: Unified Mouse Input (replaces separate Drag + Button sections)
+
+    private enum MouseInputType: Equatable {
+        case leftDrag, rightDrag, middleDrag
+        case leftClick, rightClick, middleClick
+        var displayName: String {
+            switch self {
+            case .leftDrag: return "Left Drag"
+            case .rightDrag: return "Right Drag"
+            case .middleDrag: return "Middle Drag"
+            case .leftClick: return "Left Click"
+            case .rightClick: return "Right Click"
+            case .middleClick: return "Middle Click"
+            }
+        }
+    }
+
+    private func currentMouseInputType() -> MouseInputType {
+        if let drag = components.dragType, drag.isEnabled {
+            switch drag.dragType {
+            case .leftDrag:   return .leftDrag
+            case .rightDrag:  return .rightDrag
+            case .middleDrag: return .middleDrag
+            default:          return .leftDrag
+            }
+        }
+        if let btn = components.mouseButton, btn.isEnabled {
+            switch btn.button {
+            case .right:  return .rightClick
+            case .middle: return .middleClick
+            default:      return .leftClick
+            }
+        }
+        return .leftDrag
+    }
+
+    private func applyMouseInputType(_ type: MouseInputType) {
+        switch type {
+        case .leftDrag:
+            components.dragType = DragTypeConfig(isEnabled: true, dragType: .leftDrag)
+            components.mouseButton?.isEnabled = false
+        case .rightDrag:
+            components.dragType = DragTypeConfig(isEnabled: true, dragType: .rightDrag)
+            components.mouseButton?.isEnabled = false
+        case .middleDrag:
+            components.dragType = DragTypeConfig(isEnabled: true, dragType: .middleDrag)
+            components.mouseButton?.isEnabled = false
+        case .leftClick:
+            components.dragType?.isEnabled = false
+            components.mouseButton = MouseButtonConfig(isEnabled: true, button: .left)
+        case .rightClick:
+            components.dragType?.isEnabled = false
+            components.mouseButton = MouseButtonConfig(isEnabled: true, button: .right)
+        case .middleClick:
+            components.dragType?.isEnabled = false
+            components.mouseButton = MouseButtonConfig(isEnabled: true, button: .middle)
+        }
+    }
+
+    private var mouseInputConfigView: some View {
+        HStack {
+            Text("Type:")
+                .font(.system(size: MGStyle.FontSize.caption))
+                .foregroundColor(.secondary)
+                .frame(width: 80, alignment: .trailing)
+            Picker("", selection: Binding(
+                get: { currentMouseInputType() },
+                set: { applyMouseInputType($0) }
+            )) {
+                Group {
+                    Text("Left Drag").tag(MouseInputType.leftDrag)
+                    Text("Right Drag").tag(MouseInputType.rightDrag)
+                    Text("Middle Drag").tag(MouseInputType.middleDrag)
+                    Divider()
+                    Text("Left Click").tag(MouseInputType.leftClick)
+                    Text("Right Click").tag(MouseInputType.rightClick)
+                    Text("Middle Click").tag(MouseInputType.middleClick)
                 }
             }
             .pickerStyle(.menu)
