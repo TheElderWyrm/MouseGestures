@@ -61,4 +61,4 @@ Cleanup:
 - In bundles clicking add to bundle when an action is selected should not deselect that action. [FIXED 2026-03-23]
 - Add 'none' and 'any' to mouse input selection. [FIXED 2026-03-23] (Any Drag, Any Click added; detection logic handles .any)
 - Minimize (and possibly others) not working with multiple window targets [FIXED 2026-03-23] (uses getTargetWindows plural)
-- When a parameter has a default state be specific instead of showing select (Example: All Windows instead of 'select' for cycle window.) [PENDING - investigate specific cases]
+- When a parameter has a default state be specific instead of showing select (Example: All Windows instead of 'select' for cycle window.) [FIXED 2026-03-23] ("Select..." only shown when no defaultValue defined)

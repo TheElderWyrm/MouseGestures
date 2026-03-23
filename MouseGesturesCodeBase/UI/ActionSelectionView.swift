@@ -475,7 +475,8 @@ struct ActionSelectionView: View {
                 let defaultVal = (p.defaultValue?.value as? String).flatMap({ options.contains($0) ? $0 : nil }) ?? options.first ?? ""
                 paramRow(p) {
                     Picker("", selection: strBinding(p.key, def: defaultVal)) {
-                        if !options.contains("") {
+                        // Only show "Select..." if no default is available and "" is not already an option
+                        if !options.contains("") && p.defaultValue == nil {
                             Text("Select...").tag("")
                         }
                         ForEach(options, id: \.self) { v in
