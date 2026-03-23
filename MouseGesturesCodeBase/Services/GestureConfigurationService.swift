@@ -99,6 +99,8 @@ class GestureConfigurationService {
             profile = DefaultProfiles.createMinimalProfile()
         case .developer:
             profile = DefaultProfiles.createDeveloperProfile()
+        case .tabNavigation:
+            profile = DefaultProfiles.createTabNavigationProfile()
         }
         
         // Check for name conflicts and adjust

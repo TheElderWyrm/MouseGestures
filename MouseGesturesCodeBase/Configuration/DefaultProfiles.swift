@@ -202,6 +202,54 @@ struct DefaultProfiles {
         )
     }
     
+    // Tab Navigation Profile — browser and app tab management
+    static func createTabNavigationProfile() -> ConfigurationProfile {
+        // Modifier: Cmd+Shift for tab actions
+        // Keyboard shortcut modifiers stored as CGEventFlags UInt values:
+        //   maskCommand  = 1048576  (0x100000)
+        //   maskShift    =  131072  (0x20000)
+        //   maskControl  =  262144  (0x40000)
+        let cmdMask      = UInt(1048576)
+        let shiftMask    = UInt(131072)
+        let ctrlMask     = UInt(262144)
+
+        func shortcut(keyCode: UInt16, mods: UInt, display: String) -> [String: AnyCodable] {
+            ["shortcut": AnyCodable(["keyCode": keyCode, "modifiers": mods, "displayString": display] as [String: Any])]
+        }
+
+        let gestures = [
+            // Next / previous tab  (Ctrl+Tab / Ctrl+Shift+Tab)
+            Gesture(zone: .right,  modifiers: [.command, .shift], actionIdentifier: "com.mousegestures.automation.keyboard_shortcut",
+                    parameters: shortcut(keyCode: 48, mods: ctrlMask,            display: "⌃⇥")),
+            Gesture(zone: .left,   modifiers: [.command, .shift], actionIdentifier: "com.mousegestures.automation.keyboard_shortcut",
+                    parameters: shortcut(keyCode: 48, mods: ctrlMask | shiftMask, display: "⌃⇧⇥")),
+
+            // New tab  (Cmd+T)
+            Gesture(zone: .top,    modifiers: [.command, .shift], actionIdentifier: "com.mousegestures.automation.keyboard_shortcut",
+                    parameters: shortcut(keyCode: 17, mods: cmdMask,             display: "⌘T")),
+
+            // Close tab  (Cmd+W)
+            Gesture(zone: .bottom, modifiers: [.command, .shift], actionIdentifier: "com.mousegestures.automation.keyboard_shortcut",
+                    parameters: shortcut(keyCode: 13, mods: cmdMask,             display: "⌘W")),
+
+            // Reopen closed tab  (Cmd+Shift+T)
+            Gesture(zone: .topRight, modifiers: [.command, .shift], actionIdentifier: "com.mousegestures.automation.keyboard_shortcut",
+                    parameters: shortcut(keyCode: 17, mods: cmdMask | shiftMask, display: "⌘⇧T")),
+
+            // Back / Forward  (Cmd+[ / Cmd+])
+            Gesture(zone: .topLeft,    modifiers: [.command, .shift], actionIdentifier: "com.mousegestures.automation.keyboard_shortcut",
+                    parameters: shortcut(keyCode: 33, mods: cmdMask,             display: "⌘[")),
+            Gesture(zone: .bottomRight, modifiers: [.command, .shift], actionIdentifier: "com.mousegestures.automation.keyboard_shortcut",
+                    parameters: shortcut(keyCode: 30, mods: cmdMask,             display: "⌘]")),
+
+            // Focus address bar  (Cmd+L)
+            Gesture(zone: .bottomLeft, modifiers: [.command, .shift], actionIdentifier: "com.mousegestures.automation.keyboard_shortcut",
+                    parameters: shortcut(keyCode: 37, mods: cmdMask,             display: "⌘L")),
+        ]
+
+        return ConfigurationProfile(name: "Tab Navigation", gestures: gestures, isDefault: false)
+    }
+
     // Get all default profiles
     static func getAllDefaultProfiles() -> [ConfigurationProfile] {
         return [
@@ -210,7 +258,8 @@ struct DefaultProfiles {
             createSystemNavigationProfile(),
             createProductivityProfile(),
             createMinimalProfile(),
-            createDeveloperProfile()
+            createDeveloperProfile(),
+            createTabNavigationProfile()
         ]
     }
 
@@ -229,6 +278,8 @@ struct DefaultProfiles {
             return createMinimalProfile()
         case .developer:
             return createDeveloperProfile()
+        case .tabNavigation:
+            return createTabNavigationProfile()
         }
     }
     

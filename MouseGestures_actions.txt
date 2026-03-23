@@ -57,10 +57,10 @@ cascade              - Cascade windows (scope + resize_windows parameters) [✓]
 set_size             - Set custom window size (px or %) [✓]
 	* Combine with adjust size, and resize_to_percent as additional parameter
 	* 1 Parameter for setting type, a toggle for pixels or percent
-set_position         - Set custom window position (absolute/relative/%/preset)] [✓]
+set_position         - Set custom window position (absolute/relative/%/preset) [✓]
 	* 1 Parameter for setting type, a toggle for pixels or percent
-	* Preset positions not working
-	* Relative position not working
+	* Preset positions not working [FIXED 2026-03-23] (PositionType parsing bug fixed)
+	* Relative position not working [FIXED 2026-03-23] (same parsing fix)
 
 ------------------------------------------
 MEDIA CONTROL (com.mousegestures.media)
@@ -74,14 +74,14 @@ seek                 - Seek forward or backward in playback (direction + seconds
 ------------------------------------------
 SYSTEM CONTROL (com.mousegestures.system)
 ------------------------------------------
-   - Adjust display brightness (direction parameter) [✓]
-	* Add 'set brightness' option
-	* Add increase/decrease amount 
-keyboard_brightness  - Adjust keyboard brightness (direction parameter) [✓]
-	* Add 'set brightness' option
+display_brightness   - Adjust display brightness (direction + amount parameters) [✓]
+	* Add 'set brightness' option (pending)
+	* Add increase/decrease amount [FIXED 2026-03-23] (steps 1-16 parameter added)
+keyboard_brightness  - Adjust keyboard brightness (direction + amount parameters) [✓]
+	* Add 'set brightness' option (pending)
 toggle_dark_mode     - Switch between light and dark mode [✓✓]
-toggle_do_not_disturb - Enable/disable Do Not Disturb [!]
-	* Uses F6 key simulation via CGEvent
+toggle_do_not_disturb - Enable/disable Do Not Disturb [?]
+	* Primary: AppleScript via defaults + usernoted; F6 key fallback [FIXED 2026-03-23]
 screenshot           - Take a screenshot (type: interactive/full/selection/window + destination: clipboard/desktop/custom folder)[✓✓]
 restart              - Restart the computer (confirm parameter) [✓✓]
 shutdown             - Shut down the computer (confirm parameter) [✓✓]
@@ -111,8 +111,9 @@ execute_bundle       - Execute a bundle of actions sequentially or in parallel [
 	* App relaunch is reseting delay configuration to .2 s [FIXED 2026-03-22]
 	* Improve conditional gesture bundle logic
 conditional_action   - Execute an action based on if/else condition
-	* Condition not selectable
+	* Condition not selectable (pending — requires custom condition editor UI)
+	* true_action/false_action now use actionId picker [FIXED 2026-03-23]
 repeat_action        - Repeat an action N times
-	* Improve action selection (And its parameter selection). Possibly open as advanced configuration.
+	* Action selection now uses actionId picker [FIXED 2026-03-23]
 delay                - Insert a timed pause [✓✓]
 	* Hidden from action selection UI, still available in bundles

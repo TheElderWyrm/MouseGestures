@@ -33,6 +33,8 @@ class ProfileTemplateService {
             return DefaultProfiles.createMinimalProfile()
         case .developer:
             return DefaultProfiles.createDeveloperProfile()
+        case .tabNavigation:
+            return DefaultProfiles.createTabNavigationProfile()
         }
     }
     

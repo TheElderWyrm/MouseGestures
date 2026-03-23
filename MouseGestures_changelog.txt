@@ -1,3 +1,39 @@
+## 2026-03-23 (2)
+
+### Fix: set_position Preset and Relative Modes
+
+**WindowManagementPlugin.swift**
+- `PositionType` was being parsed with `.rawValue` matching after `.capitalized` conversion (e.g. `"relative"` → `"Relative"` ≠ `"Relative to Current"`), causing preset and relative modes to silently fall back to absolute
+- Replaced with an explicit `switch` mapping: `"relative"` → `.relative`, `"screen_percentage"` → `.screenPercentage`, `"preset"` → `.preset`, default → `.absolute`
+
+### Feature: Brightness Steps Parameter
+
+**SystemControlPlugin.swift**
+- Added `amount` (steps 1–16) parameter to both `display_brightness` and `keyboard_brightness`
+- Execution now calls `sendNXKeyEvent` the specified number of times
+
+### Feature: toggleDoNotDisturb via AppleScript
+
+**SystemControlPlugin.swift**
+- Primary method: AppleScript reads current DND state from `com.apple.notificationcenterui` defaults, toggles the flag, and signals `usernoted` to refresh
+- Fallback to F6 key simulation if AppleScript fails
+
+### Feature: actionId ParameterType for repeat_action / conditional_action
+
+**PluginProtocol.swift, ActionSelectionView.swift, BundleActionsPlugin.swift**
+- Added `ParameterType.actionId` — a dedicated type that renders as a dropdown of all registered action identifiers
+- Changed `repeat_action.action_id` and `conditional_action.true_action` / `false_action` from `.string` to `.actionId`
+- Users can now pick actions from a dropdown instead of typing raw identifiers
+
+### Feature: Tab Navigation Template Profile
+
+**DefaultProfiles.swift, UIServices.swift, ProfileTemplateService.swift, GestureConfigurationService.swift**
+- Added `DefaultProfileType.tabNavigation` ("Tab Navigation") with description and icon
+- New profile maps Cmd+Shift + 8 zones to: next/prev tab (⌃⇥/⌃⇧⇥), new tab (⌘T), close tab (⌘W), reopen tab (⌘⇧T), back/forward (⌘[/⌘]), address bar (⌘L)
+- Available in the Import Templates sheet in Profiles view
+
+---
+
 ## 2026-03-23
 
 ### Feature: Notification on Activation Setting

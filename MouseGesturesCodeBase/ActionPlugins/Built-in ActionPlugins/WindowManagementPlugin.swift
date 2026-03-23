@@ -675,9 +675,13 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
             
         case "set_position":
             let positionTypeStr = parameters.string(for: "position_type") ?? "absolute"
-            let positionType = WindowPositionParameters.PositionType(
-                rawValue: positionTypeStr.replacingOccurrences(of: "_", with: " ").capitalized
-            ) ?? .absolute
+            let positionType: WindowPositionParameters.PositionType
+            switch positionTypeStr {
+            case "relative":          positionType = .relative
+            case "screen_percentage": positionType = .screenPercentage
+            case "preset":            positionType = .preset
+            default:                  positionType = .absolute
+            }
             
             var preset: WindowPositionParameters.PresetPosition? = nil
             if let presetStr = parameters.string(for: "preset") {

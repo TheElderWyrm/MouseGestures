@@ -122,9 +122,9 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
                 ParameterDefinition(
                     key: "true_action",
                     name: "Action if True",
-                    type: .string,
+                    type: .actionId,
                     required: true,
-                    description: "Action identifier to execute if condition is true"
+                    description: "Action to execute if condition is true"
                 ),
                 ParameterDefinition(
                     key: "true_parameters",
@@ -136,8 +136,8 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
                 ParameterDefinition(
                     key: "false_action",
                     name: "Action if False",
-                    type: .string,
-                    description: "Action identifier to execute if condition is false"
+                    type: .actionId,
+                    description: "Action to execute if condition is false (optional)"
                 ),
                 ParameterDefinition(
                     key: "false_parameters",
@@ -158,9 +158,9 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
                 ParameterDefinition(
                     key: "action_id",
                     name: "Action",
-                    type: .string,
+                    type: .actionId,
                     required: true,
-                    description: "Action identifier to repeat"
+                    description: "Action to repeat"
                 ),
                 ParameterDefinition(
                     key: "parameters",

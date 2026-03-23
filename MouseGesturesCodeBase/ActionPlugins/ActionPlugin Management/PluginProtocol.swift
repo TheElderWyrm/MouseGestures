@@ -249,6 +249,7 @@ public enum ParameterType: String, Codable {
     case coordinate
     case size
     case profile
+    case actionId  // Picker showing all registered action identifiers
 }
 
 /// Validation rules for parameters

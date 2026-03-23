@@ -678,7 +678,8 @@ enum DefaultProfileType: String, CaseIterable {
     case productivity = "Productivity"
     case minimal = "Minimal"
     case developer = "Developer"
-    
+    case tabNavigation = "Tab Navigation"
+
     var description: String {
         switch self {
         case .windowManagement:
@@ -693,9 +694,11 @@ enum DefaultProfileType: String, CaseIterable {
             return "Basic essential gestures only"
         case .developer:
             return "Optimized for development workflows"
+        case .tabNavigation:
+            return "Browser and app tab management: switch, open, close, and navigate tabs"
         }
     }
-    
+
     var iconName: String {
         switch self {
         case .windowManagement:
@@ -710,6 +713,8 @@ enum DefaultProfileType: String, CaseIterable {
             return "minus.circle"
         case .developer:
             return "chevron.left.forwardslash.chevron.right"
+        case .tabNavigation:
+            return "rectangle.on.rectangle"
         }
     }
 }

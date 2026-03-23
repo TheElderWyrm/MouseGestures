@@ -46,12 +46,21 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
                         AnyCodable("down")
                     ]),
                     displayValues: ["up": "Increase", "down": "Decrease"]
+                ),
+                ParameterDefinition(
+                    key: "amount",
+                    name: "Steps",
+                    type: .number,
+                    defaultValue: AnyCodable(1),
+                    description: "Number of brightness steps",
+                    validation: ValidationRule(minValue: 1, maxValue: 16),
+                    suffix: "steps"
                 )
             ],
             supportsRepeat: true,
             icon: "sun.max"
         ),
-        
+
         // Consolidated: keyboard_brightness_up + keyboard_brightness_down → keyboard_brightness
         PluginAction(
             id: "keyboard_brightness",
@@ -70,6 +79,15 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
                         AnyCodable("down")
                     ]),
                     displayValues: ["up": "Increase", "down": "Decrease"]
+                ),
+                ParameterDefinition(
+                    key: "amount",
+                    name: "Steps",
+                    type: .number,
+                    defaultValue: AnyCodable(1),
+                    description: "Number of brightness steps",
+                    validation: ValidationRule(minValue: 1, maxValue: 16),
+                    suffix: "steps"
                 )
             ],
             supportsRepeat: true,
@@ -224,13 +242,14 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
         // Consolidated display brightness
         case "display_brightness":
             let direction = parameters.string(for: "direction") ?? "up"
-            adjustBrightness(increase: direction == "up")
-            
+            let steps = max(1, Int(parameters.number(for: "amount") ?? 1))
+            for _ in 0..<steps { adjustBrightness(increase: direction == "up") }
 
         // Consolidated keyboard brightness
         case "keyboard_brightness":
             let direction = parameters.string(for: "direction") ?? "up"
-            adjustKeyboardBrightness(increase: direction == "up")
+            let steps = max(1, Int(parameters.number(for: "amount") ?? 1))
+            for _ in 0..<steps { adjustKeyboardBrightness(increase: direction == "up") }
             
 
         // System features
@@ -338,27 +357,32 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
     }
     
     private func toggleDoNotDisturb(context: PluginContext) {
-        // Toggle DND/Focus by simulating the F6 key press, which is the system
-        // shortcut for toggling Do Not Disturb on macOS Monterey+.
-        waitForModifierRelease()
-        DispatchQueue.global(qos: .userInitiated).async {
-            guard let source = CGEventSource(stateID: .privateState) else {
-                context.logger.log("Failed to create event source for DND toggle", file: #file, function: #function, line: #line)
-                return
+        // Primary: toggle via defaults + usernoted signal (works on macOS 12+)
+        let script = """
+            set dndState to do shell script "defaults -currentHost read com.apple.notificationcenterui doNotDisturb 2>/dev/null || echo 0"
+            if dndState is "1" then
+                do shell script "defaults -currentHost write com.apple.notificationcenterui doNotDisturb -bool false; killall usernoted 2>/dev/null; exit 0"
+            else
+                do shell script "defaults -currentHost write com.apple.notificationcenterui doNotDisturb -bool true; killall usernoted 2>/dev/null; exit 0"
+            end if
+        """
+        do {
+            try context.executeAppleScript(script)
+            context.logger.log("Do Not Disturb toggled via defaults", file: #file, function: #function, line: #line)
+        } catch {
+            // Fallback: F6 key simulation
+            context.logger.log("DND AppleScript failed (\(error.localizedDescription)), falling back to F6", file: #file, function: #function, line: #line)
+            waitForModifierRelease()
+            DispatchQueue.global(qos: .userInitiated).async {
+                guard let source = CGEventSource(stateID: .privateState),
+                      let keyDown = CGEvent(keyboardEventSource: source, virtualKey: 97, keyDown: true),
+                      let keyUp   = CGEvent(keyboardEventSource: source, virtualKey: 97, keyDown: false) else { return }
+                keyDown.flags = []
+                keyUp.flags   = []
+                keyDown.post(tap: .cghidEventTap)
+                usleep(100_000)
+                keyUp.post(tap: .cghidEventTap)
             }
-            // F6 virtual key code = 97
-            guard let keyDown = CGEvent(keyboardEventSource: source, virtualKey: 97, keyDown: true),
-                  let keyUp = CGEvent(keyboardEventSource: source, virtualKey: 97, keyDown: false) else {
-                context.logger.log("Failed to create key events for DND toggle", file: #file, function: #function, line: #line)
-                return
-            }
-            keyDown.flags = []  // No modifiers - bare F6
-            keyUp.flags = []
-            keyDown.post(tap: .cghidEventTap)
-            usleep(100_000)
-            keyUp.post(tap: .cghidEventTap)
-            
-            context.logger.log("Do Not Disturb toggled via F6 key", file: #file, function: #function, line: #line)
         }
     }
     

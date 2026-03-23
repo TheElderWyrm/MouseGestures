@@ -24,12 +24,12 @@ Architecture:
   - Reduce size of modifier keys trigger configuration
   - Make Action View categories dynamic
   - Haptic feedback is happening on finish instead of activation [FIXED 2026-03-15]
-  - Full screen not working when full screen button not visible (Fall back to shortcut)
+  - Full screen not working when full screen button not visible (Fall back to shortcut) [DONE] (fallback to Ctrl+Cmd+F already present in code)
 
 UI:
   - Use full 'gestures' UI in profiles
   - Manage detection plugins under developer mode
-  - Open application action should bring up Finder to select any application
+  - Open application action should bring up Finder to select any application [DONE] (folder browse button already present in application picker)
   - Show add-to-bundle button even when a bundle action is selected (choose to add or update) [FIXED 2026-03-23]
   - Setting to display notification on action activation [FIXED 2026-03-23]
   - Option to 'replace gesture' when adding gesture with identical configuration [FIXED 2026-03-23]
@@ -44,7 +44,7 @@ Features:
   - run_script: add interpreter selection option [FIXED 2026-03-23] (shell_interpreter param: sh/bash/zsh, visible for shell scripts)
   - cascade: add option to resize windows or not [DONE] (resize_windows bool parameter already present)
   - Improve templates/default configuration
-  - 'Tab Navigation' template
+  - 'Tab Navigation' template [FIXED 2026-03-23] (added as importable template profile)
 
 Cleanup:
   - Remove dummy autoupdate [DONE 2026-03-15]

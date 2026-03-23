@@ -570,6 +570,17 @@ struct ActionSelectionView: View {
                     .help("Clear shortcut")
                 }
             }
+        case .actionId:
+            paramRow(p) {
+                Picker("", selection: strBinding(p.key, def: "")) {
+                    Text("Select Action...").tag("")
+                    ForEach(allActionEntries, id: \.id) { entry in
+                        Text(entry.name).tag(entry.id)
+                    }
+                }
+                .pickerStyle(.menu)
+                .labelsHidden()
+            }
         case .json:
             EmptyView()
         default:
