@@ -449,7 +449,16 @@ public class UIServices: ObservableObject {
     func setDebugModeEnabled(_ enabled: Bool) {
         debugLoggingService.setEnabled(enabled)
     }
-    
+
+    func isNotificationOnActivation() -> Bool {
+        return Configuration.shared.notificationOnActivation
+    }
+
+    func setNotificationOnActivation(_ enabled: Bool) {
+        Configuration.shared.notificationOnActivation = enabled
+        Configuration.shared.save()
+    }
+
     func exportAppSettings(to url: URL) -> Bool {
         return settingsImportExportService.exportSettings(to: url)
     }

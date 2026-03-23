@@ -1,5 +1,20 @@
 ## 2026-03-23
 
+### Feature: Notification on Activation Setting
+
+**Configuration.swift, UIServices.swift, ActionExecutionManager.swift, BuiltInSettingsCategories.swift**
+- Added `notificationOnActivation: Bool` to `Configuration` (persisted, default `false`)
+- Added `isNotificationOnActivation()` / `setNotificationOnActivation()` to `UIServices`
+- `ActionExecutionManager.executeAction()` calls `showActivationNotification()` when the setting is on; shows the action name as title and the gesture's display description as message
+- Added "Notification on Activation" toggle to the General settings category
+
+### Feature: Replace Gesture on Conflict
+
+**GestureConfigurationSheet.swift**
+- Conflict alert now offers "Replace" and "Cancel" buttons instead of just "OK"
+- "Replace" removes the existing gesture with the same trigger key and saves the new one in its place
+- Stores the pending gesture in `@State var pendingGesture` so the replace path has access to it after the alert is dismissed
+
 ### Feature: run_script Shell Interpreter Selection
 
 **AutomationPlugin.swift**

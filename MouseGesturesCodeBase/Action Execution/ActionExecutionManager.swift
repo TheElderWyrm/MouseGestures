@@ -295,6 +295,11 @@ class ActionExecutionManager {
         // Haptic feedback on activation (immediate, not after execution completes)
         provideHapticFeedback()
 
+        // Activation notification (optional, user-controlled)
+        if Configuration.shared.notificationOnActivation {
+            showActivationNotification(actionId: actionId, gesture: context.gesture)
+        }
+
         // Log execution start
         log.log("Executing action: \(actionId) from source: \(context.source)")
 
@@ -372,9 +377,22 @@ class ActionExecutionManager {
     
     private func provideHapticFeedback() {
         guard enableHapticFeedback else { return }
-        
+
         DispatchQueue.main.async {
             NSHapticFeedbackManager.defaultPerformer.perform(.generic, performanceTime: .now)
+        }
+    }
+
+    private func showActivationNotification(actionId: String, gesture: Gesture?) {
+        let actionName = pluginManager.getAction(identifier: actionId)?.action.name ?? actionId
+        let message = gesture?.displayDescription ?? actionName
+        DispatchQueue.main.async {
+            PluginManager.shared.showPluginNotification(
+                title: actionName,
+                message: message,
+                style: .info,
+                pluginId: "com.mousegestures.system"
+            )
         }
     }
     

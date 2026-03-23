@@ -27,6 +27,16 @@ struct BuiltInSettingsProvider: SettingsProvider {
                 viewBuilder: { _ in AnyView(EnableGesturesSettingView()) }
             ),
             
+            // Notification on activation
+            SettingsEntry(
+                category: SettingsCategories.general,
+                order: 5,
+                searchableItems: [
+                    SearchableSettingItem(title: "Notification on Activation", description: "Show a banner notification when a gesture fires", keywords: ["notification", "banner", "activation", "gesture", "notify"])
+                ],
+                viewBuilder: { _ in AnyView(NotificationOnActivationSettingView()) }
+            ),
+
             // Developer Mode toggle (advanced, but always shown when enabled)
             SettingsEntry(
                 category: SettingsCategories.general,
@@ -161,7 +171,7 @@ struct DetectionSubcategoryView: View {
 
 private struct EnableGesturesSettingView: View {
     @State private var gesturesEnabled = true
-    
+
     var body: some View {
         settingsToggle(
             isOn: $gesturesEnabled,
@@ -169,6 +179,19 @@ private struct EnableGesturesSettingView: View {
             description: "Master switch to enable or disable all gesture recognition"
         ) { UIServices.shared.setGesturesEnabled($0) }
         .onAppear { gesturesEnabled = UIServices.shared.isGesturesEnabled() }
+    }
+}
+
+private struct NotificationOnActivationSettingView: View {
+    @State private var notificationEnabled = false
+
+    var body: some View {
+        settingsToggle(
+            isOn: $notificationEnabled,
+            title: "Notification on Activation",
+            description: "Show a banner notification when a gesture fires"
+        ) { UIServices.shared.setNotificationOnActivation($0) }
+        .onAppear { notificationEnabled = UIServices.shared.isNotificationOnActivation() }
     }
 }
 

@@ -21,6 +21,7 @@ struct GestureConfigurationSheet: View {
     // UI State
     @State private var showingConflictAlert = false
     @State private var conflictMessage = ""
+    @State private var pendingGesture: Gesture?
     
     enum Mode {
         case add, edit
@@ -34,7 +35,6 @@ struct GestureConfigurationSheet: View {
         self.onSave = onSave
         
         if let g = existingGesture {
-            var gesture = g
             _components = State(initialValue: g.components)
             _selectedActionId = State(initialValue: g.actionIdentifier)
             _actionParameters = State(initialValue: g.parameters)
@@ -85,7 +85,8 @@ struct GestureConfigurationSheet: View {
         }
         .frame(width: 750, height: 700)
         .alert("Gesture Conflict", isPresented: $showingConflictAlert) {
-            Button("OK") {}
+            Button("Cancel", role: .cancel) { pendingGesture = nil }
+            Button("Replace", role: .destructive) { replaceConflictingGesture() }
         } message: {
             Text(conflictMessage)
         }
@@ -588,12 +589,24 @@ struct GestureConfigurationSheet: View {
         
         if mode == .add || existingGesture?.triggerKey != gesture.triggerKey {
             if uiServices.isGestureConflicting(gesture) {
-                conflictMessage = "A gesture with this trigger combination already exists. Each trigger combination can only be assigned one action."
+                conflictMessage = "A gesture with this trigger combination already exists. Replace the existing gesture?"
+                pendingGesture = gesture
                 showingConflictAlert = true
                 return
             }
         }
-        
+
+        onSave(gesture)
+        dismiss()
+    }
+
+    private func replaceConflictingGesture() {
+        guard let gesture = pendingGesture else { return }
+        pendingGesture = nil
+        // Remove the conflicting gesture, then save the new one
+        if let conflicting = uiServices.gestures.first(where: { $0.triggerKey == gesture.triggerKey }) {
+            _ = uiServices.removeGesture(conflicting)
+        }
         onSave(gesture)
         dismiss()
     }

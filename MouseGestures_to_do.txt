@@ -31,8 +31,8 @@ UI:
   - Manage detection plugins under developer mode
   - Open application action should bring up Finder to select any application
   - Show add-to-bundle button even when a bundle action is selected (choose to add or update) [FIXED 2026-03-23]
-  - Setting to display notification on action activation
-  - Option to 'replace gesture' when adding gesture with identical configuration
+  - Setting to display notification on action activation [FIXED 2026-03-23]
+  - Option to 'replace gesture' when adding gesture with identical configuration [FIXED 2026-03-23]
   - Remove 'system shortcuts disabled' text from shortcut fields [FIXED 2026-03-22]
 
 
@@ -42,7 +42,7 @@ Features:
   - Test adding external plugins for detection and actions
   - open_url: Show only browsers when selecting app + add 'default browser' option [FIXED 2026-03-23] (browser-only filter now uses installed browsers)
   - run_script: add interpreter selection option [FIXED 2026-03-23] (shell_interpreter param: sh/bash/zsh, visible for shell scripts)
-  - cascade: add option to resize windows or not
+  - cascade: add option to resize windows or not [DONE] (resize_windows bool parameter already present)
   - Improve templates/default configuration
   - 'Tab Navigation' template
 

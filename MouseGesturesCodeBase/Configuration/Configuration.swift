@@ -22,6 +22,7 @@ public class Configuration: Codable {
     var hideFromMenuBar: Bool = false  // When true, app hides menu bar icon
     var debugModeEnabled: Bool = false  // When true, enables logging
     var developerModeEnabled: Bool = false  // When true, shows developer tab
+    var notificationOnActivation: Bool = false  // When true, shows a banner notification when any gesture fires
     
     // Plugin configuration storage - allows plugins to store arbitrary data
     var pluginConfigurations: [String: AnyCodable] = [:]
@@ -58,12 +59,13 @@ public class Configuration: Codable {
         var hideFromMenuBar: Bool?
         var debugModeEnabled: Bool?
         var developerModeEnabled: Bool?
+        var notificationOnActivation: Bool?
         var pluginConfigurations: [String: AnyCodable]?
     }
     
     // Defines which properties are saved to disk.
     enum CodingKeys: String, CodingKey {
-        case isEnabled, profiles, activeProfileId, appProfileMappings, disabledApps, hapticFeedbackEnabled, edgeThreshold, cornerSize, cornerBuffer, showZoneHighlights, showZoneLabels, hideFromMenuBar, debugModeEnabled, developerModeEnabled, pluginConfigurations
+        case isEnabled, profiles, activeProfileId, appProfileMappings, disabledApps, hapticFeedbackEnabled, edgeThreshold, cornerSize, cornerBuffer, showZoneHighlights, showZoneLabels, hideFromMenuBar, debugModeEnabled, developerModeEnabled, notificationOnActivation, pluginConfigurations
     }
 
     // --- Computed Properties ---
@@ -140,6 +142,7 @@ public class Configuration: Codable {
             self.hideFromMenuBar = decoded.hideFromMenuBar ?? false
             self.debugModeEnabled = decoded.debugModeEnabled ?? false
             self.developerModeEnabled = decoded.developerModeEnabled ?? false
+            self.notificationOnActivation = decoded.notificationOnActivation ?? false
             self.pluginConfigurations = decoded.pluginConfigurations ?? [:]
             
             // Apply debug mode setting to logger
