@@ -468,7 +468,7 @@ struct ActionSelectionView: View {
             paramRow(p) {
                 HStack(spacing: MGStyle.Spacing.sm) {
                     Picker("", selection: strBinding(p.key, def: "")) {
-                        Text("Select...").tag("")
+                        Text(p.placeholderLabel ?? "Select...").tag("")
                         let current = actionParameters[p.key]?.value as? String ?? ""
                         if !current.isEmpty && !WindowTargeting.getAllRunningApplications().contains(where: { $0.bundleId == current }) {
                             let displayName = NSWorkspace.shared.urlForApplication(withBundleIdentifier: current)

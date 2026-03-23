@@ -1,3 +1,28 @@
+## 2026-03-22
+
+### Fix: Bundle Actions Lost After App Restart
+
+**BundleActionsPlugin.swift — Robust AnyCodable Deserialisation**
+- After an app restart, `bundle_actions` stored in gesture parameters is decoded from JSON by `AnyCodable` as `[Any]` (not `[[String: Any]]`), causing the previous `as? [[String: Any]]` cast to silently fail and lose all bundle contents
+- Extracted shared `decodeBundledActions(from:)` helper that handles all four storage formats: `[[String: Any]]` (in-memory), `[Any]` (post-JSON-decode), raw `Data`, and JSON `String`
+- Both the bundle editor loading path (`presentAdvancedConfiguration`) and the execution path (`executeBundle`) now use this helper, so bundles execute correctly and display their saved actions/delays after restart
+
+### Fix: open_url / open_file Default App/Browser Option
+
+**PluginProtocol.swift, AutomationPlugin.swift, ActionSelectionView.swift**
+- Added optional `placeholderLabel` field to `ParameterDefinition` (defaults to "Select..." when nil)
+- `open_url` browser parameter now shows "Default Browser" as the empty-value option
+- `open_file` open_with parameter now shows "Default App" as the empty-value option
+- `ActionSelectionView` application picker uses `p.placeholderLabel ?? "Select..."` for the unset entry
+
+### Fix: Remove "System shortcuts disabled" from Shortcut Capture Field
+
+**KeyboardShortcutField.swift**
+- `disableSystemShortcutsTemporarily()` was displaying "Recording... (System shortcuts disabled)" — the system shortcuts note was misleading (system shortcuts are only intercepted via the event monitor, not truly disabled)
+- Changed to display only "Recording..." during capture
+
+---
+
 ## 2026-03-15
 
 ### Fix: Trigger Configuration UI Alignment

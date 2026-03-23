@@ -195,7 +195,10 @@ public struct ParameterDefinition: Codable, Equatable {
     public let displayValues: [String: String]?
     /// Unit suffix shown after number fields (e.g. "%", "px", "s")
     public let suffix: String?
-    
+    /// Label shown in the picker when no value is selected (e.g. "Default Browser", "Default App")
+    /// Defaults to "Select..." when nil
+    public let placeholderLabel: String?
+
     public init(
         key: String,
         name: String,
@@ -207,7 +210,8 @@ public struct ParameterDefinition: Codable, Equatable {
         visibleWhen: ParameterVisibilityRule? = nil,
         group: String? = nil,
         displayValues: [String: String]? = nil,
-        suffix: String? = nil
+        suffix: String? = nil,
+        placeholderLabel: String? = nil
     ) {
         self.key = key
         self.name = name
@@ -220,6 +224,7 @@ public struct ParameterDefinition: Codable, Equatable {
         self.group = group
         self.displayValues = displayValues
         self.suffix = suffix
+        self.placeholderLabel = placeholderLabel
     }
 }
 

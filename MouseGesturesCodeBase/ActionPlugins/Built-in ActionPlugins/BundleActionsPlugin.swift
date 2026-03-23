@@ -287,22 +287,10 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
         }
         
         // Decode existing bundled actions from parameters
-        var existingActions: [BundledAction] = []
-        if let bundleData = currentParameters["bundle_actions"] {
-            if let array = bundleData.value as? [[String: Any]] {
-                existingActions = array.compactMap { dict in
-                    guard let id = dict["actionIdentifier"] as? String else { return nil }
-                    let params = (dict["parameters"] as? [String: Any])?.mapValues { AnyCodable($0) } ?? [:]
-                    let delay = dict["delayAfter"] as? TimeInterval
-                    let condData = dict["conditionData"] as? Data
-                    return BundledAction(actionIdentifier: id, parameters: params, delayAfter: delay, conditionData: condData)
-                }
-            } else if let jsonStr = bundleData.value as? String,
-                      let data = jsonStr.data(using: .utf8),
-                      let decoded = try? JSONDecoder().decode([BundledAction].self, from: data) {
-                existingActions = decoded
-            }
-        }
+        let existingActions: [BundledAction] = {
+            guard let bundleData = currentParameters["bundle_actions"] else { return [] }
+            return Self.decodeBundledActions(from: bundleData)
+        }()
         
         // Read bundle-level settings from current parameters
         let stopOnFailure = (currentParameters["stop_on_failure"]?.value as? Bool) ?? false
@@ -352,30 +340,9 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
             return
         }
         
-        let bundledActions: [BundledAction]
-        if let data = bundleData.value as? Data {
-            bundledActions = (try? JSONDecoder().decode([BundledAction].self, from: data)) ?? []
-        } else if let array = bundleData.value as? [[String: Any]] {
-            bundledActions = array.compactMap { dict in
-                guard let id = dict["actionIdentifier"] as? String else { return nil }
-                let params = (dict["parameters"] as? [String: Any]) ?? [:]
-                let delay = dict["delayAfter"] as? TimeInterval
-                let conditionData = dict["conditionData"] as? Data
-                let anyCodableParams = params.mapValues { AnyCodable($0) }
-                return BundledAction(
-                    actionIdentifier: id,
-                    parameters: anyCodableParams,
-                    delayAfter: delay,
-                    conditionData: conditionData
-                )
-            }
-        } else {
-            context.logger.log("Invalid bundle actions format", file: #file, function: #function, line: #line)
-            return
-        }
-        
+        let bundledActions = Self.decodeBundledActions(from: bundleData)
         guard !bundledActions.isEmpty else {
-            context.logger.log("Empty bundle actions", file: #file, function: #function, line: #line)
+            context.logger.log("Bundle actions empty or could not be decoded", file: #file, function: #function, line: #line)
             return
         }
         
@@ -392,74 +359,87 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
         }
     }
     
+    /// Execute a single bundled sub-action directly through its plugin, bypassing
+    /// the full sandbox enter/exit cycle that can interfere when multiple actions
+    /// target the same plugin in rapid succession.
+    private func executeBundledSubAction(_ bundledAction: BundledAction, context: PluginContext) throws {
+        guard let (plugin, action) = PluginManager.shared.getAction(identifier: bundledAction.actionIdentifier) else {
+            throw PluginError.actionNotFound(bundledAction.actionIdentifier)
+        }
+        try plugin.execute(
+            action: action,
+            with: ActionParameters(values: bundledAction.parameters),
+            context: context
+        )
+    }
+
     private func executeActionsSequentially(_ actions: [BundledAction], stopOnFailure: Bool, context: PluginContext) {
+        context.logger.log("Sequential bundle: \(actions.count) actions to execute", file: #file, function: #function, line: #line)
+
         for (index, bundledAction) in actions.enumerated() {
             guard activeExecutions.contains(where: { _ in true }) else {
-                context.logger.log("Bundle execution cancelled", file: #file, function: #function, line: #line)
+                context.logger.log("Bundle execution cancelled at action \(index + 1)", file: #file, function: #function, line: #line)
                 break
             }
-            
+
             if !bundledAction.shouldExecute() {
-                context.logger.log("Skipping action \(bundledAction.actionIdentifier) due to condition", file: #file, function: #function, line: #line)
+                context.logger.log("Skipping action \(index + 1)/\(actions.count) (\(bundledAction.actionIdentifier)) due to condition", file: #file, function: #function, line: #line)
                 continue
             }
-            
+
             context.logger.log("Executing action \(index + 1)/\(actions.count): \(bundledAction.actionIdentifier)", file: #file, function: #function, line: #line)
-            
+
             do {
-                try PluginManager.shared.executeAction(
-                    identifier: bundledAction.actionIdentifier,
-                    parameters: ActionParameters(values: bundledAction.parameters)
-                )
+                try executeBundledSubAction(bundledAction, context: context)
+                context.logger.log("Completed action \(index + 1)/\(actions.count): \(bundledAction.actionIdentifier)", file: #file, function: #function, line: #line)
             } catch {
-                context.logger.log("Failed to execute action \(bundledAction.actionIdentifier): \(error)", file: #file, function: #function, line: #line)
+                context.logger.log("Failed action \(index + 1)/\(actions.count) (\(bundledAction.actionIdentifier)): \(error)", file: #file, function: #function, line: #line)
                 if stopOnFailure {
                     context.logger.log("Stopping bundle execution due to failure", file: #file, function: #function, line: #line)
                     break
                 }
             }
-            
+
             if let delay = bundledAction.delayAfter, delay > 0 {
                 Thread.sleep(forTimeInterval: delay)
             }
         }
+
+        context.logger.log("Sequential bundle execution finished", file: #file, function: #function, line: #line)
     }
-    
+
     private func executeActionsInParallel(_ actions: [BundledAction], context: PluginContext) {
         let group = DispatchGroup()
-        
+
         for bundledAction in actions {
             if !bundledAction.shouldExecute() {
                 context.logger.log("Skipping action \(bundledAction.actionIdentifier) due to condition", file: #file, function: #function, line: #line)
                 continue
             }
-            
+
             group.enter()
             executionQueue.async {
                 defer { group.leave() }
-                
+
                 guard self.activeExecutions.contains(where: { _ in true }) else {
                     context.logger.log("Bundle execution cancelled", file: #file, function: #function, line: #line)
                     return
                 }
-                
+
                 context.logger.log("Executing action (parallel): \(bundledAction.actionIdentifier)", file: #file, function: #function, line: #line)
-                
+
                 do {
-                    try PluginManager.shared.executeAction(
-                        identifier: bundledAction.actionIdentifier,
-                        parameters: ActionParameters(values: bundledAction.parameters)
-                    )
+                    try self.executeBundledSubAction(bundledAction, context: context)
                 } catch {
                     context.logger.log("Failed to execute action \(bundledAction.actionIdentifier): \(error)", file: #file, function: #function, line: #line)
                 }
-                
+
                 if let delay = bundledAction.delayAfter, delay > 0 {
                     Thread.sleep(forTimeInterval: delay)
                 }
             }
         }
-        
+
         group.wait()
         context.logger.log("Parallel bundle execution completed", file: #file, function: #function, line: #line)
     }
@@ -495,10 +475,10 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
             context.logger.log("No action specified for condition result: \(conditionResult)", file: #file, function: #function, line: #line)
             return
         }
-        
-        try PluginManager.shared.executeAction(
-            identifier: finalActionId,
-            parameters: ActionParameters(values: actionParams)
+
+        try executeBundledSubAction(
+            BundledAction(actionIdentifier: finalActionId, parameters: actionParams, delayAfter: nil),
+            context: context
         )
     }
     
@@ -518,26 +498,70 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
             context.logger.log("Action not found: \(actionId)", file: #file, function: #function, line: #line)
             return
         }
-        
+
+        let subAction = BundledAction(actionIdentifier: actionId, parameters: actionParams, delayAfter: nil)
+
         for i in 1...count {
             guard activeExecutions.contains(where: { _ in true }) else {
                 context.logger.log("Repeat execution cancelled", file: #file, function: #function, line: #line)
                 break
             }
-            
+
             context.logger.log("Repeat \(i)/\(count)", file: #file, function: #function, line: #line)
-            
-            try PluginManager.shared.executeAction(
-                identifier: actionId,
-                parameters: ActionParameters(values: actionParams)
-            )
-            
+
+            try executeBundledSubAction(subAction, context: context)
+
             if i < count && delay > 0 {
                 Thread.sleep(forTimeInterval: delay)
             }
         }
     }
     
+    /// Decode a list of BundledActions from an AnyCodable value, handling all persistence formats:
+    /// - `[[String: Any]]` — in-memory representation before serialisation
+    /// - `[Any]` — AnyCodable-decoded JSON array (produced after app restart)
+    /// - `Data` — raw JSON-encoded BundledAction array
+    /// - `String` — JSON string fallback
+    private static func decodeBundledActions(from bundleData: AnyCodable) -> [BundledAction] {
+        // Raw Data (legacy direct JSONDecoder path)
+        if let data = bundleData.value as? Data {
+            return (try? JSONDecoder().decode([BundledAction].self, from: data)) ?? []
+        }
+
+        // Normalise the raw value into [[String: Any]] regardless of whether AnyCodable
+        // stored it as [[String: Any]] (in-memory) or [Any] (post-JSON-decode).
+        let rawArray: [Any]?
+        if let typed = bundleData.value as? [[String: Any]] {
+            rawArray = typed
+        } else if let untyped = bundleData.value as? [Any] {
+            rawArray = untyped
+        } else if let jsonStr = bundleData.value as? String,
+                  let data = jsonStr.data(using: .utf8),
+                  let decoded = try? JSONDecoder().decode([BundledAction].self, from: data) {
+            return decoded
+        } else {
+            return []
+        }
+
+        return rawArray?.compactMap { element -> BundledAction? in
+            guard let dict = element as? [String: Any],
+                  let id = dict["actionIdentifier"] as? String else { return nil }
+            let params = (dict["parameters"] as? [String: Any])?.mapValues { AnyCodable($0) } ?? [:]
+            let delay = parseTimeInterval(dict["delayAfter"])
+            let condData = dict["conditionData"] as? Data
+            return BundledAction(actionIdentifier: id, parameters: params, delayAfter: delay, conditionData: condData)
+        } ?? []
+    }
+
+    /// Parse a TimeInterval from Any, handling both Int and Double after AnyCodable round-tripping.
+    /// AnyCodable decodes whole JSON numbers (e.g. 1.0) as Int, so a plain `as? TimeInterval` cast
+    /// would fail and lose the configured value.
+    private static func parseTimeInterval(_ value: Any?) -> TimeInterval? {
+        if let d = value as? Double { return d }
+        if let i = value as? Int { return Double(i) }
+        return nil
+    }
+
     private func executeDelay(parameters: ActionParameters, context: PluginContext) {
         let duration = parameters.number(for: "duration") ?? 1.0
         context.logger.log("Delaying for \(duration) seconds", file: #file, function: #function, line: #line)

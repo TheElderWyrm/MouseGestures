@@ -24,6 +24,7 @@ Architecture:
   - Reduce size of modifier keys trigger configuration
   - Make Action View categories dynamic
   - Haptic feedback is happening on finish instead of activation [FIXED 2026-03-15]
+  - Full screen not working when full screen button not visible (Fall back to shortcut)
 
 UI:
   - Use full 'gestures' UI in profiles
@@ -32,13 +33,14 @@ UI:
   - Show add-to-bundle button even when a bundle action is selected (choose to add or update)
   - Setting to display notification on action activation
   - Option to 'replace gesture' when adding gesture with identical configuration
+  - Remove 'system shortcuts disabled' text from shortcut fields [FIXED 2026-03-22]
 
 
 Features:
   - Add reset to template in gestures
   - Bundle actions with variables (e.g. Open URL From Clipboard)
   - Test adding external plugins for detection and actions
-  - open_url: Show only browsers when selecting app + add 'default browser' option
+  - open_url: Show only browsers when selecting app + add 'default browser' option [PARTIAL 2026-03-22] (default browser option added; browser-only filter pending)
   - run_script: add interpreter selection option
   - cascade: add option to resize windows or not
   - Improve templates/default configuration

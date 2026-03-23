@@ -343,10 +343,8 @@ class KeyboardShortcutField: NSTextField {
     
     // Temporarily disable system shortcuts that interfere with shortcut capture
     private func disableSystemShortcutsTemporarily() {
-        // Note: This approach uses accessibility API to temporarily prevent system shortcuts
-        // We'll show a helpful message to the user about this
         if capturedShortcut == nil {
-            stringValue = "Recording... (System shortcuts disabled)"
+            stringValue = "Recording..."
         } else {
             stringValue = capturedShortcut!.displayString + " (recording...)"
         }

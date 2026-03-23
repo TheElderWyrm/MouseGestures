@@ -98,15 +98,16 @@ run_script           - Execute a script (applescript/shell/javascript/python) [�
 	* Add interpreter selection option
 open_app             - Launch an application [✓✓]
 open_file            - Open a file or folder [✓]
-	* Use 'Default App' instead of 'select'
+	* Use 'Default App' instead of 'select' [FIXED 2026-03-22]
 open_url             - Open a URL in default browser [✓]
-	* Have a 'default browser' option instead of 'select'
+	* Have a 'default browser' option instead of 'select' [FIXED 2026-03-22]
 clipboard_action     - Manipulate clipboard contents [✓✓]
 
 ------------------------------------------
 BUNDLE ACTIONS (com.mousegestures.bundle)
 ------------------------------------------
-execute_bundle       - Execute a bundle of actions sequentially or in parallel [✓]
+execute_bundle       - Execute a bundle of actions sequentially or in parallel [?]
+	* App relaunch is reseting delay configuration to .2 s [FIXED 2026-03-22]
 	* Improve conditional gesture bundle logic
 conditional_action   - Execute an action based on if/else condition
 	* Condition not selectable

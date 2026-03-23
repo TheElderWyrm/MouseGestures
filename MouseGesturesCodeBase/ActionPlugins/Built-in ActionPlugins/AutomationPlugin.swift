@@ -152,7 +152,8 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
                     key: "open_with",
                     name: "Open With",
                     type: .application,
-                    description: "Application to open file with"
+                    description: "Application to open file with",
+                    placeholderLabel: "Default App"
                 )
             ],
             icon: "folder"
@@ -174,7 +175,8 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
                     key: "browser",
                     name: "Browser",
                     type: .application,
-                    description: "Specific browser to use"
+                    description: "Specific browser to use",
+                    placeholderLabel: "Default Browser"
                 )
             ],
             icon: "safari"
