@@ -359,8 +359,37 @@ struct ActionSelectionView: View {
         switch p.type {
         case .string:
             paramRow(p) {
-                TextField(p.description, text: strBinding(p.key, def: p.defaultValue?.value as? String ?? ""))
-                    .textFieldStyle(.roundedBorder)
+                if let providerKey = p.optionProvider {
+                    let options = resolveOptionProvider(providerKey)
+                    if !options.isEmpty {
+                        // Combo: pick from known options OR type a custom value
+                        VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
+                            Picker("", selection: Binding(
+                                get: {
+                                    let v = actionParameters[p.key]?.value as? String ?? p.defaultValue?.value as? String ?? ""
+                                    return options.contains(v) ? v : ""
+                                },
+                                set: { if !$0.isEmpty { actionParameters[p.key] = AnyCodable($0) } }
+                            )) {
+                                Text("Custom...").tag("")
+                                ForEach(options, id: \.self) { opt in Text(opt).tag(opt) }
+                            }
+                            .pickerStyle(.menu)
+                            .labelsHidden()
+                            let current = actionParameters[p.key]?.value as? String ?? p.defaultValue?.value as? String ?? ""
+                            if current.isEmpty || !options.contains(current) {
+                                TextField("Type a name...", text: strBinding(p.key, def: p.defaultValue?.value as? String ?? ""))
+                                    .textFieldStyle(.roundedBorder)
+                            }
+                        }
+                    } else {
+                        TextField(p.description, text: strBinding(p.key, def: p.defaultValue?.value as? String ?? ""))
+                            .textFieldStyle(.roundedBorder)
+                    }
+                } else {
+                    TextField(p.description, text: strBinding(p.key, def: p.defaultValue?.value as? String ?? ""))
+                        .textFieldStyle(.roundedBorder)
+                }
             }
         case .path:
             paramRow(p) {
@@ -794,6 +823,16 @@ struct ActionSelectionView: View {
         } else { advancedConfigCount = 0 }
     }
     
+    private func resolveOptionProvider(_ key: String) -> [String] {
+        let plugin = PluginManager.shared.getPlugin(identifier: "com.mousegestures.window")
+        guard let wmp = plugin as? WindowManagementPlugin else { return [] }
+        switch key {
+        case "window.layouts":        return wmp.getAvailableLayouts()
+        case "window.position_slots": return wmp.getAvailablePositionSlots()
+        default: return []
+        }
+    }
+
     private func openAdvanced(for action: PluginAction) {
         guard let (plugin, _) = PluginManager.shared.getAction(identifier: selectedActionId),
               let window = NSApp.keyWindow else { return }

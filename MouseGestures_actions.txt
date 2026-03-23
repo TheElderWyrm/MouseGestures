@@ -44,10 +44,10 @@ adjust_size          - Grow or shrink window (direction + unit + amount paramete
 	* Parameter to grow by pixels instead of percent [FIXED 2026-03-23] (unit: percent/pixels)
 switch_to_window     - Switch to a specific window [✓✓]
 window_position_memory - Save/restore/delete window position (operation + slot parameters) [✓]
-	* For restore or delete add a dropdown for saved layouts (Typing layout should come from selecting 'other'
+	* For restore or delete add a dropdown of saved slots [FIXED 2026-03-23] (optionProvider combo picker + text fallback)
 window_layout        - Save/restore/delete named window layout (operation + layout_name parameters) [✓]
 	* Reopen applications should be hidden for saving layout [FIXED 2026-03-23] (visibleWhen restore only)
-	* For restore or delete add a dropdown for saved layouts (pending — requires runtime data access)
+	* For restore or delete add a dropdown for saved layouts [FIXED 2026-03-23] (optionProvider combo picker + text fallback)
 tile_all             - Tile all windows on screen (scope + resize_windows parameters) [✓]
 	* Add option to resize or not [FIXED 2026-03-23] (resize_windows bool added; move-only mode keeps existing sizes)
 	* Some windows have minimum size and this results in overlapping windows (best-effort)

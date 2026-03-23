@@ -358,7 +358,8 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
                     name: "Slot Name",
                     type: .string,
                     defaultValue: AnyCodable("default"),
-                    description: "Named slot for the position (optional, defaults to app bundle ID)"
+                    description: "Named slot for the position",
+                    optionProvider: "window.position_slots"
                 )
             ] + windowTargetParameters,
             icon: "square.and.arrow.down"
@@ -389,7 +390,8 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
                     name: "Layout Name",
                     type: .string,
                     required: true,
-                    description: "Name of the layout"
+                    description: "Name of the layout",
+                    optionProvider: "window.layouts"
                 ),
                 ParameterDefinition(
                     key: "reopen_apps",
@@ -1217,6 +1219,13 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
     
     func getAvailableLayouts() -> [String] {
         return Array(savedLayouts.keys).sorted()
+    }
+
+    func getAvailablePositionSlots() -> [String] {
+        return Array(savedWindowPositions.keys)
+            .filter { $0.hasPrefix("slot:") }
+            .map { String($0.dropFirst("slot:".count)) }
+            .sorted()
     }
     
     func hasLayout(named name: String) -> Bool {

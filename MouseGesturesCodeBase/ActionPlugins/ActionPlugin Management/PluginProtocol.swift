@@ -200,6 +200,8 @@ public struct ParameterDefinition: Codable, Equatable {
     public let placeholderLabel: String?
     /// When true, the application picker filters to installed browsers only
     public let filterBrowsers: Bool?
+    /// Key identifying a runtime data provider for dynamic option lists (e.g. "window.layouts")
+    public let optionProvider: String?
 
     public init(
         key: String,
@@ -214,7 +216,8 @@ public struct ParameterDefinition: Codable, Equatable {
         displayValues: [String: String]? = nil,
         suffix: String? = nil,
         placeholderLabel: String? = nil,
-        filterBrowsers: Bool? = nil
+        filterBrowsers: Bool? = nil,
+        optionProvider: String? = nil
     ) {
         self.key = key
         self.name = name
@@ -229,6 +232,7 @@ public struct ParameterDefinition: Codable, Equatable {
         self.suffix = suffix
         self.placeholderLabel = placeholderLabel
         self.filterBrowsers = filterBrowsers
+        self.optionProvider = optionProvider
     }
 }
 

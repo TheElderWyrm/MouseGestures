@@ -1,3 +1,15 @@
+## 2026-03-23 (5)
+
+### Feature: Dynamic Option Dropdowns for window_layout and window_position_memory
+
+**PluginProtocol.swift, WindowManagementPlugin.swift, ActionSelectionView.swift**
+- Added `optionProvider: String?` field to `ParameterDefinition` (Codable string key identifying a runtime data source)
+- Added `getAvailablePositionSlots()` to `WindowManagementPlugin` (returns named slots from saved positions)
+- `window_layout.layout_name` and `window_position_memory.slot` now carry `optionProvider: "window.layouts"` / `"window.position_slots"`
+- `ActionSelectionView` resolves `optionProvider` keys via `WindowManagementPlugin`: shows a picker of existing names PLUS a text field for custom input (shown when picker is on "Custom..." or no options exist)
+
+---
+
 ## 2026-03-23 (4)
 
 ### Feature: Parameter Token Substitution (Bundle Variables)
