@@ -156,8 +156,8 @@ struct GestureConfigurationSheet: View {
 
     private var activationComponentsSection: some View {
         GroupBox("Trigger Configuration") {
-            VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
-                VStack(spacing: MGStyle.Spacing.sm) {
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
+                VStack(spacing: 0) {
                     // Modifier Keys Component
                     if isPluginEnabled(ModifierKeyDetectorPlugin.pluginIdentifier) {
                     ComponentToggleCard(
@@ -290,7 +290,7 @@ struct GestureConfigurationSheet: View {
                     .padding(.top, MGStyle.Spacing.sm)
                 }
             }
-            .padding(.vertical, MGStyle.Spacing.md)
+            .padding(.vertical, MGStyle.Spacing.xs)
         }
     }
     
@@ -653,37 +653,30 @@ struct GestureConfigurationSheet: View {
         let title: String
         let description: String
         @Binding var isEnabled: Bool
-        
+
         var body: some View {
             HStack(spacing: MGStyle.Spacing.md) {
                 Toggle("", isOn: $isEnabled)
                     .toggleStyle(.switch)
                     .controlSize(.mini)
                     .labelsHidden()
-                
+
                 Image(systemName: icon)
                     .font(.system(size: 11))
-                    .foregroundColor(isEnabled ? .blue : .secondary)
+                    .foregroundColor(isEnabled ? .accentColor : .secondary)
                     .frame(width: 14)
-                
+
                 Text(title)
-                    .font(.system(size: MGStyle.FontSize.body, weight: .medium))
+                    .font(.system(size: MGStyle.FontSize.caption, weight: isEnabled ? .semibold : .regular))
                     .foregroundColor(isEnabled ? .primary : .secondary)
-                
+
                 Spacer()
-                
-                Text(description)
-                    .font(.system(size: MGStyle.FontSize.badge))
-                    .foregroundColor(.secondary.opacity(0.6))
-                    .lineLimit(1)
             }
-            .padding(.horizontal, MGStyle.Spacing.lg)
-            .padding(.vertical, MGStyle.Spacing.md)
-            .background(isEnabled ? Color.blue.opacity(0.06) : Color.clear)
-            .cornerRadius(MGStyle.Corner.md)
+            .padding(.horizontal, MGStyle.Spacing.sm)
+            .padding(.vertical, MGStyle.Spacing.xs)
         }
     }
-    
+
     struct ModifierToggle: View {
         let label: String
         let name: String
