@@ -30,9 +30,9 @@ empty_trash          - Empty the trash (confirm parameter) [✓✓]
 switch_profile       - Switch to a specific gesture profile (profile_name parameter) [✓✓]
 
 General Core Issues:
-	* Move window actions (close/minimize/maximize/fullscreen) into Window Management plugin
-	* Window Targeting for these actions missing options from window targeting
-	* Modifier key interference on System Events actions (app_expose, cycle_space)
+	* Move window actions (close/minimize/maximize/fullscreen) into Window Management plugin [FIXED 2026-03-23]
+	* Window Targeting for these actions missing options from window targeting [FIXED 2026-03-23] (WM versions have full window targeting)
+	* Modifier key interference on System Events actions (app_expose, cycle_space) — system limitation, no fix available
 
 ------------------------------------------
 WINDOW MANAGEMENT (com.mousegestures.window)
