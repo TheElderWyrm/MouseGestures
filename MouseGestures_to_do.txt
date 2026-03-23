@@ -27,7 +27,7 @@ Architecture:
   - Full screen not working when full screen button not visible (Fall back to shortcut) [DONE] (fallback to Ctrl+Cmd+F already present in code)
 
 UI:
-  - Use full 'gestures' UI in profiles
+  - Use full 'gestures' UI in profiles [FIXED 2026-03-23] (ProfileDetailEditor now uses GestureCardView with expand/collapse)
   - Manage detection plugins under developer mode [FIXED 2026-03-23] (Detection Plugins section in Developer tab)
   - Open application action should bring up Finder to select any application [DONE] (folder browse button already present in application picker)
   - Show add-to-bundle button even when a bundle action is selected (choose to add or update) [FIXED 2026-03-23]

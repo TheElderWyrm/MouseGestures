@@ -566,6 +566,7 @@ struct ProfileDetailEditor: View {
     @State private var editingShortcutInline = false
     @State private var preEditShortcut: KeyboardTrigger?
     @State private var shortcutEnabled: Bool = false
+    @State private var expandedGesture: String?
     
     var body: some View {
         ScrollView {
@@ -794,10 +795,16 @@ struct ProfileDetailEditor: View {
                         .frame(maxWidth: .infinity, alignment: .center)
                         .padding(.vertical, MGStyle.Spacing.xl)
                 } else {
-                    VStack(spacing: MGStyle.Spacing.xs) {
+                    LazyVStack(spacing: MGStyle.Spacing.sm) {
                         ForEach(profile.gestures, id: \.id) { gesture in
-                            ProfileGestureRow(
+                            GestureCardView(
                                 gesture: gesture,
+                                isExpanded: expandedGesture == gesture.id,
+                                onToggleExpand: {
+                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                        expandedGesture = expandedGesture == gesture.id ? nil : gesture.id
+                                    }
+                                },
                                 onEdit: { onEditGesture(gesture) },
                                 onDelete: { gestureToDelete = gesture; showDeleteGestureConfirm = true },
                                 onToggleEnabled: { enabled in toggleGestureEnabled(gesture, enabled: enabled) }

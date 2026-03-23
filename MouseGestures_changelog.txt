@@ -1,3 +1,14 @@
+## 2026-03-23 (7)
+
+### Feature: Full Gesture Card UI in Profiles
+
+**ProfilesView.swift**
+- `ProfileDetailEditor.gestureEditorCard` now uses `GestureCardView` (the same expandable card from GesturesView) instead of the simpler `ProfileGestureRow`
+- Added `@State var expandedGesture` so cards collapse/expand correctly per-profile-detail
+- All callbacks (onEdit, onDelete, onToggleEnabled) remain profile-specific
+
+---
+
 ## 2026-03-23 (6)
 
 ### Improvement: Gestures Empty State + snap_window Rename
