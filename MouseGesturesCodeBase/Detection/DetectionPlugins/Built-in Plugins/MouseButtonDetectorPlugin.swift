@@ -57,7 +57,11 @@ class MouseButtonDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     override var identifier: String { Self.pluginIdentifier }
     override var name: String { "Mouse Button Detector" }
     override var description: String { "Detects mouse button clicks and tracks button hold state for drag gestures" }
-    override var priority: Int { 160 } // Above ScreenZoneDetector (150) since it gates it
+    override var priority: Int { 160 }
+    override var triggerIcon: String { "computermouse" }
+    override var triggerTitle: String { "Mouse Input" }
+    override var triggerDescription: String { "Activate with a click or drag gesture" }
+    override var providesTriggerUI: Bool { true }
     
     // MARK: - Settings Definitions
     

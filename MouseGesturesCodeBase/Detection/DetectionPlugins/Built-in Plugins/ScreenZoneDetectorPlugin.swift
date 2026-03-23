@@ -33,8 +33,12 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     override var identifier: String { Self.pluginIdentifier }
     override var name: String { "Screen Zone Detector" }
     override var description: String { "Detects mouse movement in screen edge and corner zones" }
-    override var priority: Int { 150 } // Medium-high priority
+    override var priority: Int { 150 }
     override var dependencies: [String] { [ModifierKeyDetectorPlugin.pluginIdentifier, MouseButtonDetectorPlugin.pluginIdentifier] }
+    override var triggerIcon: String { "square.grid.3x3" }
+    override var triggerTitle: String { "Screen Zone" }
+    override var triggerDescription: String { "Activate in a specific screen zone" }
+    override var providesTriggerUI: Bool { true }
     
     // MARK: - Settings Definitions
     

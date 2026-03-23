@@ -16,7 +16,11 @@ class ModifierKeyDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     override var identifier: String { Self.pluginIdentifier }
     override var name: String { "Modifier Key Detector" }
     override var description: String { "Detects modifier key presses (Cmd, Ctrl, Option, Shift)" }
-    override var priority: Int { 200 } // High priority
+    override var priority: Int { 200 }
+    override var triggerIcon: String { "command.square" }
+    override var triggerTitle: String { "Modifier Keys" }
+    override var triggerDescription: String { "Require modifier keys to be held" }
+    override var providesTriggerUI: Bool { true }
     
 // MARK: - Computed Settings Properties
     

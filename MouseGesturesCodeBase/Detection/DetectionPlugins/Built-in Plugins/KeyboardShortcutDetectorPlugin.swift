@@ -48,8 +48,12 @@ class KeyboardShortcutDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     override var identifier: String { Self.pluginIdentifier }
     override var name: String { "Keyboard Shortcut Detector" }
     override var description: String { "Detects keyboard shortcuts and key combinations" }
-    override var priority: Int { 100 } // Medium priority
-    
+    override var priority: Int { 100 }
+    override var triggerIcon: String { "keyboard" }
+    override var triggerTitle: String { "Keyboard Shortcut" }
+    override var triggerDescription: String { "Activate with a keyboard combination" }
+    override var providesTriggerUI: Bool { true }
+
     // MARK: - Settings Definitions
     
     override var settingsDefinitions: [PluginSettingDefinition] {

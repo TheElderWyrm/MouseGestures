@@ -152,6 +152,18 @@ struct GestureConfigurationSheet: View {
         DetectionPluginManager.shared.getAllPlugins().first { $0.identifier == id }?.isEnabled ?? true
     }
 
+    /// Plugins that provide trigger UI but aren't one of the 4 built-in types
+    private var unknownTriggerPlugins: [DetectionPlugin] {
+        let knownIds: Set<String> = [
+            ModifierKeyDetectorPlugin.pluginIdentifier,
+            ScreenZoneDetectorPlugin.pluginIdentifier,
+            MouseButtonDetectorPlugin.pluginIdentifier,
+            KeyboardShortcutDetectorPlugin.pluginIdentifier
+        ]
+        return DetectionPluginManager.shared.getAllPlugins()
+            .filter { $0.providesTriggerUI && $0.isEnabled && !knownIds.contains($0.identifier) }
+    }
+
     // MARK: - Activation Components Section
 
     private var activationComponentsSection: some View {
@@ -276,8 +288,18 @@ struct GestureConfigurationSheet: View {
                         keyboardShortcutConfigView
                     }
                     } // end keyboard plugin guard
+
+                    // Dynamic: third-party plugins that provide trigger UI
+                    ForEach(unknownTriggerPlugins, id: \.identifier) { plugin in
+                        ComponentToggleCard(
+                            icon: plugin.triggerIcon,
+                            title: plugin.triggerTitle,
+                            description: plugin.triggerDescription,
+                            isEnabled: .constant(true)
+                        )
+                    }
                 }
-                
+
                 // Validation hint
                 if !components.isValid {
                     HStack {

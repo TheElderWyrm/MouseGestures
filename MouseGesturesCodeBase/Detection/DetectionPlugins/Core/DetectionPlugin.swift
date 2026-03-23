@@ -40,7 +40,16 @@ protocol DetectionPlugin: AnyObject, PluginSettingsProvider {
     
     /// Configuration view for the plugin (for per-gesture trigger configuration)
     func configurationView() -> NSView?
-    
+
+    /// Icon for this plugin's trigger section in the gesture editor
+    var triggerIcon: String { get }
+    /// Title for this plugin's trigger section in the gesture editor
+    var triggerTitle: String { get }
+    /// Human-readable description of this trigger for the gesture editor
+    var triggerDescription: String { get }
+    /// Whether this plugin contributes a trigger option in the gesture editor
+    var providesTriggerUI: Bool { get }
+
     /// Handle global configuration changes (gestures, profiles, etc.)
     func configurationChanged()
     
@@ -268,9 +277,15 @@ open class BaseDetectionPlugin: NSObject, DetectionPlugin, PluginSettingsDelegat
     var isEnabled: Bool = true
     
     open var priority: Int { 100 }
-    
+
     /// Plugin dependencies - override in subclasses if needed
     open var dependencies: [String] { [] }
+
+    // MARK: - Trigger UI Metadata (override in subclasses to appear in gesture editor)
+    open var triggerIcon: String { "questionmark.circle" }
+    open var triggerTitle: String { name }
+    open var triggerDescription: String { "" }
+    open var providesTriggerUI: Bool { false }
     
     internal var context: DetectionContext?
     internal var state: DetectionPluginState = .uninitialized

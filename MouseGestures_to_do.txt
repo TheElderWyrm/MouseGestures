@@ -72,7 +72,7 @@ Cleanup:
 - Improve trigger configuration UI [IMPROVED 2026-03-23] (compact rows, no card backgrounds; mouse input: Click|Drag segmented + button picker; No Mouse option)
 - Add 'No Mouse' option to disable when any mouse button is pressed. [FIXED 2026-03-23] (requireNoMouse component + ScreenZone check)
 - Turn mouse input into a selection with a toggle between click and drag [FIXED 2026-03-23] (segmented Click|Drag + button picker)
-- Everything dealing with plugins should be fully dynamic [PARTIAL 2026-03-23] (trigger sections skip disabled plugins; full plugin-driven UI pending)
+- Everything dealing with plugins should be fully dynamic [IMPROVED 2026-03-23] (plugins expose triggerIcon/Title/providesTriggerUI; unknown plugins auto-appear in trigger config)
 - Add names to all template actions [FIXED 2026-03-23] (all 6 profiles have gesture names)
 - Ensure all window actions accept multiple windows [FIXED 2026-03-23] (close/maximize/fullscreen iterate all targets)
 - Add action to switch a window's display [FIXED 2026-03-23] (move_to_display: next/previous/display 1-4)
