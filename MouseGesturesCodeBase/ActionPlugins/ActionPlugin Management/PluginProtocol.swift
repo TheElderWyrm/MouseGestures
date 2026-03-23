@@ -198,6 +198,8 @@ public struct ParameterDefinition: Codable, Equatable {
     /// Label shown in the picker when no value is selected (e.g. "Default Browser", "Default App")
     /// Defaults to "Select..." when nil
     public let placeholderLabel: String?
+    /// When true, the application picker filters to installed browsers only
+    public let filterBrowsers: Bool?
 
     public init(
         key: String,
@@ -211,7 +213,8 @@ public struct ParameterDefinition: Codable, Equatable {
         group: String? = nil,
         displayValues: [String: String]? = nil,
         suffix: String? = nil,
-        placeholderLabel: String? = nil
+        placeholderLabel: String? = nil,
+        filterBrowsers: Bool? = nil
     ) {
         self.key = key
         self.name = name
@@ -225,6 +228,7 @@ public struct ParameterDefinition: Codable, Equatable {
         self.displayValues = displayValues
         self.suffix = suffix
         self.placeholderLabel = placeholderLabel
+        self.filterBrowsers = filterBrowsers
     }
 }
 

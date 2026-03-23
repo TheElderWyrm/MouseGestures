@@ -469,8 +469,12 @@ struct ActionSelectionView: View {
                 HStack(spacing: MGStyle.Spacing.sm) {
                     Picker("", selection: strBinding(p.key, def: "")) {
                         Text(p.placeholderLabel ?? "Select...").tag("")
+                        let isBrowserPicker = p.filterBrowsers == true
+                        let appList = isBrowserPicker
+                            ? WindowTargeting.getAllInstalledBrowsers()
+                            : WindowTargeting.getAllRunningApplications()
                         let current = actionParameters[p.key]?.value as? String ?? ""
-                        if !current.isEmpty && !WindowTargeting.getAllRunningApplications().contains(where: { $0.bundleId == current }) {
+                        if !current.isEmpty && !appList.contains(where: { $0.bundleId == current }) {
                             let displayName = NSWorkspace.shared.urlForApplication(withBundleIdentifier: current)
                                 .flatMap { Bundle(url: $0)?.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String }
                                 ?? Bundle(url: NSWorkspace.shared.urlForApplication(withBundleIdentifier: current) ?? URL(fileURLWithPath: ""))?.object(forInfoDictionaryKey: "CFBundleName") as? String
@@ -478,7 +482,7 @@ struct ActionSelectionView: View {
                             Text(displayName).tag(current)
                             Divider()
                         }
-                        ForEach(WindowTargeting.getAllRunningApplications(), id: \.bundleId) { app in
+                        ForEach(appList, id: \.bundleId) { app in
                             Text(app.name).tag(app.bundleId)
                         }
                     }

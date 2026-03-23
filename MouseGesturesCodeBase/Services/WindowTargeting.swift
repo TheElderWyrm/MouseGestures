@@ -480,6 +480,36 @@ class WindowTargeting {
         return apps
     }
     
+    // MARK: - Browser Discovery
+
+    static let knownBrowserBundleIds: [String] = [
+        "com.apple.Safari",
+        "com.google.Chrome",
+        "com.google.Chrome.canary",
+        "org.mozilla.firefox",
+        "org.mozilla.nightly",
+        "com.microsoft.edgemac",
+        "com.brave.Browser",
+        "com.operasoftware.Opera",
+        "com.vivaldi.Vivaldi",
+        "com.duckduckgo.macos.browser",
+        "company.thebrowser.Browser",
+        "com.googlecode.chromium",
+    ]
+
+    static func getAllInstalledBrowsers() -> [(bundleId: String, name: String)] {
+        var browsers: [(bundleId: String, name: String)] = []
+        for bundleId in knownBrowserBundleIds {
+            guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleId),
+                  let bundle = Bundle(url: url),
+                  let name = (bundle.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String)
+                           ?? (bundle.object(forInfoDictionaryKey: "CFBundleName") as? String)
+            else { continue }
+            browsers.append((bundleId: bundleId, name: name))
+        }
+        return browsers.sorted { $0.name < $1.name }
+    }
+
     // MARK: - Window List Discovery
     
     static func getAllWindowTitles() -> [(title: String, appName: String)] {

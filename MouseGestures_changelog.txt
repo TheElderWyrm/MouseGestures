@@ -1,3 +1,29 @@
+## 2026-03-23
+
+### Feature: run_script Shell Interpreter Selection
+
+**AutomationPlugin.swift**
+- Added `shell_interpreter` parameter to `run_script` action (visible only when `script_type == "shell"`)
+- Options: `/bin/sh` (default), `/bin/bash`, `/bin/zsh`
+- Updated `runScriptContent` and `runScriptFile` to resolve the chosen interpreter before launching the shell process
+
+### Feature: open_url Browser-Only Filter
+
+**PluginProtocol.swift, WindowTargeting.swift, ActionSelectionView.swift, AutomationPlugin.swift**
+- Added `filterBrowsers: Bool?` field to `ParameterDefinition`
+- Added `getAllInstalledBrowsers()` to `WindowTargeting`: checks a curated list of known browser bundle IDs against installed apps via `NSWorkspace`
+- `ActionSelectionView` `.application` picker uses `getAllInstalledBrowsers()` when `filterBrowsers == true`, instead of the running-apps list
+- Set `filterBrowsers: true` on the `browser` parameter of `open_url`
+
+### Feature: Bundle Editor "Add to Bundle" When Editing
+
+**BundleEditorView.swift**
+- When an existing bundle action is selected (edit mode), both "Add to Bundle" and "Update" buttons are now shown
+- "Add to Bundle" adds the current editor state as a new action; "Update" overwrites the selected action
+- Previously, "Add to Bundle" was hidden while editing, forcing the user to deselect first
+
+---
+
 ## 2026-03-22
 
 ### Fix: Bundle Actions Lost After App Restart

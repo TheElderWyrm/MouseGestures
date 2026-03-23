@@ -95,12 +95,13 @@ keyboard_shortcut    - Trigger a keyboard shortcut [✓]
 run_shortcut         - Run a Shortcuts app shortcut [✓✓]
 run_script           - Execute a script (applescript/shell/javascript/python) [✓]
 	* Python and JavaScript may not work
-	* Add interpreter selection option
+	* Add interpreter selection option [FIXED 2026-03-23] (shell_interpreter: sh/bash/zsh)
 open_app             - Launch an application [✓✓]
 open_file            - Open a file or folder [✓]
 	* Use 'Default App' instead of 'select' [FIXED 2026-03-22]
 open_url             - Open a URL in default browser [✓]
 	* Have a 'default browser' option instead of 'select' [FIXED 2026-03-22]
+	* Show only browsers when selecting app [FIXED 2026-03-23]
 clipboard_action     - Manipulate clipboard contents [✓✓]
 
 ------------------------------------------

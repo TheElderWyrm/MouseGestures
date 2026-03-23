@@ -266,16 +266,27 @@ struct BundleEditorView: View {
                 Spacer()
                 
                 if isEditing {
-                    Button(action: applyEdits) {
+                    Button(action: addActionToBundle) {
                         HStack(spacing: MGStyle.Spacing.sm) {
-                            Image(systemName: "checkmark.square.fill")
+                            Image(systemName: "plus.circle.fill")
                                 .font(.system(size: 12))
-                            Text("Update Action")
+                            Text("Add to Bundle")
                                 .font(.system(size: MGStyle.FontSize.body, weight: .medium))
                         }
                     }
                     .controlSize(.large)
                     .disabled(editorActionId.isEmpty)
+                    Button(action: applyEdits) {
+                        HStack(spacing: MGStyle.Spacing.sm) {
+                            Image(systemName: "checkmark.square.fill")
+                                .font(.system(size: 12))
+                            Text("Update")
+                                .font(.system(size: MGStyle.FontSize.body, weight: .medium))
+                        }
+                    }
+                    .controlSize(.large)
+                    .disabled(editorActionId.isEmpty)
+                    .buttonStyle(.borderedProminent)
                 } else {
                     Button(action: addActionToBundle) {
                         HStack(spacing: MGStyle.Spacing.sm) {

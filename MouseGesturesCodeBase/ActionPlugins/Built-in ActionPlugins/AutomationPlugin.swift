@@ -84,6 +84,24 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
                     ]
                 ),
                 ParameterDefinition(
+                    key: "shell_interpreter",
+                    name: "Interpreter",
+                    type: .selection,
+                    defaultValue: AnyCodable("sh"),
+                    description: "Shell to use for execution",
+                    validation: ValidationRule(allowedValues: [
+                        AnyCodable("sh"),
+                        AnyCodable("bash"),
+                        AnyCodable("zsh")
+                    ]),
+                    visibleWhen: ParameterVisibilityRule(key: "script_type", value: "shell"),
+                    displayValues: [
+                        "sh": "/bin/sh",
+                        "bash": "/bin/bash",
+                        "zsh": "/bin/zsh"
+                    ]
+                ),
+                ParameterDefinition(
                     key: "use_file",
                     name: "Load from File",
                     type: .boolean,
@@ -176,7 +194,8 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
                     name: "Browser",
                     type: .application,
                     description: "Specific browser to use",
-                    placeholderLabel: "Default Browser"
+                    placeholderLabel: "Default Browser",
+                    filterBrowsers: true
                 )
             ],
             icon: "safari"
@@ -251,14 +270,15 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
             let scriptType = parameters.string(for: "script_type") ?? "applescript"
             let useFile = parameters.bool(for: "use_file") ?? false
             let displayOutput = parameters.bool(for: "display_output") ?? false
-            
+            let shellInterpreter = parameters.string(for: "shell_interpreter") ?? "sh"
+
             if useFile {
                 if let path = parameters.string(for: "script_path") {
-                    runScriptFile(at: path, type: scriptType, displayOutput: displayOutput, context: context)
+                    runScriptFile(at: path, type: scriptType, shellInterpreter: shellInterpreter, displayOutput: displayOutput, context: context)
                 }
             } else {
                 if let content = parameters.string(for: "script_content") {
-                    runScriptContent(content, type: scriptType, displayOutput: displayOutput, context: context)
+                    runScriptContent(content, type: scriptType, shellInterpreter: shellInterpreter, displayOutput: displayOutput, context: context)
                 }
             }
             
@@ -458,13 +478,19 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
         executeAppleScript(script)
     }
     
-    private func runScriptContent(_ content: String, type: String, displayOutput: Bool = false, context: PluginContext) {
+    private func runScriptContent(_ content: String, type: String, shellInterpreter: String = "sh", displayOutput: Bool = false, context: PluginContext) {
         DispatchQueue.global(qos: .userInitiated).async {
             let process = Process()
-            
+
             switch type {
             case "shell":
-                process.executableURL = URL(fileURLWithPath: "/bin/sh")
+                let interpreterPath: String
+                switch shellInterpreter {
+                case "bash": interpreterPath = "/bin/bash"
+                case "zsh":  interpreterPath = "/bin/zsh"
+                default:     interpreterPath = "/bin/sh"
+                }
+                process.executableURL = URL(fileURLWithPath: interpreterPath)
                 process.arguments = ["-c", content]
                 
             case "applescript":
@@ -525,15 +551,15 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
         }
     }
     
-    private func runScriptFile(at path: String, type: String, displayOutput: Bool = false, context: PluginContext) {
+    private func runScriptFile(at path: String, type: String, shellInterpreter: String = "sh", displayOutput: Bool = false, context: PluginContext) {
         guard FileManager.default.fileExists(atPath: path) else {
             context.logger.log("Script file not found: \(path)", file: #file, function: #function, line: #line)
             return
         }
-        
+
         do {
             let content = try String(contentsOfFile: path)
-            runScriptContent(content, type: type, displayOutput: displayOutput, context: context)
+            runScriptContent(content, type: type, shellInterpreter: shellInterpreter, displayOutput: displayOutput, context: context)
         } catch {
             context.logger.log("Error reading script file: \(error)", file: #file, function: #function, line: #line)
         }
