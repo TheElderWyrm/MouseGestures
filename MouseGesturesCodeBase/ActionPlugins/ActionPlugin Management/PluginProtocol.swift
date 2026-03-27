@@ -123,7 +123,10 @@ public struct PluginAction: Codable, Equatable {
     public let icon: String? // SF Symbol name
     /// When true, this action is hidden from the action selection UI but still available for programmatic use (e.g. bundles)
     public let hidden: Bool
-    
+    /// Label shown on the "Configure..." button in the advanced config box.
+    /// Defaults to "Advanced: <action name>" when nil.
+    public let advancedConfigLabel: String?
+
     public init(
         id: String,
         name: String,
@@ -133,7 +136,8 @@ public struct PluginAction: Codable, Equatable {
         supportsLongPress: Bool = false,
         supportsRepeat: Bool = false,
         icon: String? = nil,
-        hidden: Bool = false
+        hidden: Bool = false,
+        advancedConfigLabel: String? = nil
     ) {
         self.id = id
         self.name = name
@@ -144,6 +148,7 @@ public struct PluginAction: Codable, Equatable {
         self.supportsRepeat = supportsRepeat
         self.icon = icon
         self.hidden = hidden
+        self.advancedConfigLabel = advancedConfigLabel
     }
 }
 
@@ -216,6 +221,9 @@ public struct ParameterDefinition: Codable, Equatable {
     public let filterBrowsers: Bool?
     /// Key identifying a runtime data provider for dynamic option lists (e.g. "window.layouts")
     public let optionProvider: String?
+    /// When true, this parameter is NOT shown in the standard parameter view —
+    /// it is only accessible via the action's advanced configuration sheet.
+    public let isAdvancedOnly: Bool
 
     public init(
         key: String,
@@ -231,7 +239,8 @@ public struct ParameterDefinition: Codable, Equatable {
         suffix: String? = nil,
         placeholderLabel: String? = nil,
         filterBrowsers: Bool? = nil,
-        optionProvider: String? = nil
+        optionProvider: String? = nil,
+        isAdvancedOnly: Bool = false
     ) {
         self.key = key
         self.name = name
@@ -247,6 +256,7 @@ public struct ParameterDefinition: Codable, Equatable {
         self.placeholderLabel = placeholderLabel
         self.filterBrowsers = filterBrowsers
         self.optionProvider = optionProvider
+        self.isAdvancedOnly = isAdvancedOnly
     }
 }
 

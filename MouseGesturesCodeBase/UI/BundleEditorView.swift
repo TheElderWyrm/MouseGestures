@@ -310,9 +310,9 @@ struct BundleEditorView: View {
     
     private var footerBar: some View {
         HStack {
+            Spacer()
             Button("Cancel") { onCancel() }
                 .keyboardShortcut(.escape, modifiers: [])
-            Spacer()
             Button("Done") { onDone(bundledActions, stopOnFailure, parallelExecution) }
                 .keyboardShortcut(.return, modifiers: [])
                 .buttonStyle(.borderedProminent)

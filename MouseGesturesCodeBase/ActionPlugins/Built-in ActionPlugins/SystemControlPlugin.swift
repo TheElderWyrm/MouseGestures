@@ -1,4 +1,5 @@
 import Cocoa
+import IOKit
 
 // MARK: - System Control Plugin
 
@@ -375,34 +376,62 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
 
     private func adjustKeyboardBrightness(increase: Bool) {
         sendNXKeyEvent(increase ? .keyboardBrightUp : .keyboardBrightDown)
+        usleep(20_000)
     }
 
-    // MARK: - Programmatic Brightness (CoreDisplay private framework via dlopen)
+    // MARK: - Programmatic Brightness (CoreDisplay / DisplayServices / IOKit via dlopen)
 
     private func setDisplayBrightness(_ level: Float) {
         let clamped = Double(max(0, min(1, level)))
-        // Try CoreDisplay_Display_SetUserBrightness (available macOS 10.12+, private API)
+
+        // 1. Try CoreDisplay (macOS 10.15–13)
         if let handle = dlopen("/System/Library/Frameworks/CoreDisplay.framework/CoreDisplay", RTLD_LAZY | RTLD_LOCAL) {
             defer { dlclose(handle) }
             if let sym = dlsym(handle, "CoreDisplay_Display_SetUserBrightness") {
-                typealias SetFunc = @convention(c) (UInt32, Double) -> Void
-                let fn = unsafeBitCast(sym, to: SetFunc.self)
-                fn(CGMainDisplayID(), clamped)
+                typealias Fn = @convention(c) (UInt32, Double) -> Void
+                unsafeBitCast(sym, to: Fn.self)(CGMainDisplayID(), clamped)
                 return
             }
         }
-        // Fallback: NX key approximation (step to floor then step up to target)
-        for _ in 0..<16 { sendNXKeyEvent(.brightnessDown) }
+
+        // 2. Try DisplayServices (macOS 14+)
+        if let handle = dlopen("/System/Library/PrivateFrameworks/DisplayServices.framework/DisplayServices", RTLD_LAZY | RTLD_LOCAL) {
+            defer { dlclose(handle) }
+            if let sym = dlsym(handle, "DisplayServicesSetBrightness") {
+                typealias Fn = @convention(c) (UInt32, Float) -> Int32
+                _ = unsafeBitCast(sym, to: Fn.self)(CGMainDisplayID(), Float(clamped))
+                return
+            }
+        }
+
+        // 3. IOKit fallback
+        let matching = IOServiceMatching("IODisplayConnect")
+        var iter: io_iterator_t = 0
+        if IOServiceGetMatchingServices(0, matching, &iter) == KERN_SUCCESS {
+            defer { IOObjectRelease(iter) }
+            let svc = IOIteratorNext(iter)
+            if svc != IO_OBJECT_NULL {
+                defer { IOObjectRelease(svc) }
+                var connect: io_connect_t = 0
+                if IOServiceOpen(svc, mach_task_self_, 0, &connect) == KERN_SUCCESS {
+                    IODisplaySetFloatParameter(connect, 0, kIODisplayBrightnessKey as CFString, Float(clamped))
+                    IOServiceClose(connect)
+                    return
+                }
+            }
+        }
+
+        // 4. NX key step approximation
+        for _ in 0..<16 { sendNXKeyEvent(.brightnessDown); usleep(10_000) }
         let steps = Int((clamped * 16).rounded())
-        for _ in 0..<steps { sendNXKeyEvent(.brightnessUp) }
+        for _ in 0..<steps { sendNXKeyEvent(.brightnessUp); usleep(10_000) }
     }
 
     private func setKeyboardBrightness(_ level: Float) {
         let clamped = max(0, min(1, level))
-        // No public/private API for programmatic keyboard brightness; use NX key steps
-        for _ in 0..<16 { sendNXKeyEvent(.keyboardBrightDown) }
+        for _ in 0..<16 { sendNXKeyEvent(.keyboardBrightDown); usleep(20_000) }
         let steps = Int((Double(clamped) * 16).rounded())
-        for _ in 0..<steps { sendNXKeyEvent(.keyboardBrightUp) }
+        for _ in 0..<steps { sendNXKeyEvent(.keyboardBrightUp); usleep(20_000) }
     }
     
     // MARK: - System Features

@@ -21,3 +21,12 @@ FUTURE / PLANNED
 - Possible: Combine mouse click and mouse drag into a single input type
     - Evaluates to true whenever the corresponding mouse button is pressed
     - Same way screen zones are true whenever cursor is inside them
+
+
+- Set Display Brightness not working
+- Slow down slightly on set keyboard brightness (hopefully slightly more accurate)
+- Conditional Action sheet cancel save buttons not working (Nested sheet issue? Works for execute bundle).
+- move execute bundle advanced configuration cancel button next to save button.
+- Conditional Action showing both parameters actions and advanced configuration
+- Move condition into advanced configuration for conditional action.
+- Label what the advanced configuration is (For all actions that use it). For example display 'Configure Actions' for execute action bundle.

@@ -302,7 +302,7 @@ struct ActionSelectionView: View {
                 if hasAdvancedConfig {
                     advancedConfigBox(for: action)
                 }
-                let simple = action.supportedParameters.filter { $0.type != .json }
+                let simple = action.supportedParameters.filter { $0.type != .json && !$0.isAdvancedOnly }
                 if !simple.isEmpty {
                     let grouped = parameterGroups(simple)
                     ForEach(grouped, id: \.name) { group in
@@ -351,7 +351,7 @@ struct ActionSelectionView: View {
     }
     
     private func advancedConfigBox(for action: PluginAction) -> some View {
-        GroupBox("Advanced: \(action.name)") {
+        GroupBox(action.advancedConfigLabel ?? "Advanced: \(action.name)") {
             HStack {
                 VStack(alignment: .leading, spacing: MGStyle.Spacing.sm) {
                     if advancedConfigCount > 0 {

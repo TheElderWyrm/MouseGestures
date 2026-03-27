@@ -105,7 +105,8 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
                 )
             ],
             supportsRepeat: false,
-            icon: "square.stack.3d.up"
+            icon: "square.stack.3d.up",
+            advancedConfigLabel: "Configure Bundle"
         ),
         PluginAction(
             id: "conditional_action",
@@ -132,62 +133,72 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
                         "app_running": "App Is Running",
                         "window_title_contains": "Window Title Contains",
                         "profile_active": "Profile Is Active"
-                    ]
+                    ],
+                    isAdvancedOnly: true
                 ),
                 ParameterDefinition(
                     key: "condition_negate",
                     name: "Negate Condition",
                     type: .boolean,
                     defaultValue: AnyCodable(false),
-                    description: "Execute when condition is NOT met"
+                    description: "Execute when condition is NOT met",
+                    isAdvancedOnly: true
                 ),
                 ParameterDefinition(
                     key: "condition_app",
                     name: "Application",
                     type: .application,
                     description: "Application to check",
-                    visibleWhen: ParameterVisibilityRule(key: "condition_type", anyOf: ["app_frontmost", "app_running"])
+                    visibleWhen: ParameterVisibilityRule(key: "condition_type", anyOf: ["app_frontmost", "app_running"]),
+                    isAdvancedOnly: true
                 ),
                 ParameterDefinition(
                     key: "condition_window_title",
                     name: "Window Title",
                     type: .string,
                     description: "Text the window title must contain",
-                    visibleWhen: ParameterVisibilityRule(key: "condition_type", value: "window_title_contains")
+                    visibleWhen: ParameterVisibilityRule(key: "condition_type", value: "window_title_contains"),
+                    isAdvancedOnly: true
                 ),
                 ParameterDefinition(
                     key: "condition_profile",
                     name: "Profile",
                     type: .profile,
                     description: "Profile that must be active",
-                    visibleWhen: ParameterVisibilityRule(key: "condition_type", value: "profile_active")
+                    visibleWhen: ParameterVisibilityRule(key: "condition_type", value: "profile_active"),
+                    isAdvancedOnly: true
                 ),
                 ParameterDefinition(
                     key: "nested_action_id",
                     name: "Action to Run",
                     type: .actionId,
-                    description: "The action to execute when condition is met"
+                    description: "The action to execute when condition is met",
+                    isAdvancedOnly: true
                 ),
                 ParameterDefinition(
                     key: "false_action_id",
                     name: "Action if False",
                     type: .actionId,
-                    description: "Action to run when condition is NOT met (optional)"
+                    description: "Action to run when condition is NOT met (optional)",
+                    isAdvancedOnly: true
                 ),
                 ParameterDefinition(
                     key: "nested_action_params",
                     name: "Action Parameters",
                     type: .json,
-                    description: "Parameters for the nested action"
+                    description: "Parameters for the nested action",
+                    isAdvancedOnly: true
                 ),
                 ParameterDefinition(
                     key: "false_action_params",
                     name: "False Action Parameters",
                     type: .json,
-                    description: "Parameters for the false-branch action"
+                    description: "Parameters for the false-branch action",
+                    isAdvancedOnly: true
                 )
             ],
-            icon: "questionmark.diamond"
+            icon: "questionmark.diamond",
+            advancedConfigLabel: "Configure Condition & Actions"
         ),
         PluginAction(
             id: "repeat_action",
@@ -374,6 +385,16 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
     
     // MARK: - Conditional Action Editor
 
+    private final class SheetDismisser {
+        weak var parentWindow: NSWindow?
+        var sheetWindow: NSWindow?
+        func end() {
+            guard let parent = parentWindow, let sheet = sheetWindow else { return }
+            parent.endSheet(sheet)
+            sheet.orderOut(nil)
+        }
+    }
+
     private func presentConditionalActionEditor(
         currentParameters: [String: AnyCodable],
         parentWindow: NSWindow,
@@ -389,36 +410,45 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
                   let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return [:] }
             return dict.mapValues { AnyCodable($0) }
         }
+        func encodeParams(_ p: [String: AnyCodable]) -> String {
+            guard !p.isEmpty,
+                  let data = try? JSONSerialization.data(withJSONObject: p.mapValues { $0.value }),
+                  let s = String(data: data, encoding: .utf8) else { return "" }
+            return s
+        }
+
+        let dismisser = SheetDismisser()
+        dismisser.parentWindow = parentWindow
 
         let editorView = ConditionalActionEditorView(
+            initialParameters: currentParameters,
             trueActionId: trueActionId,
             trueActionParams: decodeParams(trueParamsJson),
             falseActionId: falseActionId,
             falseActionParams: decodeParams(falseParamsJson)
-        ) { tId, tParams, fId, fParams in
+        ) { condParams, tId, tParams, fId, fParams in
             var updated = currentParameters
-            updated["nested_action_id"] = AnyCodable(tId)
-            updated["false_action_id"]  = AnyCodable(fId)
-            func encodeParams(_ p: [String: AnyCodable]) -> String {
-                guard !p.isEmpty,
-                      let data = try? JSONSerialization.data(withJSONObject: p.mapValues { $0.value }),
-                      let s = String(data: data, encoding: .utf8) else { return "" }
-                return s
-            }
+            // Merge condition parameters
+            for (k, v) in condParams { updated[k] = v }
+            updated["nested_action_id"]     = AnyCodable(tId)
+            updated["false_action_id"]      = AnyCodable(fId)
             updated["nested_action_params"] = AnyCodable(encodeParams(tParams))
             updated["false_action_params"]  = AnyCodable(encodeParams(fParams))
             completion(updated)
+            dismisser.end()
         } onCancel: {
             completion(nil)
+            dismisser.end()
         }
 
         let controller = NSHostingController(rootView: editorView)
-        let window = NSWindow(contentViewController: controller)
-        window.title = "Configure Conditional Action"
-        window.styleMask = [.titled, .closable, .resizable]
-        window.setContentSize(NSSize(width: 820, height: 680))
-        window.minSize = NSSize(width: 700, height: 500)
-        parentWindow.beginSheet(window) { _ in }
+        let sheet = NSWindow(contentViewController: controller)
+        sheet.title = "Configure Conditional Action"
+        sheet.styleMask = [.titled, .closable, .resizable]
+        sheet.setContentSize(NSSize(width: 820, height: 720))
+        sheet.minSize = NSSize(width: 700, height: 560)
+        dismisser.sheetWindow = sheet
+        parentWindow.beginSheet(sheet) { _ in }
     }
 
     // MARK: - Private Implementation
