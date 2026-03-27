@@ -74,13 +74,15 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
                         AnyCodable("applescript"),
                         AnyCodable("shell"),
                         AnyCodable("javascript"),
-                        AnyCodable("python")
+                        AnyCodable("python"),
+                        AnyCodable("custom")
                     ]),
                     displayValues: [
                         "applescript": "AppleScript",
                         "shell": "Shell Script",
                         "javascript": "JavaScript (JXA)",
-                        "python": "Python"
+                        "python": "Python",
+                        "custom": "Custom Interpreter"
                     ]
                 ),
                 ParameterDefinition(
@@ -109,6 +111,13 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
                     visibleWhen: ParameterVisibilityRule(key: "script_type", value: "python")
                 ),
                 ParameterDefinition(
+                    key: "custom_interpreter_path",
+                    name: "Interpreter Path",
+                    type: .string,
+                    description: "Path or name of interpreter (e.g. /usr/local/bin/ruby, node, perl)",
+                    visibleWhen: ParameterVisibilityRule(key: "script_type", value: "custom")
+                ),
+                ParameterDefinition(
                     key: "use_file",
                     name: "Load from File",
                     type: .boolean,
@@ -119,13 +128,15 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
                     key: "script_content",
                     name: "Script",
                     type: .script,
-                    description: "Inline script content"
+                    description: "Inline script content",
+                    visibleWhen: ParameterVisibilityRule(key: "use_file", value: "false")
                 ),
                 ParameterDefinition(
                     key: "script_path",
                     name: "Script File",
                     type: .path,
-                    description: "Path to script file"
+                    description: "Path to script file",
+                    visibleWhen: ParameterVisibilityRule(key: "use_file", value: "true")
                 ),
                 ParameterDefinition(
                     key: "display_output",
@@ -280,14 +291,15 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
             let shellInterpreter = parameters.string(for: "shell_interpreter") ?? "sh"
             let pythonInterpreterRaw = parameters.string(for: "python_interpreter") ?? ""
             let pythonInterpreter: String? = pythonInterpreterRaw.isEmpty ? nil : pythonInterpreterRaw
+            let customInterpreterPath = parameters.string(for: "custom_interpreter_path")
 
             if useFile {
                 if let path = parameters.string(for: "script_path") {
-                    runScriptFile(at: path, type: scriptType, shellInterpreter: shellInterpreter, pythonInterpreter: pythonInterpreter, displayOutput: displayOutput, context: context)
+                    runScriptFile(at: path, type: scriptType, shellInterpreter: shellInterpreter, pythonInterpreter: pythonInterpreter, customInterpreterPath: customInterpreterPath, displayOutput: displayOutput, context: context)
                 }
             } else {
                 if let content = parameters.string(for: "script_content") {
-                    runScriptContent(content, type: scriptType, shellInterpreter: shellInterpreter, pythonInterpreter: pythonInterpreter, displayOutput: displayOutput, context: context)
+                    runScriptContent(content, type: scriptType, shellInterpreter: shellInterpreter, pythonInterpreter: pythonInterpreter, customInterpreterPath: customInterpreterPath, displayOutput: displayOutput, context: context)
                 }
             }
             
@@ -487,7 +499,7 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
         executeAppleScript(script)
     }
     
-    private func runScriptContent(_ content: String, type: String, shellInterpreter: String = "sh", pythonInterpreter: String? = nil, displayOutput: Bool = false, context: PluginContext) {
+    private func runScriptContent(_ content: String, type: String, shellInterpreter: String = "sh", pythonInterpreter: String? = nil, customInterpreterPath: String? = nil, displayOutput: Bool = false, context: PluginContext) {
         DispatchQueue.global(qos: .userInitiated).async {
             let process = Process()
 
@@ -501,17 +513,16 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
                 }
                 process.executableURL = URL(fileURLWithPath: interpreterPath)
                 process.arguments = ["-c", content]
-                
+
             case "applescript":
                 process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
                 process.arguments = ["-e", content]
-                
+
             case "javascript":
                 process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
                 process.arguments = ["-l", "JavaScript", "-e", content]
-                
+
             case "python":
-                // Use custom interpreter if specified, otherwise auto-detect
                 let resolvedPath: String
                 if let custom = pythonInterpreter {
                     resolvedPath = custom
@@ -521,7 +532,19 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
                 }
                 process.executableURL = URL(fileURLWithPath: resolvedPath)
                 process.arguments = ["-c", content]
-                
+
+            case "custom":
+                let interpreterPath = customInterpreterPath ?? ""
+                guard !interpreterPath.isEmpty else { return }
+                if interpreterPath.hasPrefix("/") {
+                    process.executableURL = URL(fileURLWithPath: interpreterPath)
+                    process.arguments = ["-c", content]
+                } else {
+                    // Use env to find the interpreter by name
+                    process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+                    process.arguments = [interpreterPath, "-c", content]
+                }
+
             default:
                 return
             }
@@ -536,13 +559,13 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
             do {
                 try process.run()
                 process.waitUntilExit()
-                
+
                 if displayOutput {
                     let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
                     let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
                     let output = String(data: outputData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
                     let errorOutput = String(data: errorData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-                    
+
                     let displayText: String
                     if process.terminationStatus != 0 && !errorOutput.isEmpty {
                         displayText = "Error: \(errorOutput)"
@@ -552,7 +575,7 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
                     } else {
                         displayText = "Script completed (exit code \(process.terminationStatus))"
                     }
-                    
+
                     context.showNotification(
                         title: "Script Output",
                         message: displayText,
@@ -567,8 +590,8 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
             }
         }
     }
-    
-    private func runScriptFile(at path: String, type: String, shellInterpreter: String = "sh", pythonInterpreter: String? = nil, displayOutput: Bool = false, context: PluginContext) {
+
+    private func runScriptFile(at path: String, type: String, shellInterpreter: String = "sh", pythonInterpreter: String? = nil, customInterpreterPath: String? = nil, displayOutput: Bool = false, context: PluginContext) {
         guard FileManager.default.fileExists(atPath: path) else {
             context.logger.log("Script file not found: \(path)", file: #file, function: #function, line: #line)
             return
@@ -576,7 +599,7 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
 
         do {
             let content = try String(contentsOfFile: path)
-            runScriptContent(content, type: type, shellInterpreter: shellInterpreter, pythonInterpreter: pythonInterpreter, displayOutput: displayOutput, context: context)
+            runScriptContent(content, type: type, shellInterpreter: shellInterpreter, pythonInterpreter: pythonInterpreter, customInterpreterPath: customInterpreterPath, displayOutput: displayOutput, context: context)
         } catch {
             context.logger.log("Error reading script file: \(error)", file: #file, function: #function, line: #line)
         }

@@ -76,3 +76,41 @@ Cleanup:
 - Add names to all template actions [FIXED 2026-03-23] (all 6 profiles have gesture names)
 - Ensure all window actions accept multiple windows [FIXED 2026-03-23] (close/maximize/fullscreen iterate all targets)
 - Add action to switch a window's display [FIXED 2026-03-23] (move_to_display: next/previous/display 1-4)
+
+
+- For conditional action open action picker in new sheet (Proper picker with parameters) [FIXED 2026-03-26] (conditional_action in BundleActionsPlugin; nested_action_id uses .actionId picker)
+- Conditional Action needs condition parameter [FIXED 2026-03-26] (condition_type selection: always/app_frontmost/app_running/window_title_contains/profile_active + negate)
+- Open URL: Detect normalization [FIXED 2026-03-26] (validation indicator now accepts any parseable URL string)
+- Run Script: Python failing to write to a file file [FIXED 2026-03-26] (Python scripts written to temp file, resolves sandbox I/O restrictions)
+- Run Script: Autohide script file path when load from file not selected [FIXED 2026-03-26] (visibleWhen rules + shouldShow Bool support)
+- Run Script: Add 'custom' which takes an interpreter name/path and the script [FIXED 2026-03-26] (custom_interpreter_path param, /usr/bin/env fallback for named interpreters)
+- Add 'set brightness' option (Display brightness + Keyboard Brightness) [DONE] (display_brightness + keyboard_brightness already in SystemControlPlugin)
+- Set window position: Preset parameter is measuring from wrong location (Top center -> bottom center) [FIXED 2026-03-26] (correct AX coordinate conversion)
+- Tile All windows: Add option to tile to constant size [FIXED 2026-03-26] (constant_size + tile_width/tile_height params)
+- Tile windows: Ensure Window collection is properly excluding background windows [FIXED 2026-03-26] (filterOutWidgets checks activationPolicy + min size 50×50)
+- Tile windows causes overlap or goes off the screen [FIXED 2026-03-26] (AX coordinate fix in tileAllWindows)
+- For window layout custom is not selectable once a different option is selected [FIXED 2026-03-26] (Picker binding clears value on Custom... selection)
+- Cycle window 'all applications' seems to just switch between two frontmost windows [FIXED 2026-03-26] (uses AX focused window for currentIdx)
+- Switch to window should switch the application to the relevant application [FIXED 2026-03-26] (app.activate before kAXRaiseAction)
+- No Mouse button should be an option for mouse input, not its own input configuration. [FIXED 2026-03-26] (moved inside mouseInputConfigView as inline toggle)
+- Put Button above type in mouse input [FIXED 2026-03-26] (Button row now before Type row in mouseInputConfigView)
+- Create and install test detection plugin [FIXED 2026-03-26] (TestDetectionPlugin.swift — heartbeat logger; also added external plugin scanning to DetectionPluginManager from ~/Library/Application Support/MouseGestures/DetectionPlugins/)
+- Create and install test action plugin [FIXED 2026-03-26] (TestActionPlugin.swift — test_log + test_notify actions in Development category)
+^ Installing plugin should not require any changes to the app's code [DONE] (PluginManager scans ~/Library/Application Support/MouseGestures/Plugins/; DetectionPluginManager now also scans ~/Library/Application Support/MouseGestures/DetectionPlugins/)
+
+- Add action to run in false for conditional action [FIXED 2026-03-26] (false_action_id param; if/else branch in executeConditional)
+- Set brightness/Set keyboard brightness parameters [FIXED 2026-03-26] (direction=”set” + value 0–100% param added to both actions)
+- Cycle windows: All applications cycling between top two windows [FIXED 2026-03-26] (PID-stable ordering, one window per app)
+- Tile Windows: Add specific application target [FIXED 2026-03-26] (specific_app scope + tile_app_bundle_id picker)
+- Rename Tile all windows -> tile windows. [FIXED 2026-03-26] (display name changed, id unchanged)
+- Resize windows and constant size should not both be selectable [FIXED 2026-03-26] (resize_windows hidden when constant_size=true via notValue rule)
+- Move 'no mouse button' to the button dropdown as another selectable. [FIXED 2026-03-26] (None option in Button picker; sets requireNoMouse; hides Click/Drag selector)
+- Running from Script: When running from a file display the script that it will run in the script box [FIXED 2026-03-26] (read-only file preview in CodeTextEditor)
+- Script is autocorrecting “ to “, breaking scripts [FIXED 2026-03-26] (CodeTextEditor NSViewRepresentable disables smart-quote/autocorrect substitution)
+- ^ likely the issue with the python script, revert your change [FIXED 2026-03-26] (Python reverted to inline -c execution)
+- Commit your changes [TODO]
+- Future: Add customizeable variables for parameter fields
+	- Allow inputs and outputs to scripts with these variables
+- Possible: Combine mouse click and mouse drag (Evaluates to true whenever the corresponding mouse button is pressed. Same way zones are true whenever you are in them)
+- Have test detection plugin register a trigger configuration
+- Future: Adding plugins shouldn't require any code changes including adding a line to register (Can be installed via 'install plugin button). <-- Test with test plugins.

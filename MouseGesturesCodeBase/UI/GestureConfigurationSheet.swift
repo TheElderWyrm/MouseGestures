@@ -249,17 +249,6 @@ struct GestureConfigurationSheet: View {
                     if (components.dragType?.isEnabled ?? false) || (components.mouseButton?.isEnabled ?? false) {
                         mouseInputConfigView
                     }
-
-                    // No Mouse option
-                    ComponentToggleCard(
-                        icon: "computermouse.slash",
-                        title: "No Mouse Button",
-                        description: "Only fire when no mouse button is held",
-                        isEnabled: Binding(
-                            get: { components.requireNoMouse },
-                            set: { components.requireNoMouse = $0 }
-                        )
-                    )
                     } // end mouse plugin guard
 
                     // Keyboard Shortcut Component
@@ -451,6 +440,47 @@ struct GestureConfigurationSheet: View {
     private var mouseInputConfigView: some View {
         VStack(alignment: .leading, spacing: MGStyle.Spacing.sm) {
             HStack {
+                Text("Button:")
+                    .font(.system(size: MGStyle.FontSize.caption))
+                    .foregroundColor(.secondary)
+                    .frame(width: 80, alignment: .trailing)
+                Picker("", selection: Binding(
+                    get: {
+                        if components.requireNoMouse { return DragModifier.none }
+                        return isDragMode
+                            ? (components.dragType?.dragType ?? .leftDrag)
+                            : buttonToDragMirror(components.mouseButton?.button ?? .left)
+                    },
+                    set: { val in
+                        if val == .none {
+                            // "None" means require no mouse button
+                            components.requireNoMouse = true
+                            components.dragType?.isEnabled = false
+                            components.mouseButton?.isEnabled = false
+                        } else {
+                            components.requireNoMouse = false
+                            if isDragMode {
+                                components.dragType?.dragType = val
+                            } else {
+                                components.mouseButton?.button = dragMirrorToButton(val)
+                            }
+                        }
+                    }
+                )) {
+                    Text("Any").tag(DragModifier.anyDrag)
+                    Text("Left").tag(DragModifier.leftDrag)
+                    Text("Right").tag(DragModifier.rightDrag)
+                    Text("Middle").tag(DragModifier.middleDrag)
+                    Text("None").tag(DragModifier.none)
+                }
+                .pickerStyle(.menu)
+                .frame(width: 100)
+                .labelsHidden()
+                Spacer()
+            }
+
+            if !components.requireNoMouse {
+            HStack {
                 Text("Type:")
                     .font(.system(size: MGStyle.FontSize.caption))
                     .foregroundColor(.secondary)
@@ -475,35 +505,8 @@ struct GestureConfigurationSheet: View {
                 .labelsHidden()
                 Spacer()
             }
+            } // end if !requireNoMouse
 
-            HStack {
-                Text("Button:")
-                    .font(.system(size: MGStyle.FontSize.caption))
-                    .foregroundColor(.secondary)
-                    .frame(width: 80, alignment: .trailing)
-                Picker("", selection: Binding(
-                    get: { isDragMode
-                        ? (components.dragType?.dragType ?? .leftDrag)
-                        : buttonToDragMirror(components.mouseButton?.button ?? .left)
-                    },
-                    set: { val in
-                        if isDragMode {
-                            components.dragType?.dragType = val
-                        } else {
-                            components.mouseButton?.button = dragMirrorToButton(val)
-                        }
-                    }
-                )) {
-                    Text("Any").tag(DragModifier.anyDrag)
-                    Text("Left").tag(DragModifier.leftDrag)
-                    Text("Right").tag(DragModifier.rightDrag)
-                    Text("Middle").tag(DragModifier.middleDrag)
-                }
-                .pickerStyle(.menu)
-                .frame(width: 100)
-                .labelsHidden()
-                Spacer()
-            }
         }
         .padding(.leading, MGStyle.Spacing.xxl)
         .padding(MGStyle.Spacing.md)

@@ -1,4 +1,5 @@
 import Cocoa
+import Carbon
 import Foundation
 import SwiftUI
 
@@ -109,42 +110,75 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
         PluginAction(
             id: "conditional_action",
             name: "Conditional Action",
-            description: "Execute an action based on conditions",
+            description: "Execute an action only when a condition is met",
             requiresParameters: true,
             supportedParameters: [
                 ParameterDefinition(
-                    key: "condition",
+                    key: "condition_type",
                     name: "Condition",
-                    type: .json,
-                    required: true,
-                    description: "BundleConditionGroup to evaluate"
+                    type: .selection,
+                    defaultValue: AnyCodable("app_frontmost"),
+                    description: "When to execute the action",
+                    validation: ValidationRule(allowedValues: [
+                        AnyCodable("always"),
+                        AnyCodable("app_frontmost"),
+                        AnyCodable("app_running"),
+                        AnyCodable("window_title_contains"),
+                        AnyCodable("profile_active")
+                    ]),
+                    displayValues: [
+                        "always": "Always",
+                        "app_frontmost": "App Is Frontmost",
+                        "app_running": "App Is Running",
+                        "window_title_contains": "Window Title Contains",
+                        "profile_active": "Profile Is Active"
+                    ]
                 ),
                 ParameterDefinition(
-                    key: "true_action",
-                    name: "Action if True",
+                    key: "condition_negate",
+                    name: "Negate Condition",
+                    type: .boolean,
+                    defaultValue: AnyCodable(false),
+                    description: "Execute when condition is NOT met"
+                ),
+                ParameterDefinition(
+                    key: "condition_app",
+                    name: "Application",
+                    type: .application,
+                    description: "Application to check",
+                    visibleWhen: ParameterVisibilityRule(key: "condition_type", anyOf: ["app_frontmost", "app_running"])
+                ),
+                ParameterDefinition(
+                    key: "condition_window_title",
+                    name: "Window Title",
+                    type: .string,
+                    description: "Text the window title must contain",
+                    visibleWhen: ParameterVisibilityRule(key: "condition_type", value: "window_title_contains")
+                ),
+                ParameterDefinition(
+                    key: "condition_profile",
+                    name: "Profile",
+                    type: .profile,
+                    description: "Profile that must be active",
+                    visibleWhen: ParameterVisibilityRule(key: "condition_type", value: "profile_active")
+                ),
+                ParameterDefinition(
+                    key: "nested_action_id",
+                    name: "Action to Run",
                     type: .actionId,
-                    required: true,
-                    description: "Action to execute if condition is true"
+                    description: "The action to execute when condition is met"
                 ),
                 ParameterDefinition(
-                    key: "true_parameters",
-                    name: "Parameters if True",
-                    type: .json,
-                    defaultValue: AnyCodable([:]),
-                    description: "Parameters for the true action"
-                ),
-                ParameterDefinition(
-                    key: "false_action",
+                    key: "false_action_id",
                     name: "Action if False",
                     type: .actionId,
-                    description: "Action to execute if condition is false (optional)"
+                    description: "Action to run when condition is NOT met (optional)"
                 ),
                 ParameterDefinition(
-                    key: "false_parameters",
-                    name: "Parameters if False",
+                    key: "nested_action_params",
+                    name: "Action Parameters",
                     type: .json,
-                    defaultValue: AnyCodable([:]),
-                    description: "Parameters for the false action"
+                    description: "Parameters for the nested action"
                 )
             ],
             icon: "questionmark.diamond"
@@ -246,9 +280,8 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
                 return .invalid(error: "Bundle actions are required")
             }
         case "conditional_action":
-            guard parameters["condition"] != nil,
-                  parameters.string(for: "true_action") != nil else {
-                return .invalid(error: "Condition and true action are required")
+            guard parameters.string(for: "nested_action_id") != nil else {
+                return .invalid(error: "An action to run is required")
             }
         case "repeat_action":
             guard parameters.string(for: "action_id") != nil else {
@@ -445,41 +478,69 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
     }
     
     private func executeConditional(parameters: ActionParameters, context: PluginContext) throws {
-        guard let conditionData = parameters["condition"] else {
-            context.logger.log("No condition provided", file: #file, function: #function, line: #line)
-            return
-        }
-        
-        let conditionGroup: BundleConditionGroup
-        if let data = conditionData.value as? Data {
-            conditionGroup = (try? JSONDecoder().decode(BundleConditionGroup.self, from: data)) ?? BundleConditionGroup()
-        } else {
-            conditionGroup = BundleConditionGroup()
-        }
-        
-        let conditionResult = conditionGroup.evaluate()
-        context.logger.log("Condition evaluated to: \(conditionResult)", file: #file, function: #function, line: #line)
-        
-        let actionId: String?
-        let actionParams: [String: AnyCodable]
-        
-        if conditionResult {
-            actionId = parameters.string(for: "true_action")
-            actionParams = (parameters.dictionary(for: "true_parameters") as? [String: AnyCodable]) ?? [:]
-        } else {
-            actionId = parameters.string(for: "false_action")
-            actionParams = (parameters.dictionary(for: "false_parameters") as? [String: AnyCodable]) ?? [:]
-        }
-        
-        guard let finalActionId = actionId else {
-            context.logger.log("No action specified for condition result: \(conditionResult)", file: #file, function: #function, line: #line)
-            return
+        let conditionType = parameters.string(for: "condition_type") ?? "always"
+        let negate = parameters.bool(for: "condition_negate") ?? false
+        let conditionMet: Bool
+
+        switch conditionType {
+        case "always":
+            conditionMet = true
+        case "app_frontmost":
+            let bundleId = parameters.string(for: "condition_app") ?? ""
+            conditionMet = context.getFrontmostApplication()?.bundleIdentifier == bundleId
+        case "app_running":
+            let bundleId = parameters.string(for: "condition_app") ?? ""
+            conditionMet = context.getRunningApplications().contains { $0.bundleIdentifier == bundleId && !$0.isTerminated }
+        case "window_title_contains":
+            let titlePart = (parameters.string(for: "condition_window_title") ?? "").lowercased()
+            let frontApp = context.getFrontmostApplication()
+            let appEl = frontApp.map { AXUIElementCreateApplication($0.processIdentifier) }
+            var windowTitle = ""
+            if let appEl = appEl {
+                var focusedRef: CFTypeRef?
+                if AXUIElementCopyAttributeValue(appEl, kAXFocusedWindowAttribute as CFString, &focusedRef) == .success,
+                   let focused = focusedRef {
+                    var titleRef: CFTypeRef?
+                    AXUIElementCopyAttributeValue(unsafeBitCast(focused, to: AXUIElement.self), kAXTitleAttribute as CFString, &titleRef)
+                    windowTitle = (titleRef as? String ?? "").lowercased()
+                }
+            }
+            conditionMet = !titlePart.isEmpty && windowTitle.contains(titlePart)
+        case "profile_active":
+            let profileName = (parameters.string(for: "condition_profile") ?? "").lowercased()
+            let activeProfiles = context.getProfiles().filter { ($0["id"] as? String).flatMap(UUID.init(uuidString:)) == context.getActiveProfileId() }
+            conditionMet = activeProfiles.contains { ($0["name"] as? String ?? "").lowercased() == profileName }
+        default:
+            conditionMet = false
         }
 
-        try executeBundledSubAction(
-            BundledAction(actionIdentifier: finalActionId, parameters: actionParams, delayAfter: nil),
-            context: context
-        )
+        let shouldExecute = negate ? !conditionMet : conditionMet
+        context.logger.log("Condition '\(conditionType)' evaluated to: \(conditionMet), negate: \(negate), execute: \(shouldExecute)", file: #file, function: #function, line: #line)
+
+        // Get nested action params
+        var nestedParams: [String: AnyCodable] = [:]
+        if let paramsJson = parameters.string(for: "nested_action_params"),
+           let data = paramsJson.data(using: .utf8),
+           let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            for (k, v) in dict { nestedParams[k] = AnyCodable(v) }
+        }
+
+        if shouldExecute {
+            guard let nestedActionId = parameters.string(for: "nested_action_id"), !nestedActionId.isEmpty else {
+                context.logger.log("No nested action ID specified", file: #file, function: #function, line: #line)
+                return
+            }
+            try executeBundledSubAction(
+                BundledAction(actionIdentifier: nestedActionId, parameters: nestedParams, delayAfter: nil),
+                context: context
+            )
+        } else {
+            // Run false branch if specified
+            if let falseActionId = parameters.string(for: "false_action_id"), !falseActionId.isEmpty {
+                let falseParams = ActionParameters()
+                try context.executeAction(identifier: falseActionId, parameters: falseParams)
+            }
+        }
     }
     
     private func executeRepeat(parameters: ActionParameters, context: PluginContext) throws {

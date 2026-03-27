@@ -155,25 +155,39 @@ public struct ParameterVisibilityRule: Codable, Equatable {
     public let value: String
     /// Multiple acceptable values — parameter is visible if sibling matches ANY of these (OR logic)
     public let values: [String]?
-    
+    /// When set, the parameter is visible when the sibling's value is NOT this string
+    public let notValue: String?
+
     public init(key: String, value: String) {
         self.key = key
         self.value = value
         self.values = nil
+        self.notValue = nil
     }
-    
+
     /// Create a rule that matches any of the given values
     public init(key: String, anyOf values: [String]) {
         self.key = key
         self.value = values.first ?? ""
         self.values = values
+        self.notValue = nil
     }
-    
+
+    /// Create a rule that shows the parameter when the sibling's value is NOT the given string
+    public init(key: String, notValue: String) {
+        self.key = key
+        self.value = ""
+        self.values = nil
+        self.notValue = notValue
+    }
+
     /// Returns true when the given current value satisfies this rule
     public func matches(_ currentValue: String) -> Bool {
-        if let values = values {
-            return values.contains(currentValue)
+        if let nv = notValue {
+            if let vals = values { return !vals.contains(currentValue) }
+            return currentValue != nv
         }
+        if let vals = values { return vals.contains(currentValue) }
         return currentValue == value
     }
 }

@@ -43,9 +43,10 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
                     description: "Increase or decrease brightness",
                     validation: ValidationRule(allowedValues: [
                         AnyCodable("up"),
-                        AnyCodable("down")
+                        AnyCodable("down"),
+                        AnyCodable("set")
                     ]),
-                    displayValues: ["up": "Increase", "down": "Decrease"]
+                    displayValues: ["up": "Increase", "down": "Decrease", "set": "Set to Value"]
                 ),
                 ParameterDefinition(
                     key: "amount",
@@ -54,7 +55,18 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
                     defaultValue: AnyCodable(1),
                     description: "Number of brightness steps",
                     validation: ValidationRule(minValue: 1, maxValue: 16),
+                    visibleWhen: ParameterVisibilityRule(key: "direction", anyOf: ["up", "down"]),
                     suffix: "steps"
+                ),
+                ParameterDefinition(
+                    key: "value",
+                    name: "Brightness Level",
+                    type: .number,
+                    defaultValue: AnyCodable(50),
+                    description: "Brightness percentage (0–100)",
+                    validation: ValidationRule(minValue: 0, maxValue: 100),
+                    visibleWhen: ParameterVisibilityRule(key: "direction", value: "set"),
+                    suffix: "%"
                 )
             ],
             supportsRepeat: true,
@@ -76,9 +88,10 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
                     description: "Increase or decrease keyboard brightness",
                     validation: ValidationRule(allowedValues: [
                         AnyCodable("up"),
-                        AnyCodable("down")
+                        AnyCodable("down"),
+                        AnyCodable("set")
                     ]),
-                    displayValues: ["up": "Increase", "down": "Decrease"]
+                    displayValues: ["up": "Increase", "down": "Decrease", "set": "Set to Value"]
                 ),
                 ParameterDefinition(
                     key: "amount",
@@ -87,7 +100,18 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
                     defaultValue: AnyCodable(1),
                     description: "Number of brightness steps",
                     validation: ValidationRule(minValue: 1, maxValue: 16),
+                    visibleWhen: ParameterVisibilityRule(key: "direction", anyOf: ["up", "down"]),
                     suffix: "steps"
+                ),
+                ParameterDefinition(
+                    key: "value",
+                    name: "Brightness Level",
+                    type: .number,
+                    defaultValue: AnyCodable(50),
+                    description: "Brightness percentage (0–100)",
+                    validation: ValidationRule(minValue: 0, maxValue: 100),
+                    visibleWhen: ParameterVisibilityRule(key: "direction", value: "set"),
+                    suffix: "%"
                 )
             ],
             supportsRepeat: true,
@@ -242,14 +266,24 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
         // Consolidated display brightness
         case "display_brightness":
             let direction = parameters.string(for: "direction") ?? "up"
-            let steps = max(1, Int(parameters.number(for: "amount") ?? 1))
-            for _ in 0..<steps { adjustBrightness(increase: direction == "up") }
+            if direction == "set" {
+                let targetPct = parameters.number(for: "value") ?? 50
+                setDisplayBrightness(Float(targetPct) / 100.0)
+            } else {
+                let steps = max(1, Int(parameters.number(for: "amount") ?? 1))
+                for _ in 0..<steps { adjustBrightness(increase: direction == "up") }
+            }
 
         // Consolidated keyboard brightness
         case "keyboard_brightness":
             let direction = parameters.string(for: "direction") ?? "up"
-            let steps = max(1, Int(parameters.number(for: "amount") ?? 1))
-            for _ in 0..<steps { adjustKeyboardBrightness(increase: direction == "up") }
+            if direction == "set" {
+                let targetPct = parameters.number(for: "value") ?? 50
+                setKeyboardBrightness(Float(targetPct) / 100.0)
+            } else {
+                let steps = max(1, Int(parameters.number(for: "amount") ?? 1))
+                for _ in 0..<steps { adjustKeyboardBrightness(increase: direction == "up") }
+            }
             
 
         // System features
@@ -334,13 +368,28 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
     }
     
     // MARK: - Brightness (fixed: now uses NX media keys)
-    
+
     private func adjustBrightness(increase: Bool) {
         sendNXKeyEvent(increase ? .brightnessUp : .brightnessDown)
     }
-    
+
     private func adjustKeyboardBrightness(increase: Bool) {
         sendNXKeyEvent(increase ? .keyboardBrightUp : .keyboardBrightDown)
+    }
+
+    private func setDisplayBrightness(_ level: Float) {
+        let clamped = max(0, min(1, level))
+        // Send brightness-down 16 times to reach minimum, then send up (level * 16) times
+        for _ in 0..<16 { sendNXKeyEvent(.brightnessDown) }
+        let steps = Int(clamped * 16)
+        for _ in 0..<steps { sendNXKeyEvent(.brightnessUp) }
+    }
+
+    private func setKeyboardBrightness(_ level: Float) {
+        let clamped = max(0, min(1, level))
+        for _ in 0..<16 { sendNXKeyEvent(.keyboardBrightDown) }
+        let steps = Int(clamped * 16)
+        for _ in 0..<steps { sendNXKeyEvent(.keyboardBrightUp) }
     }
     
     // MARK: - System Features

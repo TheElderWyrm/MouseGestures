@@ -623,22 +623,42 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
     }
     
     private func cycleAcrossAllWindows(forward: Bool, context: PluginContext) {
-        // Get all visible windows sorted by front-to-back order and find the current frontmost
         let allWindows = context.getAllVisibleWindows()
         guard !allWindows.isEmpty else { return }
-        // Find current frontmost window
-        let frontPid = context.getFrontmostApplication()?.processIdentifier
-        let currentIdx = allWindows.firstIndex { _, pid in pid == frontPid } ?? 0
+
+        // Build per-app map: take the frontmost window of each app
+        // Use insertion order from getAllVisibleWindows (z-order: frontmost app first)
+        var appMap: [(pid: pid_t, window: AXUIElement)] = []
+        var seenPids = Set<pid_t>()
+        for (window, pid) in allWindows {
+            if seenPids.insert(pid).inserted {
+                appMap.append((pid: pid, window: window))
+            }
+        }
+        guard appMap.count > 1 else {
+            // Only one app — cycle its own windows using Cmd+`
+            if forward {
+                context.sendKeyboardShortcut(keyCode: 50, modifiers: [.maskCommand])
+            } else {
+                context.sendKeyboardShortcut(keyCode: 50, modifiers: [.maskCommand, .maskShift])
+            }
+            return
+        }
+
+        // Sort by PID for stable ordering that doesn't change when windows get focused
+        appMap.sort { $0.pid < $1.pid }
+
+        let frontPid = context.getFrontmostApplication()?.processIdentifier ?? 0
+        let currentIdx = appMap.firstIndex { $0.pid == frontPid } ?? 0
         let nextIdx = forward
-            ? (currentIdx + 1) % allWindows.count
-            : (currentIdx - 1 + allWindows.count) % allWindows.count
-        let (nextWindow, nextPid) = allWindows[nextIdx]
-        // Activate the target app
-        if let app = context.getRunningApplications().first(where: { $0.processIdentifier == nextPid }) {
+            ? (currentIdx + 1) % appMap.count
+            : (currentIdx - 1 + appMap.count) % appMap.count
+
+        let next = appMap[nextIdx]
+        if let app = context.getRunningApplications().first(where: { $0.processIdentifier == next.pid }) {
             app.activate(options: [.activateIgnoringOtherApps])
         }
-        // Raise the window
-        _ = context.performAccessibilityAction(nextWindow, action: kAXRaiseAction as String)
+        _ = context.performAccessibilityAction(next.window, action: kAXRaiseAction as String)
     }
 
     private func cycleWindows(forward: Bool, appBundleId: String? = nil, context: PluginContext) {

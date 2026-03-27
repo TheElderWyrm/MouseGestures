@@ -1,6 +1,56 @@
 import SwiftUI
 import AppKit
 
+// MARK: - Code Text Editor (disables smart quotes and autocorrection)
+
+struct CodeTextEditor: NSViewRepresentable {
+    @Binding var text: String
+    var isEditable: Bool = true
+
+    func makeNSView(context: Context) -> NSScrollView {
+        let scrollView = NSScrollView()
+        scrollView.hasVerticalScroller = true
+        scrollView.autohidesScrollers = true
+        scrollView.borderType = .noBorder
+
+        let textView = NSTextView()
+        textView.isEditable = isEditable
+        textView.isRichText = false
+        textView.font = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
+        textView.autoresizingMask = [.width]
+        textView.isAutomaticQuoteSubstitutionEnabled = false
+        textView.isAutomaticDashSubstitutionEnabled = false
+        textView.isAutomaticSpellingCorrectionEnabled = false
+        textView.isAutomaticTextReplacementEnabled = false
+        textView.isContinuousSpellCheckingEnabled = false
+        textView.isGrammarCheckingEnabled = false
+        textView.string = text
+        textView.delegate = context.coordinator
+
+        scrollView.documentView = textView
+        return scrollView
+    }
+
+    func updateNSView(_ scrollView: NSScrollView, context: Context) {
+        guard let textView = scrollView.documentView as? NSTextView else { return }
+        if textView.string != text { textView.string = text }
+        textView.isEditable = isEditable
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    class Coordinator: NSObject, NSTextViewDelegate {
+        var parent: CodeTextEditor
+        init(_ parent: CodeTextEditor) { self.parent = parent }
+        func textDidChange(_ notification: Notification) {
+            guard let tv = notification.object as? NSTextView else { return }
+            parent.text = tv.string
+        }
+    }
+}
+
 // MARK: - Shared Action Selection + Parameter Configuration
 
 struct ActionSelectionView: View {
@@ -335,8 +385,14 @@ struct ActionSelectionView: View {
     /// Returns true when the parameter should be displayed given current parameter values
     private func shouldShow(_ p: ParameterDefinition) -> Bool {
         guard let rule = p.visibleWhen else { return true }
-        let current = actionParameters[rule.key]?.value as? String ?? ""
-        return rule.matches(current)
+        if let stringVal = actionParameters[rule.key]?.value as? String {
+            return rule.matches(stringVal)
+        }
+        if let boolVal = actionParameters[rule.key]?.value as? Bool {
+            return rule.matches(boolVal ? "true" : "false")
+        }
+        let defaultStr = actionParameters[rule.key]?.value as? String ?? ""
+        return rule.matches(defaultStr)
     }
 
     @ViewBuilder
@@ -369,7 +425,7 @@ struct ActionSelectionView: View {
                                     let v = actionParameters[p.key]?.value as? String ?? p.defaultValue?.value as? String ?? ""
                                     return options.contains(v) ? v : ""
                                 },
-                                set: { if !$0.isEmpty { actionParameters[p.key] = AnyCodable($0) } }
+                                set: { (v: String) in actionParameters[p.key] = AnyCodable(v) }
                             )) {
                                 Text("Custom...").tag("")
                                 ForEach(options, id: \.self) { opt in Text(opt).tag(opt) }
@@ -410,7 +466,7 @@ struct ActionSelectionView: View {
                     // URL validation indicator
                     let current = actionParameters[p.key]?.value as? String ?? ""
                     if !current.isEmpty {
-                        if URL(string: current) != nil && (current.hasPrefix("http") || current.hasPrefix("/")) {
+                        if URL(string: current) != nil && (!current.isEmpty) {
                             Image(systemName: "checkmark.circle.fill")
                                 .foregroundColor(.green)
                                 .font(.system(size: 12))
@@ -539,11 +595,24 @@ struct ActionSelectionView: View {
                             .foregroundColor(.secondary)
                     }
                 }
-                TextEditor(text: strBinding(p.key, def: p.defaultValue?.value as? String ?? ""))
-                    .font(.system(.body, design: .monospaced))
-                    .frame(minHeight: 80, maxHeight: 150)
-                    .border(MGStyle.Colors.separator, width: 1)
-                    .cornerRadius(MGStyle.Corner.sm)
+                let useFile = actionParameters["use_file"]?.value as? Bool ?? false
+                if useFile, let filePath = actionParameters["script_path"]?.value as? String, !filePath.isEmpty {
+                    // Show file contents as read-only preview
+                    let fileContents = (try? String(contentsOfFile: filePath, encoding: .utf8)) ?? "(unable to read file)"
+                    CodeTextEditor(text: .constant(fileContents), isEditable: false)
+                        .frame(minHeight: 80, maxHeight: 150)
+                        .border(MGStyle.Colors.separator, width: 1)
+                        .cornerRadius(MGStyle.Corner.sm)
+                        .opacity(0.75)
+                    Text("Preview of: \(filePath)")
+                        .font(.system(size: MGStyle.FontSize.badge))
+                        .foregroundColor(.secondary)
+                } else {
+                    CodeTextEditor(text: strBinding(p.key, def: p.defaultValue?.value as? String ?? ""), isEditable: true)
+                        .frame(minHeight: 80, maxHeight: 150)
+                        .border(MGStyle.Colors.separator, width: 1)
+                        .cornerRadius(MGStyle.Corner.sm)
+                }
             }
         case .keyboardShortcut:
             paramRow(p) {

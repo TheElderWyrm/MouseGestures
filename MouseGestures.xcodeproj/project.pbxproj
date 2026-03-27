@@ -10,6 +10,7 @@
 		212E4EB8A4F446405206B88D /* ActivationComponentService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A7844B6B3BB98B841022947 /* ActivationComponentService.swift */; };
 		231D4D12905AE874B7331D1A /* ActivationMapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08B54313B0ED9B193F3749C6 /* ActivationMapper.swift */; };
 		410A4D418988160F289DF05D /* GenericActivation.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1D3401DA8E9283C5710D113 /* GenericActivation.swift */; };
+		56F74CC5A595A9E99710FFFA /* TestDetectionPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89C0422D85DC12F5E6E9AD43 /* TestDetectionPlugin.swift */; };
 		776CFCB32F37AE1300664D2F /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = 776CFCB22F37AE1300664D2F /* AppIcon.icns */; };
 		77A1C48A2F368ED800D1FE6A /* PluginProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4162F368ED800D1FE6A /* PluginProtocol.swift */; };
 		77A1C48B2F368ED800D1FE6A /* PerformanceMonitorService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C45B2F368ED800D1FE6A /* PerformanceMonitorService.swift */; };
@@ -103,6 +104,7 @@
 		77A1C4E42F368ED800D1FE6A /* SystemServicePlugins.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4452F368ED800D1FE6A /* SystemServicePlugins.swift */; };
 		77A1C4E62F368ED800D1FE6A /* ZoneHighlightWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4752F368ED800D1FE6A /* ZoneHighlightWindow.swift */; };
 		77A1C4E72F368ED800D1FE6A /* ServicePluginProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4492F368ED800D1FE6A /* ServicePluginProtocol.swift */; };
+		A12F4CA892A9E86EB8897D0A /* TestActionPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86FB4971B28428C6D1C0A5B7 /* TestActionPlugin.swift */; };
 		BA98418F85ECA410558094B0 /* ActivationComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 046848D79A549E69C644FFD7 /* ActivationComponents.swift */; };
 		BD884DE9B9DBAF4A53E6123D /* SettingsCategoryProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08AA45A28A2516DB23980BC2 /* SettingsCategoryProvider.swift */; };
 		D37249979159DF938C105417 /* BuiltInSettingsCategories.swift in Sources */ = {isa = PBXBuildFile; fileRef = F50141A48E3DD816B8942DA8 /* BuiltInSettingsCategories.swift */; };
@@ -209,6 +211,8 @@
 		77A1C4852F368ED800D1FE6A /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
 		77A1C4872F368ED800D1FE6A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		7A7844B6B3BB98B841022947 /* ActivationComponentService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActivationComponentService.swift; path = MouseGesturesCodeBase/Services/ActivationComponentService.swift; sourceTree = SOURCE_ROOT; };
+		86FB4971B28428C6D1C0A5B7 /* TestActionPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TestActionPlugin.swift; path = "MouseGesturesCodeBase/ActionPlugins/Built-in ActionPlugins/TestActionPlugin.swift"; sourceTree = SOURCE_ROOT; };
+		89C0422D85DC12F5E6E9AD43 /* TestDetectionPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TestDetectionPlugin.swift; path = "MouseGesturesCodeBase/Detection/DetectionPlugins/Built-in Plugins/TestDetectionPlugin.swift"; sourceTree = SOURCE_ROOT; };
 		8E94445AB3BF094E20E605FC /* UIStyles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UIStyles.swift; path = MouseGesturesCodeBase/UI/UIStyles.swift; sourceTree = SOURCE_ROOT; };
 		F1D3401DA8E9283C5710D113 /* GenericActivation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GenericActivation.swift; path = MouseGesturesCodeBase/Core/GenericActivation.swift; sourceTree = SOURCE_ROOT; };
 		F50141A48E3DD816B8942DA8 /* BuiltInSettingsCategories.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BuiltInSettingsCategories.swift; path = MouseGesturesCodeBase/UI/Settings/BuiltInSettingsCategories.swift; sourceTree = SOURCE_ROOT; };
@@ -242,6 +246,7 @@
 				77A1C41C2F368ED800D1FE6A /* MediaControlPlugin.swift */,
 				77A1C41D2F368ED800D1FE6A /* SystemControlPlugin.swift */,
 				77A1C41E2F368ED800D1FE6A /* WindowManagementPlugin.swift */,
+				86FB4971B28428C6D1C0A5B7 /* TestActionPlugin.swift */,
 			);
 			path = "Built-in ActionPlugins";
 			sourceTree = "<group>";
@@ -293,6 +298,7 @@
 				77A1C42F2F368ED800D1FE6A /* ModifierKeyDetectorPlugin.swift */,
 				77A1C4302F368ED800D1FE6A /* MouseButtonDetectorPlugin.swift */,
 				77A1C4312F368ED800D1FE6A /* ScreenZoneDetectorPlugin.swift */,
+				89C0422D85DC12F5E6E9AD43 /* TestDetectionPlugin.swift */,
 			);
 			path = "Built-in Plugins";
 			sourceTree = "<group>";
@@ -682,6 +688,8 @@
 				212E4EB8A4F446405206B88D /* ActivationComponentService.swift in Sources */,
 				410A4D418988160F289DF05D /* GenericActivation.swift in Sources */,
 				F64847768F1F2D8E06D72CBC /* UIStyles.swift in Sources */,
+				A12F4CA892A9E86EB8897D0A /* TestActionPlugin.swift in Sources */,
+				56F74CC5A595A9E99710FFFA /* TestDetectionPlugin.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

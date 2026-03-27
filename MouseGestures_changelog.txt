@@ -1,3 +1,129 @@
+## 2026-03-26 (22)
+
+### Fix: Script editor smart-quote autocorrection
+**ActionSelectionView.swift**
+- Replaced SwiftUI `TextEditor` in script fields with `CodeTextEditor` (NSViewRepresentable wrapping NSTextView)
+- Disables smart-quote substitution, dash substitution, spell-check, autocorrect, and text-replacement — prevents `"` from being converted to `"` which broke scripts
+
+### Fix: Script file preview in script box
+**ActionSelectionView.swift**
+- When "Load from File" is enabled AND a file path is set, the script box now shows a read-only preview of the file contents instead of being hidden
+
+### Revert: Python temp-file execution
+**AutomationPlugin.swift**
+- Reverted Python to inline `-c content` execution (temp-file workaround was solving the wrong problem; root cause was smart-quote autocorrection above)
+
+### Feature: Conditional Action — false branch
+**BundleActionsPlugin.swift**
+- Added `false_action_id` parameter: action to run when the condition is NOT met (optional)
+- `executeConditional` now runs false-branch when condition fails instead of returning early
+
+### Feature: Set Brightness / Set Keyboard Brightness to specific value
+**SystemControlPlugin.swift**
+- Added `"set"` direction option to `display_brightness` and `keyboard_brightness`
+- New `value` (0–100%) parameter visible when direction = "set"
+- Uses NX key events: drives to minimum then steps up to target level
+
+### Fix: Cycle Window (All Apps) — stable PID-order cycling
+**CoreActionsPlugin.swift**
+- `cycleAcrossAllWindows` now takes the frontmost window per app, deduplicates by PID, sorts by PID for stable ordering
+- Eliminates ping-pong between two windows; if only one app is present falls back to Cmd+`
+
+### Feature: Tile Windows — specific app scope
+**WindowManagementPlugin.swift**
+- Added `specific_app` scope option with `tile_app_bundle_id` picker
+
+### Rename: Tile All Windows → Tile Windows
+**WindowManagementPlugin.swift**
+- Action display name changed; `id` kept as `tile_all` for backward compatibility
+
+### Fix: Tile Windows — resize and constant size mutual exclusion
+**WindowManagementPlugin.swift** + **PluginProtocol.swift**
+- Added `notValue` support to `ParameterVisibilityRule` (shows param when sibling value is NOT the given string)
+- `resize_windows` now hidden when `constant_size = true`
+
+### Fix: No Mouse Button — moved to Button dropdown
+**GestureConfigurationSheet.swift**
+- "No Mouse" is now a selectable option in the Button picker (alongside Any/Left/Right/Middle)
+- Selecting "None" sets `requireNoMouse = true` and hides the Click/Drag type selector
+- Removed the inline "No Mouse Button" checkbox from the Mouse Input config view
+
+### Feature: Test Detection Plugin — trigger configuration
+**TestDetectionPlugin.swift**
+- `providesTriggerUI = true`; added `configurationView()` showing status label in gesture editor
+
+## 2026-03-26 (13)
+
+### Fix: Mouse Input UI Reorder + No Mouse Integration
+**GestureConfigurationSheet.swift**
+- Button picker now appears above Type (Click/Drag) segmented control in Mouse Input config
+- "No Mouse Button" toggle moved inside mouseInputConfigView as an inline checkbox instead of a separate ComponentToggleCard
+
+### Fix: Open URL validation indicator
+**ActionSelectionView.swift**
+- URL validation checkmark now accepts any parseable URL string (not just http:// prefixed), matching the execution-time normalization behavior
+
+### Fix: shouldShow handles Bool parameter values
+**ActionSelectionView.swift**
+- `shouldShow(_:)` now converts Bool parameter values to "true"/"false" strings before matching visibleWhen rules, enabling use_file and constant_size visibilty rules
+
+### Fix: window_layout / position_slots "Custom..." re-selectable
+**ActionSelectionView.swift**
+- Picker binding for optionProvider fields now allows "" selection (Custom...) to clear the current value, making the text field re-appear after picking a named option
+
+### Fix: Run Script – script_path and script_content auto-hide
+**AutomationPlugin.swift**
+- script_content now hides when use_file=true; script_path now hides when use_file=false (requires shouldShow Bool fix above)
+
+### Feature: Run Script – Custom interpreter option
+**AutomationPlugin.swift**
+- Added "Custom Interpreter" to script_type selection
+- Added custom_interpreter_path parameter (visible when custom type selected)
+- Supports full path (/usr/local/bin/ruby) or env-resolved name (node, perl, etc.)
+
+### Fix: Run Script – Python temp-file execution
+**AutomationPlugin.swift**
+- Python scripts now written to a temp .py file and executed from there instead of via -c, resolving macOS sandbox file I/O restrictions
+
+### Fix: Set Window Position preset coordinates
+**WindowManagementPlugin.swift**
+- Preset positions (topLeft, topCenter, etc.) now correctly convert NSScreen coords (bottom-left origin) to AX coords (top-left origin); fixes top↔bottom swap
+
+### Fix: Tile All Windows overlap and off-screen
+**WindowManagementPlugin.swift**
+- Tile grid origin now computed in AX coordinate space (primaryH - sf.maxY), eliminating overlap and windows placed off-screen
+
+### Fix: Tile All Windows better background window filtering
+**WindowManagementPlugin.swift**
+- filterOutWidgets now also excludes apps with non-.regular activation policy and windows smaller than 50×50px
+
+### Feature: Tile All Windows constant size option
+**WindowManagementPlugin.swift**
+- Added constant_size boolean parameter; when true, tile_width/tile_height specify fixed per-window size instead of auto-filling the grid
+
+### Fix: Switch to Window activates application
+**WindowManagementPlugin.swift**
+- switchToWindow now calls app.activate(options:) before kAXRaiseAction so the target app becomes frontmost
+
+### Fix: Cycle Window (All Apps) cycles through all windows not just two
+**CoreActionsPlugin.swift**
+- cycleAcrossAllWindows now reads the AX-focused window of the frontmost app to determine currentIdx, instead of the first window with matching PID
+
+### Feature: Test Detection Plugin
+**TestDetectionPlugin.swift** (new), **DetectionPluginManager.swift**
+- Added TestDetectionPlugin: a built-in reference/test plugin that logs a heartbeat every 30s; demonstrates the DetectionPlugin interface
+- DetectionPluginManager now scans ~/Library/Application Support/MouseGestures/DetectionPlugins/ for external .plugin/.bundle files at startup (parallel to PluginManager's action plugin scanning)
+
+### Feature: Test Action Plugin
+**TestActionPlugin.swift** (new), **PluginManager.swift**
+- Added TestActionPlugin: provides "Test: Log Message" and "Test: Show Notification" actions in the Development category; serves as a reference for building external action plugins
+
+### Feature: Conditional Action
+**BundleActionsPlugin.swift**
+- Added conditional_action: executes a nested action only when a condition is met
+- Conditions: always, app_frontmost, app_running, window_title_contains, profile_active
+- condition_negate inverts the condition; nested_action_id selects the action to run
+
 ## 2026-03-23 (10)
 
 ### Fix: Real macOS Notifications via UNUserNotificationCenter

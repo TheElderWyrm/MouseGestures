@@ -51,7 +51,10 @@ class DetectionPluginManager: NSObject {
         
         // Load built-in plugins
         loadBuiltInPlugins()
-        
+
+        // Discover and load external detection plugins
+        discoverExternalPlugins()
+
         // Listen for configuration changes
         NotificationCenter.default.addObserver(
             self,
@@ -75,7 +78,8 @@ class DetectionPluginManager: NSObject {
             ScreenZoneDetectorPlugin(),
             KeyboardShortcutDetectorPlugin(),
             MouseButtonDetectorPlugin(),
-            AppConfigurationDetectorPlugin()
+            AppConfigurationDetectorPlugin(),
+            TestDetectionPlugin()
         ]
         
         for plugin in builtInPlugins {
@@ -84,8 +88,36 @@ class DetectionPluginManager: NSObject {
         
         // Load saved settings for all plugins
         loadAllPluginSettings()
-        
+
         log.log("Loaded \(plugins.count) built-in detection plugins")
+    }
+
+    /// Scan the user DetectionPlugins directory for external .plugin/.bundle files
+    private func discoverExternalPlugins() {
+        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        let pluginDir = appSupport
+            .appendingPathComponent("MouseGestures", isDirectory: true)
+            .appendingPathComponent("DetectionPlugins", isDirectory: true)
+        try? FileManager.default.createDirectory(at: pluginDir, withIntermediateDirectories: true)
+        guard let contents = try? FileManager.default.contentsOfDirectory(at: pluginDir, includingPropertiesForKeys: nil) else { return }
+        for item in contents where item.pathExtension == "plugin" || item.pathExtension == "bundle" {
+            loadExternalPlugin(at: item)
+        }
+    }
+
+    private func loadExternalPlugin(at url: URL) {
+        guard let bundle = Bundle(url: url), bundle.load() else {
+            log.log("DetectionPluginManager: failed to load bundle at \(url.lastPathComponent)")
+            return
+        }
+        guard let cls = bundle.principalClass as? NSObject.Type,
+              let plugin = cls.init() as? DetectionPlugin else {
+            log.log("DetectionPluginManager: principal class in \(url.lastPathComponent) does not conform to DetectionPlugin")
+            bundle.unload()
+            return
+        }
+        registerPlugin(plugin)
+        log.log("DetectionPluginManager: loaded external plugin \(plugin.name) v\(plugin.version)")
     }
     
     /// Register a detection plugin

@@ -182,7 +182,8 @@ public class PluginManager: NSObject {
             (MediaControlPlugin(), .builtIn),
             (SystemControlPlugin(), .builtIn),
             (AutomationPlugin(), .builtIn),
-            (BundleActionsPlugin(), .builtIn)
+            (BundleActionsPlugin(), .builtIn),
+            (TestActionPlugin(), .builtIn)
         ]
         
         for (plugin, permissions) in builtInPlugins {

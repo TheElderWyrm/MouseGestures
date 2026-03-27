@@ -448,7 +448,7 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
         // MARK: Tile / Cascade
         PluginAction(
             id: "tile_all",
-            name: "Tile All Windows",
+            name: "Tile Windows",
             description: "Tile windows on screen",
             requiresParameters: true,
             supportedParameters: [
@@ -460,16 +460,52 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
                     description: "Which windows to tile",
                     validation: ValidationRule(allowedValues: [
                         AnyCodable("current_app"),
-                        AnyCodable("all_windows")
+                        AnyCodable("all_windows"),
+                        AnyCodable("specific_app")
                     ]),
-                    displayValues: ["current_app": "Current App", "all_windows": "All Windows"]
+                    displayValues: ["current_app": "Current App", "all_windows": "All Windows", "specific_app": "Specific App"]
+                ),
+                ParameterDefinition(
+                    key: "tile_app_bundle_id",
+                    name: "Application",
+                    type: .application,
+                    description: "App whose windows to tile",
+                    visibleWhen: ParameterVisibilityRule(key: "scope", value: "specific_app")
                 ),
                 ParameterDefinition(
                     key: "resize_windows",
                     name: "Resize Windows",
                     type: .boolean,
                     defaultValue: AnyCodable(true),
-                    description: "Resize windows to fill the tiled grid"
+                    description: "Resize windows to fill the tiled grid",
+                    visibleWhen: ParameterVisibilityRule(key: "constant_size", notValue: "true")
+                ),
+                ParameterDefinition(
+                    key: "constant_size",
+                    name: "Constant Size",
+                    type: .boolean,
+                    defaultValue: AnyCodable(false),
+                    description: "Tile each window to a fixed size instead of auto-filling"
+                ),
+                ParameterDefinition(
+                    key: "tile_width",
+                    name: "Tile Width",
+                    type: .number,
+                    defaultValue: AnyCodable(800),
+                    description: "Width for each tiled window",
+                    validation: ValidationRule(minValue: 100),
+                    visibleWhen: ParameterVisibilityRule(key: "constant_size", value: "true"),
+                    suffix: "px"
+                ),
+                ParameterDefinition(
+                    key: "tile_height",
+                    name: "Tile Height",
+                    type: .number,
+                    defaultValue: AnyCodable(600),
+                    description: "Height for each tiled window",
+                    validation: ValidationRule(minValue: 100),
+                    visibleWhen: ParameterVisibilityRule(key: "constant_size", value: "true"),
+                    suffix: "px"
                 )
             ] + windowTargetParameters,
             icon: "rectangle.split.2x2"
@@ -774,15 +810,22 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
         case "tile_all":
             let tileScope = parameters.string(for: "scope") ?? "current_app"
             let tileResize = parameters.bool(for: "resize_windows") ?? true
+            let tileConstant = parameters.bool(for: "constant_size") ?? false
+            let tileWidth = parameters.number(for: "tile_width").map { CGFloat($0) }
+            let tileHeight = parameters.number(for: "tile_height").map { CGFloat($0) }
             let tileTarget: WindowTargeting.WindowTarget?
-            if tileScope == "all_windows" {
+            switch tileScope {
+            case "all_windows":
+                var t = WindowTargeting.WindowTarget(); t.targetType = .allWindows; tileTarget = t
+            case "specific_app":
                 var t = WindowTargeting.WindowTarget()
-                t.targetType = .allWindows
+                t.targetType = .allWindowsOfApp
+                t.applicationBundleId = parameters.string(for: "tile_app_bundle_id")
                 tileTarget = t
-            } else {
+            default:
                 tileTarget = target
             }
-            tileAllWindows(target: tileTarget, resize: tileResize, context: context)
+            tileAllWindows(target: tileTarget, resize: tileResize, constantSize: tileConstant, fixedWidth: tileWidth, fixedHeight: tileHeight, context: context)
         case "cascade":
             let cascadeScope = parameters.string(for: "scope") ?? "current_app"
             let resizeWindows = parameters.bool(for: "resize_windows") ?? true
@@ -1147,7 +1190,11 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
 
     private func switchToWindow(target: WindowTargeting.WindowTarget?, context: PluginContext) {
         guard let target = target,
-              let (window, _) = getTargetWindow(target, context: context) else { return }
+              let (window, pid) = getTargetWindow(target, context: context) else { return }
+        // Activate the app so it comes to front
+        if let app = NSRunningApplication(processIdentifier: pid) {
+            app.activate(options: [.activateIgnoringOtherApps])
+        }
         let result = context.performAccessibilityAction(window, action: kAXRaiseAction as String)
         context.logger.log(result ? "Switched to target window" : "Failed to switch to window", file: #file, function: #function, line: #line)
     }
@@ -1183,27 +1230,50 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
         return windows.filter { window in
             var pid: pid_t = 0
             AXUIElementGetPid(window, &pid)
-            if let app = NSRunningApplication(processIdentifier: pid),
-               let bundleId = app.bundleIdentifier {
-                return !Self.widgetBundlePrefixes.contains(where: { bundleId.hasPrefix($0) })
+            guard let app = NSRunningApplication(processIdentifier: pid) else { return false }
+            // Exclude non-regular apps (widgets, menu bar apps, etc.)
+            guard app.activationPolicy == .regular else { return false }
+            // Exclude known widget bundle prefixes
+            if let bundleId = app.bundleIdentifier {
+                if Self.widgetBundlePrefixes.contains(where: { bundleId.hasPrefix($0) }) { return false }
+            }
+            // Exclude windows with zero or very small size
+            if let frame = getWindowFrame(window, context: context) {
+                if frame.width < 50 || frame.height < 50 { return false }
             }
             return true
         }
     }
     
-    private func tileAllWindows(target: WindowTargeting.WindowTarget? = nil, resize: Bool = true, context: PluginContext) {
+    private func tileAllWindows(target: WindowTargeting.WindowTarget? = nil, resize: Bool = true, constantSize: Bool = false, fixedWidth: CGFloat? = nil, fixedHeight: CGFloat? = nil, context: PluginContext) {
         let rawWindows = getAppWindows(target: target, context: context)
         let windows = filterOutWidgets(rawWindows, context: context)
         guard !windows.isEmpty, let screen = NSScreen.main else { return }
         let sf  = screen.visibleFrame
         let cnt = windows.count
-        
+
+        if constantSize, let fw = fixedWidth, let fh = fixedHeight {
+            // Fixed-size tiling: arrange windows in a grid at fixed size
+            let cols = max(1, Int(sf.width / fw))
+            let primaryH = NSScreen.screens.first?.frame.height ?? screen.frame.height
+            let axTopY = primaryH - sf.maxY
+            for (idx, window) in windows.enumerated() {
+                let col = idx % cols
+                let row = idx / cols
+                let x = sf.minX + CGFloat(col) * fw
+                let y = axTopY + CGFloat(row) * fh
+                setWindowFrame(window, frame: CGRect(x: x, y: y, width: fw, height: fh), context: context)
+            }
+            context.logger.log("Tiled \(cnt) windows at \(Int(fw))x\(Int(fh))", file: #file, function: #function, line: #line)
+            return
+        }
+
         // Calculate optimal grid layout that minimizes wasted space
         // Try different column counts and pick the one with the best aspect ratio fit
         var bestCols = 1
         var bestScore = CGFloat.infinity
         let screenRatio = sf.width / sf.height
-        
+
         for cols in 1...cnt {
             let rows = Int(ceil(Double(cnt) / Double(cols)))
             let cellW = sf.width / CGFloat(cols)
@@ -1219,26 +1289,27 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
                 bestCols = cols
             }
         }
-        
+
         let cols = bestCols
         let rows = Int(ceil(Double(cnt) / Double(cols)))
         let lastRowCols = cnt - (rows - 1) * cols
-        
+
         for (idx, window) in windows.enumerated() {
             let row = idx / cols
             let col = idx % cols
             let isLastRow = row == rows - 1
-            
+
             // Center the last row if it has fewer windows
             let effectiveCols = isLastRow ? lastRowCols : cols
             let effectiveCol = isLastRow ? (idx - (rows - 1) * cols) : col
             let winW = sf.width / CGFloat(effectiveCols)
             let winH = sf.height / CGFloat(rows)
-            let xOffset = isLastRow ? CGFloat(0) : CGFloat(0) // Last row windows fill evenly
-            
+            // Convert: AX y-origin of visible area = primaryScreenHeight - sf.maxY
+            let primaryH = NSScreen.screens.first?.frame.height ?? screen.frame.height
+            let axTopY = primaryH - sf.maxY
             let origin = CGPoint(
-                x: sf.minX + CGFloat(effectiveCol) * winW + xOffset,
-                y: sf.minY + sf.height - CGFloat(row + 1) * winH
+                x: sf.minX + CGFloat(effectiveCol) * winW,
+                y: axTopY + CGFloat(row) * winH
             )
             if resize {
                 setWindowFrame(window, frame: CGRect(origin: origin, size: CGSize(width: winW, height: winH)), context: context)
@@ -1486,16 +1557,23 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
             if let yp = params.yPercent { newPos.y = sf.minY + sf.height * CGFloat(yp) / 100 }
         case .preset:
             guard let preset = params.preset else { break }
+            // Convert NSScreen coords (bottom-left origin) to AX coords (top-left origin)
+            let primaryH = NSScreen.screens.first?.frame.height ?? screen.frame.height
+            let axTop = primaryH - sf.maxY       // AX y of top edge of visible area
+            let axBottom = primaryH - sf.minY    // AX y of bottom edge of visible area
+            let axMid = (axTop + axBottom) / 2   // AX y of vertical center
+            let w = currentFrame.width
+            let h = currentFrame.height
             switch preset {
-            case .topLeft:      newPos = CGPoint(x: sf.minX,                             y: sf.maxY - currentFrame.height)
-            case .topCenter:    newPos = CGPoint(x: sf.midX - currentFrame.width / 2,    y: sf.maxY - currentFrame.height)
-            case .topRight:     newPos = CGPoint(x: sf.maxX - currentFrame.width,         y: sf.maxY - currentFrame.height)
-            case .middleLeft:   newPos = CGPoint(x: sf.minX,                             y: sf.midY - currentFrame.height / 2)
-            case .center:       newPos = CGPoint(x: sf.midX - currentFrame.width / 2,    y: sf.midY - currentFrame.height / 2)
-            case .middleRight:  newPos = CGPoint(x: sf.maxX - currentFrame.width,         y: sf.midY - currentFrame.height / 2)
-            case .bottomLeft:   newPos = CGPoint(x: sf.minX,                             y: sf.minY)
-            case .bottomCenter: newPos = CGPoint(x: sf.midX - currentFrame.width / 2,    y: sf.minY)
-            case .bottomRight:  newPos = CGPoint(x: sf.maxX - currentFrame.width,         y: sf.minY)
+            case .topLeft:      newPos = CGPoint(x: sf.minX,             y: axTop)
+            case .topCenter:    newPos = CGPoint(x: sf.midX - w / 2,     y: axTop)
+            case .topRight:     newPos = CGPoint(x: sf.maxX - w,          y: axTop)
+            case .middleLeft:   newPos = CGPoint(x: sf.minX,             y: axMid - h / 2)
+            case .center:       newPos = CGPoint(x: sf.midX - w / 2,     y: axMid - h / 2)
+            case .middleRight:  newPos = CGPoint(x: sf.maxX - w,          y: axMid - h / 2)
+            case .bottomLeft:   newPos = CGPoint(x: sf.minX,             y: axBottom - h)
+            case .bottomCenter: newPos = CGPoint(x: sf.midX - w / 2,     y: axBottom - h)
+            case .bottomRight:  newPos = CGPoint(x: sf.maxX - w,          y: axBottom - h)
             }
         }
         setWindowFrame(window, frame: CGRect(origin: newPos, size: currentFrame.size), context: context)
