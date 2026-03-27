@@ -23,6 +23,8 @@ struct GestureConfigurationSheet: View {
     @State private var showingConflictAlert = false
     @State private var conflictMessage = ""
     @State private var pendingGesture: Gesture?
+    /// Enabled state for third-party trigger plugins (keyed by plugin identifier)
+    @State private var externalTriggerStates: [String: Bool] = [:]
     
     enum Mode {
         case add, edit
@@ -231,7 +233,7 @@ struct GestureConfigurationSheet: View {
                         title: "Mouse Input",
                         description: "Activate with a click or drag gesture",
                         isEnabled: Binding(
-                            get: { (components.dragType?.isEnabled ?? false) || (components.mouseButton?.isEnabled ?? false) },
+                            get: { (components.dragType?.isEnabled ?? false) || (components.mouseButton?.isEnabled ?? false) || components.requireNoMouse },
                             set: { enabled in
                                 if enabled {
                                     if components.dragType == nil { components.dragType = DragTypeConfig(isEnabled: false, dragType: .leftDrag) }
@@ -241,12 +243,13 @@ struct GestureConfigurationSheet: View {
                                 } else {
                                     components.dragType?.isEnabled = false
                                     components.mouseButton?.isEnabled = false
+                                    components.requireNoMouse = false
                                 }
                             }
                         )
                     )
 
-                    if (components.dragType?.isEnabled ?? false) || (components.mouseButton?.isEnabled ?? false) {
+                    if (components.dragType?.isEnabled ?? false) || (components.mouseButton?.isEnabled ?? false) || components.requireNoMouse {
                         mouseInputConfigView
                     }
                     } // end mouse plugin guard
@@ -284,7 +287,10 @@ struct GestureConfigurationSheet: View {
                             icon: plugin.triggerIcon,
                             title: plugin.triggerTitle,
                             description: plugin.triggerDescription,
-                            isEnabled: .constant(true)
+                            isEnabled: Binding(
+                                get: { externalTriggerStates[plugin.identifier] ?? false },
+                                set: { externalTriggerStates[plugin.identifier] = $0 }
+                            )
                         )
                     }
                 }

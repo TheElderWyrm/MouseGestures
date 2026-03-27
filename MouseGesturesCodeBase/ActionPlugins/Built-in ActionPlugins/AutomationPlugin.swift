@@ -128,8 +128,7 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
                     key: "script_content",
                     name: "Script",
                     type: .script,
-                    description: "Inline script content",
-                    visibleWhen: ParameterVisibilityRule(key: "use_file", value: "false")
+                    description: "Inline script content"
                 ),
                 ParameterDefinition(
                     key: "script_path",
@@ -500,8 +499,13 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
     }
     
     private func runScriptContent(_ content: String, type: String, shellInterpreter: String = "sh", pythonInterpreter: String? = nil, customInterpreterPath: String? = nil, displayOutput: Bool = false, context: PluginContext) {
+        // Expand ~ to the actual home directory so scripts can use ~/file paths
+        let home = NSHomeDirectory()
+        let expandedContent = content.replacingOccurrences(of: "~/", with: home + "/")
+
         DispatchQueue.global(qos: .userInitiated).async {
             let process = Process()
+            let content = expandedContent
 
             switch type {
             case "shell":

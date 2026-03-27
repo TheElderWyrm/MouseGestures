@@ -114,7 +114,7 @@ struct GestureActivationComponents: Codable, Equatable {
     
     /// Check if gesture is valid (has at least one enabled component)
     var isValid: Bool {
-        return !enabledTypes.isEmpty
+        return !enabledTypes.isEmpty || requireNoMouse
     }
     
     /// All registered components as (label, config) pairs in display order

@@ -377,18 +377,31 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
         sendNXKeyEvent(increase ? .keyboardBrightUp : .keyboardBrightDown)
     }
 
+    // MARK: - Programmatic Brightness (CoreDisplay private framework via dlopen)
+
     private func setDisplayBrightness(_ level: Float) {
-        let clamped = max(0, min(1, level))
-        // Send brightness-down 16 times to reach minimum, then send up (level * 16) times
+        let clamped = Double(max(0, min(1, level)))
+        // Try CoreDisplay_Display_SetUserBrightness (available macOS 10.12+, private API)
+        if let handle = dlopen("/System/Library/Frameworks/CoreDisplay.framework/CoreDisplay", RTLD_LAZY | RTLD_LOCAL) {
+            defer { dlclose(handle) }
+            if let sym = dlsym(handle, "CoreDisplay_Display_SetUserBrightness") {
+                typealias SetFunc = @convention(c) (UInt32, Double) -> Void
+                let fn = unsafeBitCast(sym, to: SetFunc.self)
+                fn(CGMainDisplayID(), clamped)
+                return
+            }
+        }
+        // Fallback: NX key approximation (step to floor then step up to target)
         for _ in 0..<16 { sendNXKeyEvent(.brightnessDown) }
-        let steps = Int(clamped * 16)
+        let steps = Int((clamped * 16).rounded())
         for _ in 0..<steps { sendNXKeyEvent(.brightnessUp) }
     }
 
     private func setKeyboardBrightness(_ level: Float) {
         let clamped = max(0, min(1, level))
+        // No public/private API for programmatic keyboard brightness; use NX key steps
         for _ in 0..<16 { sendNXKeyEvent(.keyboardBrightDown) }
-        let steps = Int(clamped * 16)
+        let steps = Int((Double(clamped) * 16).rounded())
         for _ in 0..<steps { sendNXKeyEvent(.keyboardBrightUp) }
     }
     

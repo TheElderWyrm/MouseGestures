@@ -108,9 +108,17 @@ Cleanup:
 - Running from Script: When running from a file display the script that it will run in the script box [FIXED 2026-03-26] (read-only file preview in CodeTextEditor)
 - Script is autocorrecting “ to “, breaking scripts [FIXED 2026-03-26] (CodeTextEditor NSViewRepresentable disables smart-quote/autocorrect substitution)
 - ^ likely the issue with the python script, revert your change [FIXED 2026-03-26] (Python reverted to inline -c execution)
-- Commit your changes [TODO]
+- Conditional Action: Configure actions to run in as an advanced configuration [FIXED 2026-03-26] (ConditionalActionEditorView sheet with two ActionSelectionViews; opened via BundleActionsPlugin.presentAdvancedConfiguration)
+- Set keyboard brightness unreliable [PARTIAL 2026-03-26] (NX key steps still used; no reliable public API for programmatic keyboard brightness)
+- Implement set brightness programmatically [FIXED 2026-03-26] (CoreDisplay_Display_SetUserBrightness via dlopen; NX key fallback)
+- Switch tile windows hiding [FIXED 2026-03-26] (constant_size now only visible when resize_windows=true)
+- Selecting None as mouse input disables section [FIXED 2026-03-26] (requireNoMouse keeps section active; isValid accepts requireNoMouse)
+- Still not showing script box for preview [FIXED 2026-03-26] (removed visibleWhen from script_content; CodeTextEditor always shows, file preview when use_file=true)
+- Test trigger not selectable [FIXED 2026-03-26] (externalTriggerStates dict in GestureConfigurationSheet; providesTriggerUI=true in TestDetectionPlugin)
+- Python error: ~/output.txt not found [FIXED 2026-03-26] (runScriptContent expands ~/  to NSHomeDirectory() before execution)
+- False action branch params [FIXED 2026-03-26] (false_action_params parameter + proper BundledAction execution)
+
 - Future: Add customizeable variables for parameter fields
 	- Allow inputs and outputs to scripts with these variables
-- Possible: Combine mouse click and mouse drag (Evaluates to true whenever the corresponding mouse button is pressed. Same way zones are true whenever you are in them)
-- Have test detection plugin register a trigger configuration
-- Future: Adding plugins shouldn't require any code changes including adding a line to register (Can be installed via 'install plugin button). <-- Test with test plugins.
+- Possible: Combine mouse click and mouse drag
+- Future: Adding plugins shouldn't require any code changes (install plugin button)

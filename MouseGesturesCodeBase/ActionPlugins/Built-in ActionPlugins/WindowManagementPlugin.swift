@@ -477,15 +477,15 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
                     name: "Resize Windows",
                     type: .boolean,
                     defaultValue: AnyCodable(true),
-                    description: "Resize windows to fill the tiled grid",
-                    visibleWhen: ParameterVisibilityRule(key: "constant_size", notValue: "true")
+                    description: "Resize windows to fill the tiled grid"
                 ),
                 ParameterDefinition(
                     key: "constant_size",
                     name: "Constant Size",
                     type: .boolean,
                     defaultValue: AnyCodable(false),
-                    description: "Tile each window to a fixed size instead of auto-filling"
+                    description: "Tile each window to a fixed size instead of auto-filling",
+                    visibleWhen: ParameterVisibilityRule(key: "resize_windows", value: "true")
                 ),
                 ParameterDefinition(
                     key: "tile_width",

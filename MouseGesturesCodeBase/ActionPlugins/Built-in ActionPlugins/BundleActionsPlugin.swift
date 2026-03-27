@@ -179,6 +179,12 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
                     name: "Action Parameters",
                     type: .json,
                     description: "Parameters for the nested action"
+                ),
+                ParameterDefinition(
+                    key: "false_action_params",
+                    name: "False Action Parameters",
+                    type: .json,
+                    description: "Parameters for the false-branch action"
                 )
             ],
             icon: "questionmark.diamond"
@@ -305,15 +311,19 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
     }
     
     func hasAdvancedConfiguration(for action: PluginAction) -> Bool {
-        return action.id == "execute_bundle"
+        return action.id == "execute_bundle" || action.id == "conditional_action"
     }
-    
+
     func presentAdvancedConfiguration(
         for action: PluginAction,
         currentParameters: [String: AnyCodable],
         parentWindow: NSWindow,
         completion: @escaping ([String: AnyCodable]?) -> Void
     ) {
+        if action.id == "conditional_action" {
+            presentConditionalActionEditor(currentParameters: currentParameters, parentWindow: parentWindow, completion: completion)
+            return
+        }
         guard action.id == "execute_bundle" else {
             completion(nil)
             return
@@ -362,8 +372,57 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
         )
     }
     
+    // MARK: - Conditional Action Editor
+
+    private func presentConditionalActionEditor(
+        currentParameters: [String: AnyCodable],
+        parentWindow: NSWindow,
+        completion: @escaping ([String: AnyCodable]?) -> Void
+    ) {
+        let trueActionId  = currentParameters["nested_action_id"]?.value as? String ?? ""
+        let falseActionId = currentParameters["false_action_id"]?.value as? String ?? ""
+        let trueParamsJson  = currentParameters["nested_action_params"]?.value as? String ?? ""
+        let falseParamsJson = currentParameters["false_action_params"]?.value as? String ?? ""
+
+        func decodeParams(_ json: String) -> [String: AnyCodable] {
+            guard !json.isEmpty, let data = json.data(using: .utf8),
+                  let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return [:] }
+            return dict.mapValues { AnyCodable($0) }
+        }
+
+        let editorView = ConditionalActionEditorView(
+            trueActionId: trueActionId,
+            trueActionParams: decodeParams(trueParamsJson),
+            falseActionId: falseActionId,
+            falseActionParams: decodeParams(falseParamsJson)
+        ) { tId, tParams, fId, fParams in
+            var updated = currentParameters
+            updated["nested_action_id"] = AnyCodable(tId)
+            updated["false_action_id"]  = AnyCodable(fId)
+            func encodeParams(_ p: [String: AnyCodable]) -> String {
+                guard !p.isEmpty,
+                      let data = try? JSONSerialization.data(withJSONObject: p.mapValues { $0.value }),
+                      let s = String(data: data, encoding: .utf8) else { return "" }
+                return s
+            }
+            updated["nested_action_params"] = AnyCodable(encodeParams(tParams))
+            updated["false_action_params"]  = AnyCodable(encodeParams(fParams))
+            completion(updated)
+        } onCancel: {
+            completion(nil)
+        }
+
+        let controller = NSHostingController(rootView: editorView)
+        let window = NSWindow(contentViewController: controller)
+        window.title = "Configure Conditional Action"
+        window.styleMask = [.titled, .closable, .resizable]
+        window.setContentSize(NSSize(width: 820, height: 680))
+        window.minSize = NSSize(width: 700, height: 500)
+        parentWindow.beginSheet(window) { _ in }
+    }
+
     // MARK: - Private Implementation
-    
+
     private func executeBundle(parameters: ActionParameters, context: PluginContext) throws {
         let stopOnFailure = parameters.bool(for: "stop_on_failure") ?? false
         let parallel = parameters.bool(for: "parallel_execution") ?? false
@@ -537,8 +596,16 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
         } else {
             // Run false branch if specified
             if let falseActionId = parameters.string(for: "false_action_id"), !falseActionId.isEmpty {
-                let falseParams = ActionParameters()
-                try context.executeAction(identifier: falseActionId, parameters: falseParams)
+                var falseParams: [String: AnyCodable] = [:]
+                if let paramsJson = parameters.string(for: "false_action_params"),
+                   let data = paramsJson.data(using: .utf8),
+                   let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    for (k, v) in dict { falseParams[k] = AnyCodable(v) }
+                }
+                try executeBundledSubAction(
+                    BundledAction(actionIdentifier: falseActionId, parameters: falseParams, delayAfter: nil),
+                    context: context
+                )
             }
         }
     }
