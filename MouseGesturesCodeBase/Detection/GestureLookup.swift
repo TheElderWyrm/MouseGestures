@@ -38,7 +38,13 @@ class GestureLookup {
     /// - Returns: Array of matching gestures (may be empty)
     func findMatchingGestures(zone: ScreenZone, dragModifier: DragModifier, modifiers: NSEvent.ModifierFlags) -> [Gesture] {
         let key = createLookupKey(zone: zone, dragModifier: dragModifier, modifiers: modifiers)
-        return lookupTable[key] ?? []
+        var results = lookupTable[key] ?? []
+        // When a specific drag is active, also check anyDrag gestures
+        if dragModifier != .none && dragModifier != .anyDrag {
+            let anyDragKey = createLookupKey(zone: zone, dragModifier: .anyDrag, modifiers: modifiers)
+            results += lookupTable[anyDragKey] ?? []
+        }
+        return results
     }
     
     /// Rebuilds the lookup table from current configuration

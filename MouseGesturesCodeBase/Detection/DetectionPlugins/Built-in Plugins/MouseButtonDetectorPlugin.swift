@@ -329,18 +329,31 @@ class MouseButtonDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         
         for gesture in enabledGestures {
             guard let trigger = gesture.mouseButtonTrigger else { continue }
-            if (trigger.button == .any || trigger.button == button) && trigger.modifiers.normalized == modifiers {
-                clicksTriggered += 1
-                lastTriggerTime = Date()
-                
-                context?.logger.log("✓ Mouse button trigger: \(trigger.displayString) -> \(gesture.actionIdentifier)", file: #file, function: #function, line: #line)
-                
-                triggerGesture(gesture, context: GestureContext(
-                    source: .mouseButton(button: button, modifiers: modifiers),
-                    modifiers: modifiers, timestamp: Date()
-                ))
-                break
+            // Use the gesture's modifierKey component for required modifiers (trigger.modifiers is always [])
+            let requiredMods = gesture.modifiers
+            guard (trigger.button == .any || trigger.button == button) && requiredMods == modifiers else { continue }
+            // For zone+click gestures, validate mouse position is in the required zone
+            if gesture.hasZoneTrigger {
+                let mouseLocation = NSEvent.mouseLocation
+                guard let screenFrame = NSScreen.main?.frame else { continue }
+                guard gesture.zone.contains(
+                    point: mouseLocation,
+                    screenFrame: screenFrame,
+                    threshold: Configuration.shared.edgeThreshold,
+                    cornerSize: Configuration.shared.cornerSize,
+                    cornerBuffer: Configuration.shared.cornerBuffer
+                ) else { continue }
             }
+            clicksTriggered += 1
+            lastTriggerTime = Date()
+
+            context?.logger.log("✓ Mouse button trigger: \(trigger.displayString) -> \(gesture.actionIdentifier)", file: #file, function: #function, line: #line)
+
+            triggerGesture(gesture, context: GestureContext(
+                source: .mouseButton(button: button, modifiers: modifiers),
+                modifiers: modifiers, timestamp: Date()
+            ))
+            break
         }
     }
     

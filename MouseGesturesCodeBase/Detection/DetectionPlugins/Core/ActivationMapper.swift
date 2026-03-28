@@ -81,7 +81,7 @@ class ActivationMapper {
         
         for gesture in gestures {
             guard activationTypes(for: gesture).contains(.screenZone) else { continue }
-            if gesture.dragModifier == heldDrag || gesture.dragModifier == .none {
+            if gesture.dragModifier == heldDrag || gesture.dragModifier == .none || gesture.dragModifier == .anyDrag {
                 return true
             }
         }

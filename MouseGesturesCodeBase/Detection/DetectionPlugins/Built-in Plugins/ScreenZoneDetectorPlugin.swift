@@ -460,10 +460,12 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     private func detectGesture(zone: ScreenZone, dragModifier: DragModifier) {
         // Use cached modifiers, normalized to match GestureLookup key format
         let modifiers = cachedModifiers.normalized
-        
+
         guard let lookup = gestureLookup else { return }
+        // Filter out click gestures (mouseButton enabled, no drag) — they fire via click detection
         let matching = lookup.findMatchingGestures(zone: zone, dragModifier: dragModifier, modifiers: modifiers)
-        
+            .filter { !(($0.components.mouseButton?.isEnabled == true) && $0.dragModifier == .none) }
+
         if let gesture = matching.first {
             gestureTriggeredCount += 1
             

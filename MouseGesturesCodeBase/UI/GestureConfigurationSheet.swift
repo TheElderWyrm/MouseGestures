@@ -476,10 +476,10 @@ struct GestureConfigurationSheet: View {
                     }
                 )) {
                     Text("Any").tag(DragModifier.anyDrag)
+                    Text("None").tag(DragModifier.none)
                     Text("Left").tag(DragModifier.leftDrag)
                     Text("Right").tag(DragModifier.rightDrag)
                     Text("Middle").tag(DragModifier.middleDrag)
-                    Text("None").tag(DragModifier.none)
                 }
                 .pickerStyle(.menu)
                 .frame(width: 100)

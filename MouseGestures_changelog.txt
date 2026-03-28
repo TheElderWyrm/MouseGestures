@@ -1,3 +1,24 @@
+## 2026-03-27
+
+### Fix: Move "None" below "Any" in Mouse Button picker
+**GestureConfigurationSheet.swift**
+- Reordered Button picker: Any → None → Left → Right → Middle (grouped None with Any as both are non-specific)
+
+### Fix: ANY drag not working
+**ActivationMapper.swift**
+- `heldButtonMatchesGestures` now returns `true` when `gesture.dragModifier == .anyDrag`, allowing any held button to satisfy the gate for `anyDrag` zone gestures
+
+**GestureLookup.swift**
+- `findMatchingGestures` now also searches the `anyDrag` key when a specific drag (left/right/middle) is active, so anyDrag gestures are found during actual drags
+
+### Fix: Click activation gating
+**MouseButtonDetectorPlugin.swift**
+- Click handler now uses `gesture.modifiers` (from `modifierKey` component) instead of `trigger.modifiers` (always `[]`) to validate required modifier keys — fixes gestures that require modifier+click never firing, and no-modifier click gestures firing even when modifiers are held
+- For zone+click gestures, validates mouse position is in the required zone at click time using `ScreenZone.contains`
+
+**ScreenZoneDetectorPlugin.swift**
+- `detectGesture` now filters out click gestures (`mouseButton.isEnabled == true && dragModifier == .none`) — these are handled exclusively by click detection, preventing zone entry from firing click-type gestures without an actual click
+
 ## 2026-03-26 (22)
 
 ### Fix: Script editor smart-quote autocorrection
