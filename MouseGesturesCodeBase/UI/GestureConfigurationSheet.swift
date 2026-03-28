@@ -496,12 +496,16 @@ struct GestureConfigurationSheet: View {
                 Picker("", selection: Binding(
                     get: { isDragMode ? "drag" : "click" },
                     set: { mode in
+                        // Preserve current button selection when switching between Click and Drag
+                        let currentButton = isDragMode
+                            ? (components.dragType?.dragType ?? .leftDrag)
+                            : buttonToDragMirror(components.mouseButton?.button ?? .left)
                         if mode == "drag" {
-                            components.dragType = DragTypeConfig(isEnabled: true, dragType: currentMouseInputType() == .anyDrag ? .anyDrag : .leftDrag)
+                            components.dragType = DragTypeConfig(isEnabled: true, dragType: currentButton)
                             components.mouseButton?.isEnabled = false
                         } else {
                             components.dragType?.isEnabled = false
-                            components.mouseButton = MouseButtonConfig(isEnabled: true, button: currentMouseInputType() == .anyClick ? .any : .left)
+                            components.mouseButton = MouseButtonConfig(isEnabled: true, button: dragMirrorToButton(currentButton))
                         }
                     }
                 )) {
