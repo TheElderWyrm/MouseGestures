@@ -1,5 +1,4 @@
 import Cocoa
-import IOKit
 
 // MARK: - System Control Plugin
 
@@ -379,37 +378,12 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
         usleep(20_000)
     }
 
-    // MARK: - Programmatic Brightness (IOKit, NX key fallback)
+    // MARK: - Programmatic Brightness (NX key steps)
 
     private func setDisplayBrightness(_ level: Float) {
         let clamped = max(0, min(1, level))
-
-        // IOKit: iterate all IODisplayConnect services and set brightness
-        var iter: io_iterator_t = 0
-        guard IOServiceGetMatchingServices(0, IOServiceMatching("IODisplayConnect"), &iter) == KERN_SUCCESS else {
-            nxKeySetBrightness(clamped)
-            return
-        }
-        defer { IOObjectRelease(iter) }
-        var found = false
-        var svc = IOIteratorNext(iter)
-        while svc != IO_OBJECT_NULL {
-            var connect: io_connect_t = 0
-            if IOServiceOpen(svc, mach_task_self_, 0, &connect) == KERN_SUCCESS {
-                IODisplaySetFloatParameter(connect, 0, kIODisplayBrightnessKey as CFString, clamped)
-                IOServiceClose(connect)
-                found = true
-            }
-            IOObjectRelease(svc)
-            svc = IOIteratorNext(iter)
-        }
-        if !found { nxKeySetBrightness(clamped) }
-    }
-
-    /// NX key-step fallback for brightness when IOKit is unavailable
-    private func nxKeySetBrightness(_ level: Float) {
         for _ in 0..<16 { sendNXKeyEvent(.brightnessDown); usleep(10_000) }
-        let steps = Int((Double(level) * 16).rounded())
+        let steps = Int((Double(clamped) * 16).rounded())
         for _ in 0..<steps { sendNXKeyEvent(.brightnessUp); usleep(10_000) }
     }
 
