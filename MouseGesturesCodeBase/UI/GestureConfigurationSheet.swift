@@ -466,8 +466,10 @@ struct GestureConfigurationSheet: View {
                         } else {
                             components.requireNoMouse = false
                             if isDragMode {
+                                components.dragType?.isEnabled = true
                                 components.dragType?.dragType = val
                             } else {
+                                components.mouseButton?.isEnabled = true
                                 components.mouseButton?.button = dragMirrorToButton(val)
                             }
                         }

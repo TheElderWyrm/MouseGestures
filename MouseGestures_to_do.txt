@@ -1,32 +1,24 @@
 MOUSEGESTURES - TO DO
 =====================
-See MouseGestures_changelog.txt for completed items.
-
---------------------------------------
-KNOWN ISSUES
---------------------------------------
-- Set keyboard brightness (absolute value) is approximate — uses NX key-step simulation
-  since no public/private API exists for direct keyboard backlight brightness control.
-  Result may vary by step count; not bit-accurate.
-
 --------------------------------------
 FUTURE / PLANNED
 --------------------------------------
-- Customizable variables for parameter fields
+- Customizable variables
+    - Action to set a variable
     - Allow inputs and outputs to scripts with these variables
-    - Example: {clipboard}, {frontmost_app}, {selected_text} usable in any parameter
+    - Example: {user_variable}, {clipboard}, {frontmost_app}, {selected_text} usable in any parameter
 - Adding plugins should not require any code changes (no registration line needed)
     - Install via 'Install Plugin' button in Developer tab
     - Test with TestActionPlugin and TestDetectionPlugin bundles
-- Possible: Combine mouse click and mouse drag into a single input type
-    - Evaluates to true whenever the corresponding mouse button is pressed
-    - Same way screen zones are true whenever cursor is inside them
+    - Should fully integrate into the efficiency sytem
+- Possible: Combine mouse click and mouse drag into a single input type for the user
+    - Option: Evaluates to true and send notification whenever the corresponding mouse button is pressed. Same way screen zones are true whenever cursor is inside them
+    - Option: Evaluate whether click of drag is needed internally.
 
 
-- Set Display Brightness not working
-- Slow down slightly on set keyboard brightness (hopefully slightly more accurate)
-- Conditional Action sheet cancel save buttons not working (Nested sheet issue? Works for execute bundle).
-- move execute bundle advanced configuration cancel button next to save button.
-- Conditional Action showing both parameters actions and advanced configuration
-- Move condition into advanced configuration for conditional action.
-- Label what the advanced configuration is (For all actions that use it). For example display 'Configure Actions' for execute action bundle.
+- Rename: Execute Action Bundle -> Action Bundle
+- Display Brightness not working. Simplify complicated fallback mechanisms.
+- None mouse input not working. When selected should prevent activation of action sir any mouse button is pressed (True only when no mouse button is selected.
+- Selecting None and a different mouse configuration button turns off Mouse Trigger
+- Improve full screen (doesn't always work when buttons not visible <-- Currently falls back to a keyboard shortcut, some applications accept Cmnd + Ctrl + F, some accept Fn + F, some both. If only one fallback is used Cmnd + Ctrl + F is probably better?
+- Actions repeating on hold should not display notifications on every repeat when notify on action is enabled.

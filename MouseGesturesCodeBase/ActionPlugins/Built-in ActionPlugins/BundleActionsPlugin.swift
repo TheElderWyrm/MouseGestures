@@ -78,7 +78,7 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
     lazy var providedActions: [PluginAction] = [
         PluginAction(
             id: "execute_bundle",
-            name: "Execute Action Bundle",
+            name: "Action Bundle",
             description: "Execute a bundle of actions with conditions and delays",
             requiresParameters: true,
             supportedParameters: [

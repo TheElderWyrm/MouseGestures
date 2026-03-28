@@ -295,8 +295,15 @@ class ActionExecutionManager {
         // Haptic feedback on activation (immediate, not after execution completes)
         provideHapticFeedback()
 
-        // Activation notification (optional, user-controlled)
-        if Configuration.shared.notificationOnActivation {
+        // requireNoMouse guard — skip execution if a mouse button is currently held
+        if let gesture = context.gesture, gesture.components.requireNoMouse {
+            if DragModifier.currentSystem != .none { return }
+        }
+
+        // Activation notification (optional, user-controlled; suppressed on repeated holds)
+        var isRepeatSource = false
+        if case .repeat = context.source { isRepeatSource = true }
+        if Configuration.shared.notificationOnActivation, !isRepeatSource {
             showActivationNotification(actionId: actionId, gesture: context.gesture)
         }
 

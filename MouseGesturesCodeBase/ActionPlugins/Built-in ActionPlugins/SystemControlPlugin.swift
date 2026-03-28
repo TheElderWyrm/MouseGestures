@@ -379,51 +379,37 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
         usleep(20_000)
     }
 
-    // MARK: - Programmatic Brightness (CoreDisplay / DisplayServices / IOKit via dlopen)
+    // MARK: - Programmatic Brightness (IOKit, NX key fallback)
 
     private func setDisplayBrightness(_ level: Float) {
-        let clamped = Double(max(0, min(1, level)))
+        let clamped = max(0, min(1, level))
 
-        // 1. Try CoreDisplay (macOS 10.15–13)
-        if let handle = dlopen("/System/Library/Frameworks/CoreDisplay.framework/CoreDisplay", RTLD_LAZY | RTLD_LOCAL) {
-            defer { dlclose(handle) }
-            if let sym = dlsym(handle, "CoreDisplay_Display_SetUserBrightness") {
-                typealias Fn = @convention(c) (UInt32, Double) -> Void
-                unsafeBitCast(sym, to: Fn.self)(CGMainDisplayID(), clamped)
-                return
-            }
-        }
-
-        // 2. Try DisplayServices (macOS 14+)
-        if let handle = dlopen("/System/Library/PrivateFrameworks/DisplayServices.framework/DisplayServices", RTLD_LAZY | RTLD_LOCAL) {
-            defer { dlclose(handle) }
-            if let sym = dlsym(handle, "DisplayServicesSetBrightness") {
-                typealias Fn = @convention(c) (UInt32, Float) -> Int32
-                _ = unsafeBitCast(sym, to: Fn.self)(CGMainDisplayID(), Float(clamped))
-                return
-            }
-        }
-
-        // 3. IOKit fallback
-        let matching = IOServiceMatching("IODisplayConnect")
+        // IOKit: iterate all IODisplayConnect services and set brightness
         var iter: io_iterator_t = 0
-        if IOServiceGetMatchingServices(0, matching, &iter) == KERN_SUCCESS {
-            defer { IOObjectRelease(iter) }
-            let svc = IOIteratorNext(iter)
-            if svc != IO_OBJECT_NULL {
-                defer { IOObjectRelease(svc) }
-                var connect: io_connect_t = 0
-                if IOServiceOpen(svc, mach_task_self_, 0, &connect) == KERN_SUCCESS {
-                    IODisplaySetFloatParameter(connect, 0, kIODisplayBrightnessKey as CFString, Float(clamped))
-                    IOServiceClose(connect)
-                    return
-                }
-            }
+        guard IOServiceGetMatchingServices(0, IOServiceMatching("IODisplayConnect"), &iter) == KERN_SUCCESS else {
+            nxKeySetBrightness(clamped)
+            return
         }
+        defer { IOObjectRelease(iter) }
+        var found = false
+        var svc = IOIteratorNext(iter)
+        while svc != IO_OBJECT_NULL {
+            var connect: io_connect_t = 0
+            if IOServiceOpen(svc, mach_task_self_, 0, &connect) == KERN_SUCCESS {
+                IODisplaySetFloatParameter(connect, 0, kIODisplayBrightnessKey as CFString, clamped)
+                IOServiceClose(connect)
+                found = true
+            }
+            IOObjectRelease(svc)
+            svc = IOIteratorNext(iter)
+        }
+        if !found { nxKeySetBrightness(clamped) }
+    }
 
-        // 4. NX key step approximation
+    /// NX key-step fallback for brightness when IOKit is unavailable
+    private func nxKeySetBrightness(_ level: Float) {
         for _ in 0..<16 { sendNXKeyEvent(.brightnessDown); usleep(10_000) }
-        let steps = Int((clamped * 16).rounded())
+        let steps = Int((Double(level) * 16).rounded())
         for _ in 0..<steps { sendNXKeyEvent(.brightnessUp); usleep(10_000) }
     }
 

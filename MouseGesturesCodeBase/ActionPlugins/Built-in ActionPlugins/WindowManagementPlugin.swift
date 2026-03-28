@@ -730,10 +730,13 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
                 context.sendKeyboardShortcut(keyCode: 3, modifiers: [.maskControl, .maskCommand])
             } else {
                 for (window, _) in fsTargets {
+                    // Try AX full-screen button; fall back to Cmd+Ctrl+F if absent or if press fails
+                    var pressed = false
                     if let btnObj = context.getAccessibilityAttribute(window, attribute: "AXFullScreenButton") {
                         let btn = unsafeBitCast(btnObj, to: AXUIElement.self)
-                        _ = context.performAccessibilityAction(btn, action: kAXPressAction as String)
-                    } else {
+                        pressed = context.performAccessibilityAction(btn, action: kAXPressAction as String)
+                    }
+                    if !pressed {
                         context.sendKeyboardShortcut(keyCode: 3, modifiers: [.maskControl, .maskCommand])
                     }
                 }
