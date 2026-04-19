@@ -1,3 +1,83 @@
+## 2026-04-19
+
+### Feature: License & Pro Version Support
+**LicenseService.swift** (new)
+- Core service for managing 30-day trial and Pro feature gating.
+- Tracks first launch date and stores Pro status in UserDefaults.
+- Provides unified API for checking Pro feature access.
+
+**LicenseSettingsView.swift** (new)
+- New settings tab for viewing license status, trial remaining days, and Pro feature list.
+- Supports simulating "Upgrade to Pro" for evaluation.
+
+**Configuration.swift**
+- Enforced single profile limit for Free users in `createProfile` and `duplicateProfile`.
+- Blocked app-specific profile targeting for Free users in `addAppProfileMapping`.
+
+**ActionExecutionManager.swift**
+- Implemented action gating: advanced actions (automation, scripting, plugins) now require a Pro license.
+- Added user notification when an action is blocked by licensing.
+
+### Feature: Improved Developer Tools
+**ActivationCoordinator.swift**
+- Added `getActivationStates()` for structured query of the efficiency chain state.
+
+**DeveloperView.swift**
+- Added "Activation Coordinator" section with real-time visualization of the efficiency chain.
+- Shows activation type status (active/idle), engagement state, and efficiency scores.
+- Helpful for debugging gated plugins and performance.
+
+### Fix: Gated Plugin Detection
+**ModifierKeyDetectorPlugin.swift** & **KeyboardShortcutDetectorPlugin.swift**
+- Now correctly respect `enableDetection`/`disableDetection` from the coordinator.
+- Monitors are only installed when the efficiency chain requires them (e.g., when a gesture is active that uses them).
+- Fulfills requirement: "Any detection plugin should only effect the output if the plugin is enabled."
+
+### Fix: Finder Quit Behavior
+**CoreActionsPlugin.swift**
+- Removed fallback that hid Finder windows when 'Quit Application' was triggered on the frontmost app.
+
+## 2026-03-29 (2)
+
+### Feature: Combined Click/Drag input type ("Either" mode)
+**ActivationComponents.swift**
+- Added `allowClick: Bool = false` to `DragTypeConfig` with custom `Codable` init for backward compatibility
+- `displayValue` now shows "Right Click/Drag" etc. when `allowClick = true`
+
+**MouseButtonDetectorPlugin.swift**
+- Extracted click detection into `fireClickOrCombinedGesture(button:modifiers:)`
+- Click check now runs **before** `ActivationCoordinator.activationEngaged` so combined gestures can suppress ScreenZoneDetectorPlugin before it starts zone tracking
+- Added Case B: combined gesture detection — when button is clicked while cursor is already in the configured zone, fires the gesture and tells ScreenZoneDetectorPlugin to suppress re-firing
+- Updated `logActiveButtonTriggers` to report combined gesture count separately
+
+**ScreenZoneDetectorPlugin.swift**
+- Added `suppressClickFiring(forKey:)` — called by MouseButtonDetectorPlugin after a combined gesture fires via click; prevents double-firing with a 150 ms suppression window
+- Updated `detectGesture()` filter to also exclude combined gestures whose key is currently suppressed
+
+**GestureConfigurationSheet.swift**
+- Added `isCombinedMode` computed property
+- Type picker now has three segments: Click | Drag | **Either**
+- "Either" stores `DragTypeConfig(allowClick: true)` — fires on both click-in-zone and drag-into-zone
+- Button picker preserves `allowClick` when changing button in drag/combined mode
+- Preview text shows "Right Click/Drag" etc. for combined mode
+- Type picker width expanded from 120 → 180 to fit three segments
+
+## 2026-03-29
+
+### Feature: Customizable user variables
+**VariableStore.swift** (new)
+- Thread-safe in-memory store for user-defined string variables, persisted to UserDefaults
+- API: `set(_:value:)`, `get(_:)`, `getAll()`, `remove(_:)`, `clear()`
+
+**BundleActionsPlugin.swift**
+- Added `set_variable` action: stores a named value for later use in any action parameter
+  - Parameters: `variable_name` (required), `variable_value` (supports token substitution)
+
+**ActionExecutionManager.swift**
+- Added `{selected_text}` built-in token — reads currently selected text from frontmost app via Accessibility API
+- Added user-variable token substitution: any `{VARIABLE_NAME}` in a parameter string is replaced with the corresponding value from VariableStore
+- Added `getSelectedText()` helper using `kAXSelectedTextAttribute`
+
 ## 2026-03-27
 
 ### Fix: Move "None" below "Any" in Mouse Button picker

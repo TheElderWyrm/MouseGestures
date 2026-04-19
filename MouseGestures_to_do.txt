@@ -3,16 +3,31 @@ MOUSEGESTURES - TO DO
 --------------------------------------
 FUTURE / PLANNED
 --------------------------------------
-- Customizable variables
-    - Action to set a variable
-    - Allow inputs and outputs to scripts with these variables
-    - Example: {user_variable}, {clipboard}, {frontmost_app}, {selected_text} usable in any parameter
-- Adding plugins should not require any code changes (no registration line needed)
-    - Install via 'Install Plugin' button in Developer tab
+- [DONE] 'Quite Application' on finder should not fall back to hiding windows
+- [DONE] Modifier keys disabling output when not enabled for an action. Any detection plugin should only effect the output if the plugin is enabled.
+- [DONE] Improve developer mode/tools: Added Activation Coordinator state view for real-time efficiency chain debugging.
+- [IN PROGRESS] Free/Payment implementation:
+    - [DONE] LicenseService for trial tracking (30 days) and Pro feature gating.
+    - [DONE] License UI in Settings for status viewing and simulation of upgrade.
+    - [DONE] Enforce single profile limit for Free version.
+    - [DONE] Enforce app-specific targeting limit for Free version.
+    - [DONE] Enforce advanced action blocking for Free version.
+    - [ ] Implement actual payment tracking/validation.
+- Onboarding UI
+- Update checker, Autoupdate, update notifications
+- Payment checking
+- Create a website for the App
+- Add browser actions as actual actions instead of just an application of keyboard shortcuts
+- Prepare for publishing and publish.
+- Advertise
+
+
+
+- Adding plugins should not require any code changes (no registration line needed) <--TEST
+    - [DONE] Install via 'Install Plugin' button in Developer tab (PluginManagementService.installPlugin + installDetectionPlugin)
+    - [DONE] External .plugin/.bundle files auto-discovered from ~/Library/Application Support/MouseGestures/Plugins and DetectionPlugins
     - Test with TestActionPlugin and TestDetectionPlugin bundles
-    - Should fully integrate into the efficiency sytem
-- Possible: Combine mouse click and mouse drag into a single input type for the user
-    - Option: Evaluates to true and send notification whenever the corresponding mouse button is pressed. Same way screen zones are true whenever cursor is inside them
-    - Option: Evaluate whether click of drag is needed internally.
-
-
+    - Should fully integrate into the efficiency system
+- [DONE 2026-03-29] Combine mouse click and mouse drag into a single input type
+    - [DONE] "Either" mode in Type picker: fires on click-in-zone OR drag-into-zone
+    - [DONE] Stored as DragTypeConfig(allowClick: true); backward compatible with existing gestures
