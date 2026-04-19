@@ -46,11 +46,14 @@ struct DeveloperView: View {
     @State private var successMessage: String?
     @State private var errorMessage: String?
     
+    @State private var coordinatorStates: [ActivationCoordinator.ActivationStateInfo] = []
+    
     enum DeveloperSection: String, CaseIterable {
         case settings = "Developer Settings"
         case logging = "Logging"
         case plugins = "Plugin Management"
         case detectionPlugins = "Detection Plugins"
+        case coordinator = "Activation Coordinator"
         case services = "Services"
         case performance = "Performance"
         case diagnostics = "Diagnostics"
@@ -61,6 +64,7 @@ struct DeveloperView: View {
             case .logging: return "doc.text"
             case .plugins: return "puzzlepiece.extension"
             case .detectionPlugins: return "hand.tap"
+            case .coordinator: return "flowchart"
             case .services: return "gearshape.2"
             case .performance: return "speedometer"
             case .diagnostics: return "stethoscope"
@@ -89,6 +93,7 @@ struct DeveloperView: View {
                     case .logging: loggingSection
                     case .plugins: pluginsSection
                     case .detectionPlugins: detectionPluginsSection
+                    case .coordinator: coordinatorSection
                     case .services: servicesSection
                     case .performance: performanceSection
                     case .diagnostics: diagnosticsSection
@@ -362,6 +367,79 @@ struct DeveloperView: View {
             }
             .padding(.vertical, MGStyle.Spacing.sm)
             Divider()
+        }
+    }
+
+    // MARK: - Activation Coordinator Section
+
+    private var coordinatorSection: some View {
+        VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {
+            MGSectionHeader("Activation Coordinator")
+
+            MGContentCard {
+                Text("The Activation Coordinator manages the efficiency chain, enabling and disabling detection plugins based on gesture requirements and current system state.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            MGContentCard {
+                VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
+                    HStack {
+                        Text("Activation Type").font(.system(size: MGStyle.FontSize.caption, weight: .bold))
+                        Spacer()
+                        Text("Efficiency").frame(width: 80).font(.system(size: MGStyle.FontSize.caption, weight: .bold))
+                        Text("Status").frame(width: 80).font(.system(size: MGStyle.FontSize.caption, weight: .bold))
+                        Text("Engaged").frame(width: 80).font(.system(size: MGStyle.FontSize.caption, weight: .bold))
+                    }
+                    .foregroundColor(.secondary)
+                    
+                    Divider()
+                    
+                    ForEach(coordinatorStates) { state in
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(state.type.displayName)
+                                    .font(.system(size: MGStyle.FontSize.body, weight: .medium))
+                                Text(state.type.rawValue)
+                                    .font(.system(.caption2, design: .monospaced))
+                                    .foregroundColor(.secondary)
+                            }
+                            Spacer()
+                            Text("\(state.efficiency)")
+                                .font(.system(.body, design: .monospaced))
+                                .frame(width: 80)
+                            
+                            HStack {
+                                Circle()
+                                    .fill(state.isEnabled ? Color.green : Color.gray.opacity(0.3))
+                                    .frame(width: 8, height: 8)
+                                Text(state.isEnabled ? "ACTIVE" : "idle")
+                                    .font(.caption)
+                                    .foregroundColor(state.isEnabled ? .primary : .secondary)
+                            }
+                            .frame(width: 80, alignment: .leading)
+                            
+                            HStack {
+                                Circle()
+                                    .fill(state.isEngaged ? Color.blue : Color.gray.opacity(0.1))
+                                    .frame(width: 8, height: 8)
+                                Text(state.isEngaged ? "YES" : "no")
+                                    .font(.caption)
+                                    .foregroundColor(state.isEngaged ? .blue : .secondary)
+                            }
+                            .frame(width: 80, alignment: .leading)
+                        }
+                    }
+                }
+            }
+            
+            MGContentCard {
+                Text("Coordination Logic")
+                    .font(.system(size: MGStyle.FontSize.heading, weight: .semibold))
+                Text("Higher efficiency triggers act as gates for lower efficiency ones. For example, mouse tracking (efficiency 20) is only enabled when modifiers (efficiency 100) are already engaged.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
         }
     }
 
@@ -673,6 +751,7 @@ struct DeveloperView: View {
     private func refreshPerformanceMetrics() {
         memoryUsage = perfMonitor.getMemoryUsage()
         cpuUsage = perfMonitor.getCPUUsage()
+        coordinatorStates = ActivationCoordinator.shared.getActivationStates()
     }
     
     private func refreshLogFiles() {

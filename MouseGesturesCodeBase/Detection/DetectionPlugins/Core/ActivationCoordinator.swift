@@ -490,6 +490,31 @@ class ActivationCoordinator {
         return Set(dependencies.filter { $0.gate == type }.map { $0.dependent })
     }
     
+    // MARK: - UI Query Helpers
+    
+    struct ActivationStateInfo: Identifiable {
+        let id: String
+        let type: ActivationType
+        let isEngaged: Bool
+        let isEnabled: Bool
+        let efficiency: Int
+    }
+    
+    func getActivationStates() -> [ActivationStateInfo] {
+        lock.lock()
+        defer { lock.unlock() }
+        
+        return ActivationType.allCases.map { type in
+            ActivationStateInfo(
+                id: type.rawValue,
+                type: type,
+                isEngaged: activationStates[type]?.isEngaged ?? false,
+                isEnabled: enabledTypes.contains(type),
+                efficiency: queryEfficiencyScore(for: type)
+            )
+        }.sorted(by: { $0.efficiency > $1.efficiency })
+    }
+    
     // MARK: - Debug
     
     func debugDescription() -> String {
