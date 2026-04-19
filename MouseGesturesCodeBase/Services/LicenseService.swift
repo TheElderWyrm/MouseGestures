@@ -1,5 +1,6 @@
 import Foundation
 import Cocoa
+import UserNotifications
 
 /// Represents the current license state of the application
 public enum LicenseStatus: String, Codable {
@@ -33,6 +34,7 @@ public class LicenseService: ObservableObject {
     }
     
     private let defaults = UserDefaults.standard
+    private let lastNotifiedThresholdKey = "MGLastNotifiedTrialThreshold"
     
     // MARK: - Initialization
     
@@ -85,13 +87,68 @@ public class LicenseService: ObservableObject {
     }
 
     private func updateStatus(_ newStatus: LicenseStatus, remaining: Int) {
+        let oldStatus = self.status
         self.status = newStatus
         self.trialDaysRemaining = remaining
         
+        if oldStatus != newStatus || remaining != trialDaysRemaining {
+            checkTrialThresholds(status: newStatus, remaining: remaining)
+        }
+
         NotificationCenter.default.post(
             name: NSNotification.Name("LicenseStatusChanged"),
             object: self
         )
+    }
+
+    private func checkTrialThresholds(status: LicenseStatus, remaining: Int) {
+        guard status == .trial || status == .free else { return }
+        
+        let thresholds = [3, 1, 0]
+        let currentThreshold = status == .free ? 0 : remaining
+        
+        guard thresholds.contains(currentThreshold) else { return }
+        
+        // Only notify once per threshold per day
+        let lastNotified = defaults.integer(forKey: lastNotifiedThresholdKey)
+        let lastDate = defaults.object(forKey: "MGLastNotifiedDate") as? Date ?? .distantPast
+        
+        if lastNotified == currentThreshold && Calendar.current.isDateInToday(lastDate) {
+            return
+        }
+        
+        sendExpirationNotification(daysRemaining: currentThreshold)
+        
+        defaults.set(currentThreshold, forKey: lastNotifiedThresholdKey)
+        defaults.set(Date(), forKey: "MGLastNotifiedDate")
+    }
+
+    private func sendExpirationNotification(daysRemaining: Int) {
+        let content = UNMutableNotificationContent()
+        content.categoryIdentifier = "TRIAL_EXPIRATION"
+        
+        if daysRemaining > 0 {
+            content.title = "MouseGestures Trial Ending"
+            content.body = "Your Pro trial expires in \(daysRemaining) day\(daysRemaining == 1 ? "" : "s"). Upgrade now to keep all features."
+        } else {
+            content.title = "MouseGestures Trial Expired"
+            content.body = "Your Pro trial has expired. Upgrade to Pro to continue using advanced features."
+        }
+        
+        content.userInfo = ["daysRemaining": daysRemaining]
+        content.sound = .default
+        
+        let request = UNNotificationRequest(
+            identifier: "com.mousegestures.trial.expiration",
+            content: content,
+            trigger: nil
+        )
+        
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                log.log("Failed to send trial notification: \(error)")
+            }
+        }
     }
     
     /// Returns true if the current license allows Pro features

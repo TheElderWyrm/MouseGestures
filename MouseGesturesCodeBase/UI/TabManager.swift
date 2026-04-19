@@ -68,6 +68,9 @@ struct TabManager: View {
                 .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("MGUpdateAvailable"))) { _ in
                     showingUpdateNotification = true
                 }
+                .onReceive(NotificationCenter.default.publisher(for: .openUpgradeTab)) { _ in
+                    selectedTabID = "com.mousegestures.ui.upgrade"
+                }
             }
         }
     }

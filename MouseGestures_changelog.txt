@@ -1,3 +1,15 @@
+## 2026-04-19 (6)
+
+### Free Mode & Trial Enforcement
+- **Trial Expiration Notifications**: Added local notifications that fire 3 days, 1 day, and 0 days before the Pro trial expires, with direct links to the Upgrade tab.
+- **Single Profile Enforcement**: If multiple profiles exist when the trial expires, Free users are now prompted to select one to keep active. Other profiles are preserved but remain inaccessible.
+- **Advanced Action Locking**: Gestures containing Pro-only actions (Automation, Bundles, External Plugins) are now visually locked with a lock icon and disabled in the UI for Free users.
+- **Enhanced License Visibility**: The 'Upgrade' tab and Pro feature descriptions now remain visible throughout the 30-day trial period.
+
+### Technical Improvements
+- **Notification Routing**: Implemented `UNUserNotificationCenterDelegate` in `AppDelegate` to handle deep-linking from notifications to specific settings tabs.
+- **Persistence**: Added `freeModeProfileId` to the application configuration to persist the user's selected profile in Free mode.
+- **UI Consistency**: Standardized lock icons and disabled states across the Gestures list.
 ## 2026-04-19 (5)
 
 ### Bug Fixes & UI Polishing

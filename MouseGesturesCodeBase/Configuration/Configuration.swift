@@ -23,6 +23,7 @@ public class Configuration: Codable {
     var debugModeEnabled: Bool = false  // When true, enables logging
     var developerModeEnabled: Bool = false  // When true, shows developer tab
     var notificationOnActivation: Bool = false  // When true, shows a banner notification when any gesture fires
+    var freeModeProfileId: UUID?  // The single profile allowed in Free mode
     
     // Plugin configuration storage - allows plugins to store arbitrary data
     var pluginConfigurations: [String: AnyCodable] = [:]
@@ -60,12 +61,13 @@ public class Configuration: Codable {
         var debugModeEnabled: Bool?
         var developerModeEnabled: Bool?
         var notificationOnActivation: Bool?
+        var freeModeProfileId: UUID?
         var pluginConfigurations: [String: AnyCodable]?
     }
     
     // Defines which properties are saved to disk.
     enum CodingKeys: String, CodingKey {
-        case isEnabled, profiles, activeProfileId, appProfileMappings, disabledApps, hapticFeedbackEnabled, edgeThreshold, cornerSize, cornerBuffer, showZoneHighlights, showZoneLabels, hideFromMenuBar, debugModeEnabled, developerModeEnabled, notificationOnActivation, pluginConfigurations
+        case isEnabled, profiles, activeProfileId, appProfileMappings, disabledApps, hapticFeedbackEnabled, edgeThreshold, cornerSize, cornerBuffer, showZoneHighlights, showZoneLabels, hideFromMenuBar, debugModeEnabled, developerModeEnabled, notificationOnActivation, freeModeProfileId, pluginConfigurations
     }
 
     // --- Computed Properties ---
@@ -143,6 +145,7 @@ public class Configuration: Codable {
             self.debugModeEnabled = decoded.debugModeEnabled ?? false
             self.developerModeEnabled = decoded.developerModeEnabled ?? false
             self.notificationOnActivation = decoded.notificationOnActivation ?? false
+            self.freeModeProfileId = decoded.freeModeProfileId
             self.pluginConfigurations = decoded.pluginConfigurations ?? [:]
             
             // Apply debug mode setting to logger

@@ -22,6 +22,7 @@ struct GesturesView: View {
     @State private var showSearch = false
     @State private var expandedGesture: String?
     @State private var showProfilePicker = false
+    @State private var selectedProfileIdForFreeMode: UUID?
     
     private var filteredGestures: [Gesture] {
         if searchText.isEmpty { return uiServices.gestures }
@@ -88,28 +89,34 @@ struct GesturesView: View {
             .padding(.horizontal, MGStyle.Spacing.xl)
             .padding(.vertical, MGStyle.Spacing.md)
             
-            // Main Content
-            if filteredGestures.isEmpty {
-                if searchText.isEmpty {
-                    gestureEmptyState
-                } else {
-                    MGEmptyState(icon: "magnifyingglass", title: "No matching gestures")
-                }
-            } else {
-                ScrollView {
-                    LazyVStack(spacing: MGStyle.Spacing.sm) {
-                        ForEach(filteredGestures, id: \.id) { gesture in
-                            GestureCardView(
-                                gesture: gesture,
-                                isExpanded: expandedGesture == gesture.id,
-                                onToggleExpand: { toggleExpand(gesture) },
-                                onEdit: { activeSheet = .editGesture(gesture) },
-                                onDelete: { deleteGesture(gesture) },
-                                onToggleEnabled: { enabled in toggleGestureEnabled(gesture, enabled: enabled) }
-                            )
-                        }
+            ZStack {
+                // Main Content
+                if filteredGestures.isEmpty {
+                    if searchText.isEmpty {
+                        gestureEmptyState
+                    } else {
+                        MGEmptyState(icon: "magnifyingglass", title: "No matching gestures")
                     }
-                    .padding(MGStyle.Spacing.xl)
+                } else {
+                    ScrollView {
+                        LazyVStack(spacing: MGStyle.Spacing.sm) {
+                            ForEach(filteredGestures, id: \.id) { gesture in
+                                GestureCardView(
+                                    gesture: gesture,
+                                    isExpanded: expandedGesture == gesture.id,
+                                    onToggleExpand: { toggleExpand(gesture) },
+                                    onEdit: { activeSheet = .editGesture(gesture) },
+                                    onDelete: { deleteGesture(gesture) },
+                                    onToggleEnabled: { enabled in toggleGestureEnabled(gesture, enabled: enabled) }
+                                )
+                            }
+                        }
+                        .padding(MGStyle.Spacing.xl)
+                    }
+                }
+                
+                if !uiServices.licenseService.isPro && uiServices.profiles.count > 1 && uiServices.configuration.freeModeProfileId == nil {
+                    freeModeProfileSelectionOverlay
                 }
             }
         }
@@ -139,6 +146,72 @@ struct GesturesView: View {
             }
         }
         .onAppear { uiServices.loadData() }
+    }
+    
+    // MARK: - Free Mode Profile Selection
+    
+    private var freeModeProfileSelectionOverlay: some View {
+        ZStack {
+            Color.black.opacity(0.6)
+                .ignoresSafeArea()
+            
+            VStack(spacing: MGStyle.Spacing.xl) {
+                Image(systemName: "person.2.fill")
+                    .font(.system(size: 48))
+                    .foregroundColor(.orange)
+                
+                VStack(spacing: MGStyle.Spacing.md) {
+                    Text("Select Active Profile")
+                        .font(.title2).fontWeight(.bold)
+                    
+                    Text("Your trial has expired. Free mode supports only one profile. Please select the profile you want to keep active.")
+                        .font(.body)
+                        .multilineTextAlignment(.center)
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal)
+                }
+                
+                Picker("Profile", selection: $selectedProfileIdForFreeMode) {
+                    Text("Select a profile...").tag(UUID?.none)
+                    ForEach(uiServices.profiles) { profile in
+                        Text(profile.name).tag(UUID?.some(profile.id))
+                    }
+                }
+                .pickerStyle(.menu)
+                .frame(maxWidth: 250)
+                
+                Button(action: {
+                    if let profileId = selectedProfileIdForFreeMode {
+                        uiServices.configuration.freeModeProfileId = profileId
+                        uiServices.switchToProfile(profileId)
+                        uiServices.configuration.save()
+                    }
+                }) {
+                    Text("Confirm Selection")
+                        .fontWeight(.semibold)
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .disabled(selectedProfileIdForFreeMode == nil)
+                .padding(.top, MGStyle.Spacing.md)
+                
+                Button("Upgrade to Pro") {
+                    // Navigate to upgrade tab - we can't do this easily from here, 
+                    // but they can click the tab once they select a profile
+                }
+                .buttonStyle(.link)
+                .font(.caption)
+            }
+            .padding(40)
+            .background(RoundedRectangle(cornerRadius: 24).fill(MGStyle.Colors.contentBackground))
+            .overlay(RoundedRectangle(cornerRadius: 24).stroke(Color.white.opacity(0.1), lineWidth: 1))
+            .shadow(radius: 30)
+            .frame(maxWidth: 450)
+        }
+        .onAppear {
+            selectedProfileIdForFreeMode = uiServices.activeProfileId
+        }
     }
     
     // MARK: - Empty State
@@ -267,6 +340,11 @@ struct GestureCardView: View {
         UIServices.shared.getActionDefinition(for: gesture.actionIdentifier)
     }
     
+    private var isLocked: Bool {
+        if UIServices.shared.licenseService.isPro { return false }
+        return !UIServices.shared.licenseService.isActionAllowed(gesture.actionIdentifier)
+    }
+    
     /// Build a concise trigger summary string from enabled components
     private var triggerSummary: String {
         return gesture.components.previewString
@@ -279,20 +357,28 @@ struct GestureCardView: View {
                 // Action icon
                 ZStack {
                     RoundedRectangle(cornerRadius: MGStyle.Corner.md)
-                        .fill(isEnabled ? Color.accentColor.opacity(0.1) : Color.secondary.opacity(0.06))
+                        .fill(isEnabled && !isLocked ? Color.accentColor.opacity(0.1) : Color.secondary.opacity(0.06))
                         .frame(width: 32, height: 32)
                     
-                    Image(systemName: actionDef?.icon ?? "bolt")
+                    Image(systemName: isLocked ? "lock.fill" : (actionDef?.icon ?? "bolt"))
                         .font(.system(size: 14))
-                        .foregroundColor(isEnabled ? .accentColor : .secondary)
+                        .foregroundColor(isEnabled && !isLocked ? .accentColor : .secondary)
                 }
                 
                 // Enable toggle
-                Toggle("", isOn: $isEnabled)
+                Toggle("", isOn: Binding(
+                    get: { isEnabled && !isLocked },
+                    set: { v in 
+                        if !isLocked {
+                            isEnabled = v
+                            onToggleEnabled(v)
+                        }
+                    }
+                ))
                     .toggleStyle(.switch)
                     .controlSize(.mini)
                     .labelsHidden()
-                    .onChange(of: isEnabled) { v in onToggleEnabled(v) }
+                    .disabled(isLocked)
                 
                 // Info block
                 VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {

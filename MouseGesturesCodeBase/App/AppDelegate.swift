@@ -26,7 +26,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         // Request notification permissions
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert]) { granted, error in
+        let center = UNUserNotificationCenter.current()
+        center.delegate = self
+        center.requestAuthorization(options: [.alert, .sound]) { granted, error in
             if let error = error {
                 log.log("Notification permission error: \(error)")
             }
@@ -163,6 +165,30 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 }
 
+// MARK: - UNUserNotificationCenterDelegate
+
+extension AppDelegate: UNUserNotificationCenterDelegate {
+    func userNotificationCenter(_ center: UNUserNotificationCenter, 
+                                didReceive response: UNNotificationResponse, 
+                                withCompletionHandler completionHandler: @escaping () -> Void) {
+        
+        let category = response.notification.request.content.categoryIdentifier
+        
+        if category == "TRIAL_EXPIRATION" {
+            // Open settings and switch to Upgrade tab
+            DispatchQueue.main.async {
+                self.showPreferences()
+                // Wait for settings to open then switch tab
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    NotificationCenter.default.post(name: .openUpgradeTab, object: nil)
+                }
+            }
+        }
+        
+        completionHandler()
+    }
+}
+
 // MARK: - AccessibilityPermissionManagerDelegate
 
 extension AppDelegate: AccessibilityPermissionManagerDelegate {
@@ -285,6 +311,8 @@ extension AppDelegate: MenuIconDelegate {
 extension Notification.Name {
     /// A notification to programmatically open the Settings scene.
     static let openSettingsWindow = Notification.Name("com.mousegestures.openSettings")
+    /// A notification to switch to the Upgrade tab.
+    static let openUpgradeTab = Notification.Name("com.mousegestures.openUpgradeTab")
 }
 
 /// Configuration for app-specific gesture behaviors

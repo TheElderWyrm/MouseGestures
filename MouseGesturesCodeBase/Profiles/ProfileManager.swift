@@ -41,6 +41,14 @@ public class ProfileManager {
     /// - Returns: True if the switch was successful, false otherwise
     @discardableResult
     func switchToProfile(withId profileId: UUID) -> Bool {
+        // Enforce Free mode profile limit
+        if !LicenseService.shared.isPro, let freeId = Configuration.shared.freeModeProfileId {
+            if profileId != freeId {
+                log.log("Access Denied: Cannot switch to other profiles in Free mode.")
+                return false
+            }
+        }
+
         guard let profile = configuration.profiles.first(where: { $0.id == profileId }) else {
             log.log("Failed to switch to profile with ID: \(profileId) - profile not found")
             return false
