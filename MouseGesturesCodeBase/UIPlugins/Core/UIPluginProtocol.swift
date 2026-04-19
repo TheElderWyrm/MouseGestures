@@ -37,6 +37,9 @@ protocol UIPlugin: ObservableObject {
     /// Sort order for the tab (lower values appear first)
     var sortOrder: Int { get }
     
+    /// Whether the plugin requires a Pro license
+    var isPro: Bool { get }
+    
     /// Initialize the plugin with context
     func initialize(context: UIPluginContext) async throws
     
@@ -70,6 +73,7 @@ extension UIPlugin {
     var requiredPermissions: UIPluginPermissions { UIPluginPermissions() }
     var sortOrder: Int { 100 }
     var minimumAppVersion: String { "3.0.0" }
+    var isPro: Bool { false }
     
     func createSettingsView() -> AnyView? { nil }
     func onActivate() {}

@@ -32,6 +32,10 @@
 	<true/>
 	<key>NSHighResolutionCapable</key>
 	<true/>
+	<key>NSAccessibilityUsageDescription</key>
+	<string>MouseGestures needs accessibility access to monitor mouse movements and trigger system-wide actions.</string>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>MouseGestures uses AppleScript to control system volume, brightness, and automate third-party applications.</string>
 	<key>NSSupportsAutomaticTermination</key>
 	<false/>
 	<key>NSSupportsSuddenTermination</key>

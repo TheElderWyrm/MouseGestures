@@ -54,6 +54,10 @@ open class BaseUIPlugin: NSObject, UIPlugin, ObservableObject {
         100
     }
     
+    open var isPro: Bool {
+        false
+    }
+    
     // MARK: - Protected Properties
     
     internal var context: UIPluginContext?

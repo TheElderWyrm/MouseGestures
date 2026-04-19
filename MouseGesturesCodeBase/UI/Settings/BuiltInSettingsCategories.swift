@@ -428,6 +428,18 @@ struct AboutSettingsView: View {
                     }
                 }
             }
+            
+            Divider()
+            
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
+                Text("Support & Help").font(.system(size: MGStyle.FontSize.heading, weight: .semibold))
+                
+                Button(action: {
+                    UIServices.shared.setOnboardingCompleted(false)
+                }) {
+                    Label("Restart Onboarding", systemImage: "book")
+                }
+            }
         }
     }
 }

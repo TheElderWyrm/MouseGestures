@@ -101,8 +101,14 @@ struct GestureConfigurationSheet: View {
                     .lineLimit(1)
                     .truncationMode(.tail)
             }
+            .tutorialStep(targetState: .saveGesture, currentState: uiServices.tutorialService.state, text: "Great! Now click Add to save it.", edge: .top)
         }
         .frame(width: 750, height: 700)
+        .onChange(of: selectedActionId) { newValue in
+            if !newValue.isEmpty {
+                uiServices.tutorialService.advance(from: .selectAction, to: .saveGesture)
+            }
+        }
         .alert("Gesture Conflict", isPresented: $showingConflictAlert) {
             Button("Cancel", role: .cancel) { pendingGesture = nil }
             Button("Replace", role: .destructive) { replaceConflictingGesture() }
@@ -648,6 +654,7 @@ struct GestureConfigurationSheet: View {
             selectedActionId: $selectedActionId,
             actionParameters: $actionParameters
         )
+        .tutorialStep(targetState: .selectAction, currentState: uiServices.tutorialService.state, text: "Select what you want this gesture to do.")
     }
     
     // MARK: - Timing
@@ -819,6 +826,9 @@ struct GestureConfigurationSheet: View {
         }
 
         onSave(gesture)
+        if uiServices.tutorialService.state == .saveGesture {
+            uiServices.tutorialService.finish()
+        }
         dismiss()
     }
 
@@ -830,6 +840,9 @@ struct GestureConfigurationSheet: View {
             _ = uiServices.removeGesture(conflicting)
         }
         onSave(gesture)
+        if uiServices.tutorialService.state == .saveGesture {
+            uiServices.tutorialService.finish()
+        }
         dismiss()
     }
 }

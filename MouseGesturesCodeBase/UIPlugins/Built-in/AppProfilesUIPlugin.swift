@@ -14,6 +14,7 @@ class AppProfilesUIPlugin: StandardUIPlugin {
     override var description: String { "Configure app-specific gesture profiles" }
     override var category: UIPluginCategory { .configuration }
     override var sortOrder: Int { 3 }
+    override var isPro: Bool { true }
     override var requiredPermissions: UIPluginPermissions { [.profiles, .configuration] }
     
     // MARK: - Plugin Implementation

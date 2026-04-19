@@ -67,6 +67,7 @@ struct GesturesView: View {
                 Button(action: { activeSheet = .addGesture }) {
                     Label("Add Gesture", systemImage: "plus")
                 }
+                .tutorialStep(targetState: .clickAddGesture, currentState: uiServices.tutorialService.state, text: "Click here to create your first gesture!")
             }
             
             Divider()
@@ -128,6 +129,11 @@ struct GesturesView: View {
         .sheet(isPresented: $showingResetToTemplate) {
             ResetToTemplateSheet { type in
                 uiServices.resetCurrentProfileToTemplate(type)
+            }
+        }
+        .onChange(of: activeSheet?.id) { newValue in
+            if newValue == "add" {
+                uiServices.tutorialService.advance(from: .clickAddGesture, to: .selectAction)
             }
         }
         .onAppear { uiServices.loadData() }

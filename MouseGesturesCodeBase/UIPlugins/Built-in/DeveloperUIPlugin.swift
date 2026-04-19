@@ -12,6 +12,7 @@ class DeveloperUIPlugin: DeveloperUIPluginBase {
     override var version: String { "1.0.0" }
     override var author: String { "MouseGestures Team" }
     override var description: String { "Developer tools and debugging" }
+    override var isPro: Bool { true }
     override var sortOrder: Int { 5 }
     
     // MARK: - Plugin Implementation

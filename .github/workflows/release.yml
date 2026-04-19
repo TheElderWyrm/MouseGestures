@@ -1,0 +1,45 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Xcode
+      uses: maxim-lobanov/setup-xcode@v1
+      with:
+        xcode-version: 'latest'
+
+    - name: Build and Archive
+      run: |
+        xcodebuild archive \
+          -project "MouseGestures.xcodeproj" \
+          -scheme MouseGestures \
+          -configuration Release \
+          -archivePath MouseGestures.xcarchive
+
+    - name: Export App
+      run: |
+        xcodebuild -exportArchive \
+          -archivePath MouseGestures.xcarchive \
+          -exportOptionsPlist exportOptions.plist \
+          -exportPath ./build
+
+    - name: Create DMG
+      run: |
+        hdiutil create -volname "MouseGestures" -srcfolder ./build/MouseGestures.app -ov -format UDZO MouseGestures.dmg
+
+    - name: Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: MouseGestures.dmg
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

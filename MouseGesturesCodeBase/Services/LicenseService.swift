@@ -21,12 +21,16 @@ public class LicenseService: ObservableObject {
     private let trialDurationDays = 30
     private let firstLaunchKey = "MGFirstLaunchDate"
     private let licenseKeyKey = "MGLicenseKey"
-    private let isProKey = "MGIsPro"
     
     // MARK: - Properties
     
     @Published private(set) var status: LicenseStatus = .free
     @Published private(set) var trialDaysRemaining: Int = 0
+    @Published public var forceFreeMode: Bool = false {
+        didSet {
+            refreshLicenseStatus()
+        }
+    }
     
     private let defaults = UserDefaults.standard
     
@@ -34,14 +38,27 @@ public class LicenseService: ObservableObject {
     
     private init() {
         refreshLicenseStatus()
+        
+        // Observe the PaymentService directly
+        Task { @MainActor in
+            for await _ in PaymentService.shared.$purchasedProductIDs.values {
+                self.refreshLicenseStatus()
+            }
+        }
     }
     
     // MARK: - Public API
     
     /// Refresh the license status from stored settings
     public func refreshLicenseStatus() {
-        // Check for manual Pro override (for development or after purchase)
-        if defaults.bool(forKey: isProKey) {
+        // Handle forced free mode for testing
+        if forceFreeMode {
+            status = .free
+            return
+        }
+
+        // Check for actual purchase via StoreKit
+        if PaymentService.shared.isProUnlocked {
             status = .pro
             return
         }
@@ -80,21 +97,15 @@ public class LicenseService: ObservableObject {
         return status == .trial
     }
     
-    /// Purchase the Pro version (simulated for now)
+    /// Purchase the Pro version (no longer simulated)
     public func purchasePro() {
-        defaults.set(true, forKey: isProKey)
+        // This is now handled via PaymentService in the UI
         refreshLicenseStatus()
-        
-        NotificationCenter.default.post(
-            name: NSNotification.Name("LicenseStatusChanged"),
-            object: self
-        )
     }
     
     /// Reset the trial (for testing purposes)
     public func resetTrial() {
         defaults.removeObject(forKey: firstLaunchKey)
-        defaults.removeObject(forKey: isProKey)
         refreshLicenseStatus()
         
         NotificationCenter.default.post(

@@ -1,17 +1,19 @@
 import SwiftUI
 
 struct OnboardingView: View {
+    @StateObject private var uiServices = UIServices.shared
     @State private var currentPage = 0
     var onComplete: () -> Void
-    
+
     private let pages: [OnboardingPage] = [
         OnboardingPage(
             title: "Welcome to MouseGestures",
             description: "MouseGestures allows you to trigger system-wide actions by moving your mouse into screen corners or edges while holding modifiers.",
-            image: "mouse",
+            image: "hand.draw.fill",
             color: .blue
         ),
         OnboardingPage(
+            id: "zones",
             title: "Screen Zones",
             description: "The screen is divided into 8 zones: 4 corners and 4 edges. Configure gestures to trigger when you enter these zones.",
             image: "rectangle.inset.filled",
@@ -26,7 +28,7 @@ struct OnboardingView: View {
         OnboardingPage(
             title: "App Profiles",
             description: "Create custom profiles for different apps. Your gestures will automatically switch when you change your focused application.",
-            image: "app.window.stack",
+            image: "app.badge",
             color: .green
         ),
         OnboardingPage(
@@ -36,7 +38,7 @@ struct OnboardingView: View {
             color: .red
         )
     ]
-    
+
     var body: some View {
         VStack(spacing: 0) {
             // Content
@@ -80,11 +82,19 @@ struct OnboardingView: View {
                     .controlSize(.large)
                     .padding(.leading, 10)
                 } else {
-                    Button("Get Started") {
-                        onComplete()
+                    HStack(spacing: 12) {
+                        Button("Maybe Later") {
+                            onComplete()
+                        }
+                        .buttonStyle(.link)
+                        
+                        Button("Create My First Action") {
+                            onComplete()
+                            uiServices.tutorialService.startTutorial()
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.large)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.large)
                 }
             }
             .padding(24)
@@ -95,6 +105,7 @@ struct OnboardingView: View {
 }
 
 struct OnboardingPage {
+    var id: String? = nil
     let title: String
     let description: String
     let image: String
@@ -126,8 +137,52 @@ struct OnboardingPageView: View {
                 .foregroundColor(.secondary)
                 .padding(.horizontal, 40)
             
+//            if page.id == "zones" {
+//                ZoneQuickSettingsView()
+//                    .padding(.top, 10)
+//            }
+            
             Spacer()
         }
         .padding()
+    }
+}
+
+struct ZoneQuickSettingsView: View {
+    @State private var showHighlights = ZoneVisualizationService.shared.isShowZoneHighlights()
+    @State private var showLabels = ZoneVisualizationService.shared.isShowZoneLabels()
+    
+    var body: some View {
+        VStack(spacing: 12) {
+            Text("Quick Settings")
+                .font(.headline)
+            
+            VStack(alignment: .leading, spacing: 8) {
+                Toggle("Show Zone Highlights", isOn: $showHighlights)
+                    .onChange(of: showHighlights) { newValue in
+                        ZoneVisualizationService.shared.setShowZoneHighlights(newValue)
+                    }
+                    
+                Toggle("Show Zone Labels", isOn: $showLabels)
+                    .onChange(of: showLabels) { newValue in
+                        ZoneVisualizationService.shared.setShowZoneLabels(newValue)
+                    }
+                    .disabled(!showHighlights)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 20)
+                
+            Button(action: {
+                ZoneHighlightManager.shared.showPreview(duration: 5.0)
+            }) {
+                Label("Preview Zones", systemImage: "eye")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .padding(.top, 4)
+        }
+        .padding()
+        .background(RoundedRectangle(cornerRadius: 12).fill(Color.secondary.opacity(0.1)))
+        .padding(.horizontal, 40)
     }
 }

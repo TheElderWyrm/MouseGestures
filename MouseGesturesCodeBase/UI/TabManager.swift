@@ -5,6 +5,8 @@ import SwiftUI
 struct TabManager: View {
     @StateObject private var uiPluginManager = UIPluginManager.shared
     @StateObject private var uiServices = UIServices.shared
+    @StateObject private var licenseService = LicenseService.shared
+    @StateObject private var tutorialService = TutorialService.shared
     @State private var selectedTabID: String = ""
     @State private var previousTabID: String = ""
     // Memory optimization: Track which tabs have been loaded to enable lazy loading
@@ -33,6 +35,14 @@ struct TabManager: View {
                     ForEach(uiPluginManager.visiblePlugins, id: \.identifier) { plugin in
                         createTabItem(for: plugin)
                     }
+                    
+                    if !licenseService.isPro {
+                        LicenseSettingsView()
+                            .tabItem {
+                                Label("Upgrade", systemImage: "star.fill")
+                            }
+                            .tag("com.mousegestures.ui.upgrade")
+                    }
                 }
                 .frame(width: 1000, height: 700)
                 .onChange(of: selectedTabID) { newValue in
@@ -40,6 +50,14 @@ struct TabManager: View {
                     loadedTabs.insert(newValue)
                     handleTabChange(from: previousTabID, to: newValue)
                     previousTabID = newValue
+                }
+                .onChange(of: tutorialService.state) { newState in
+                    if newState == .start {
+                        let gesturesTabID = "com.mousegestures.ui.gestures"
+                        selectedTabID = gesturesTabID
+                        loadedTabs.insert(gesturesTabID)
+                        tutorialService.advance(from: .start, to: .clickAddGesture)
+                    }
                 }
                 .onAppear {
                     initializeFirstTab()
@@ -74,14 +92,24 @@ struct TabManager: View {
         // This prevents all 8+ tabs from being rendered at startup
         Group {
             if loadedTabs.contains(plugin.identifier) {
-                plugin.createView()
+                ZStack {
+                    plugin.createView()
+                    
+                    if plugin.isPro && !licenseService.isPro {
+                        ProGatedTabOverlay()
+                    }
+                }
             } else {
                 // Lightweight placeholder until tab is first selected
                 LazyTabPlaceholder(pluginName: plugin.displayName)
             }
         }
         .tabItem {
-            Label(plugin.displayName, systemImage: plugin.iconName)
+            if plugin.isPro && !licenseService.isPro {
+                Label(plugin.displayName, systemImage: "lock.fill")
+            } else {
+                Label(plugin.displayName, systemImage: plugin.iconName)
+            }
         }
         .tag(plugin.identifier)
     }
@@ -336,5 +364,38 @@ struct LazyTabPlaceholder: View {
                 .foregroundColor(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+struct ProGatedTabOverlay: View {
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.4)
+                .ignoresSafeArea()
+            
+            VStack(spacing: 20) {
+                Image(systemName: "lock.shield.fill")
+                    .font(.system(size: 64))
+                    .foregroundColor(.orange)
+                
+                Text("Pro Feature")
+                    .font(.title).fontWeight(.bold)
+                
+                Text("This tab is only available with a Pro license.")
+                    .font(.body)
+                    .multilineTextAlignment(.center)
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: 300)
+                
+                Text("Upgrade to unlock unlimited profiles, app-specific targeting, and advanced automation.")
+                    .font(.caption)
+                    .multilineTextAlignment(.center)
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal)
+            }
+            .padding(40)
+            .background(RoundedRectangle(cornerRadius: 20).fill(MGStyle.Colors.contentBackground))
+            .shadow(radius: 20)
+        }
     }
 }

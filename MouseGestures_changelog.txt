@@ -1,3 +1,30 @@
+## 2026-04-19 (3)
+
+### Feature: Actual Payment Tracking & Validation
+- **StoreKit 2 Integration**: Replaced simulated license checks with real StoreKit 2 logic in `PaymentService.swift`.
+- **Flexible Pricing**: Added support for both Non-Consumable (One-Time) and Auto-Renewable Subscription Pro licenses.
+- **Improved License UI**: `LicenseSettingsView.swift` now fetches real products, prices, and descriptions from the App Store.
+- **Seamless Restore**: Added "Restore Purchases" functionality and automatic entitlement checking on startup.
+
+### Feature: Interactive Guided Tour
+- **Tutorial Service**: Implemented a state-managed `TutorialService.swift` to guide new users.
+- **Contextual Popovers**: Created a reusable `TutorialModifier.swift` for highlighting specific UI elements.
+- **Guided Onboarding**: Added "Create My First Action" walkthrough that automatically navigates the user through the creation process.
+
+### Feature: Promotional Website
+- **Modern Landing Page**: Created a sleek, dark-themed promotional website in the `/Website` directory.
+- **Interactive Visuals**: CSS-based monitor visualization explaining screen zones and modifiers.
+- **Clear Value Prop**: Detailed feature breakdowns and pricing comparison for Free vs. Pro.
+
+### Distribution & Publishing Readiness
+- **GitHub Actions**: Added CI/CD pipeline in `.github/workflows/release.yml` for automated builds and releases.
+- **Usage Descriptions**: Updated `Info.plist` with mandatory NSAccessibilityUsageDescription and NSAppleEventsUsageDescription strings.
+- **Build Infrastructure**: Created `exportOptions.plist` and refined `Release` build readiness.
+
+### UI Fixes
+- **Onboarding Symbols**: Fixed missing SF Symbols in onboarding (replaced 'mouse' with 'hand.draw.fill' and 'app.window.stack' with 'app.badge').
+- **Quick Settings**: Integrated "Quick Start" settings (zone highlights/labels) directly into the onboarding flow.
+- **Navigation**: Improved `TabManager` to support programmatic tab switching for the tutorial.
 ## 2026-04-19 (2)
 
 ### Feature: Onboarding Experience

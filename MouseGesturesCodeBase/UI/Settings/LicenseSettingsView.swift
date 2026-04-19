@@ -1,78 +1,153 @@
 import SwiftUI
+import StoreKit
 
 struct LicenseSettingsView: View {
     @ObservedObject var licenseService = LicenseService.shared
+    @StateObject var paymentService = PaymentService.shared
     @State private var showingPurchaseAlert = false
+    @State private var isPurchasing = false
+    @State private var purchaseError: String?
     
     var body: some View {
-        VStack(alignment: .leading, spacing: MGStyle.Spacing.xl) {
-            HStack(spacing: MGStyle.Spacing.xl) {
-                ZStack {
-                    Circle()
-                        .fill(statusColor.opacity(0.1))
-                        .frame(width: 48, height: 48)
-                    Image(systemName: statusIcon)
-                        .font(.system(size: 24, weight: .semibold))
-                        .foregroundColor(statusColor)
-                }
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(licenseService.status.rawValue)
-                        .font(.system(size: MGStyle.FontSize.heading, weight: .bold))
-                    
-                    if licenseService.isTrial {
-                        Text("\(licenseService.trialDaysRemaining) days remaining in your trial")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                    } else if licenseService.isPro {
-                        Text("Thank you for supporting MouseGestures!")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                    } else {
-                        Text("Basic features only")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
+        ScrollView {
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.xl) {
+                HStack(spacing: MGStyle.Spacing.xl) {
+                    ZStack {
+                        Circle()
+                            .fill(statusColor.opacity(0.1))
+                            .frame(width: 48, height: 48)
+                        Image(systemName: statusIcon)
+                            .font(.system(size: 24, weight: .semibold))
+                            .foregroundColor(statusColor)
                     }
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(licenseService.status.rawValue)
+                            .font(.system(size: MGStyle.FontSize.heading, weight: .bold))
+                        
+                        if licenseService.isTrial && !PaymentService.shared.isProUnlocked {
+                            Text("\(licenseService.trialDaysRemaining) days remaining in your trial")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        } else if licenseService.isPro {
+                            Text("Thank you for supporting MouseGestures!")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        } else {
+                            Text("Basic features only")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    
+                    Spacer()
                 }
-                
-                Spacer()
+                .padding(MGStyle.Spacing.lg)
+                .background(RoundedRectangle(cornerRadius: MGStyle.Corner.md).fill(MGStyle.Colors.contentBackground))
+                .overlay(RoundedRectangle(cornerRadius: MGStyle.Corner.md).stroke(MGStyle.Colors.separator, lineWidth: 0.5))
                 
                 if !licenseService.isPro {
-                    Button(action: {
-                        licenseService.purchasePro()
-                        showingPurchaseAlert = true
-                    }) {
+                    VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
                         Text("Upgrade to Pro")
-                            .fontWeight(.medium)
-                            .padding(.horizontal, MGStyle.Spacing.lg)
-                            .padding(.vertical, MGStyle.Spacing.sm)
-                    }
-                    .buttonStyle(.borderedProminent)
-                }
-            }
-            .padding(MGStyle.Spacing.lg)
-            .background(RoundedRectangle(cornerRadius: MGStyle.Corner.md).fill(MGStyle.Colors.contentBackground))
-            .overlay(RoundedRectangle(cornerRadius: MGStyle.Corner.md).stroke(MGStyle.Colors.separator, lineWidth: 0.5))
-            
-            if !licenseService.isPro {
-                proFeaturesList
-            }
-            
-            if UIServices.shared.isDeveloperModeEnabled() {
-                Divider()
-                HStack {
-                    Text("Developer Actions:").font(.caption).foregroundColor(.secondary)
-                    Button("Reset Trial") { licenseService.resetTrial() }
+                            .font(.headline)
+                        
+                        if paymentService.products.isEmpty {
+                            HStack {
+                                ProgressView().controlSize(.small)
+                                Text("Loading products...")
+                                    .foregroundColor(.secondary)
+                                    .font(.caption)
+                            }
+                        } else {
+                            VStack(spacing: MGStyle.Spacing.md) {
+                                ForEach(paymentService.products, id: \.id) { product in
+                                    purchaseRow(for: product)
+                                }
+                            }
+                        }
+                        
+                        Button("Restore Previous Purchases") {
+                            Task {
+                                await paymentService.restorePurchases()
+                            }
+                        }
                         .buttonStyle(.link)
                         .font(.caption)
+                    }
+                    .padding(MGStyle.Spacing.lg)
+                    .background(RoundedRectangle(cornerRadius: MGStyle.Corner.md).fill(MGStyle.Colors.subtleOverlay))
+                    
+                    proFeaturesList
+                }
+                
+                if UIServices.shared.isDeveloperModeEnabled() {
+                    Divider()
+                    HStack(spacing: MGStyle.Spacing.xl) {
+                        HStack(spacing: MGStyle.Spacing.md) {
+                            Text("Developer Actions:").font(.caption).foregroundColor(.secondary)
+                            Button("Reset Trial") { licenseService.resetTrial() }
+                                .buttonStyle(.link)
+                                .font(.caption)
+                        }
+                        
+                        Toggle("Force Free Mode (Test)", isOn: $licenseService.forceFreeMode)
+                            .font(.caption)
+                            .toggleStyle(.checkbox)
+                    }
                 }
             }
+            .padding(MGStyle.Spacing.xl)
         }
         .alert("Pro Activated", isPresented: $showingPurchaseAlert) {
             Button("Awesome", role: .cancel) { }
         } message: {
             Text("You now have access to all Pro features. Enjoy!")
         }
+        .alert("Purchase Error", isPresented: Binding(
+            get: { purchaseError != nil },
+            set: { _ in purchaseError = nil }
+        )) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            if let error = purchaseError {
+                Text(error)
+            }
+        }
+    }
+    
+    private func purchaseRow(for product: Product) -> some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(product.displayName)
+                    .font(.subheadline).fontWeight(.medium)
+                Text(product.description)
+                    .font(.caption).foregroundColor(.secondary)
+            }
+            
+            Spacer()
+            
+            Button(action: {
+                Task {
+                    isPurchasing = true
+                    do {
+                        if try await paymentService.purchase(product) {
+                            showingPurchaseAlert = true
+                        }
+                    } catch {
+                        purchaseError = error.localizedDescription
+                    }
+                    isPurchasing = false
+                }
+            }) {
+                Text(product.displayPrice)
+                    .fontWeight(.bold)
+                    .frame(width: 80)
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(isPurchasing)
+        }
+        .padding(MGStyle.Spacing.md)
+        .background(RoundedRectangle(cornerRadius: MGStyle.Corner.sm).fill(Color.primary.opacity(0.05)))
     }
     
     private var proFeaturesList: some View {

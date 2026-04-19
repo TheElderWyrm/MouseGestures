@@ -82,6 +82,8 @@ public class UIServices: ObservableObject {
     @Published var errorMessage: String?
     @Published var isOnboardingCompleted: Bool = UserDefaults.standard.bool(forKey: "MGOnboardingCompleted")
     
+    let tutorialService = TutorialService.shared
+    
     // MARK: - Initialization
     
     private init() {
