@@ -53,15 +53,18 @@ class ModifierKeyDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     }
     
     func enableDetection(for type: ActivationType) {
-        // Modifier detection is always active - nothing to enable
+        guard type == .modifierKey else { return }
+        enableModifierMonitors()
     }
     
     func disableDetection(for type: ActivationType) {
-        // Modifier detection is always active - nothing to disable
+        guard type == .modifierKey else { return }
+        disableModifierMonitors()
     }
     
     func isDetectionActive(for type: ActivationType) -> Bool {
-        return state == .running
+        guard type == .modifierKey else { return false }
+        return globalModifierMonitor != nil
     }
     
     // MARK: - Plugin-Declared Behavioral Properties
@@ -72,8 +75,7 @@ class ModifierKeyDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     }
     
     func isAlwaysActive(for type: ActivationType) -> Bool {
-        guard type == .modifierKey else { return false }
-        return true // Event-based, very efficient
+        return false // Gated by activation coordinator based on gesture requirements
     }
     
     func isInfrastructure(for type: ActivationType) -> Bool {
@@ -101,6 +103,16 @@ class ModifierKeyDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     override func start() throws {
         try super.start()
         
+        // Detection is now enabled/disabled via ActivationCoordinator
+        // which calls enableDetection/disableDetection.
+        ActivationCoordinator.shared.rebuildDependencies()
+        
+        context?.logger.log("Modifier key detector started (waiting for activation)", file: #file, function: #function, line: #line)
+    }
+    
+    private func enableModifierMonitors() {
+        guard globalModifierMonitor == nil else { return }
+        
         // Monitor modifier key changes - both global and local
         globalModifierMonitor = NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
             self?.handleModifierChange(event)
@@ -111,10 +123,12 @@ class ModifierKeyDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
             return event
         }
         
-        // Check if modifiers are already pressed at startup
+        // Check if modifiers are already pressed when monitors enable
         initializeModifierState()
         
-        context?.logger.log("Modifier key detection started", file: #file, function: #function, line: #line)
+        if context?.logger.isDebugEnabled ?? false {
+            context?.logger.log("Modifier key monitoring ENABLED", file: #file, function: #function, line: #line)
+        }
     }
     
     /// Initialize modifier state from current system state
@@ -134,7 +148,11 @@ class ModifierKeyDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     
     override func stop() {
         ActivationCoordinator.shared.pluginStopping(self)
-        
+        disableModifierMonitors()
+        super.stop()
+    }
+    
+    private func disableModifierMonitors() {
         if let monitor = globalModifierMonitor {
             NSEvent.removeMonitor(monitor)
             globalModifierMonitor = nil
@@ -149,7 +167,9 @@ class ModifierKeyDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         lastModifiers = []
         hasModifiers = false
         
-        super.stop()
+        if context?.logger.isDebugEnabled ?? false {
+            context?.logger.log("Modifier key monitoring DISABLED", file: #file, function: #function, line: #line)
+        }
     }
     
     override func cleanup() {

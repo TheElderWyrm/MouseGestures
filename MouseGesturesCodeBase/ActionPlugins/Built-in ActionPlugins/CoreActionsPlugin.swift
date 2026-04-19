@@ -559,8 +559,6 @@ class CoreActionsPlugin: NSObject, GestureActionPlugin {
             if let app = context.getFrontmostApplication() {
                 if app.bundleIdentifier != "com.apple.finder" {
                     _ = context.terminateApplication(app)
-                } else {
-                    _ = context.hideApplication(app)
                 }
             }
         case "specific":

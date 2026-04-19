@@ -118,15 +118,18 @@ class KeyboardShortcutDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     }
     
     func enableDetection(for type: ActivationType) {
-        // Keyboard shortcut detection is always active - nothing to enable
+        guard type == .keyboardShortcut else { return }
+        enableKeyboardMonitors()
     }
     
     func disableDetection(for type: ActivationType) {
-        // Keyboard shortcut detection is always active - nothing to disable
+        guard type == .keyboardShortcut else { return }
+        disableKeyboardMonitors()
     }
     
     func isDetectionActive(for type: ActivationType) -> Bool {
-        return state == .running
+        guard type == .keyboardShortcut else { return false }
+        return globalKeyboardMonitor != nil
     }
     
     // MARK: - Plugin-Declared Behavioral Properties
@@ -137,8 +140,7 @@ class KeyboardShortcutDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     }
     
     func isAlwaysActive(for type: ActivationType) -> Bool {
-        guard type == .keyboardShortcut else { return false }
-        return true // Event-based, efficient
+        return false // Gated by activation coordinator based on gesture requirements
     }
     
     func isInfrastructure(for type: ActivationType) -> Bool {
@@ -160,6 +162,16 @@ class KeyboardShortcutDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     override func start() throws {
         try super.start()
         
+        // Detection is now enabled/disabled via ActivationCoordinator
+        // which calls enableDetection/disableDetection.
+        ActivationCoordinator.shared.rebuildDependencies()
+        
+        context?.logger.log("Keyboard shortcut detector started (waiting for activation)", file: #file, function: #function, line: #line)
+    }
+    
+    private func enableKeyboardMonitors() {
+        guard globalKeyboardMonitor == nil else { return }
+        
         // Monitor key presses only — both global and local
         globalKeyboardMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
             _ = self?.handleKeyPress(event)
@@ -174,12 +186,22 @@ class KeyboardShortcutDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         }
         
         logActiveShortcuts()
+        
+        if context?.logger.isDebugEnabled ?? false {
+            context?.logger.log("Keyboard shortcut monitoring ENABLED", file: #file, function: #function, line: #line)
+        }
     }
     
     override func stop() {
         // Notify coordinator that this plugin is stopping
         ActivationCoordinator.shared.pluginStopping(self)
         
+        disableKeyboardMonitors()
+        
+        super.stop()
+    }
+    
+    private func disableKeyboardMonitors() {
         // Remove key monitors
         if let monitor = globalKeyboardMonitor {
             NSEvent.removeMonitor(monitor)
@@ -195,7 +217,9 @@ class KeyboardShortcutDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         lastKeyPressTime = nil
         lastTriggeredShortcut = nil
         
-        super.stop()
+        if context?.logger.isDebugEnabled ?? false {
+            context?.logger.log("Keyboard shortcut monitoring DISABLED", file: #file, function: #function, line: #line)
+        }
     }
     
     override func cleanup() {
