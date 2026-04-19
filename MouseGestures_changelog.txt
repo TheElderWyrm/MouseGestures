@@ -1,3 +1,19 @@
+## 2026-04-19 (4)
+
+### UI & Tutorial Improvements
+- **Fixed Tutorial Workflow**: Resolved issue where popovers appeared multiple times; "Got it" button now correctly advances state.
+- **Tutorial Controls**: Added "Skip Tutorial" option to all walkthrough steps.
+- **Improved Free Mode Gating**:
+    - **Tab Management**: Pro-only tabs are now hidden from the sidebar/tab bar in Free mode.
+    - **Upgrade Visibility**: Added a permanent "Upgrade" tab for Free users for easy access to Pro features.
+    - **Gestures Tab**: Hidden the profile/gesture switcher for Free users to enforce the single-profile limit.
+    - **Action Filtering**: Advanced actions and external (third-party) plugins are now hidden from the action selection UI in Free mode.
+    - **Execution Guard**: Added backend enforcement in `ActionExecutionManager` to prevent triggering advanced actions without a Pro license.
+
+### Architecture
+- **Plugin Metadata**: Added `isAdvanced` and `isExternal` properties to the `GestureActionPlugin` protocol and `PluginAction` struct.
+- **Context API**: Extended `UIPluginContext` to expose `isPro` status to UI plugins.
+- **Service Integration**: Added `licenseService` to `UIServices` for unified access across the UI layer.
 ## 2026-04-19 (3)
 
 ### Feature: Actual Payment Tracking & Validation

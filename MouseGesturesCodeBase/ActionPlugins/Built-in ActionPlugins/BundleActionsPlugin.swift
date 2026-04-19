@@ -71,6 +71,8 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
     let version = "3.0.0" // Version 3.0: SwiftUI Bundle Editor
     let author = "MouseGestures"
     let category = ActionCategory.automation
+    let isAdvanced = true
+    var isExternal = false
     let icon: NSImage? = nil
     
     // MARK: - Actions

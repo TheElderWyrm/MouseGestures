@@ -140,7 +140,19 @@ public class LicenseService: ObservableObject {
     public func isActionAllowed(_ identifier: String) -> Bool {
         if isPro { return true }
         
-        // Built-in core actions are always allowed
+        // Use the plugin manager to check if this specific action is advanced or external
+        if let (plugin, action) = PluginManager.shared.getAction(identifier: identifier) {
+            // Advanced plugins or actions are Pro-only
+            if plugin.isAdvanced || action.isAdvanced { return false }
+            
+            // External (third-party) plugins are Pro-only
+            if plugin.isExternal { return false }
+            
+            // Otherwise it's a basic built-in action
+            return true
+        }
+        
+        // Fallback for hardcoded core prefixes if plugin isn't loaded yet
         let corePrefixes = [
             "com.mousegestures.core.system",
             "com.mousegestures.core.media",

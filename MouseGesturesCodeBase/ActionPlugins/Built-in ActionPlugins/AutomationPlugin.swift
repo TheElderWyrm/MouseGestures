@@ -14,6 +14,8 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
     let version = "1.0.0"
     let author = "MouseGestures"
     let category = ActionCategory.automation
+    let isAdvanced = true
+    var isExternal = false
     let icon: NSImage? = nil
     
     // MARK: - Actions

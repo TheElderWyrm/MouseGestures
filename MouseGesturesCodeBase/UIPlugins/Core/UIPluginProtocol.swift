@@ -172,6 +172,9 @@ public protocol UIPluginContext: AnyObject {
     
     /// Check if developer mode is enabled
     var isDeveloperModeEnabled: Bool { get }
+    
+    /// Check if the current license is Pro
+    var isPro: Bool { get }
 }
 
 // MARK: - UI Plugin Metadata

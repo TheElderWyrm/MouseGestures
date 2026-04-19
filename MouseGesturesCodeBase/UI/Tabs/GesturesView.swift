@@ -67,19 +67,21 @@ struct GesturesView: View {
                 Button(action: { activeSheet = .addGesture }) {
                     Label("Add Gesture", systemImage: "plus")
                 }
-                .tutorialStep(targetState: .clickAddGesture, currentState: uiServices.tutorialService.state, text: "Click here to create your first gesture!")
+                .tutorialStep(targetState: .clickAddGesture, currentState: $uiServices.tutorialService.state, text: "Click here to create your first gesture!")
             }
             
             Divider()
             
             // Profile bar with stats
             HStack(spacing: MGStyle.Spacing.lg) {
-                profileSwitcher
-                
-                Divider().frame(height: 14)
+                if uiServices.licenseService.isPro {
+                    profileSwitcher
+                    
+                    Divider().frame(height: 14)
+                }
                 
                 Text("\(enabledCount) of \(uiServices.gestures.count) active")
-                    .font(.system(size: MGStyle.FontSize.caption))
+                    .font(.system(size: MGStyle.FontSize.caption) )
                     .foregroundColor(.secondary)
                 Spacer()
             }

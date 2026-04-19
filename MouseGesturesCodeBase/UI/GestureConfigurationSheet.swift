@@ -101,7 +101,7 @@ struct GestureConfigurationSheet: View {
                     .lineLimit(1)
                     .truncationMode(.tail)
             }
-            .tutorialStep(targetState: .saveGesture, currentState: uiServices.tutorialService.state, text: "Great! Now click Add to save it.", edge: .top)
+            .tutorialStep(targetState: .saveGesture, currentState: $uiServices.tutorialService.state, text: "Great! Now click Add to save it.", edge: .top)
         }
         .frame(width: 750, height: 700)
         .onChange(of: selectedActionId) { newValue in
@@ -654,7 +654,7 @@ struct GestureConfigurationSheet: View {
             selectedActionId: $selectedActionId,
             actionParameters: $actionParameters
         )
-        .tutorialStep(targetState: .selectAction, currentState: uiServices.tutorialService.state, text: "Select what you want this gesture to do.")
+        .tutorialStep(targetState: .selectAction, currentState: $uiServices.tutorialService.state, text: "Select what you want this gesture to do.")
     }
     
     // MARK: - Timing

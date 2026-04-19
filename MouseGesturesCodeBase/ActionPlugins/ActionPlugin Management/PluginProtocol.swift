@@ -22,6 +22,12 @@ public protocol GestureActionPlugin: AnyObject {
     /// Category for grouping in UI
     var category: ActionCategory { get }
     
+    /// Whether this is an advanced plugin (Pro only)
+    var isAdvanced: Bool { get }
+    
+    /// Whether this is an external plugin (Pro only)
+    var isExternal: Bool { get set }
+    
     /// Icon for the plugin (optional)
     var icon: NSImage? { get }
     
@@ -62,6 +68,11 @@ public protocol GestureActionPlugin: AnyObject {
 
 // MARK: - Default Implementations
 extension GestureActionPlugin {
+    var isAdvanced: Bool { false }
+    var isExternal: Bool {
+        get { false }
+        set { }
+    }
     func configurationView(for action: PluginAction) -> NSView? { nil }
     func hasAdvancedConfiguration(for action: PluginAction) -> Bool { false }
     func presentAdvancedConfiguration(
@@ -121,6 +132,8 @@ public struct PluginAction: Codable, Equatable {
     public let supportsLongPress: Bool
     public let supportsRepeat: Bool
     public let icon: String? // SF Symbol name
+    /// Whether this action is considered advanced (Pro only)
+    public let isAdvanced: Bool
     /// When true, this action is hidden from the action selection UI but still available for programmatic use (e.g. bundles)
     public let hidden: Bool
     /// Label shown on the "Configure..." button in the advanced config box.
@@ -136,6 +149,7 @@ public struct PluginAction: Codable, Equatable {
         supportsLongPress: Bool = false,
         supportsRepeat: Bool = false,
         icon: String? = nil,
+        isAdvanced: Bool = false,
         hidden: Bool = false,
         advancedConfigLabel: String? = nil
     ) {
@@ -147,6 +161,7 @@ public struct PluginAction: Codable, Equatable {
         self.supportsLongPress = supportsLongPress
         self.supportsRepeat = supportsRepeat
         self.icon = icon
+        self.isAdvanced = isAdvanced
         self.hidden = hidden
         self.advancedConfigLabel = advancedConfigLabel
     }

@@ -146,6 +146,9 @@ public class PluginManager: NSObject {
         // Determine permissions for external plugin
         let permissions = isSystem ? PluginPermissions.default : PluginPermissions.restricted
         
+        // Set external flag (if it's not a system plugin)
+        plugin.isExternal = !isSystem
+        
         // Initialize the plugin in sandbox
         do {
             let sandbox = PluginSandbox(plugin: plugin, permissions: permissions)
@@ -189,6 +192,9 @@ public class PluginManager: NSObject {
         
         for (plugin, permissions) in builtInPlugins {
             do {
+                // Built-in plugins are never external
+                plugin.isExternal = false
+                
                 // Create sandboxed wrapper
                 let sandbox = PluginSandbox(plugin: plugin, permissions: permissions)
                 try sandbox.initialize()

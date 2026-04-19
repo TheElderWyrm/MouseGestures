@@ -45,6 +45,13 @@ class UIPluginManager: ObservableObject {
                 self?.updateVisiblePlugins()
             }
             .store(in: &cancellables)
+            
+        // Listen for license status changes
+        NotificationCenter.default.publisher(for: NSNotification.Name("LicenseStatusChanged"))
+            .sink { [weak self] _ in
+                self?.updateVisiblePlugins()
+            }
+            .store(in: &cancellables)
     }
     
     // MARK: - Plugin Loading
@@ -188,6 +195,9 @@ class UIPluginManager: ObservableObject {
                     // Check if plugin is enabled
                     guard self.pluginStates[plugin.identifier] != .disabled else { return false }
                     
+                    // Check if plugin is Pro and user is not Pro (New requirement: remove tabs)
+                    if plugin.isPro && !self.context.isPro { return false }
+                    
                     // Check if plugin should be visible
                     return plugin.shouldBeVisible(context: self.context)
                 }
@@ -268,6 +278,10 @@ class UIPluginContextImpl: UIPluginContext {
     
     var isDeveloperModeEnabled: Bool {
         uiServices.isDeveloperModeEnabled()
+    }
+    
+    var isPro: Bool {
+        uiServices.licenseService.isPro
     }
     
     func logger(_ message: String, level: LogLevel) {

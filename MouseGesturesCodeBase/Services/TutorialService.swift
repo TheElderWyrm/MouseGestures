@@ -14,7 +14,7 @@ public enum TutorialState: String, Codable {
 public class TutorialService: ObservableObject {
     public static let shared = TutorialService()
     
-    @Published public private(set) var state: TutorialState = .inactive
+    @Published public var state: TutorialState = .inactive
     
     private init() {}
     

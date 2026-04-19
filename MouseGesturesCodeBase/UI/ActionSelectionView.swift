@@ -57,6 +57,7 @@ struct ActionSelectionView: View {
     @Binding var selectedActionId: String
     @Binding var actionParameters: [String: AnyCodable]
     
+    @StateObject private var licenseService = LicenseService.shared
     @State private var searchText: String = ""
     @State private var selectedCategory: String = "All"
     @State private var hasAdvancedConfig = false
@@ -711,6 +712,8 @@ struct ActionSelectionView: View {
         let category: ActionCategory
         let categoryLabel: String
         let isSaved: Bool
+        let isAdvanced: Bool
+        let isExternal: Bool
     }
     
     private struct CategoryGroup: Identifiable {
@@ -727,7 +730,10 @@ struct ActionSelectionView: View {
             .filter { !$0.action.hidden }
             .map { item in
                 let fullId = item.pluginId + "." + item.action.id
-                let cat = PluginManager.shared.getPlugin(identifier: item.pluginId)?.category ?? .custom
+                let plugin = PluginManager.shared.getPlugin(identifier: item.pluginId)
+                let cat = plugin?.category ?? .custom
+                let isAdvanced = (plugin?.isAdvanced ?? false) || item.action.isAdvanced
+                let isExternal = plugin?.isExternal ?? false
                 return ActionEntry(
                     id: fullId,
                     name: item.action.name,
@@ -735,7 +741,9 @@ struct ActionSelectionView: View {
                     icon: item.action.icon,
                     category: cat,
                     categoryLabel: cat.rawValue,
-                    isSaved: false
+                    isSaved: false,
+                    isAdvanced: isAdvanced,
+                    isExternal: isExternal
                 )
             }
     }
@@ -749,7 +757,9 @@ struct ActionSelectionView: View {
                 icon: "bookmark.fill",
                 category: .custom,
                 categoryLabel: "Saved",
-                isSaved: true
+                isSaved: true,
+                isAdvanced: false,
+                isExternal: false
             )
         }
     }
@@ -765,16 +775,24 @@ struct ActionSelectionView: View {
         let q = searchText.lowercased()
         let all = allActionEntries + savedActionEntries
         return all.filter {
-            $0.name.lowercased().contains(q) ||
+            ((!$0.isAdvanced && !$0.isExternal) || licenseService.isPro) &&
+            ($0.name.lowercased().contains(q) ||
             $0.description.lowercased().contains(q) ||
-            $0.categoryLabel.lowercased().contains(q)
+            $0.categoryLabel.lowercased().contains(q))
         }
     }
     
     private var displayEntries: [ActionEntry] {
-        if selectedCategory == "All" { return allActionEntries }
-        if selectedCategory == "Saved" { return savedActionEntries }
-        return allActionEntries.filter { $0.category.rawValue == selectedCategory }
+        let base: [ActionEntry]
+        if selectedCategory == "All" { 
+            base = allActionEntries 
+        } else if selectedCategory == "Saved" { 
+            base = savedActionEntries 
+        } else {
+            base = allActionEntries.filter { $0.category.rawValue == selectedCategory }
+        }
+        
+        return base.filter { (!$0.isAdvanced && !$0.isExternal) || licenseService.isPro }
     }
     
     private func groupedByCategory(_ entries: [ActionEntry]) -> [CategoryGroup] {
