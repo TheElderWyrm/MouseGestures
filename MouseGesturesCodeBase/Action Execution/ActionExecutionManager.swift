@@ -281,6 +281,23 @@ class ActionExecutionManager {
     private func executeAction(_ actionId: String,
                               parameters: ActionParameters,
                               context: ActionExecutionContext) {
+        
+        // Enforce license limits: some actions require Pro
+        if !LicenseService.shared.isActionAllowed(actionId) {
+            log.log("Access Denied: Action '\(actionId)' requires a Pro license.")
+            
+            // Show a notification so the user knows why it didn't fire
+            DispatchQueue.main.async {
+                PluginManager.shared.showPluginNotification(
+                    title: "Pro Feature",
+                    message: "The requested action requires a Pro license.",
+                    style: .warning,
+                    pluginId: "com.mousegestures.system"
+                )
+            }
+            return
+        }
+        
         let executionId = UUID()
         let startTime = Date()
 
@@ -399,22 +416,46 @@ class ActionExecutionManager {
     ///   {clipboard}           — current pasteboard string
     ///   {frontmost_app}       — bundle ID of frontmost app
     ///   {frontmost_app_name}  — localised name of frontmost app
+    ///   {selected_text}       — currently selected text in frontmost app (requires Accessibility permission)
+    ///   {VARIABLE_NAME}       — user-defined variable set via the "Set Variable" action
     private func resolveTokens(in parameters: ActionParameters) -> ActionParameters {
         let tokens: [String: () -> String] = [
             "{clipboard}":          { NSPasteboard.general.string(forType: .string) ?? "" },
             "{frontmost_app}":      { NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "" },
             "{frontmost_app_name}": { NSWorkspace.shared.frontmostApplication?.localizedName ?? "" },
+            "{selected_text}":      { self.getSelectedText() },
         ]
 
         var resolved = parameters
         for key in parameters.keys {
             guard var str = parameters.string(for: key), str.contains("{") else { continue }
+            // System tokens
             for (token, resolver) in tokens where str.contains(token) {
                 str = str.replacingOccurrences(of: token, with: resolver())
+            }
+            // User-defined variables: {VARIABLE_NAME}
+            if str.contains("{") {
+                for (name, value) in VariableStore.shared.getAll() where str.contains("{\(name)}") {
+                    str = str.replacingOccurrences(of: "{\(name)}", with: value)
+                }
             }
             resolved[key] = AnyCodable(str)
         }
         return resolved
+    }
+
+    /// Returns the text currently selected in the frontmost application using the Accessibility API.
+    private func getSelectedText() -> String {
+        guard let app = NSWorkspace.shared.frontmostApplication else { return "" }
+        let appEl = AXUIElementCreateApplication(app.processIdentifier)
+        var focusedRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(appEl, kAXFocusedUIElementAttribute as CFString, &focusedRef) == .success,
+              let focusedAny = focusedRef else { return "" }
+        let focused = unsafeBitCast(focusedAny, to: AXUIElement.self)
+        var textRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(focused, kAXSelectedTextAttribute as CFString, &textRef) == .success,
+              let text = textRef as? String else { return "" }
+        return text
     }
 
     private func showActivationNotification(actionId: String, gesture: Gesture?) {

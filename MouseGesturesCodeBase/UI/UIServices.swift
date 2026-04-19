@@ -80,12 +80,18 @@ public class UIServices: ObservableObject {
     @Published var savedActions: [SavedAction] = []
     @Published var isLoading: Bool = false
     @Published var errorMessage: String?
+    @Published var isOnboardingCompleted: Bool = UserDefaults.standard.bool(forKey: "MGOnboardingCompleted")
     
     // MARK: - Initialization
     
     private init() {
         loadData()
         setupNotifications()
+    }
+    
+    func setOnboardingCompleted(_ completed: Bool) {
+        UserDefaults.standard.set(completed, forKey: "MGOnboardingCompleted")
+        isOnboardingCompleted = completed
     }
     
     private func setupNotifications() {

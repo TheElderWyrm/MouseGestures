@@ -180,6 +180,7 @@ public class PluginManager: NSObject {
             (CoreActionsPlugin(), .builtIn),
             (WindowManagementPlugin(), .builtIn),
             (MediaControlPlugin(), .builtIn),
+            (BrowserActionsPlugin(), .builtIn),
             (SystemControlPlugin(), .builtIn),
             (AutomationPlugin(), .builtIn),
             (BundleActionsPlugin(), .builtIn),
@@ -224,11 +225,12 @@ public class PluginManager: NSObject {
             "com.mousegestures.core": { CoreActionsPlugin() },
             "com.mousegestures.window": { WindowManagementPlugin() },
             "com.mousegestures.media": { MediaControlPlugin() },
+            "com.mousegestures.browser": { BrowserActionsPlugin() },
             "com.mousegestures.system": { SystemControlPlugin() },
             "com.mousegestures.automation": { AutomationPlugin() },
-            "com.mousegestures.bundle": { BundleActionsPlugin() }
+            "com.mousegestures.bundle": { BundleActionsPlugin() },
+            "com.mousegestures.test": { TestActionPlugin() }
         ]
-        
         guard let factory = builtInMap[identifier] else {
             log.log("Plugin \(identifier) is not a recognized built-in plugin")
             return false

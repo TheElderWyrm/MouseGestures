@@ -10,9 +10,15 @@ struct TabManager: View {
     // Memory optimization: Track which tabs have been loaded to enable lazy loading
     @State private var loadedTabs: Set<String> = []
     
+    @State private var showingUpdateNotification = false
+    
     var body: some View {
         Group {
-            if uiPluginManager.isLoading || uiPluginManager.visiblePlugins.isEmpty {
+            if !uiServices.isOnboardingCompleted {
+                OnboardingView {
+                    uiServices.setOnboardingCompleted(true)
+                }
+            } else if uiPluginManager.isLoading || uiPluginManager.visiblePlugins.isEmpty {
                 // Show loading state until plugins are ready, prevents invalid variadic child access
                 VStack(spacing: 16) {
                     ProgressView()
@@ -37,6 +43,12 @@ struct TabManager: View {
                 }
                 .onAppear {
                     initializeFirstTab()
+                }
+                .sheet(isPresented: $showingUpdateNotification) {
+                    UpdateNotificationView()
+                }
+                .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("MGUpdateAvailable"))) { _ in
+                    showingUpdateNotification = true
                 }
             }
         }

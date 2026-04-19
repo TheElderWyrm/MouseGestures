@@ -125,7 +125,11 @@ struct GestureConfigurationSheet: View {
             if !modStr.isEmpty { triggerParts.append(modStr) }
         }
         if components.dragType?.isEnabled == true {
-            triggerParts.append(components.dragType?.dragType.displayName ?? "Drag")
+            let dm = components.dragType?.dragType ?? .anyDrag
+            let allowClick = components.dragType?.allowClick ?? false
+            triggerParts.append(allowClick
+                ? dm.displayName.replacingOccurrences(of: " Drag", with: " Click/Drag")
+                : dm.displayName)
         }
         if components.mouseButton?.isEnabled == true {
             triggerParts.append(components.mouseButton?.button.rawValue ?? "Click")
@@ -439,8 +443,14 @@ struct GestureConfigurationSheet: View {
         }
     }
 
+    /// True when the gesture uses a drag type (pure drag OR combined click/drag).
     private var isDragMode: Bool {
         components.dragType?.isEnabled == true
+    }
+
+    /// True only for the combined "Either" mode (click-in-zone OR drag-into-zone).
+    private var isCombinedMode: Bool {
+        components.dragType?.isEnabled == true && components.dragType?.allowClick == true
     }
 
     private var mouseInputConfigView: some View {
@@ -459,15 +469,15 @@ struct GestureConfigurationSheet: View {
                     },
                     set: { val in
                         if val == .none {
-                            // "None" means require no mouse button
                             components.requireNoMouse = true
                             components.dragType?.isEnabled = false
                             components.mouseButton?.isEnabled = false
                         } else {
                             components.requireNoMouse = false
                             if isDragMode {
-                                components.dragType?.isEnabled = true
-                                components.dragType?.dragType = val
+                                // Preserve allowClick when changing the button in drag/combined mode
+                                let allowClick = components.dragType?.allowClick ?? false
+                                components.dragType = DragTypeConfig(isEnabled: true, dragType: val, allowClick: allowClick)
                             } else {
                                 components.mouseButton?.isEnabled = true
                                 components.mouseButton?.button = dragMirrorToButton(val)
@@ -494,26 +504,35 @@ struct GestureConfigurationSheet: View {
                     .foregroundColor(.secondary)
                     .frame(width: 80, alignment: .trailing)
                 Picker("", selection: Binding(
-                    get: { isDragMode ? "drag" : "click" },
+                    get: {
+                        if isCombinedMode { return "either" }
+                        return isDragMode ? "drag" : "click"
+                    },
                     set: { mode in
-                        // Preserve current button selection when switching between Click and Drag
-                        let currentButton = isDragMode
+                        // Preserve current button selection when switching type
+                        let currentButton: DragModifier = isDragMode
                             ? (components.dragType?.dragType ?? .leftDrag)
                             : buttonToDragMirror(components.mouseButton?.button ?? .left)
-                        if mode == "drag" {
-                            components.dragType = DragTypeConfig(isEnabled: true, dragType: currentButton)
+                        switch mode {
+                        case "drag":
+                            components.dragType = DragTypeConfig(isEnabled: true, dragType: currentButton, allowClick: false)
                             components.mouseButton?.isEnabled = false
-                        } else {
+                        case "click":
                             components.dragType?.isEnabled = false
                             components.mouseButton = MouseButtonConfig(isEnabled: true, button: dragMirrorToButton(currentButton))
+                        case "either":
+                            components.dragType = DragTypeConfig(isEnabled: true, dragType: currentButton, allowClick: true)
+                            components.mouseButton?.isEnabled = false
+                        default: break
                         }
                     }
                 )) {
                     Text("Click").tag("click")
                     Text("Drag").tag("drag")
+                    Text("Either").tag("either")
                 }
                 .pickerStyle(.segmented)
-                .frame(width: 120)
+                .frame(width: 180)
                 .labelsHidden()
                 Spacer()
             }

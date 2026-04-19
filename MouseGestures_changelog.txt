@@ -1,6 +1,23 @@
-## 2026-04-19
+## 2026-04-19 (2)
 
-### Feature: License & Pro Version Support
+### Feature: Onboarding Experience
+**OnboardingView.swift** (new)
+- Multi-page introduction to core app concepts: Screen Zones, Modifiers, Profiles, and Permissions.
+- Integrated into `TabManager` to show automatically for new users.
+
+### Feature: Update Checker & Management
+**UpdateService.swift** (new)
+- Manages version checking, release notes, and automatic update preferences.
+- **UpdateNotificationView.swift** (new): Modern UI for informing users about new versions.
+- Added "Check for Updates" and "Automatic Updates" settings to the About tab.
+
+### Feature: Browser-Specific Actions
+**BrowserActionsPlugin.swift** (new)
+- Dedicated actions for Web Browsers (Safari, Chrome, Arc, etc.).
+- Actions include: Navigation (Back/Forward/Refresh), Tab Management (New/Close/Switch), and Zoom.
+- Registered as a core built-in plugin.
+
+## 2026-04-19 (1)
 **LicenseService.swift** (new)
 - Core service for managing 30-day trial and Pro feature gating.
 - Tracks first launch date and stores Pro status in UserDefaults.

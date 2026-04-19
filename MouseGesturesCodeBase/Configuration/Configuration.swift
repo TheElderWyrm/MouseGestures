@@ -242,7 +242,13 @@ public class Configuration: Codable {
 
     // --- Profile Management Methods (for UI) ---
     
-    func createProfile(name: String) -> ConfigurationProfile {
+    func createProfile(name: String) -> ConfigurationProfile? {
+        // Enforce license limits: only 1 profile allowed for Free version
+        if !LicenseService.shared.canUseMultipleProfiles && !profiles.isEmpty {
+            log.log("Access Denied: Multiple profiles require a Pro license.")
+            return nil
+        }
+        
         // Create the new profile by copying gestures from the currently active one.
         let newProfile = ConfigurationProfile(
             name: name,
@@ -274,6 +280,12 @@ public class Configuration: Codable {
     }
 
     func duplicateProfile(id: UUID, newName: String) -> ConfigurationProfile? {
+        // Enforce license limits
+        if !LicenseService.shared.canUseMultipleProfiles && !profiles.isEmpty {
+            log.log("Access Denied: Multiple profiles require a Pro license.")
+            return nil
+        }
+        
         guard var profileToDuplicate = profiles.first(where: { $0.id == id }) else { return nil }
         
         profileToDuplicate.id = UUID() // Assign a new unique ID
@@ -289,6 +301,12 @@ public class Configuration: Codable {
     // --- App Mapping Methods ---
 
     func addAppProfileMapping(bundleId: String, appName: String, profileId: UUID) {
+        // Enforce license limits: advanced targeting requires a Pro license
+        if !LicenseService.shared.canUseAdvancedTargeting {
+            log.log("Access Denied: Advanced targeting (App-specific profiles) requires a Pro license.")
+            return
+        }
+        
         appProfileMappings.removeAll { $0.appBundleIdentifier == bundleId }
         let newMapping = AppProfileMapping(appBundleIdentifier: bundleId, appName: appName, profileId: profileId)
         appProfileMappings.append(newMapping)

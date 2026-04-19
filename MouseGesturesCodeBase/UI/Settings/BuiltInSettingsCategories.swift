@@ -6,6 +6,7 @@ import UniformTypeIdentifiers
 enum SettingsCategories {
     static let general = SettingsCategoryDescriptor(id: "general", title: "General", icon: "gear", order: 0)
     static let detection = SettingsCategoryDescriptor(id: "detection", title: "Detection", icon: "hand.tap", order: 10)
+    static let license = SettingsCategoryDescriptor(id: "license", title: "License", icon: "checkmark.seal", order: 70)
     static let about = SettingsCategoryDescriptor(id: "about", title: "About", icon: "info.circle", order: 80)
 }
 
@@ -69,6 +70,22 @@ struct BuiltInSettingsProvider: SettingsProvider {
                     SearchableSettingItem(title: "Check for Updates", description: "Check for the latest version of MouseGestures", keywords: ["update", "check", "latest", "new", "version"])
                 ],
                 viewBuilder: { _ in AnyView(AboutSettingsView()) }
+            )
+        ]
+    }
+}
+
+/// Settings provider for license and pro features.
+struct LicenseSettingsProvider: SettingsProvider {
+    var settingsEntries: [SettingsEntry] {
+        [
+            SettingsEntry(
+                category: SettingsCategories.license,
+                order: 0,
+                searchableItems: [
+                    SearchableSettingItem(title: "License Status", description: "View your current license status and upgrade to Pro", keywords: ["license", "pro", "upgrade", "trial", "payment", "buy"])
+                ],
+                viewBuilder: { _ in AnyView(LicenseSettingsView()) }
             )
         ]
     }
@@ -347,19 +364,68 @@ struct DataManagementSettingsView: View {
 // MARK: - About View
 
 struct AboutSettingsView: View {
+    @ObservedObject var updateService = UpdateService.shared
+    
     var body: some View {
         VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {
             VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
                 Text("Version Information").font(.system(size: MGStyle.FontSize.heading, weight: .semibold))
-                HStack {
-                    Text("Current Version:").font(.system(size: MGStyle.FontSize.body))
-                    Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown")
-                        .font(.system(size: MGStyle.FontSize.body, weight: .medium))
+                
+                HStack(spacing: 20) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text("Current Version:").font(.system(size: MGStyle.FontSize.body))
+                            Text(updateService.currentVersion)
+                                .font(.system(size: MGStyle.FontSize.body, weight: .medium))
+                        }
+                        HStack {
+                            Text("Build Number:").font(.system(size: MGStyle.FontSize.body))
+                            Text(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "Unknown")
+                                .font(.system(size: MGStyle.FontSize.body, weight: .medium))
+                        }
+                    }
+                    
+                    Divider().frame(height: 40)
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        if updateService.isChecking {
+                            HStack {
+                                ProgressView().controlSize(.small)
+                                Text("Checking for updates...").font(.caption).foregroundColor(.secondary)
+                            }
+                        } else if let lastCheck = updateService.lastCheckDate {
+                            Text("Last checked: \(lastCheck.formatted(date: .abbreviated, time: .shortened))")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        } else {
+                            Text("Never checked for updates")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
                 }
-                HStack {
-                    Text("Build Number:").font(.system(size: MGStyle.FontSize.body))
-                    Text(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "Unknown")
-                        .font(.system(size: MGStyle.FontSize.body, weight: .medium))
+                
+                Button(action: {
+                    updateService.checkForUpdates()
+                }) {
+                    Label("Check for Updates", systemImage: "arrow.clockwise")
+                }
+                .disabled(updateService.isChecking)
+            }
+            
+            Divider()
+            
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
+                Text("Automatic Updates").font(.system(size: MGStyle.FontSize.heading, weight: .semibold))
+                
+                Toggle(isOn: Binding(
+                    get: { updateService.isAutoUpdateEnabled },
+                    set: { updateService.isAutoUpdateEnabled = $0 }
+                )) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Download and install updates automatically")
+                        Text("Requires app restart to apply").font(.caption).foregroundColor(.secondary)
+                    }
                 }
             }
         }
@@ -402,6 +468,9 @@ func registerAllSettings() {
     
     // Core app entries
     registry.register(BuiltInSettingsProvider())
+    
+    // License and Pro features
+    registry.register(LicenseSettingsProvider())
     
     // Detection plugin settings (bridged from PluginSettingDefinition system)
     registry.register(DetectionPluginSettingsProvider())

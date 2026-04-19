@@ -295,65 +295,98 @@ class MouseButtonDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     
     private func handleMouseDown(_ event: NSEvent) {
         let button = Self.buttonFrom(event)
-        
+
         // --- 1. Update button hold state ---
         let wasHeld = heldButton
         heldButton = button
-        
+
+        // --- 2. Check for click-trigger and combined click/drag gestures.
+        //        Must run BEFORE activationEngaged so that when ScreenZoneDetectorPlugin
+        //        enables and calls checkCurrentMousePosition, combined gestures that already
+        //        fired here are suppressed (via suppressClickFiring) and not double-fired.
+        if isButtonAllowed(button) {
+            let modifiers = event.modifierFlags.normalized
+            if !requireModifiers || !modifiers.isEmpty {
+                fireClickOrCombinedGesture(button: button, modifiers: modifiers)
+            }
+        }
+
+        // --- 3. Signal button activation to ActivationCoordinator ---
         if wasHeld == nil {
             holdEngagements += 1
             ActivationCoordinator.shared.activationEngaged(.mouseButton, metadata: buildMetadata())
-            
             if context?.logger.isDebugEnabled ?? false {
                 context?.logger.log("Button held: \(button.rawValue)", file: #file, function: #function, line: #line)
             }
         } else if wasHeld != button {
             ActivationCoordinator.shared.activationEngaged(.mouseButton, metadata: buildMetadata())
         }
-        
-        // --- 2. Check for click-trigger gestures ---
-        // NOTE: App-disabled filtering is handled centrally by DetectionPluginManager.
-        
-        guard isButtonAllowed(button) else { return }
-        
-        let modifiers = event.modifierFlags.normalized
-        if requireModifiers && modifiers.isEmpty { return }
-        
+    }
+
+    /// Check all click-type and combined click/drag gestures and fire the first match.
+    private func fireClickOrCombinedGesture(button: MouseButtonTrigger.MouseButton, modifiers: NSEvent.ModifierFlags) {
         guard let config = context?.configuration else { return }
-        
-        // Use ActivationMapper to determine which gestures use mouse buttons
-        let enabledGestures = config.gestures.filter { g in
-            g.isEnabled && g.mouseButtonTrigger != nil &&
-            ActivationMapper.shared.activationTypes(for: g).contains(.mouseButton)
+        let mouseLocation = NSEvent.mouseLocation
+        let screenFrame = NSScreen.main?.frame
+
+        // Candidates: gestures that use .mouseButton activation AND have either a
+        // click trigger or a combined (allowClick) drag trigger.
+        let candidates = config.gestures.filter { g in
+            g.isEnabled &&
+            ActivationMapper.shared.activationTypes(for: g).contains(.mouseButton) &&
+            (g.mouseButtonTrigger != nil || g.components.dragType?.allowClick == true)
         }
-        
-        for gesture in enabledGestures {
-            guard let trigger = gesture.mouseButtonTrigger else { continue }
-            // Use the gesture's modifierKey component for required modifiers (trigger.modifiers is always [])
-            let requiredMods = gesture.modifiers
-            guard (trigger.button == .any || trigger.button == button) && requiredMods == modifiers else { continue }
-            // For zone+click gestures, validate mouse position is in the required zone
-            if gesture.hasZoneTrigger {
-                let mouseLocation = NSEvent.mouseLocation
-                guard let screenFrame = NSScreen.main?.frame else { continue }
+
+        for gesture in candidates {
+            // --- Case A: regular click gesture ---
+            if let trigger = gesture.mouseButtonTrigger {
+                let requiredMods = gesture.modifiers
+                guard (trigger.button == .any || trigger.button == button) && requiredMods == modifiers else { continue }
+                if gesture.hasZoneTrigger {
+                    guard let sf = screenFrame else { continue }
+                    guard gesture.zone.contains(
+                        point: mouseLocation, screenFrame: sf,
+                        threshold: Configuration.shared.edgeThreshold,
+                        cornerSize: Configuration.shared.cornerSize,
+                        cornerBuffer: Configuration.shared.cornerBuffer
+                    ) else { continue }
+                }
+                clicksTriggered += 1
+                lastTriggerTime = Date()
+                context?.logger.log("✓ Mouse button trigger: \(trigger.displayString) -> \(gesture.actionIdentifier)", file: #file, function: #function, line: #line)
+                triggerGesture(gesture, context: GestureContext(
+                    source: .mouseButton(button: button, modifiers: modifiers),
+                    modifiers: modifiers, timestamp: Date()
+                ))
+                return
+            }
+
+            // --- Case B: combined click/drag gesture — fires when clicked while in zone ---
+            if let dragConfig = gesture.components.dragType, dragConfig.isEnabled, dragConfig.allowClick {
+                let buttonMatches = dragConfig.dragType == .anyDrag ||
+                    DragModifier.from(mouseButton: button) == dragConfig.dragType
+                let requiredMods = gesture.modifiers
+                guard buttonMatches && requiredMods == modifiers && gesture.hasZoneTrigger else { continue }
+                guard let sf = screenFrame else { continue }
                 guard gesture.zone.contains(
-                    point: mouseLocation,
-                    screenFrame: screenFrame,
+                    point: mouseLocation, screenFrame: sf,
                     threshold: Configuration.shared.edgeThreshold,
                     cornerSize: Configuration.shared.cornerSize,
                     cornerBuffer: Configuration.shared.cornerBuffer
                 ) else { continue }
+                // Tell ScreenZoneDetectorPlugin to not re-fire this gesture when zone
+                // tracking starts immediately after this button press.
+                (DetectionPluginManager.shared.getPlugin(ScreenZoneDetectorPlugin.pluginIdentifier) as? ScreenZoneDetectorPlugin)?
+                    .suppressClickFiring(forKey: gesture.triggerKey)
+                clicksTriggered += 1
+                lastTriggerTime = Date()
+                context?.logger.log("✓ Combined click/drag trigger (via click): \(gesture.actionIdentifier) zone: \(gesture.zone.rawValue)", file: #file, function: #function, line: #line)
+                triggerGesture(gesture, context: GestureContext(
+                    source: .mouseButton(button: button, modifiers: modifiers),
+                    modifiers: modifiers, timestamp: Date()
+                ))
+                return
             }
-            clicksTriggered += 1
-            lastTriggerTime = Date()
-
-            context?.logger.log("✓ Mouse button trigger: \(trigger.displayString) -> \(gesture.actionIdentifier)", file: #file, function: #function, line: #line)
-
-            triggerGesture(gesture, context: GestureContext(
-                source: .mouseButton(button: button, modifiers: modifiers),
-                modifiers: modifiers, timestamp: Date()
-            ))
-            break
         }
     }
     
@@ -396,18 +429,22 @@ class MouseButtonDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     
     private func logActiveButtonTriggers() {
         guard let config = context?.configuration else { return }
-        
-        // Use ActivationMapper to count mouse button gestures
+
         let clickCount = config.gestures.filter {
             $0.mouseButtonTrigger != nil && $0.isEnabled &&
             ActivationMapper.shared.activationTypes(for: $0).contains(.mouseButton)
         }.count
-        
+
         let dragCount = config.gestures.filter {
-            $0.isEnabled && $0.hasZoneTrigger && $0.dragModifier != .none
+            $0.isEnabled && $0.hasZoneTrigger && $0.dragModifier != .none &&
+            $0.components.dragType?.allowClick != true
         }.count
-        
-        context?.logger.log("Mouse button detection started (clicks: \(clickCount), drag gestures: \(dragCount))", file: #file, function: #function, line: #line)
+
+        let combinedCount = config.gestures.filter {
+            $0.isEnabled && $0.components.dragType?.allowClick == true
+        }.count
+
+        context?.logger.log("Mouse button detection started (clicks: \(clickCount), drag: \(dragCount), combined: \(combinedCount))", file: #file, function: #function, line: #line)
     }
     
     // MARK: - Statistics

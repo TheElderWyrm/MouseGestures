@@ -253,6 +253,30 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
             ],
             icon: "clock",
             hidden: true
+        ),
+        PluginAction(
+            id: "set_variable",
+            name: "Set Variable",
+            description: "Store a value in a named variable. Use {VARIABLE_NAME} in any action parameter to substitute the value.",
+            requiresParameters: true,
+            supportedParameters: [
+                ParameterDefinition(
+                    key: "variable_name",
+                    name: "Variable Name",
+                    type: .string,
+                    required: true,
+                    description: "Name of the variable (e.g. my_url, target_app). Reference it later as {my_url}."
+                ),
+                ParameterDefinition(
+                    key: "variable_value",
+                    name: "Value",
+                    type: .string,
+                    required: true,
+                    defaultValue: AnyCodable(""),
+                    description: "Value to store. Supports tokens: {clipboard}, {selected_text}, {frontmost_app}, {frontmost_app_name}."
+                )
+            ],
+            icon: "character.cursor.ibeam"
         )
     ]
     
@@ -285,6 +309,8 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
             try executeRepeat(parameters: parameters, context: context)
         case "delay":
             executeDelay(parameters: parameters, context: context)
+        case "set_variable":
+            executeSetVariable(parameters: parameters, context: context)
         default:
             throw PluginError.actionNotFound(action.id)
         }
@@ -310,6 +336,10 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
         case "delay":
             if let duration = parameters.number(for: "duration"), duration < 0 {
                 return .invalid(error: "Delay duration must be positive")
+            }
+        case "set_variable":
+            guard let name = parameters.string(for: "variable_name"), !name.isEmpty else {
+                return .invalid(error: "Variable name is required")
             }
         default:
             break
@@ -718,6 +748,16 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
         if let d = value as? Double { return d }
         if let i = value as? Int { return Double(i) }
         return nil
+    }
+
+    private func executeSetVariable(parameters: ActionParameters, context: PluginContext) {
+        guard let name = parameters.string(for: "variable_name"), !name.isEmpty else {
+            context.logger.log("Set Variable: variable_name is missing or empty", file: #file, function: #function, line: #line)
+            return
+        }
+        let value = parameters.string(for: "variable_value") ?? ""
+        VariableStore.shared.set(name, value: value)
+        context.logger.log("Set variable '\(name)' = '\(value)'", file: #file, function: #function, line: #line)
     }
 
     private func executeDelay(parameters: ActionParameters, context: PluginContext) {

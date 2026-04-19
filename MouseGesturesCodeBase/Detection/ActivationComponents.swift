@@ -53,10 +53,31 @@ struct ScreenZoneConfig: ActivationComponentConfig {
 struct DragTypeConfig: ActivationComponentConfig {
     var isEnabled: Bool = false
     var dragType: DragModifier = .none
-    
+    /// When true the gesture fires on click-in-zone **and** drag-into-zone (combined mode).
+    var allowClick: Bool = false
+
     var displayValue: String {
         guard isEnabled else { return "Not configured" }
+        if allowClick {
+            return dragType.displayName.replacingOccurrences(of: " Drag", with: " Click/Drag")
+        }
         return dragType.displayName
+    }
+
+    // Custom Codable so old saved gestures without `allowClick` decode correctly.
+    enum CodingKeys: String, CodingKey { case isEnabled, dragType, allowClick }
+
+    init(isEnabled: Bool = false, dragType: DragModifier = .none, allowClick: Bool = false) {
+        self.isEnabled = isEnabled
+        self.dragType = dragType
+        self.allowClick = allowClick
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        isEnabled  = try c.decode(Bool.self, forKey: .isEnabled)
+        dragType   = try c.decode(DragModifier.self, forKey: .dragType)
+        allowClick = try c.decodeIfPresent(Bool.self, forKey: .allowClick) ?? false
     }
 }
 

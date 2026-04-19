@@ -179,7 +179,11 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     
     // Gesture lookup for efficient matching
     private var gestureLookup: GestureLookup?
-    
+
+    // Keys of combined (click-or-drag) gestures fired by click detection.
+    // Suppresses re-firing when zone tracking starts after a button press.
+    private var clickFiredKeys: Set<String> = []
+
     // Statistics
     private var zoneEnterCount = 0
     private var gestureTriggeredCount = 0
@@ -457,14 +461,33 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         }
     }
     
+    /// Called by MouseButtonDetectorPlugin after a combined gesture fires via click.
+    /// Prevents this plugin from re-firing the same gesture when zone tracking starts.
+    func suppressClickFiring(forKey key: String) {
+        clickFiredKeys.insert(key)
+        // Clear the suppression after a brief window — long enough to cover the
+        // synchronous activationEngaged path, but short enough not to block legitimate
+        // drag re-entries after the button is released and re-pressed.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in
+            self?.clickFiredKeys.remove(key)
+        }
+    }
+
     private func detectGesture(zone: ScreenZone, dragModifier: DragModifier) {
         // Use cached modifiers, normalized to match GestureLookup key format
         let modifiers = cachedModifiers.normalized
 
         guard let lookup = gestureLookup else { return }
-        // Filter out click gestures (mouseButton enabled, no drag) — they fire via click detection
+        // • Filter out pure click gestures (mouseButton enabled, dragModifier == .none)
+        //   — they fire exclusively via click detection in MouseButtonDetectorPlugin.
+        // • Filter out combined (click/drag) gestures that were just fired by click
+        //   detection — prevents double-firing when zone tracking starts after the click.
         let matching = lookup.findMatchingGestures(zone: zone, dragModifier: dragModifier, modifiers: modifiers)
-            .filter { !(($0.components.mouseButton?.isEnabled == true) && $0.dragModifier == .none) }
+            .filter { gesture in
+                if gesture.components.mouseButton?.isEnabled == true && gesture.dragModifier == .none { return false }
+                if gesture.components.dragType?.allowClick == true && clickFiredKeys.contains(gesture.triggerKey) { return false }
+                return true
+            }
 
         if let gesture = matching.first {
             gestureTriggeredCount += 1
