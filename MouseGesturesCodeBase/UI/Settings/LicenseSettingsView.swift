@@ -46,9 +46,9 @@ struct LicenseSettingsView: View {
                 .background(RoundedRectangle(cornerRadius: MGStyle.Corner.md).fill(MGStyle.Colors.contentBackground))
                 .overlay(RoundedRectangle(cornerRadius: MGStyle.Corner.md).stroke(MGStyle.Colors.separator, lineWidth: 0.5))
                 
-                if !licenseService.isPro {
+                if licenseService.status != .pro {
                     VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
-                        Text("Upgrade to Pro")
+                        Text(licenseService.isTrial ? "Purchase Pro License" : "Upgrade to Pro")
                             .font(.headline)
                         
                         if paymentService.products.isEmpty {

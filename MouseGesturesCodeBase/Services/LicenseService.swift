@@ -53,13 +53,13 @@ public class LicenseService: ObservableObject {
     public func refreshLicenseStatus() {
         // Handle forced free mode for testing
         if forceFreeMode {
-            status = .free
+            updateStatus(.free, remaining: 0)
             return
         }
 
         // Check for actual purchase via StoreKit
         if PaymentService.shared.isProUnlocked {
-            status = .pro
+            updateStatus(.pro, remaining: 0)
             return
         }
         
@@ -72,19 +72,26 @@ public class LicenseService: ObservableObject {
             let daysElapsed = components.day ?? 0
             
             if daysElapsed < trialDurationDays {
-                status = .trial
-                trialDaysRemaining = trialDurationDays - daysElapsed
+                updateStatus(.trial, remaining: trialDurationDays - daysElapsed)
             } else {
-                status = .free
-                trialDaysRemaining = 0
+                updateStatus(.free, remaining: 0)
             }
         } else {
             // First launch - start trial
             let now = Date()
             defaults.set(now, forKey: firstLaunchKey)
-            status = .trial
-            trialDaysRemaining = trialDurationDays
+            updateStatus(.trial, remaining: trialDurationDays)
         }
+    }
+
+    private func updateStatus(_ newStatus: LicenseStatus, remaining: Int) {
+        self.status = newStatus
+        self.trialDaysRemaining = remaining
+        
+        NotificationCenter.default.post(
+            name: NSNotification.Name("LicenseStatusChanged"),
+            object: self
+        )
     }
     
     /// Returns true if the current license allows Pro features

@@ -1,3 +1,9 @@
+## 2026-04-19 (5)
+
+### Bug Fixes & UI Polishing
+- **Immediate UI Refresh**: Updated `LicenseService` to broadcast `LicenseStatusChanged` whenever the status is refreshed (including manual developer overrides), ensuring tabs and gated features update instantly without requiring a restart.
+- **Improved Trial Experience**: `LicenseSettingsView` now continues to display Pro features and purchase options during the 30-day trial period, giving users a clear path to upgrade before the trial expires.
+- **Tutorial Stability**: Fixed state binding issues to ensure the tutorial correctly advances and dismisses popovers as expected.
 ## 2026-04-19 (4)
 
 ### UI & Tutorial Improvements
