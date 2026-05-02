@@ -36,6 +36,9 @@ public class LicenseService: ObservableObject {
     private let defaults = UserDefaults.standard
     private let lastNotifiedThresholdKey = "MGLastNotifiedTrialThreshold"
     
+    private var checkTimer: Timer?
+    private let lastCheckDateKey = "MGLastTrialCheckDate"
+
     // MARK: - Initialization
     
     private init() {
@@ -46,6 +49,30 @@ public class LicenseService: ObservableObject {
             for await _ in PaymentService.shared.$purchasedProductIDs.values {
                 self.refreshLicenseStatus()
             }
+        }
+
+        // Start periodic check timer (every hour to be safe, but checks date)
+        startCheckTimer()
+    }
+    
+    deinit {
+        checkTimer?.invalidate()
+    }
+
+    private func startCheckTimer() {
+        checkTimer = Timer.scheduledTimer(withTimeInterval: 3600, repeats: true) { [weak self] _ in
+            self?.performDailyCheck()
+        }
+    }
+
+    private func performDailyCheck() {
+        let now = Date()
+        let lastCheck = defaults.object(forKey: lastCheckDateKey) as? Date ?? .distantPast
+        
+        // Check if it's a new day or at least 24 hours passed
+        if !Calendar.current.isDate(now, inSameDayAs: lastCheck) {
+            refreshLicenseStatus()
+            defaults.set(now, forKey: lastCheckDateKey)
         }
     }
     
@@ -76,7 +103,7 @@ public class LicenseService: ObservableObject {
             if daysElapsed < trialDurationDays {
                 updateStatus(.trial, remaining: trialDurationDays - daysElapsed)
             } else {
-                updateStatus(.free, remaining: 0)
+                updateStatus(.expired, remaining: 0)
             }
         } else {
             // First launch - start trial
@@ -88,35 +115,48 @@ public class LicenseService: ObservableObject {
 
     private func updateStatus(_ newStatus: LicenseStatus, remaining: Int) {
         let oldStatus = self.status
+        let oldRemaining = self.trialDaysRemaining
+        
         self.status = newStatus
         self.trialDaysRemaining = remaining
         
-        if oldStatus != newStatus || remaining != trialDaysRemaining {
+        if oldStatus != newStatus || remaining != oldRemaining {
             checkTrialThresholds(status: newStatus, remaining: remaining)
+            
+            NotificationCenter.default.post(
+                name: NSNotification.Name("LicenseStatusChanged"),
+                object: self
+            )
         }
-
-        NotificationCenter.default.post(
-            name: NSNotification.Name("LicenseStatusChanged"),
-            object: self
-        )
     }
 
     private func checkTrialThresholds(status: LicenseStatus, remaining: Int) {
-        guard status == .trial || status == .free else { return }
+        // Only notify for trial or just expired
+        guard (status == .trial || status == .expired) && !PaymentService.shared.isProUnlocked else { return }
         
         let thresholds = [3, 1, 0]
-        let currentThreshold = status == .free ? 0 : remaining
+        let currentThreshold = status == .expired ? 0 : remaining
         
         guard thresholds.contains(currentThreshold) else { return }
         
-        // Only notify once per threshold per day
+        // Only notify once per threshold per day to prevent spam
         let lastNotified = defaults.integer(forKey: lastNotifiedThresholdKey)
         let lastDate = defaults.object(forKey: "MGLastNotifiedDate") as? Date ?? .distantPast
         
-        if lastNotified == currentThreshold && Calendar.current.isDateInToday(lastDate) {
+        if lastNotified == currentThreshold && Calendar.current.isDateInToday(lastDate) && status != .expired {
+            // For expiration (0), we might want to show it once on the day it happens
             return
         }
         
+        // Special case: if it just expired (0), and we already notified for 0 today, don't spam
+        if currentThreshold == 0 && lastNotified == 0 && Calendar.current.isDateInToday(lastDate) {
+            return
+        }
+
+        if currentThreshold == 0 {
+            NotificationCenter.default.post(name: .trialDidExpire, object: nil)
+        }
+
         sendExpirationNotification(daysRemaining: currentThreshold)
         
         defaults.set(currentThreshold, forKey: lastNotifiedThresholdKey)
@@ -124,22 +164,25 @@ public class LicenseService: ObservableObject {
     }
 
     private func sendExpirationNotification(daysRemaining: Int) {
+        // If Pro is already unlocked, don't send anything
+        if PaymentService.shared.isProUnlocked { return }
+
         let content = UNMutableNotificationContent()
         content.categoryIdentifier = "TRIAL_EXPIRATION"
         
         if daysRemaining > 0 {
-            content.title = "MouseGestures Trial Ending"
-            content.body = "Your Pro trial expires in \(daysRemaining) day\(daysRemaining == 1 ? "" : "s"). Upgrade now to keep all features."
+            content.title = "MouseGestures Pro Trial Ending"
+            content.body = "Your trial expires in \(daysRemaining) day\(daysRemaining == 1 ? "" : "s"). Upgrade now to keep all features."
         } else {
-            content.title = "MouseGestures Trial Expired"
-            content.body = "Your Pro trial has expired. Upgrade to Pro to continue using advanced features."
+            content.title = "MouseGestures Pro Trial Expired"
+            content.body = "Your trial has expired. Upgrade to continue using advanced features."
         }
         
         content.userInfo = ["daysRemaining": daysRemaining]
         content.sound = .default
         
         let request = UNNotificationRequest(
-            identifier: "com.mousegestures.trial.expiration",
+            identifier: "com.mousegestures.trial.expiration.\(daysRemaining)",
             content: content,
             trigger: nil
         )
@@ -170,7 +213,39 @@ public class LicenseService: ObservableObject {
     /// Reset the trial (for testing purposes)
     public func resetTrial() {
         defaults.removeObject(forKey: firstLaunchKey)
+        defaults.removeObject(forKey: lastNotifiedThresholdKey)
+        defaults.removeObject(forKey: "MGLastNotifiedDate")
+        defaults.removeObject(forKey: "MGFootprintForcedFree")
+        forceFreeMode = false
         refreshLicenseStatus()
+    }
+    
+    /// Forces the trial to start today (for testing purposes)
+    public func startTrial() {
+        defaults.set(Date(), forKey: firstLaunchKey)
+        defaults.removeObject(forKey: lastNotifiedThresholdKey)
+        defaults.removeObject(forKey: "MGLastNotifiedDate")
+        defaults.removeObject(forKey: "MGFootprintForcedFree")
+        forceFreeMode = false
+        refreshLicenseStatus()
+    }
+    
+    /// Forces the trial to expire (for testing purposes)
+    public func expireTrial() {
+        // Set first launch date to 31 days ago
+        let expiredDate = Calendar.current.date(byAdding: .day, value: -(trialDurationDays + 1), to: Date())
+        defaults.set(expiredDate, forKey: firstLaunchKey)
+        refreshLicenseStatus()
+    }
+    
+    /// Removes any Pro license (for testing purposes)
+    public func removeProLicense() {
+        // Clear trial and pro indicators
+        defaults.removeObject(forKey: firstLaunchKey)
+        defaults.set(true, forKey: "MGFootprintForcedFree") // Optional indicator
+        forceFreeMode = true // This will trigger a refresh via didSet
+        
+        // If there were other persistence keys for pro status, clear them here.
         
         NotificationCenter.default.post(
             name: NSNotification.Name("LicenseStatusChanged"),
@@ -226,4 +301,8 @@ public class LicenseService: ObservableObject {
         
         return corePrefixes.contains { identifier.hasPrefix($0) }
     }
+}
+
+extension Notification.Name {
+    public static let trialDidExpire = Notification.Name("com.mousegestures.trialDidExpire")
 }

@@ -78,8 +78,7 @@ class DetectionPluginManager: NSObject {
             ScreenZoneDetectorPlugin(),
             KeyboardShortcutDetectorPlugin(),
             MouseButtonDetectorPlugin(),
-            AppConfigurationDetectorPlugin(),
-            TestDetectionPlugin()
+            AppConfigurationDetectorPlugin()
         ]
         
         for plugin in builtInPlugins {

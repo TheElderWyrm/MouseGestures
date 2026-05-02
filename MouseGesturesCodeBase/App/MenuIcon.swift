@@ -9,8 +9,11 @@ class MenuIcon: NSObject {
     
     private var statusItem: NSStatusItem?
     private var profilesMenuItem: NSMenuItem?
+    private var gesturesMenuItem: NSMenuItem?
+    private var licenseMenuItem: NSMenuItem?
     private weak var delegate: MenuIconDelegate?
     private let profileManager = ProfileManager.shared
+    private let licenseService = LicenseService.shared
     
     // MARK: - Initialization
     
@@ -38,6 +41,14 @@ class MenuIcon: NSObject {
             self,
             selector: #selector(profilesListChanged),
             name: .profilesDidChange,
+            object: nil
+        )
+
+        // Listen for license changes
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(licenseChanged),
+            name: NSNotification.Name("LicenseStatusChanged"),
             object: nil
         )
         
@@ -74,11 +85,6 @@ class MenuIcon: NSObject {
         
         menu.addItem(NSMenuItem.separator())
         
-        // Enable Gestures menu item
-        let gesturesItem = NSMenuItem(title: "Enable Gestures", action: #selector(toggleGestures), keyEquivalent: "")
-        gesturesItem.target = self
-        menu.addItem(gesturesItem)
-        
         // Add profiles submenu
         let profilesItem = NSMenuItem(title: "Profiles", action: nil, keyEquivalent: "")
         let profilesSubmenu = NSMenu()
@@ -87,6 +93,21 @@ class MenuIcon: NSObject {
         profilesMenuItem = profilesItem
         updateProfilesMenu()
         
+        // Add gestures submenu
+        let currentGesturesItem = NSMenuItem(title: "Gestures", action: nil, keyEquivalent: "")
+        let gesturesSubmenu = NSMenu()
+        currentGesturesItem.submenu = gesturesSubmenu
+        menu.addItem(currentGesturesItem)
+        gesturesMenuItem = currentGesturesItem
+        updateGesturesMenu()
+
+        // License status item
+        let licenseItem = NSMenuItem(title: "License: ...", action: nil, keyEquivalent: "")
+        licenseItem.isEnabled = false // Greys it out
+        menu.addItem(licenseItem)
+        self.licenseMenuItem = licenseItem
+        updateLicenseMenu()
+
         menu.addItem(NSMenuItem.separator())
         
         // Check Accessibility Permissions menu item
@@ -208,6 +229,72 @@ class MenuIcon: NSObject {
         delegate?.menuIconDidSelectCheckPermissions()
     }
     
+    private func updateLicenseMenu() {
+        guard let item = licenseMenuItem else { return }
+        
+        let status = licenseService.status
+        let title: String
+        
+        switch status {
+        case .pro:
+            title = "License: Pro"
+        case .trial:
+            title = "License: Trial (\(licenseService.trialDaysRemaining) days left)"
+        case .expired, .free:
+            title = "License: Free"
+        }
+        
+        item.title = title
+    }
+    
+    private func updateGesturesMenu() {
+        guard let submenu = gesturesMenuItem?.submenu else { return }
+        submenu.removeAllItems()
+        
+        guard let activeProfile = profileManager.activeProfile else {
+            let item = NSMenuItem(title: "No active profile", action: nil, keyEquivalent: "")
+            item.isEnabled = false
+            submenu.addItem(item)
+            return
+        }
+        
+        let gestures = activeProfile.gestures
+        
+        if gestures.isEmpty {
+            let item = NSMenuItem(title: "No gestures in this profile", action: nil, keyEquivalent: "")
+            item.isEnabled = false
+            submenu.addItem(item)
+            return
+        }
+        
+        for gesture in gestures {
+            let actionName = PluginManager.shared.getAction(identifier: gesture.actionIdentifier)?.action.name ?? "Unknown Action"
+            let name = (gesture.name ?? "").isEmpty ? actionName : gesture.name!
+            let activationText = gesture.displayDescription
+            
+            // Format: Title: (Activation) -> (Action)
+            // Activation is the trigger (zone, modifiers, etc)
+            // Action is the display name of the action being triggered
+            let title = "\(name): (\(activationText)) -> (\(actionName))"
+            let item = NSMenuItem(title: title, action: #selector(gestureMenuItemAction), keyEquivalent: "")
+            item.target = self
+            submenu.addItem(item)
+        }
+    }
+
+    @objc private func gestureMenuItemAction() {
+        // No-op - just to keep items enabled
+    }
+
+    @objc private func licenseChanged() {
+        let work = { [weak self] in
+            guard let self = self else { return }
+            self.updateLicenseMenu()
+            self.updateAppearance()
+        }
+        if Thread.isMainThread { work() } else { DispatchQueue.main.async(execute: work) }
+    }
+    
     // MARK: - Profile Management
     
     private func updateProfilesMenu() {
@@ -266,6 +353,8 @@ class MenuIcon: NSObject {
             self.updateVisibility()
             if self.statusItem != nil {
                 self.updateProfilesMenu()
+                self.updateGesturesMenu()
+                self.updateLicenseMenu()
                 self.updateGestureToggleState()
                 self.updateAppearance()
             }
@@ -274,12 +363,18 @@ class MenuIcon: NSObject {
     }
     
     @objc private func profileChanged() {
-        let work: () -> Void = { [weak self] in self?.updateProfilesMenu() }
+        let work: () -> Void = { [weak self] in 
+            self?.updateProfilesMenu()
+            self?.updateGesturesMenu()
+        }
         if Thread.isMainThread { work() } else { DispatchQueue.main.async(execute: work) }
     }
     
     @objc private func profilesListChanged() {
-        let work: () -> Void = { [weak self] in self?.updateProfilesMenu() }
+        let work: () -> Void = { [weak self] in 
+            self?.updateProfilesMenu()
+            self?.updateGesturesMenu()
+        }
         if Thread.isMainThread { work() } else { DispatchQueue.main.async(execute: work) }
     }
 }

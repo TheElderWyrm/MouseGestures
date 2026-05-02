@@ -12,10 +12,57 @@ struct DeveloperView: View {
     @State private var logContent: String = ""
     @State private var isLoadingLogContent = false
     
-    @State private var plugins: [PluginInfo] = []
-    @State private var selectedPlugin: PluginInfo?
+    @State private var unifiedPlugins: [UnifiedPluginInfo] = []
+    @State private var selectedUnifiedPlugin: UnifiedPluginInfo?
+    @State private var pluginSearchText = ""
+    @State private var selectedPluginType: UnifiedPluginType? = nil
     @State private var showingPluginDetails = false
     @State private var showingInstallPlugin = false
+    
+    enum UnifiedPluginType: String, CaseIterable, Identifiable {
+        case action = "Action"
+        case detection = "Detection"
+        case service = "Service"
+        case ui = "UI"
+        
+        var id: String { self.rawValue }
+        
+        var icon: String {
+            switch self {
+            case .action: return "bolt.fill"
+            case .detection: return "hand.tap.fill"
+            case .service: return "gearshape.2.fill"
+            case .ui: return "uiwindow.split.2x1"
+            }
+        }
+        
+        var color: Color {
+            switch self {
+            case .action: return .blue
+            case .detection: return .orange
+            case .service: return .green
+            case .ui: return .purple
+            }
+        }
+    }
+    
+    struct UnifiedPluginInfo: Identifiable {
+        let id: String
+        let identifier: String
+        let name: String
+        let type: UnifiedPluginType
+        let version: String
+        let author: String
+        let description: String
+        let isBuiltIn: Bool
+        var isEnabled: Bool
+        
+        // Additional info
+        var actionCount: Int? = nil
+        var serviceCategory: ServiceCategory? = nil
+        var uiCategory: UIPluginCategory? = nil
+        var permissions: String = ""
+    }
     
     private let perfMonitor = PerformanceMonitorService.shared
     @State private var memoryUsage: (resident: String, virtual: String) = ("", "")
@@ -52,7 +99,6 @@ struct DeveloperView: View {
         case settings = "Developer Settings"
         case logging = "Logging"
         case plugins = "Plugin Management"
-        case detectionPlugins = "Detection Plugins"
         case coordinator = "Activation Coordinator"
         case services = "Services"
         case performance = "Performance"
@@ -63,7 +109,6 @@ struct DeveloperView: View {
             case .settings: return "gearshape"
             case .logging: return "doc.text"
             case .plugins: return "puzzlepiece.extension"
-            case .detectionPlugins: return "hand.tap"
             case .coordinator: return "flowchart"
             case .services: return "gearshape.2"
             case .performance: return "speedometer"
@@ -92,7 +137,6 @@ struct DeveloperView: View {
                     case .settings: developerSettingsSection
                     case .logging: loggingSection
                     case .plugins: pluginsSection
-                    case .detectionPlugins: detectionPluginsSection
                     case .coordinator: coordinatorSection
                     case .services: servicesSection
                     case .performance: performanceSection
@@ -138,20 +182,22 @@ struct DeveloperView: View {
             MGSectionHeader("Developer Settings")
             
             MGContentCard {
-                Toggle(isOn: $developerModeEnabled) {
-                    VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
-                        Text("Developer Mode")
-                            .font(.system(size: MGStyle.FontSize.body, weight: .medium))
-                        Text("Enables this Developer tab and other advanced developer features")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                if LicenseService.shared.status != .free {
+                    Toggle(isOn: $developerModeEnabled) {
+                        VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
+                            Text("Developer Mode")
+                                .font(.system(size: MGStyle.FontSize.body, weight: .medium))
+                            Text("Enables this Developer tab and other advanced developer features")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
                     }
+                    .onChange(of: developerModeEnabled) { newValue in
+                        uiServices.setDeveloperModeEnabled(newValue)
+                    }
+                    
+                    Divider()
                 }
-                .onChange(of: developerModeEnabled) { newValue in
-                    uiServices.setDeveloperModeEnabled(newValue)
-                }
-                
-                Divider()
                 
                 Toggle(isOn: $debugLoggingEnabled) {
                     VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
@@ -280,94 +326,189 @@ struct DeveloperView: View {
         .onTapGesture { selectLogFile(logFile) }
     }
     
-    // MARK: - Plugins Section
+    // MARK: - Plugin Management Section
     
     private var pluginsSection: some View {
         VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {
             MGSectionHeader("Plugin Management")
             
-            MGContentCard {
-                HStack {
-                    Button(action: { showingInstallPlugin = true }) {
-                        Label("Install Plugin", systemImage: "plus.circle")
-                    }
-                    .buttonStyle(.borderedProminent)
-                    
-                    Button("Refresh") { refreshPlugins() }
-                    Spacer()
-                    Text("\(plugins.count) plugins loaded")
-                        .font(.caption).foregroundColor(.secondary)
-                }
-            }
-            
-            if !plugins.isEmpty {
+            // Search and Filters
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
                 MGContentCard {
-                    Text("Loaded Plugins")
-                        .font(.system(size: MGStyle.FontSize.heading, weight: .semibold))
-                    
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
-                            ForEach(plugins, id: \.identifier) { plugin in
-                                pluginRow(plugin)
+                    VStack(spacing: MGStyle.Spacing.lg) {
+                        HStack(spacing: MGStyle.Spacing.lg) {
+                            MGSearchField("Search plugins...", text: $pluginSearchText)
+                            
+                            Button(action: { refreshUnifiedPlugins() }) {
+                                Label("Refresh", systemImage: "arrow.clockwise")
                             }
+                            .buttonStyle(.bordered)
+                            
+                            Button(action: { showingInstallPlugin = true }) {
+                                Label("Install Plugin", systemImage: "plus.circle")
+                            }
+                            .buttonStyle(.borderedProminent)
+                        }
+                        
+                        HStack(spacing: MGStyle.Spacing.md) {
+                            Text("Filter:")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            
+                            Button(action: { selectedPluginType = nil }) {
+                                Text("All")
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 4)
+                                    .background(selectedPluginType == nil ? Color.accentColor : Color.secondary.opacity(0.1))
+                                    .foregroundColor(selectedPluginType == nil ? .white : .primary)
+                                    .cornerRadius(12)
+                            }
+                            .buttonStyle(.plain)
+                            
+                            ForEach(UnifiedPluginType.allCases) { type in
+                                Button(action: { selectedPluginType = type }) {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: type.icon)
+                                            .font(.system(size: 10))
+                                        Text(type.rawValue)
+                                    }
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 4)
+                                    .background(selectedPluginType == type ? type.color : Color.secondary.opacity(0.1))
+                                    .foregroundColor(selectedPluginType == type ? .white : .primary)
+                                    .cornerRadius(12)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                            
+                            Spacer()
+                            
+                            Text("\(filteredPlugins.count) plugins")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
                         }
                     }
                 }
             }
             
-            if let plugin = selectedPlugin {
-                pluginDetailsView(plugin)
+            // Unified Plugin List
+            if filteredPlugins.isEmpty {
+                MGContentCard {
+                    VStack(spacing: MGStyle.Spacing.lg) {
+                        Image(systemName: "puzzlepiece.extension")
+                            .font(.system(size: 40))
+                            .foregroundColor(.secondary.opacity(0.3))
+                        Text(pluginSearchText.isEmpty ? "No plugins loaded" : "No plugins matching your search")
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 150)
+                }
+            } else {
+                MGContentCard {
+                    ScrollView {
+                        VStack(spacing: 0) {
+                            ForEach(filteredPlugins) { plugin in
+                                unifiedPluginRow(plugin)
+                                if plugin.id != filteredPlugins.last?.id {
+                                    Divider().padding(.horizontal, MGStyle.Spacing.lg)
+                                }
+                            }
+                        }
+                    }
+                    .frame(maxHeight: 500)
+                }
+            }
+            
+            if let plugin = selectedUnifiedPlugin {
+                unifiedPluginDetailsView(plugin)
             }
         }
     }
     
-    // MARK: - Detection Plugins Section
-
-    private var detectionPluginsSection: some View {
-        VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {
-            MGSectionHeader("Detection Plugins")
-
-            MGContentCard {
-                Text("Detection plugins listen for input events and trigger gesture recognition. Disabling a plugin stops that input method.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-
-            let detectionPlugins = DetectionPluginManager.shared.getAllPlugins()
-            MGContentCard {
-                VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
-                    ForEach(detectionPlugins, id: \.identifier) { plugin in
-                        detectionPluginRow(plugin)
-                    }
-                }
-            }
+    private var filteredPlugins: [UnifiedPluginInfo] {
+        unifiedPlugins.filter { plugin in
+            let matchesSearch = pluginSearchText.isEmpty || 
+                plugin.name.localizedCaseInsensitiveContains(pluginSearchText) ||
+                plugin.identifier.localizedCaseInsensitiveContains(pluginSearchText) ||
+                plugin.description.localizedCaseInsensitiveContains(pluginSearchText)
+            
+            let matchesType = selectedPluginType == nil || plugin.type == selectedPluginType
+            
+            return matchesSearch && matchesType
         }
     }
-
-    private func detectionPluginRow(_ plugin: DetectionPlugin) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
+    
+    private func unifiedPluginRow(_ plugin: UnifiedPluginInfo) -> some View {
+        HStack(spacing: MGStyle.Spacing.lg) {
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
+                HStack(spacing: MGStyle.Spacing.md) {
                     Text(plugin.name)
                         .font(.system(size: MGStyle.FontSize.body, weight: .medium))
-                    Text(plugin.description)
-                        .font(.caption)
+                    
+                    // Type Chip
+                    HStack(spacing: 4) {
+                        Image(systemName: plugin.type.icon)
+                            .font(.system(size: 8))
+                        Text(plugin.type.rawValue)
+                            .font(.system(size: 9, weight: .bold))
+                            .textCase(.uppercase)
+                    }
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(plugin.type.color.opacity(0.15))
+                    .foregroundColor(plugin.type.color)
+                    .cornerRadius(4)
+                    
+                    if plugin.isBuiltIn {
+                        Text("BUILT-IN")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundColor(.secondary.opacity(0.6))
+                            .padding(.horizontal, 4)
+                            .overlay(RoundedRectangle(cornerRadius: 2).stroke(Color.secondary.opacity(0.3), lineWidth: 0.5))
+                    }
+                }
+                
+                Text(plugin.description)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+            }
+            
+            Spacer()
+            
+            HStack(spacing: MGStyle.Spacing.xl) {
+                if plugin.type == .action, let count = plugin.actionCount {
+                    Text("\(count) actions")
+                        .font(.caption2)
                         .foregroundColor(.secondary)
-                    Text("v\(plugin.version) · Priority \(plugin.priority)")
+                }
+                
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("v\(plugin.version)")
                         .font(.caption2)
                         .foregroundColor(.secondary.opacity(0.7))
+                    Text(plugin.identifier)
+                        .font(.system(size: 8, design: .monospaced))
+                        .foregroundColor(.secondary.opacity(0.5))
                 }
-                Spacer()
+                
                 Toggle("", isOn: Binding(
                     get: { plugin.isEnabled },
-                    set: { DetectionPluginManager.shared.setPluginEnabled(plugin.identifier, enabled: $0) }
+                    set: { togglePlugin(plugin, enabled: $0) }
                 ))
                 .toggleStyle(.switch)
+                .controlSize(.small)
                 .labelsHidden()
+                
+                MGActionButton("info.circle", help: "View details") {
+                    selectedUnifiedPlugin = plugin
+                }
             }
-            .padding(.vertical, MGStyle.Spacing.sm)
-            Divider()
         }
+        .padding(MGStyle.Spacing.lg)
+        .contentShape(Rectangle())
+        .onTapGesture { selectedUnifiedPlugin = plugin }
+        .background(selectedUnifiedPlugin?.id == plugin.id ? MGStyle.Colors.selectedRow : Color.clear)
     }
 
     // MARK: - Activation Coordinator Section
@@ -443,89 +584,6 @@ struct DeveloperView: View {
         }
     }
 
-    private func pluginRow(_ plugin: PluginInfo) -> some View {
-        VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
-            HStack {
-                VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
-                    HStack {
-                        Text(plugin.name)
-                            .font(.system(size: MGStyle.FontSize.body, weight: .medium))
-                        Text("v\(plugin.version)")
-                            .font(.caption).foregroundColor(.secondary)
-                        if plugin.isBuiltIn {
-                            MGBadge("BUILT-IN", color: .blue)
-                        }
-                    }
-                    Text(plugin.description)
-                        .font(.caption).foregroundColor(.secondary).lineLimit(2)
-                    HStack(spacing: MGStyle.Spacing.lg) {
-                        Label("\(plugin.actionCount) actions", systemImage: "bolt.circle")
-                            .font(.caption2).foregroundColor(.secondary)
-                        Label(plugin.category.rawValue, systemImage: "tag")
-                            .font(.caption2).foregroundColor(.secondary)
-                        Text("by \(plugin.author)")
-                            .font(.caption2).foregroundColor(.secondary)
-                    }
-                }
-                Spacer()
-                HStack(spacing: MGStyle.Spacing.xs) {
-                    if !plugin.isBuiltIn {
-                        MGActionButton("lock.shield", help: "Permissions") { showPluginPermissions(plugin) }
-                        MGActionButton("trash", help: "Uninstall", destructive: true) { uninstallPlugin(plugin) }
-                    }
-                    MGActionButton("arrow.clockwise", help: "Reload") { reloadPlugin(plugin) }
-                }
-            }
-            Divider()
-        }
-        .padding(.vertical, MGStyle.Spacing.sm)
-        .contentShape(Rectangle())
-        .onTapGesture { selectedPlugin = plugin }
-    }
-    
-    private func pluginDetailsView(_ plugin: PluginInfo) -> some View {
-        MGContentCard {
-            Text("Plugin Details: \(plugin.name)")
-                .font(.system(size: MGStyle.FontSize.heading, weight: .semibold))
-            
-            Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: MGStyle.Spacing.xxl, verticalSpacing: MGStyle.Spacing.md) {
-                GridRow {
-                    Text("Identifier:").foregroundColor(.secondary)
-                    Text(plugin.identifier).font(.system(.caption, design: .monospaced))
-                }
-                GridRow {
-                    Text("Permissions:").foregroundColor(.secondary)
-                    Text(describePermissions(plugin.permissions))
-                }
-                GridRow {
-                    Text("Status:").foregroundColor(.secondary)
-                    HStack {
-                        Circle().fill(plugin.isEnabled ? Color.green : Color.gray).frame(width: 8, height: 8)
-                        Text(plugin.isEnabled ? "Enabled" : "Disabled")
-                    }
-                }
-            }
-            
-            if plugin.actionCount > 0 {
-                VStack(alignment: .leading, spacing: MGStyle.Spacing.sm) {
-                    Text("Provided Actions:").font(.caption).foregroundColor(.secondary)
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
-                            ForEach(uiServices.getPluginActions(plugin.identifier), id: \.id) { action in
-                                HStack {
-                                    Image(systemName: action.icon ?? "questionmark.circle").frame(width: 16).font(.caption)
-                                    Text(action.name).font(.caption)
-                                }
-                            }
-                        }
-                    }
-                    .frame(maxHeight: 100)
-                    .padding(MGStyle.Spacing.sm)
-                    .background(RoundedRectangle(cornerRadius: MGStyle.Corner.sm).fill(MGStyle.Colors.contentBackground))
-                }
-            }
-        }
-    }
     
     // MARK: - Services Section
     
@@ -730,7 +788,7 @@ struct DeveloperView: View {
         developerModeEnabled = uiServices.isDeveloperModeEnabled()
         debugLoggingEnabled = uiServices.isDebugModeEnabled()
         refreshLogFiles()
-        refreshPlugins()
+        refreshUnifiedPlugins()
         refreshPerformanceMetrics()
         loadServicePlugins()
     }
@@ -811,33 +869,205 @@ struct DeveloperView: View {
         }
     }
     
-    private func refreshPlugins() { plugins = uiServices.getLoadedPlugins() }
+    private func refreshUnifiedPlugins() {
+        var allPlugins: [UnifiedPluginInfo] = []
+        
+        // 1. Action Plugins
+        let actionPlugins = uiServices.getLoadedPlugins()
+        for p in actionPlugins {
+            allPlugins.append(UnifiedPluginInfo(
+                id: "action-\(p.identifier)",
+                identifier: p.identifier,
+                name: p.name,
+                type: .action,
+                version: p.version,
+                author: p.author,
+                description: p.description,
+                isBuiltIn: p.isBuiltIn,
+                isEnabled: p.isEnabled,
+                actionCount: p.actionCount,
+                permissions: describePermissions(p.permissions)
+            ))
+        }
+        
+        // 2. Detection Plugins
+        let detectionPlugins = DetectionPluginManager.shared.getAllPlugins()
+        for p in detectionPlugins {
+            allPlugins.append(UnifiedPluginInfo(
+                id: "detection-\(p.identifier)",
+                identifier: p.identifier,
+                name: p.name,
+                type: .detection,
+                version: p.version,
+                author: "System",
+                description: p.description,
+                isBuiltIn: true,
+                isEnabled: p.isEnabled,
+                permissions: "Low-level Input"
+            ))
+        }
+        
+        // 3. Service Plugins
+        let services = servicePluginManager.getAllPlugins()
+        for p in services {
+            allPlugins.append(UnifiedPluginInfo(
+                id: "service-\(p.identifier)",
+                identifier: p.identifier,
+                name: p.name,
+                type: .service,
+                version: p.version,
+                author: p.author,
+                description: p.description,
+                isBuiltIn: p.isBuiltIn,
+                isEnabled: p.isEnabled,
+                serviceCategory: p.category,
+                permissions: describeServicePermissions(p.requiredPermissions)
+            ))
+        }
+        
+        // 4. UI Plugins
+        let uiPlugs = UIPluginManager.shared.getAllPlugins()
+        for p in uiPlugs {
+            allPlugins.append(UnifiedPluginInfo(
+                id: "ui-\(p.identifier)",
+                identifier: p.identifier,
+                name: p.displayName,
+                type: .ui,
+                version: p.version,
+                author: p.author,
+                description: p.description,
+                isBuiltIn: p.sortOrder < 100,
+                isEnabled: UIPluginManager.shared.isPluginEnabled(identifier: p.identifier),
+                uiCategory: p.category,
+                permissions: "UI/Management"
+            ))
+        }
+        
+        unifiedPlugins = allPlugins
+        if let selected = selectedUnifiedPlugin {
+            selectedUnifiedPlugin = unifiedPlugins.first(where: { $0.id == selected.id })
+        }
+    }
+    
+    private func describeServicePermissions(_ p: ServicePermissions) -> String {
+        var perms: [String] = []
+        if p.requiresAccessibility { perms.append("Accessibility") }
+        if p.requiresFileAccess { perms.append("Files") }
+        if p.requiresNetworkAccess { perms.append("Network") }
+        if p.requiresNotifications { perms.append("Notifications") }
+        if p.requiresScreenRecording { perms.append("Screen") }
+        if p.requiresAutomation { perms.append("Automation") }
+        if p.requiresFullDiskAccess { perms.append("Full Disk") }
+        return perms.isEmpty ? "None" : perms.joined(separator: ", ")
+    }
+    
+    private func togglePlugin(_ plugin: UnifiedPluginInfo, enabled: Bool) {
+        switch plugin.type {
+        case .action:
+            if enabled { _ = uiServices.reloadPlugin(plugin.identifier) }
+            else { _ = uiServices.uninstallPlugin(plugin.identifier) }
+        case .detection:
+            DetectionPluginManager.shared.setPluginEnabled(plugin.identifier, enabled: enabled)
+        case .service:
+            if enabled { _ = servicePluginManager.enablePlugin(identifier: plugin.identifier) }
+            else { _ = servicePluginManager.disablePlugin(identifier: plugin.identifier) }
+        case .ui:
+            UIPluginManager.shared.setPluginEnabled(identifier: plugin.identifier, enabled: enabled)
+        }
+        refreshUnifiedPlugins()
+    }
     
     private func handlePluginInstall(result: Result<[URL], Error>) {
         switch result {
         case .success(let urls):
             guard let url = urls.first else { return }
-            if uiServices.installPlugin(from: url) { refreshPlugins(); successMessage = "Plugin installed successfully" }
-            else { errorMessage = uiServices.errorMessage ?? "Failed to install plugin" }
+            
+            // Unified installation logic: autodetect by extension
+            let ext = url.pathExtension.lowercased()
+            
+            if ext == "plugin" || ext == "auraplugin" {
+                if uiServices.installPlugin(from: url) { 
+                    successMessage = "Action plugin installed"
+                    refreshUnifiedPlugins()
+                } else { errorMessage = uiServices.errorMessage ?? "Failed to install action plugin" }
+            } else if ext == "service" {
+                let res = servicePluginManager.installPlugin(from: url)
+                if res.success { 
+                    successMessage = "Service installed"
+                    refreshUnifiedPlugins()
+                } else { errorMessage = res.error ?? "Failed to install service" }
+            } else if ext == "uiplugin" {
+                let dest = Configuration.applicationSupportDirectory.appendingPathComponent("UIPlugins").appendingPathComponent(url.lastPathComponent)
+                do {
+                    try? FileManager.default.createDirectory(at: dest.deletingLastPathComponent(), withIntermediateDirectories: true)
+                    if FileManager.default.fileExists(atPath: dest.path) { try FileManager.default.removeItem(at: dest) }
+                    try FileManager.default.copyItem(at: url, to: dest)
+                    successMessage = "UI plugin installed. Restart app to activate."
+                    refreshUnifiedPlugins()
+                } catch { errorMessage = "Failed to install UI plugin: \(error.localizedDescription)" }
+            } else {
+                if uiServices.installPlugin(from: url) { 
+                    successMessage = "Plugin installed"
+                    refreshUnifiedPlugins()
+                } else { errorMessage = "Unsupported plugin format" }
+            }
         case .failure(let error): errorMessage = "Install failed: \(error.localizedDescription)"
         }
     }
     
-    private func uninstallPlugin(_ plugin: PluginInfo) {
-        if uiServices.uninstallPlugin(plugin.identifier) {
-            refreshPlugins()
-            if selectedPlugin?.identifier == plugin.identifier { selectedPlugin = nil }
-            successMessage = "Plugin uninstalled"
+    private func uninstallUnifiedPlugin(_ plugin: UnifiedPluginInfo) {
+        switch plugin.type {
+        case .action: _ = uiServices.uninstallPlugin(plugin.identifier)
+        case .service: _ = servicePluginManager.uninstallPlugin(identifier: plugin.identifier)
+        case .ui: errorMessage = "Manually remove from UIPlugins folder"
+        default: break
         }
+        refreshUnifiedPlugins()
+        selectedUnifiedPlugin = nil
     }
     
-    private func reloadPlugin(_ plugin: PluginInfo) {
-        if uiServices.reloadPlugin(plugin.identifier) { refreshPlugins(); successMessage = "Plugin reloaded" }
-        else { errorMessage = "Failed to reload plugin" }
+    private func reloadUnifiedPlugin(_ plugin: UnifiedPluginInfo) {
+        switch plugin.type {
+        case .action: _ = uiServices.reloadPlugin(plugin.identifier)
+        case .service:
+            _ = servicePluginManager.disablePlugin(identifier: plugin.identifier)
+            _ = servicePluginManager.enablePlugin(identifier: plugin.identifier)
+        default: break
+        }
+        refreshUnifiedPlugins()
     }
     
-    private func showPluginPermissions(_ plugin: PluginInfo) {
-        successMessage = "Permissions: \(describePermissions(plugin.permissions))"
+    private func unifiedPluginDetailsView(_ plugin: UnifiedPluginInfo) -> some View {
+        MGContentCard {
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(plugin.name).font(.headline)
+                        Text(plugin.identifier).font(.system(.caption, design: .monospaced)).foregroundColor(.secondary)
+                    }
+                    Spacer()
+                    if !plugin.isBuiltIn {
+                        HStack(spacing: MGStyle.Spacing.md) {
+                            Button("Reload") { reloadUnifiedPlugin(plugin) }
+                            Button("Uninstall", role: .destructive) { uninstallUnifiedPlugin(plugin) }
+                                .foregroundColor(.red)
+                        }
+                    }
+                    Button("Close") { selectedUnifiedPlugin = nil }.buttonStyle(.plain).foregroundColor(.secondary)
+                }
+                Divider()
+                Grid(alignment: .leading, horizontalSpacing: MGStyle.Spacing.xl, verticalSpacing: MGStyle.Spacing.md) {
+                    GridRow { Text("Type").foregroundColor(.secondary); Text(plugin.type.rawValue) }
+                    GridRow { Text("Version").foregroundColor(.secondary); Text(plugin.version) }
+                    GridRow { Text("Author").foregroundColor(.secondary); Text(plugin.author) }
+                    GridRow { Text("Status").foregroundColor(.secondary); Text(plugin.isEnabled ? "Active" : "Disabled") }
+                    GridRow { Text("Permissions").foregroundColor(.secondary); Text(plugin.permissions).font(.caption) }
+                }
+                .font(.caption)
+                Text(plugin.description).font(.callout).padding(.top, 4)
+            }
+            .padding(MGStyle.Spacing.lg)
+        }
     }
     
     private func describePermissions(_ permissions: PluginPermissions) -> String {
@@ -883,12 +1113,13 @@ struct DeveloperView: View {
         }
     }
     
+
     private func resetPreferences() { uiServices.resetAppToDefaults(); successMessage = "Preferences reset to defaults" }
     private func clearCaches() { successMessage = "Caches cleared" }
     
     private func reloadAllPlugins() {
-        for plugin in plugins where !plugin.isBuiltIn { _ = uiServices.reloadPlugin(plugin.identifier) }
-        refreshPlugins(); successMessage = "All plugins reloaded"
+        for plugin in unifiedPlugins where !plugin.isBuiltIn { reloadUnifiedPlugin(plugin) }
+        successMessage = "All plugins reloaded"
     }
     
     private func exportAllLogs() {

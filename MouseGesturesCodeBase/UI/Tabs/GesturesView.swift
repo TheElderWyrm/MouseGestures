@@ -387,7 +387,7 @@ struct GestureCardView: View {
                     Text(displayName)
                         .font(.system(size: MGStyle.FontSize.body, weight: .medium))
                         .lineLimit(1)
-                        .opacity(isEnabled ? 1 : 0.5)
+                        .opacity(isEnabled && !isLocked ? 1 : 0.5)
                     // Subtitle: action name (if custom name) + separator + trigger
                     let subtitleParts: [String] = [
                         hasName ? (actionDef?.name ?? gesture.actionIdentifier) : nil,
@@ -398,7 +398,7 @@ struct GestureCardView: View {
                             .font(.system(size: MGStyle.FontSize.caption))
                             .foregroundColor(.secondary)
                             .lineLimit(1)
-                            .opacity(isEnabled ? 0.8 : 0.4)
+                            .opacity(isEnabled && !isLocked ? 0.8 : 0.4)
                     }
                 }
                 
@@ -406,6 +406,14 @@ struct GestureCardView: View {
                 
                 // Timing indicators
                 HStack(spacing: MGStyle.Spacing.sm) {
+                    if isLocked {
+                        Text("PRO ONLY")
+                            .font(.system(size: 8, weight: .bold))
+                            .foregroundColor(.orange)
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 1)
+                            .overlay(RoundedRectangle(cornerRadius: 3).stroke(Color.orange.opacity(0.5), lineWidth: 1))
+                    }
                     if gesture.timing.repeatOnHold {
                         Image(systemName: "repeat")
                             .font(.system(size: 9))

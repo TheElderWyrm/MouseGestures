@@ -231,7 +231,12 @@ struct ActionSelectionView: View {
     
     private func actionRow(_ entry: ActionEntry) -> some View {
         HStack(spacing: MGStyle.Spacing.md) {
-            if let iconName = entry.icon {
+            if entry.isLocked {
+                Image(systemName: "lock.fill")
+                    .foregroundColor(.secondary.opacity(0.5))
+                    .font(.system(size: MGStyle.IconSize.row - 2))
+                    .frame(width: 20, alignment: .center)
+            } else if let iconName = entry.icon {
                 Image(systemName: iconName)
                     .foregroundColor(entry.isSaved ? .orange : .accentColor)
                     .font(.system(size: MGStyle.IconSize.row))
@@ -243,9 +248,21 @@ struct ActionSelectionView: View {
                     .frame(width: 20, alignment: .center)
             }
             VStack(alignment: .leading, spacing: 1) {
-                Text(entry.name)
-                    .font(.system(size: MGStyle.FontSize.body))
-                    .lineLimit(1)
+                HStack(spacing: 4) {
+                    Text(entry.name)
+                        .font(.system(size: MGStyle.FontSize.body))
+                        .lineLimit(1)
+                    
+                    if entry.isLocked {
+                        Text("PRO")
+                            .font(.system(size: 8, weight: .bold))
+                            .foregroundColor(.orange)
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 1)
+                            .overlay(RoundedRectangle(cornerRadius: 3).stroke(Color.orange.opacity(0.5), lineWidth: 1))
+                    }
+                }
+                
                 if isSearching {
                     Text(entry.categoryLabel)
                         .font(.system(size: MGStyle.FontSize.badge))
@@ -255,6 +272,8 @@ struct ActionSelectionView: View {
             }
         }
         .padding(.vertical, 1)
+        .opacity(entry.isLocked ? 0.6 : 1.0)
+        .disabled(entry.isLocked)
     }
     
     // MARK: - Category Chip
@@ -714,6 +733,10 @@ struct ActionSelectionView: View {
         let isSaved: Bool
         let isAdvanced: Bool
         let isExternal: Bool
+        
+        var isLocked: Bool {
+            (isAdvanced || isExternal) && !LicenseService.shared.isPro
+        }
     }
     
     private struct CategoryGroup: Identifiable {
@@ -775,24 +798,20 @@ struct ActionSelectionView: View {
         let q = searchText.lowercased()
         let all = allActionEntries + savedActionEntries
         return all.filter {
-            ((!$0.isAdvanced && !$0.isExternal) || licenseService.isPro) &&
-            ($0.name.lowercased().contains(q) ||
+            $0.name.lowercased().contains(q) ||
             $0.description.lowercased().contains(q) ||
-            $0.categoryLabel.lowercased().contains(q))
+            $0.categoryLabel.lowercased().contains(q)
         }
     }
     
     private var displayEntries: [ActionEntry] {
-        let base: [ActionEntry]
         if selectedCategory == "All" { 
-            base = allActionEntries 
+            return allActionEntries 
         } else if selectedCategory == "Saved" { 
-            base = savedActionEntries 
+            return savedActionEntries 
         } else {
-            base = allActionEntries.filter { $0.category.rawValue == selectedCategory }
+            return allActionEntries.filter { $0.category.rawValue == selectedCategory }
         }
-        
-        return base.filter { (!$0.isAdvanced && !$0.isExternal) || licenseService.isPro }
     }
     
     private func groupedByCategory(_ entries: [ActionEntry]) -> [CategoryGroup] {

@@ -13,6 +13,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var menuIcon: MenuIcon!
     var detectionPluginManager: DetectionPluginManager!
     var accessibilityManager: AccessibilityPermissionManager!
+    private var trialExpiredWindow: NSWindow?
     
     override init() {
         super.init()
@@ -47,6 +48,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         // Initialize menu icon
         menuIcon = MenuIcon(delegate: self)
+        
+        // Listen for trial expiration
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleTrialExpiration),
+            name: .trialDidExpire,
+            object: nil
+        )
         
         // Check current permission status and start monitoring if needed
         if accessibilityManager.checkPermission(prompt: false) {
@@ -145,6 +154,39 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         keyDown?.post(tap: .cghidEventTap)
         keyUp?.post(tap: .cghidEventTap)
+    }
+
+    @objc private func handleTrialExpiration() {
+        DispatchQueue.main.async {
+            self.showTrialExpiredProfileSelection()
+        }
+    }
+
+    func showTrialExpiredProfileSelection() {
+        if trialExpiredWindow != nil {
+            trialExpiredWindow?.makeKeyAndOrderFront(nil)
+            return
+        }
+
+        let contentView = TrialExpiredProfileSelectionView {
+            self.trialExpiredWindow?.close()
+            self.trialExpiredWindow = nil
+        }
+
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 450, height: 500),
+            styleMask: [.titled, .closable, .fullSizeContentView],
+            backing: .buffered, defer: false)
+        
+        window.center()
+        window.title = "MouseGestures Pro Trial Expired"
+        window.contentView = NSHostingView(rootView: contentView)
+        window.isReleasedWhenClosed = false
+        window.level = .floating
+        
+        self.trialExpiredWindow = window
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
     }
     
     // MARK: - Private Methods

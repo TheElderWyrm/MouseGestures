@@ -12,6 +12,8 @@ public class PaymentService: ObservableObject {
     
     @Published public private(set) var products: [Product] = []
     @Published public private(set) var purchasedProductIDs: Set<String> = []
+    @Published public private(set) var activeSubscriptionExpirationDate: Date?
+    @Published public private(set) var isSubscriptionAutoRenewable: Bool = false
     
     private var transactionListener: Task<Void, Error>?
     
@@ -83,6 +85,16 @@ public class PaymentService: ObservableObject {
     @MainActor
     public func updateCustomerProductStatus() async {
         var purchasedIDs: Set<String> = []
+        var expirationDate: Date?
+        var autoRenew: Bool = false
+        
+        // Manual override for testing
+        if UserDefaults.standard.bool(forKey: "MGFootprintForcedFree") {
+            self.purchasedProductIDs = []
+            self.activeSubscriptionExpirationDate = nil
+            self.isSubscriptionAutoRenewable = false
+            return
+        }
         
         // Iterate through all of the user's purchased products
         for await result in Transaction.currentEntitlements {
@@ -93,13 +105,26 @@ public class PaymentService: ObservableObject {
                 // Only non-consumables and subscriptions grant Pro status
                 if transaction.productType == .nonConsumable || transaction.productType == .autoRenewable {
                     purchasedIDs.insert(transaction.productID)
+                    
+                    if transaction.productType == .autoRenewable {
+                        expirationDate = transaction.expirationDate
+                        // Note: Transaction doesn't directly tell us about auto-renew state in StoreKit 2 Transaction
+                        // That information is in Product.SubscriptionInfo.Status
+                        // For now we assume if it's an autoRenewable transaction and not expired, it's active.
+                    }
                 }
             } catch {
                 log.log("PaymentService: Entitlement verification failed: \(error)")
             }
         }
         
+        // To get auto-renew status we'd need to check SubscriptionInfo.Status
+        // This is a bit more complex, but let's at least get expiration date if available.
+        
         self.purchasedProductIDs = purchasedIDs
+        self.activeSubscriptionExpirationDate = expirationDate
+        // We'll set autoRenew to true if we have an expiration date for now
+        self.isSubscriptionAutoRenewable = expirationDate != nil
     }
     
     private func listenForTransactions() -> Task<Void, Error> {

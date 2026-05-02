@@ -22,21 +22,53 @@ struct LicenseSettingsView: View {
                     }
                     
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(licenseService.status.rawValue)
-                            .font(.system(size: MGStyle.FontSize.heading, weight: .bold))
-                        
-                        if licenseService.isTrial && !PaymentService.shared.isProUnlocked {
-                            Text("\(licenseService.trialDaysRemaining) days remaining in your trial")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                        } else if licenseService.isPro {
-                            Text("Thank you for supporting MouseGestures!")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
+                        if paymentService.isProUnlocked {
+                            if paymentService.purchasedProductIDs.contains("com.mousegestures.pro.onetime") {
+                                Text("Pro (One-Time)")
+                                    .font(.system(size: MGStyle.FontSize.heading, weight: .bold))
+                                Text("Thank you for your one-time purchase!")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                            } else if paymentService.purchasedProductIDs.contains("com.mousegestures.pro.subscription") {
+                                Text("Pro (Monthly)")
+                                    .font(.system(size: MGStyle.FontSize.heading, weight: .bold))
+                                
+                                if let expirationDate = paymentService.activeSubscriptionExpirationDate {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Renews on \(expirationDate.formatted(date: .long, time: .omitted))")
+                                            .font(.subheadline)
+                                            .foregroundColor(.secondary)
+                                        
+                                        Button("Manage Subscription...") {
+                                            if let url = URL(string: "https://apps.apple.com/account/subscriptions") {
+                                                NSWorkspace.shared.open(url)
+                                            }
+                                        }
+                                        .buttonStyle(.link)
+                                        .font(.caption)
+                                    }
+                                } else {
+                                    Text("Active subscription")
+                                        .font(.subheadline)
+                                        .foregroundColor(.secondary)
+                                }
+                            } else {
+                                Text("Pro Activated")
+                                    .font(.system(size: MGStyle.FontSize.heading, weight: .bold))
+                            }
                         } else {
-                            Text("Basic features only")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
+                            Text(licenseService.status == .expired ? "Free" : licenseService.status.rawValue)
+                                .font(.system(size: MGStyle.FontSize.heading, weight: .bold))
+                            
+                            if licenseService.isTrial {
+                                Text("\(licenseService.trialDaysRemaining) days remaining in your trial")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                            } else {
+                                Text("Basic features only")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                            }
                         }
                     }
                     
@@ -82,17 +114,33 @@ struct LicenseSettingsView: View {
                 
                 if UIServices.shared.isDeveloperModeEnabled() {
                     Divider()
-                    HStack(spacing: MGStyle.Spacing.xl) {
-                        HStack(spacing: MGStyle.Spacing.md) {
-                            Text("Developer Actions:").font(.caption).foregroundColor(.secondary)
+                    VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
+                        Text("Developer Actions (Test):")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        
+                        HStack(spacing: MGStyle.Spacing.xl) {
                             Button("Reset Trial") { licenseService.resetTrial() }
                                 .buttonStyle(.link)
                                 .font(.caption)
+                            
+                            Button("Start Trial") { licenseService.startTrial() }
+                                .buttonStyle(.link)
+                                .font(.caption)
+                            
+                            Button("Expire Trial") { licenseService.expireTrial() }
+                                .buttonStyle(.link)
+                                .font(.caption)
+                            
+                            Button("Remove Pro License") { licenseService.removeProLicense() }
+                                .buttonStyle(.link)
+                                .font(.caption)
+                                .foregroundColor(.red)
+                            
+                            Toggle("Force Free Mode", isOn: $licenseService.forceFreeMode)
+                                .font(.caption)
+                                .toggleStyle(.checkbox)
                         }
-                        
-                        Toggle("Force Free Mode (Test)", isOn: $licenseService.forceFreeMode)
-                            .font(.caption)
-                            .toggleStyle(.checkbox)
                     }
                 }
             }
@@ -160,7 +208,6 @@ struct LicenseSettingsView: View {
                 featureRow(icon: "app.badge", title: "App-Specific Targeting", description: "Automatically switch profiles when switching apps.")
                 featureRow(icon: "bolt.fill", title: "Advanced Actions", description: "Access automation, scripting, and bundled actions.")
                 featureRow(icon: "gearshape.2", title: "Services & Plugins", description: "Extend functionality with custom service plugins.")
-                featureRow(icon: "flowchart", title: "Efficiency Gating", description: "Fine-tune detection for maximum performance.")
             }
         }
     }

@@ -14,7 +14,6 @@
 		410A4D418988160F289DF05D /* GenericActivation.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1D3401DA8E9283C5710D113 /* GenericActivation.swift */; };
 		47664568AFCE2E60CBCAD6AF /* LicenseSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FCB488CA68065730DE07C36 /* LicenseSettingsView.swift */; };
 		56614B068B7EE21330CA141F /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89214489A146B36C7BA39BCC /* OnboardingView.swift */; };
-		56F74CC5A595A9E99710FFFA /* TestDetectionPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89C0422D85DC12F5E6E9AD43 /* TestDetectionPlugin.swift */; };
 		5F4845B58FDFC0978ECFFBB6 /* VariableStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F40B4B2C90F7A03C4CEE2B6A /* VariableStore.swift */; };
 		5F6349D3B922F5EC3DAD2A72 /* UpdateNotificationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 984443C1AFEF57DDC1EE4E15 /* UpdateNotificationView.swift */; };
 		776CFCB32F37AE1300664D2F /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = 776CFCB22F37AE1300664D2F /* AppIcon.icns */; };
@@ -110,8 +109,8 @@
 		77A1C4E42F368ED800D1FE6A /* SystemServicePlugins.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4452F368ED800D1FE6A /* SystemServicePlugins.swift */; };
 		77A1C4E62F368ED800D1FE6A /* ZoneHighlightWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4752F368ED800D1FE6A /* ZoneHighlightWindow.swift */; };
 		77A1C4E72F368ED800D1FE6A /* ServicePluginProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4492F368ED800D1FE6A /* ServicePluginProtocol.swift */; };
+		77BC7E332FA5899100E631AF /* TrialExpiredProfileSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77BC7E322FA5899100E631AF /* TrialExpiredProfileSelectionView.swift */; };
 		9960454DBE0FEE05BE520654 /* BrowserActionsPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24834D81A3CF701D5ADE9D92 /* BrowserActionsPlugin.swift */; };
-		A12F4CA892A9E86EB8897D0A /* TestActionPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86FB4971B28428C6D1C0A5B7 /* TestActionPlugin.swift */; };
 		B33F49F584127F8CF6410EFD /* PaymentService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF364725A69D58F9475F3894 /* PaymentService.swift */; };
 		B6334DA2B441A379EF6CBDF7 /* ConditionalActionEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AFE406092050617E48F85A5 /* ConditionalActionEditorView.swift */; };
 		B88740FC8BBF9FCB115197F6 /* TutorialService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE0347CE854263CC12FAA6C3 /* TutorialService.swift */; };
@@ -226,11 +225,10 @@
 		77A1C4842F368ED800D1FE6A /* AnyCodable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnyCodable.swift; sourceTree = "<group>"; };
 		77A1C4852F368ED800D1FE6A /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
 		77A1C4872F368ED800D1FE6A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		77BC7E322FA5899100E631AF /* TrialExpiredProfileSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrialExpiredProfileSelectionView.swift; sourceTree = "<group>"; };
 		77EBF1192F9532360027C904 /* Products.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; name = Products.storekit; path = MouseGesturesCodeBase/Products.storekit; sourceTree = "<group>"; };
 		7A7844B6B3BB98B841022947 /* ActivationComponentService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActivationComponentService.swift; path = MouseGesturesCodeBase/Services/ActivationComponentService.swift; sourceTree = SOURCE_ROOT; };
-		86FB4971B28428C6D1C0A5B7 /* TestActionPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TestActionPlugin.swift; path = "MouseGesturesCodeBase/ActionPlugins/Built-in ActionPlugins/TestActionPlugin.swift"; sourceTree = SOURCE_ROOT; };
 		89214489A146B36C7BA39BCC /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = OnboardingView.swift; path = MouseGesturesCodeBase/UI/OnboardingView.swift; sourceTree = SOURCE_ROOT; };
-		89C0422D85DC12F5E6E9AD43 /* TestDetectionPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TestDetectionPlugin.swift; path = "MouseGesturesCodeBase/Detection/DetectionPlugins/Built-in Plugins/TestDetectionPlugin.swift"; sourceTree = SOURCE_ROOT; };
 		8AFE406092050617E48F85A5 /* ConditionalActionEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ConditionalActionEditorView.swift; path = MouseGesturesCodeBase/UI/ConditionalActionEditorView.swift; sourceTree = SOURCE_ROOT; };
 		8E94445AB3BF094E20E605FC /* UIStyles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UIStyles.swift; path = MouseGesturesCodeBase/UI/UIStyles.swift; sourceTree = SOURCE_ROOT; };
 		984443C1AFEF57DDC1EE4E15 /* UpdateNotificationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UpdateNotificationView.swift; path = MouseGesturesCodeBase/UI/UpdateNotificationView.swift; sourceTree = SOURCE_ROOT; };
@@ -277,7 +275,6 @@
 				77A1C41C2F368ED800D1FE6A /* MediaControlPlugin.swift */,
 				77A1C41D2F368ED800D1FE6A /* SystemControlPlugin.swift */,
 				77A1C41E2F368ED800D1FE6A /* WindowManagementPlugin.swift */,
-				86FB4971B28428C6D1C0A5B7 /* TestActionPlugin.swift */,
 			);
 			path = "Built-in ActionPlugins";
 			sourceTree = "<group>";
@@ -330,7 +327,6 @@
 				77A1C42F2F368ED800D1FE6A /* ModifierKeyDetectorPlugin.swift */,
 				77A1C4302F368ED800D1FE6A /* MouseButtonDetectorPlugin.swift */,
 				77A1C4312F368ED800D1FE6A /* ScreenZoneDetectorPlugin.swift */,
-				89C0422D85DC12F5E6E9AD43 /* TestDetectionPlugin.swift */,
 			);
 			path = "Built-in Plugins";
 			sourceTree = "<group>";
@@ -466,6 +462,7 @@
 				77A1C46D2F368ED800D1FE6A /* BundleEditorView.swift */,
 				77A1C46E2F368ED800D1FE6A /* GestureConfigurationSheet.swift */,
 				77A1C46F2F368ED800D1FE6A /* ImportDefaultProfiles.swift */,
+				77BC7E322FA5899100E631AF /* TrialExpiredProfileSelectionView.swift */,
 				77A1C4702F368ED800D1FE6A /* KeyboardShortcutField.swift */,
 				77A1C4712F368ED800D1FE6A /* PluginSettingsView.swift */,
 				77A1C4722F368ED800D1FE6A /* SavedActionConfigurationSheet.swift */,
@@ -661,6 +658,7 @@
 				77A1C4A42F368ED800D1FE6A /* GestureSearchService.swift in Sources */,
 				77A1C4A52F368ED800D1FE6A /* AppProfilesUIPlugin.swift in Sources */,
 				77A1C4A62F368ED800D1FE6A /* TabManager.swift in Sources */,
+				77BC7E332FA5899100E631AF /* TrialExpiredProfileSelectionView.swift in Sources */,
 				77A1C4A72F368ED800D1FE6A /* MouseButtonDetectorPlugin.swift in Sources */,
 				77A1C4A82F368ED800D1FE6A /* SystemControlPlugin.swift in Sources */,
 				77A1C4A92F368ED800D1FE6A /* ApplicationResetService.swift in Sources */,
@@ -731,8 +729,6 @@
 				212E4EB8A4F446405206B88D /* ActivationComponentService.swift in Sources */,
 				410A4D418988160F289DF05D /* GenericActivation.swift in Sources */,
 				F64847768F1F2D8E06D72CBC /* UIStyles.swift in Sources */,
-				A12F4CA892A9E86EB8897D0A /* TestActionPlugin.swift in Sources */,
-				56F74CC5A595A9E99710FFFA /* TestDetectionPlugin.swift in Sources */,
 				B6334DA2B441A379EF6CBDF7 /* ConditionalActionEditorView.swift in Sources */,
 				5F4845B58FDFC0978ECFFBB6 /* VariableStore.swift in Sources */,
 				0E5D47AB895A8A178352C385 /* LicenseService.swift in Sources */,

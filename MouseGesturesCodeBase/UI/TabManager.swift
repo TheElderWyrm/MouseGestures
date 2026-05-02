@@ -36,7 +36,7 @@ struct TabManager: View {
                         createTabItem(for: plugin)
                     }
                     
-                    if !licenseService.isPro {
+                    if !PaymentService.shared.isProUnlocked {
                         LicenseSettingsView()
                             .tabItem {
                                 Label("Upgrade", systemImage: "star.fill")

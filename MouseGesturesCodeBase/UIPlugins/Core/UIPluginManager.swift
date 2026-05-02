@@ -69,9 +69,7 @@ class UIPluginManager: ObservableObject {
                 SavedActionsUIPlugin(),
                 ProfilesUIPlugin(),
                 AppProfilesUIPlugin(),
-                SettingsUIPlugin(),
-                ServicesUIPlugin(),
-                DeveloperUIPlugin()
+                SettingsUIPlugin()
             ]
             
             for plugin in builtInPlugins {
@@ -124,10 +122,51 @@ class UIPluginManager: ObservableObject {
         // Create directory if it doesn't exist
         try? FileManager.default.createDirectory(at: customPluginsPath, withIntermediateDirectories: true)
         
-        // Load plugins from directory
-        // Note: This would require dynamic loading implementation
-        // For now, we'll just log that we checked for custom plugins
-        Logger.shared.log("Checked for custom UI plugins in: \(customPluginsPath.path)")
+        do {
+            let pluginFiles = try FileManager.default.contentsOfDirectory(
+                at: customPluginsPath,
+                includingPropertiesForKeys: nil,
+                options: .skipsHiddenFiles
+            )
+            
+            for pluginFile in pluginFiles where pluginFile.pathExtension == "uiplugin" {
+                Logger.shared.log("UIPluginManager: Loading external plugin at \(pluginFile.path)")
+                
+                guard let bundle = Bundle(url: pluginFile) else {
+                    Logger.shared.error("UIPluginManager: Failed to create bundle for plugin at: \(pluginFile.path)")
+                    continue
+                }
+                
+                // Load the bundle
+                guard bundle.load() else {
+                    Logger.shared.error("UIPluginManager: Failed to load bundle for plugin at: \(pluginFile.path)")
+                    continue
+                }
+                
+                // Get the principal class, which must be an NSObject subclass
+                guard let principalClass = bundle.principalClass as? NSObject.Type else {
+                    Logger.shared.error("UIPluginManager: No principal class found in plugin at: \(pluginFile.path)")
+                    bundle.unload()
+                    continue
+                }
+                
+                // Instantiate the class and check if the instance conforms to our protocol
+                // Note: UIPlugin is a protocol, we need to cast to it.
+                // We use any UIPlugin since it's a protocol with associated types or just a protocol.
+                guard let plugin = principalClass.init() as? any UIPlugin else {
+                    Logger.shared.error("UIPluginManager: Principal class '\(principalClass)' does not conform to UIPlugin protocol.")
+                    bundle.unload()
+                    continue
+                }
+                
+                await loadPlugin(plugin)
+                Logger.shared.log("UIPluginManager: Successfully loaded external plugin: \(plugin.identifier)")
+            }
+        } catch {
+            Logger.shared.error("UIPluginManager: Error loading custom plugins: \(error)")
+        }
+        
+        Logger.shared.log("Finished checking for custom UI plugins.")
     }
     
     // MARK: - Plugin Management
@@ -174,6 +213,15 @@ class UIPluginManager: ObservableObject {
         updateVisiblePlugins()
     }
     
+    /// Set the enabled state of a plugin
+    public func setPluginEnabled(identifier: String, enabled: Bool) {
+        if enabled {
+            enablePlugin(identifier: identifier)
+        } else {
+            disablePlugin(identifier: identifier)
+        }
+    }
+    
     /// Reload a plugin
     public func reloadPlugin(identifier: String) async {
         if let plugin = loadedPlugins[identifier] {
@@ -203,6 +251,11 @@ class UIPluginManager: ObservableObject {
                 }
                 .sorted { $0.sortOrder < $1.sortOrder }
         }
+    }
+    
+    /// Get all loaded plugins
+    public func getAllPlugins() -> [any UIPlugin] {
+        return Array(loadedPlugins.values).sorted { $0.sortOrder < $1.sortOrder }
     }
     
     /// Get a plugin by identifier

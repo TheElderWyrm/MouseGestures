@@ -17,7 +17,7 @@ FUTURE / PLANNED
 - [DONE] Update checker, Autoupdate, update notifications
 - [DONE] Add browser actions as actual actions instead of just an application of keyboard shortcuts
 - [DONE] Payment checking (Integrated via StoreKit 2 and LicenseService)
-- Create a website for the App
+- [PARTIAL --IMPROVE, ADD APP ICON TO WEBSITE] Create a website for the App
 - Prepare for publishing and publish.
 - Advertise
 
@@ -29,6 +29,7 @@ FUTURE / PLANNED
 - [DONE] ERROR: No symbol named 'mouse' found in system symbol set
 - [DONE] No symbol named 'app.window.stack' found in system symbol set
 - [DONE] Restart onboarding button in about
+- Test Browser Actions
 
 - [DONE] For Testing (Temporary): - Add a 'free/payed mode toggle in License settings
 

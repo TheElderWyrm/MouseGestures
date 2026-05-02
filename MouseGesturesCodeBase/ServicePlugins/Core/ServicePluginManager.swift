@@ -112,12 +112,37 @@ public class ServicePluginManager: ObservableObject {
     private func loadExternalPlugin(at url: URL) {
         log.log("ServicePluginManager: Loading external plugin at \(url.path)")
         
-        // Note: In a real implementation, this would load a dynamic library or bundle
-        // For now, we'll just log the attempt
-        // Future implementation would use Bundle(url:) or dlopen() for dynamic loading
+        guard let bundle = Bundle(url: url) else {
+            log.log("ServicePluginManager: Failed to create bundle for plugin at: \(url.path)")
+            return
+        }
         
-        // Placeholder for future dynamic loading implementation
-        // This would require the plugin to be compiled as a framework or dynamic library
+        // Load the bundle
+        guard bundle.load() else {
+            log.log("ServicePluginManager: Failed to load bundle for plugin at: \(url.path)")
+            return
+        }
+        
+        // Get the principal class, which must be an NSObject subclass
+        guard let principalClass = bundle.principalClass as? NSObject.Type else {
+            log.log("ServicePluginManager: No principal class found in plugin at: \(url.path)")
+            bundle.unload()
+            return
+        }
+        
+        // Instantiate the class and check if the instance conforms to our protocol
+        guard let plugin = principalClass.init() as? ServicePlugin else {
+            log.log("ServicePluginManager: Principal class '\(principalClass)' does not conform to ServicePlugin protocol or failed to instantiate.")
+            bundle.unload()
+            return
+        }
+        
+        // Mark as external
+        // (Assuming ServicePlugin has a way to mark as external if needed, 
+        // but registerPlugin handles initialization and storage)
+        
+        registerPlugin(plugin)
+        log.log("ServicePluginManager: Successfully loaded external plugin: \(plugin.identifier)")
     }
     
     /// Register a service plugin
