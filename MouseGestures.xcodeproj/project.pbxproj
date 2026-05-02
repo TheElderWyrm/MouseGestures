@@ -51,7 +51,6 @@
 		77A1C4A92F368ED800D1FE6A /* ApplicationResetService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4502F368ED800D1FE6A /* ApplicationResetService.swift */; };
 		77A1C4AA2F368ED800D1FE6A /* DebugReportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4522F368ED800D1FE6A /* DebugReportService.swift */; };
 		77A1C4AB2F368ED800D1FE6A /* SettingsUIPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C47D2F368ED800D1FE6A /* SettingsUIPlugin.swift */; };
-		77A1C4AC2F368ED800D1FE6A /* ImportDefaultProfiles.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C46F2F368ED800D1FE6A /* ImportDefaultProfiles.swift */; };
 		77A1C4AD2F368ED800D1FE6A /* LogFileService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4582F368ED800D1FE6A /* LogFileService.swift */; };
 		77A1C4AE2F368ED800D1FE6A /* UIPluginProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4812F368ED800D1FE6A /* UIPluginProtocol.swift */; };
 		77A1C4AF2F368ED800D1FE6A /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4852F368ED800D1FE6A /* Extensions.swift */; };
@@ -205,7 +204,6 @@
 		77A1C46C2F368ED800D1FE6A /* ActionSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionSelectionView.swift; sourceTree = "<group>"; };
 		77A1C46D2F368ED800D1FE6A /* BundleEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BundleEditorView.swift; sourceTree = "<group>"; };
 		77A1C46E2F368ED800D1FE6A /* GestureConfigurationSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GestureConfigurationSheet.swift; sourceTree = "<group>"; };
-		77A1C46F2F368ED800D1FE6A /* ImportDefaultProfiles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportDefaultProfiles.swift; sourceTree = "<group>"; };
 		77A1C4702F368ED800D1FE6A /* KeyboardShortcutField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardShortcutField.swift; sourceTree = "<group>"; };
 		77A1C4712F368ED800D1FE6A /* PluginSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PluginSettingsView.swift; sourceTree = "<group>"; };
 		77A1C4722F368ED800D1FE6A /* SavedActionConfigurationSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedActionConfigurationSheet.swift; sourceTree = "<group>"; };
@@ -461,7 +459,6 @@
 				77A1C46C2F368ED800D1FE6A /* ActionSelectionView.swift */,
 				77A1C46D2F368ED800D1FE6A /* BundleEditorView.swift */,
 				77A1C46E2F368ED800D1FE6A /* GestureConfigurationSheet.swift */,
-				77A1C46F2F368ED800D1FE6A /* ImportDefaultProfiles.swift */,
 				77BC7E322FA5899100E631AF /* TrialExpiredProfileSelectionView.swift */,
 				77A1C4702F368ED800D1FE6A /* KeyboardShortcutField.swift */,
 				77A1C4712F368ED800D1FE6A /* PluginSettingsView.swift */,
@@ -664,7 +661,6 @@
 				77A1C4A92F368ED800D1FE6A /* ApplicationResetService.swift in Sources */,
 				77A1C4AA2F368ED800D1FE6A /* DebugReportService.swift in Sources */,
 				77A1C4AB2F368ED800D1FE6A /* SettingsUIPlugin.swift in Sources */,
-				77A1C4AC2F368ED800D1FE6A /* ImportDefaultProfiles.swift in Sources */,
 				77A1C4AD2F368ED800D1FE6A /* LogFileService.swift in Sources */,
 				77A1C4AE2F368ED800D1FE6A /* UIPluginProtocol.swift in Sources */,
 				77A1C4AF2F368ED800D1FE6A /* Extensions.swift in Sources */,

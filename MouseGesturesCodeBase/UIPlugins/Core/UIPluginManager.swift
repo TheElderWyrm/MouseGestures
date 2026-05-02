@@ -69,7 +69,8 @@ class UIPluginManager: ObservableObject {
                 SavedActionsUIPlugin(),
                 ProfilesUIPlugin(),
                 AppProfilesUIPlugin(),
-                SettingsUIPlugin()
+                SettingsUIPlugin(),
+                DeveloperUIPlugin()
             ]
             
             for plugin in builtInPlugins {
