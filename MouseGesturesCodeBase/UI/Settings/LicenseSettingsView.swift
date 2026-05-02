@@ -112,6 +112,7 @@ struct LicenseSettingsView: View {
                     proFeaturesList
                 }
                 
+                
                 if UIServices.shared.isDeveloperModeEnabled() {
                     Divider()
                     VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
@@ -143,6 +144,7 @@ struct LicenseSettingsView: View {
                         }
                     }
                 }
+                
             }
             .padding(MGStyle.Spacing.xl)
         }
@@ -206,6 +208,7 @@ struct LicenseSettingsView: View {
             VStack(alignment: .leading, spacing: MGStyle.Spacing.sm) {
                 featureRow(icon: "rectangle.stack", title: "Unlimited Profiles", description: "Create specific gesture sets for different workflows.")
                 featureRow(icon: "app.badge", title: "App-Specific Targeting", description: "Automatically switch profiles when switching apps.")
+                featureRow(icon: "slider.horizontal.3", title: "Advanced Settings", description: "Fine-tune app behavior and performance parameters.")
                 featureRow(icon: "bolt.fill", title: "Advanced Actions", description: "Access automation, scripting, and bundled actions.")
                 featureRow(icon: "gearshape.2", title: "Services & Plugins", description: "Extend functionality with custom service plugins.")
             }

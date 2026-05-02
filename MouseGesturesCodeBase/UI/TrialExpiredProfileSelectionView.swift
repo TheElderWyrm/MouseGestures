@@ -13,10 +13,10 @@ struct TrialExpiredProfileSelectionView: View {
                 .foregroundColor(.orange)
             
             VStack(spacing: MGStyle.Spacing.md) {
-                Text("Trial Expired")
+                Text("MouseGestures Trial Expired")
                     .font(.title).fontWeight(.bold)
                 
-                Text("Your trial has expired. Free mode supports only one profile. Please select the profile you want to keep active.")
+                Text("Your MouseGestures trial has expired. Free mode supports only one profile. Please select the profile you want to keep active.")
                     .font(.body)
                     .multilineTextAlignment(.center)
                     .foregroundColor(.secondary)

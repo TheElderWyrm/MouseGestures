@@ -175,12 +175,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 450, height: 420),
-            styleMask: [.titled, .closable, .fullSizeContentView],
+            styleMask: [.titled, .closable],
             backing: .buffered, defer: false)
         
-        window.center()
         window.title = "MouseGestures Pro Trial Expired"
-        window.contentView = NSHostingView(rootView: contentView)
+        window.contentView = NSHostingView(rootView: contentView.frame(width: 450, height: 420))
+        window.setContentSize(NSSize(width: 450, height: 420))
+        window.center()
         window.isReleasedWhenClosed = false
         window.level = .floating
         
