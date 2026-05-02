@@ -120,6 +120,11 @@ public class LicenseService: ObservableObject {
         self.status = newStatus
         self.trialDaysRemaining = remaining
         
+        // Automatically disable developer mode if in free mode
+        if newStatus == .free || newStatus == .expired {
+            UserDefaults.standard.set(false, forKey: "MGDeveloperModeEnabled")
+        }
+        
         if oldStatus != newStatus || remaining != oldRemaining {
             checkTrialThresholds(status: newStatus, remaining: remaining)
             

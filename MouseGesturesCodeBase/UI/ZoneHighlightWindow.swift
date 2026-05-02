@@ -485,13 +485,18 @@ class ZoneHighlightManager {
     private func getLabel(for gesture: Gesture?) -> String? {
         guard let gesture = gesture else { return nil }
         
-        // Special case: show shortcut name for run_shortcut
+        // Priority 1: Gesture Title (if user provided one)
+        if let name = gesture.name, !name.isEmpty {
+            return name
+        }
+        
+        // Priority 2: Special case: show shortcut name for run_shortcut
         if gesture.actionIdentifier == "com.mousegestures.automation.run_shortcut",
            let name = gesture.parameters["shortcut_name"]?.value as? String {
             return name
         }
         
-        // Look up action name from plugin registry
+        // Priority 3: Look up action name from plugin registry
         if let (_, action) = PluginManager.shared.getAction(identifier: gesture.actionIdentifier) {
             return action.name
         }

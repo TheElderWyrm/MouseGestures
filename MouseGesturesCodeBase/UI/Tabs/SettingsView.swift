@@ -81,17 +81,22 @@ struct SettingsView: View {
                     .padding(.vertical, MGStyle.Spacing.md)
                 
                 HStack {
-                    Toggle(isOn: $showAdvanced) {
-                        HStack(spacing: MGStyle.Spacing.md) {
-                            Image(systemName: "slider.horizontal.3")
-                                .frame(width: 20)
-                                .foregroundColor(.secondary)
-                            Text("Advanced")
-                                .font(.system(size: MGStyle.FontSize.caption))
+                    if LicenseService.shared.isPro {
+                        Toggle(isOn: $showAdvanced) {
+                            HStack(spacing: MGStyle.Spacing.md) {
+                                Image(systemName: "slider.horizontal.3")
+                                    .frame(width: 20)
+                                    .foregroundColor(.secondary)
+                                Text("Advanced")
+                                    .font(.system(size: MGStyle.FontSize.caption))
+                            }
                         }
+                        .toggleStyle(.switch)
+                        .controlSize(.small)
+                    } else {
+                        EmptyView()
+                            .onAppear { showAdvanced = false }
                     }
-                    .toggleStyle(.switch)
-                    .controlSize(.small)
                     
                     Spacer()
                 }
