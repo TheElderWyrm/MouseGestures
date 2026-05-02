@@ -71,24 +71,9 @@ struct DeveloperView: View {
     
     @State private var debugReport: String = ""
     @State private var showingExportReport = false
-    
+
     private let servicePluginManager = ServicePluginManager.shared
-    @State private var servicePlugins: [ServicePluginInfo] = []
-    @State private var serviceSearchText = ""
-    @State private var serviceCategory: ServiceCategory?
-    @State private var serviceActiveSheet: ServiceSheet?
-    
-    enum ServiceSheet: Identifiable {
-        case configure(ServicePluginInfo)
-        case install
-        var id: String {
-            switch self {
-            case .configure(let p): return "cfg-\(p.id)"
-            case .install: return "install"
-            }
-        }
-    }
-    
+
     @State private var developerModeEnabled: Bool = false
     @State private var successMessage: String?
     @State private var errorMessage: String?
@@ -100,7 +85,6 @@ struct DeveloperView: View {
         case logging = "Logging"
         case plugins = "Plugin Management"
         case coordinator = "Activation Coordinator"
-        case services = "Services"
         case performance = "Performance"
         case diagnostics = "Diagnostics"
 
@@ -110,7 +94,6 @@ struct DeveloperView: View {
             case .logging: return "doc.text"
             case .plugins: return "puzzlepiece.extension"
             case .coordinator: return "flowchart"
-            case .services: return "gearshape.2"
             case .performance: return "speedometer"
             case .diagnostics: return "stethoscope"
             }
@@ -138,7 +121,6 @@ struct DeveloperView: View {
                     case .logging: loggingSection
                     case .plugins: pluginsSection
                     case .coordinator: coordinatorSection
-                    case .services: servicesSection
                     case .performance: performanceSection
                     case .diagnostics: diagnosticsSection
                     }
@@ -165,14 +147,6 @@ struct DeveloperView: View {
             contentType: .plainText,
             defaultFilename: "MouseGestures_Debug_\(Date().formatted(date: .numeric, time: .omitted).replacingOccurrences(of: "/", with: "-")).txt"
         ) { result in handleReportExport(result: result) }
-        .sheet(item: $serviceActiveSheet) { sheet in
-            switch sheet {
-            case .configure(let plugin):
-                ServiceConfigurationSheet(plugin: plugin)
-            case .install:
-                ServiceInstallSheet { url in installServicePlugin(from: url) }
-            }
-        }
     }
     
     // MARK: - Developer Settings Section
@@ -585,78 +559,6 @@ struct DeveloperView: View {
     }
 
     
-    // MARK: - Services Section
-    
-    private var filteredServicePlugins: [ServicePluginInfo] {
-        var result = servicePlugins
-        if let cat = serviceCategory { result = result.filter { $0.category == cat } }
-        if !serviceSearchText.isEmpty {
-            result = result.filter {
-                $0.name.localizedCaseInsensitiveContains(serviceSearchText) ||
-                $0.description.localizedCaseInsensitiveContains(serviceSearchText) ||
-                $0.identifier.localizedCaseInsensitiveContains(serviceSearchText)
-            }
-        }
-        return result.sorted { $0.name < $1.name }
-    }
-    
-    private var activeServiceCategories: [ServiceCategory] {
-        let cats = Set(servicePlugins.map(\.category))
-        return ServiceCategory.allCases.filter { cats.contains($0) }
-    }
-    
-    private var servicesSection: some View {
-        VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {
-            MGSectionHeader("Services")
-            
-            MGContentCard {
-                HStack(spacing: MGStyle.Spacing.lg) {
-                    Picker("Category:", selection: $serviceCategory) {
-                        Text("All").tag(ServiceCategory?.none)
-                        Divider()
-                        ForEach(activeServiceCategories, id: \.self) { cat in
-                            Label(cat.rawValue, systemImage: cat.icon).tag(ServiceCategory?.some(cat))
-                        }
-                    }
-                    .frame(width: 220)
-                    
-                    MGSearchField("Search services...", text: $serviceSearchText)
-                        .frame(maxWidth: 220)
-                    
-                    Spacer()
-                    
-                    Button(action: { serviceActiveSheet = .install }) {
-                        Label("Install", systemImage: "plus.circle")
-                    }
-                    Button(action: loadServicePlugins) {
-                        Image(systemName: "arrow.clockwise")
-                    }
-                }
-                
-                Text("\(filteredServicePlugins.count) service\(filteredServicePlugins.count == 1 ? "" : "s")")
-                    .font(.caption).foregroundColor(.secondary)
-            }
-            
-            if filteredServicePlugins.isEmpty {
-                MGEmptyState(
-                    icon: "tray",
-                    title: servicePlugins.isEmpty ? "No services loaded" : "No services match the current filter"
-                )
-            } else {
-                LazyVStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
-                    ForEach(filteredServicePlugins) { plugin in
-                        ServiceRow(plugin: plugin) {
-                            serviceActiveSheet = .configure(plugin)
-                        } onToggle: {
-                            toggleServicePlugin(plugin)
-                        }
-                    }
-                }
-            }
-        }
-    }
-    
-    // MARK: - Performance Section
     
     private var performanceSection: some View {
         VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {
@@ -790,7 +692,6 @@ struct DeveloperView: View {
         refreshLogFiles()
         refreshUnifiedPlugins()
         refreshPerformanceMetrics()
-        loadServicePlugins()
     }
     
     private func startPerformanceMonitoring() {
@@ -1084,25 +985,6 @@ struct DeveloperView: View {
         }
     }
     
-    private func loadServicePlugins() { servicePlugins = servicePluginManager.getAllPlugins() }
-    
-    private func toggleServicePlugin(_ plugin: ServicePluginInfo) {
-        if plugin.isEnabled { _ = servicePluginManager.disablePlugin(identifier: plugin.identifier) }
-        else { _ = servicePluginManager.enablePlugin(identifier: plugin.identifier) }
-        loadServicePlugins()
-    }
-    
-    private func installServicePlugin(from url: URL) {
-        let result = servicePluginManager.installPlugin(from: url)
-        if !result.success {
-            let alert = NSAlert()
-            alert.messageText = "Failed to install plugin"
-            alert.informativeText = result.error ?? "Unknown error"
-            alert.alertStyle = .warning
-            alert.runModal()
-        }
-        loadServicePlugins()
-    }
     
     private func generateDebugReport() { debugReport = uiServices.generateDebugReport(); successMessage = "Debug report generated" }
     
@@ -1139,7 +1021,6 @@ struct DeveloperView: View {
     private func openAccessibilityPreferences() {
         NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
     }
-}
 
 // MARK: - Supporting Types
 
@@ -1161,4 +1042,5 @@ struct DebugReportDocument: FileDocument {
     func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
         return FileWrapper(regularFileWithContents: content.data(using: .utf8)!)
     }
+}
 }

@@ -307,7 +307,7 @@ struct ActionSelectionView: View {
     }
     
     private func shortLabel(_ label: String) -> String {
-        let maxLen = 14
+        let maxLen = 20
         if label.count <= maxLen { return label }
         // Take the first word if it's descriptive enough, otherwise truncate
         let first = label.split(separator: " ").first.map(String.init) ?? label
