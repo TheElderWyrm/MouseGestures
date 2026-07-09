@@ -1,0 +1,13 @@
+# macOS
+.DS_Store
+
+# Xcode / build output
+build/
+DerivedData/
+*.xcarchive
+*.xcuserstate
+xcuserdata/
+
+# SwiftLint (portable binary downloaded by CI / local lint runs)
+.swiftlint-bin/
+portable_swiftlint.zip

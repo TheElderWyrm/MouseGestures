@@ -50,6 +50,53 @@ xcodebuild build \
 
 Expected result: `** BUILD SUCCEEDED **`.
 
+## Testing
+
+The repo ships a no-host, pure-logic unit-test target (`MouseGesturesTests`)
+wired into the shared scheme. Run it unsigned from the command line:
+
+```sh
+xcodebuild test \
+  -project "MouseGestures.xcodeproj" \
+  -scheme MouseGestures \
+  -destination 'platform=macOS' \
+  CODE_SIGNING_ALLOWED=NO
+```
+
+Expected result: `** TEST SUCCEEDED **` (19 tests, 0 failures). The suite covers
+the dependency-free licensing/trial rules (`LicenseLogic`), screen-zone math, and
+`AnyCodable` round-tripping — logic that needs no running app.
+
+## Linting
+
+Linting uses [SwiftLint](https://github.com/realm/SwiftLint) with the config in
+`.swiftlint.yml`. Pre-existing style/structure debt is grandfathered in
+`.swiftlint-baseline.json`, so the lint gate fails only on **new** violations
+introduced by future changes.
+
+```sh
+# install once (Homebrew), or download the pinned portable binary as CI does
+brew install swiftlint
+
+# lint against the baseline — clean today, fails only on new violations
+swiftlint lint --strict --baseline .swiftlint-baseline.json
+```
+
+To fix auto-correctable issues in new code: `swiftlint --fix`. If you
+deliberately pay down grandfathered debt (or intentionally accept new debt),
+refresh the baseline with
+`swiftlint lint --write-baseline .swiftlint-baseline.json` and rewrite its file
+paths to be project-root-relative so it stays portable across checkouts (CI runs
+it on a fresh clone).
+
+## Continuous integration
+
+`.github/workflows/ci.yml` runs on every push and pull request: it builds
+unsigned, runs the test suite, and lints against the baseline — none of which
+need signing credentials. Signing, notarization, and packaging live separately in
+`.github/workflows/release.yml` (tag-triggered), which is **blocked** pending the
+distribution decision and credentials described under **Deployment** below.
+
 ### Granting permissions (needed for gestures to actually fire)
 
 At runtime the app requests two macOS permissions; without them gesture

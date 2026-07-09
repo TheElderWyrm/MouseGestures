@@ -1,0 +1,74 @@
+name: CI
+
+# Fork-independent verification: builds unsigned, runs the unit-test suite, and
+# lints against the checked-in baseline. Does NOT sign, notarize, or package —
+# that is handled by release.yml once the distribution/signing decision is made.
+
+on:
+  push:
+    branches: [main, default]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  SWIFTLINT_VERSION: "0.65.0"   # pinned to the version the baseline was generated against
+
+jobs:
+  build-and-test:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Select latest Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Build (Debug, unsigned)
+        run: |
+          xcodebuild build \
+            -project "MouseGestures.xcodeproj" \
+            -scheme MouseGestures \
+            -configuration Debug \
+            -destination 'platform=macOS' \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+            | xcbeautify || (echo "::error::Build failed" && exit 1)
+
+      - name: Test (unsigned)
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -project "MouseGestures.xcodeproj" \
+            -scheme MouseGestures \
+            -destination 'platform=macOS' \
+            -derivedDataPath build/TestDerivedData \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+            | xcbeautify
+
+  lint:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install pinned SwiftLint
+        run: |
+          curl -sL -o portable_swiftlint.zip \
+            "https://github.com/realm/SwiftLint/releases/download/${SWIFTLINT_VERSION}/portable_swiftlint.zip"
+          mkdir -p .swiftlint-bin
+          unzip -q -o portable_swiftlint.zip -d .swiftlint-bin
+          chmod +x .swiftlint-bin/swiftlint
+          .swiftlint-bin/swiftlint version
+
+      - name: Lint against baseline (fails only on NEW violations)
+        run: |
+          .swiftlint-bin/swiftlint lint \
+            --strict \
+            --baseline .swiftlint-baseline.json \
+            --reporter github-actions-logging

@@ -1,0 +1,74 @@
+# SwiftLint configuration for MouseGestures
+# Introduced during the deployment-readiness pass. Pre-existing structural debt is
+# grandfathered via .swiftlint-baseline.json so CI fails only on NEW violations;
+# see README (Linting) for how to run and how to refresh the baseline.
+
+included:
+  - MouseGesturesCodeBase
+  - MouseGesturesTests
+
+excluded:
+  - build
+  - .build
+
+disabled_rules:
+  - todo                 # TODO/FIXME tracked in MouseGestures_to_do.txt, not by lint
+
+opt_in_rules:
+  - empty_count
+  - closure_spacing
+  - closure_end_indentation
+  - operator_usage_whitespace
+
+# Thresholds relaxed from defaults to match this codebase's established style.
+# These set the go-forward bar for new code; existing overruns are in the baseline.
+line_length:
+  warning: 140
+  error: 250
+  ignores_comments: true
+  ignores_urls: true
+
+file_length:
+  warning: 600
+  error: 1200
+
+type_body_length:
+  warning: 400
+  error: 800
+
+function_body_length:
+  warning: 80
+  error: 200
+
+cyclomatic_complexity:
+  warning: 20
+  error: 40
+
+large_tuple:
+  warning: 3
+  error: 4
+
+function_parameter_count:
+  warning: 6
+  error: 8
+
+identifier_name:
+  min_length:
+    warning: 2
+    error: 1
+  excluded:
+    - id
+    - x
+    - y
+    - z
+    - dx
+    - dy
+    - r
+    - g
+    - b
+    - a
+    - i
+    - j
+    - k
+    - to
+    - up
