@@ -14,7 +14,7 @@ enum GestureServicePluginFactory {
                            category: .gesture,
                            factory: { GestureConfigurationService.shared })
     }
-    
+
     static func profileManagement() -> ServicePlugin {
         SimpleServicePlugin(id: "com.mousegestures.service.profilemanagement",
                            name: "Profile Management Service",
@@ -22,7 +22,7 @@ enum GestureServicePluginFactory {
                            category: .profile,
                            factory: { ProfileManagementService.shared })
     }
-    
+
     static func profileImportExport() -> ServicePlugin {
         SimpleServicePlugin(id: "com.mousegestures.service.profileimportexport",
                            name: "Profile Import/Export Service",
@@ -31,7 +31,7 @@ enum GestureServicePluginFactory {
                            permissions: .basic,
                            factory: { ProfileImportExportService.shared })
     }
-    
+
     static func gestureSearch() -> ServicePlugin {
         SimpleServicePlugin(id: "com.mousegestures.service.gesturesearch",
                            name: "Gesture Search Service",
@@ -39,7 +39,7 @@ enum GestureServicePluginFactory {
                            category: .gesture,
                            factory: { GestureSearchService.shared })
     }
-    
+
     static func savedActionsSort() -> ServicePlugin {
         SimpleServicePlugin(id: "com.mousegestures.service.savedactionssort",
                            name: "Saved Actions Sort Service",

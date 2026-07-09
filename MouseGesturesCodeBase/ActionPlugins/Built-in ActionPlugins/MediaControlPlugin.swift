@@ -4,9 +4,9 @@ import Cocoa
 
 /// Built-in plugin for media control actions
 class MediaControlPlugin: NSObject, GestureActionPlugin {
-    
+
     // MARK: - Plugin Properties
-    
+
     let identifier = "com.mousegestures.media"
     let name = "Media Control"
     override var description: String { "Control media playback and system audio" }
@@ -14,9 +14,9 @@ class MediaControlPlugin: NSObject, GestureActionPlugin {
     let author = "MouseGestures"
     let category = ActionCategory.media
     let icon: NSImage? = nil
-    
+
     // MARK: - Actions
-    
+
     lazy var providedActions: [PluginAction] = [
         PluginAction(
             id: "play_pause",
@@ -24,7 +24,7 @@ class MediaControlPlugin: NSObject, GestureActionPlugin {
             description: "Toggle media playback",
             icon: "playpause"
         ),
-        
+
         // Consolidated: next_track + previous_track → track_skip
         PluginAction(
             id: "track_skip",
@@ -48,7 +48,7 @@ class MediaControlPlugin: NSObject, GestureActionPlugin {
             supportsRepeat: true,
             icon: "forward.end"
         ),
-        
+
         // Consolidated: volume_up + volume_down + mute + set_volume → volume
         PluginAction(
             id: "volume",
@@ -89,7 +89,7 @@ class MediaControlPlugin: NSObject, GestureActionPlugin {
             supportsRepeat: true,
             icon: "speaker.wave.2"
         ),
-        
+
         // Consolidated: fast_forward + rewind → seek
         PluginAction(
             id: "seek",
@@ -123,33 +123,32 @@ class MediaControlPlugin: NSObject, GestureActionPlugin {
             icon: "goforward.10"
         )
     ]
-    
+
     // MARK: - Plugin Lifecycle
-    
+
     private var context: PluginContext?
-    
+
     func initialize(context: PluginContext) throws {
         self.context = context
         context.logger.log("Media Control Plugin initialized", file: #file, function: #function, line: #line)
     }
-    
+
     func cleanup() {
         context?.logger.log("Media Control Plugin cleaned up", file: #file, function: #function, line: #line)
         context = nil
     }
-    
+
     // MARK: - Action Execution
-    
+
     func execute(action: PluginAction, with parameters: ActionParameters, context: PluginContext) throws {
         switch action.id {
         case "play_pause":
             sendMediaKey(.playPause)
-            
+
         // Consolidated track skip
         case "track_skip":
             let direction = parameters.string(for: "direction") ?? "next"
             sendMediaKey(direction == "next" ? .nextTrack : .previousTrack)
-            
 
         // Consolidated volume control
         case "volume":
@@ -167,7 +166,6 @@ class MediaControlPlugin: NSObject, GestureActionPlugin {
             default:
                 break
             }
-            
 
         // Consolidated seek
         case "seek":
@@ -178,13 +176,12 @@ class MediaControlPlugin: NSObject, GestureActionPlugin {
             } else {
                 seekMedia(seconds: Int(seconds), forward: false)
             }
-            
 
         default:
             throw PluginError.actionNotFound(action.id)
         }
     }
-    
+
     func validate(action: PluginAction, with parameters: ActionParameters) -> ValidationResult {
         switch action.id {
         case "volume":
@@ -199,13 +196,13 @@ class MediaControlPlugin: NSObject, GestureActionPlugin {
         }
         return .valid
     }
-    
+
     func configurationView(for action: PluginAction) -> NSView? {
         return nil
     }
-    
+
     // MARK: - NX Media Key Types
-    
+
     /// System media key types (from IOKit/hidsystem)
     private enum NXMediaKeyType: UInt32 {
         case playPause     = 16  // NX_KEYTYPE_PLAY
@@ -214,7 +211,7 @@ class MediaControlPlugin: NSObject, GestureActionPlugin {
         case fastForward   = 19  // NX_KEYTYPE_FAST
         case rewind        = 20  // NX_KEYTYPE_REWIND
     }
-    
+
     /// Send a system media key event using NX_KEYTYPE events.
     /// This works system-wide regardless of which app is focused.
     private func sendMediaKey(_ key: NXMediaKeyType) {
@@ -232,7 +229,7 @@ class MediaControlPlugin: NSObject, GestureActionPlugin {
             data1: keyDownData,
             data2: -1
         )
-        
+
         // Key up
         let keyUpData = Int((key.rawValue << 16) | (0x0B << 8))
         let keyUp = NSEvent.otherEvent(
@@ -246,7 +243,7 @@ class MediaControlPlugin: NSObject, GestureActionPlugin {
             data1: keyUpData,
             data2: -1
         )
-        
+
         if let keyDown = keyDown {
             keyDown.cgEvent?.post(tap: .cghidEventTap)
         }
@@ -254,13 +251,13 @@ class MediaControlPlugin: NSObject, GestureActionPlugin {
             keyUp.cgEvent?.post(tap: .cghidEventTap)
         }
     }
-    
+
     /// Seek forward or backward in media playback using NX media keys.
     private func seekMedia(seconds: Int, forward: Bool) {
         // Send the appropriate NX media key for seeking
         // For apps that support it, this triggers proper seeking rather than track skip
         let key: NXMediaKeyType = forward ? .fastForward : .rewind
-        
+
         // For NX seek keys, we send key-down, wait, then key-up to simulate hold duration
         let keyDownData = Int((key.rawValue << 16) | (0x0A << 8))
         let keyDown = NSEvent.otherEvent(
@@ -274,15 +271,15 @@ class MediaControlPlugin: NSObject, GestureActionPlugin {
             data1: keyDownData,
             data2: -1
         )
-        
+
         if let keyDown = keyDown {
             keyDown.cgEvent?.post(tap: .cghidEventTap)
         }
-        
+
         // Hold for proportional to seconds requested (100ms per second as approximation)
         let holdDuration = useconds_t(min(seconds * 100_000, 2_000_000))
         usleep(holdDuration)
-        
+
         let keyUpData = Int((key.rawValue << 16) | (0x0B << 8))
         let keyUp = NSEvent.otherEvent(
             with: .systemDefined,
@@ -295,14 +292,14 @@ class MediaControlPlugin: NSObject, GestureActionPlugin {
             data1: keyUpData,
             data2: -1
         )
-        
+
         if let keyUp = keyUp {
             keyUp.cgEvent?.post(tap: .cghidEventTap)
         }
     }
-    
+
     // MARK: - Volume Control (AppleScript — these are system-level, not media keys)
-    
+
     private func changeVolume(by amount: Int, context: PluginContext) {
         let script = """
             set currentVolume to output volume of (get volume settings)
@@ -313,13 +310,13 @@ class MediaControlPlugin: NSObject, GestureActionPlugin {
         """
         try? context.executeAppleScript(script)
     }
-    
+
     private func setVolume(to level: Int, context: PluginContext) {
         let clampedLevel = min(max(level, 0), 100)
         let script = "set volume output volume \(clampedLevel)"
         try? context.executeAppleScript(script)
     }
-    
+
     private func toggleMute(context: PluginContext) {
         let script = """
             set currentMute to (output muted of (get volume settings))

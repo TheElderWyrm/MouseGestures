@@ -14,11 +14,11 @@ public enum TutorialState: String, Codable {
 /// Service that manages the state of the interactive tutorial walkthrough
 public class TutorialService: ObservableObject {
     public static let shared = TutorialService()
-    
+
     @Published public var state: TutorialState = .inactive
-    
+
     private init() {}
-    
+
     public func startTutorial() {
         log.log("Tutorial starting soon...")
         // Add a short delay to allow the UI to transition from Onboarding to TabView
@@ -27,28 +27,28 @@ public class TutorialService: ObservableObject {
             log.log("Tutorial started")
         }
     }
-    
+
     public func setState(_ newState: TutorialState) {
         state = newState
         log.log("Tutorial state changed to: \(newState)")
     }
-    
+
     public func advance(from currentState: TutorialState, to nextState: TutorialState) {
         if state == currentState {
             setState(nextState)
         }
     }
-    
+
     public func finish() {
         state = .complete
         log.log("Tutorial finished")
-        
+
         // Reset to inactive after a short delay
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
             self.state = .inactive
         }
     }
-    
+
     public func cancel() {
         state = .inactive
         log.log("Tutorial cancelled")

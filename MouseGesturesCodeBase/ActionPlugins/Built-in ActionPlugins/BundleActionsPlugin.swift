@@ -62,9 +62,9 @@ struct BundledAction: Codable, Equatable {
 
 /// Built-in plugin providing bundle action execution with integrated UI components
 class BundleActionsPlugin: NSObject, GestureActionPlugin {
-    
+
     // MARK: - Plugin Properties
-    
+
     let identifier = "com.mousegestures.bundle"
     let name = "Bundle Actions"
     override var description: String { "Execute multiple actions sequentially with conditions" }
@@ -74,9 +74,9 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
     let isAdvanced = true
     var isExternal = false
     let icon: NSImage? = nil
-    
+
     // MARK: - Actions
-    
+
     lazy var providedActions: [PluginAction] = [
         PluginAction(
             id: "execute_bundle",
@@ -281,26 +281,26 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
             icon: "character.cursor.ibeam"
         )
     ]
-    
+
     // MARK: - Plugin Lifecycle
-    
+
     private var context: PluginContext?
     private let executionQueue = DispatchQueue(label: "com.mousegestures.bundle.execution", attributes: .concurrent)
     private var activeExecutions = Set<UUID>()
-    
+
     func initialize(context: PluginContext) throws {
         self.context = context
         context.logger.log("Bundle Actions Plugin initialized", file: #file, function: #function, line: #line)
     }
-    
+
     func cleanup() {
         activeExecutions.removeAll()
         context?.logger.log("Bundle Actions Plugin cleaned up", file: #file, function: #function, line: #line)
         context = nil
     }
-    
+
     // MARK: - Action Execution
-    
+
     func execute(action: PluginAction, with parameters: ActionParameters, context: PluginContext) throws {
         switch action.id {
         case "execute_bundle":
@@ -317,7 +317,7 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
             throw PluginError.actionNotFound(action.id)
         }
     }
-    
+
     func validate(action: PluginAction, with parameters: ActionParameters) -> ValidationResult {
         switch action.id {
         case "execute_bundle":
@@ -348,11 +348,11 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
         }
         return .valid
     }
-    
+
     func configurationView(for action: PluginAction) -> NSView? {
         return nil
     }
-    
+
     func hasAdvancedConfiguration(for action: PluginAction) -> Bool {
         return action.id == "execute_bundle" || action.id == "conditional_action"
     }
@@ -371,17 +371,17 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
             completion(nil)
             return
         }
-        
+
         // Decode existing bundled actions from parameters
         let existingActions: [BundledAction] = {
             guard let bundleData = currentParameters["bundle_actions"] else { return [] }
             return Self.decodeBundledActions(from: bundleData)
         }()
-        
+
         // Read bundle-level settings from current parameters
         let stopOnFailure = (currentParameters["stop_on_failure"]?.value as? Bool) ?? false
         let parallelExecution = (currentParameters["parallel_execution"]?.value as? Bool) ?? false
-        
+
         // Present the SwiftUI bundle editor
         let host = BundleEditorWindowHost()
         host.present(
@@ -414,7 +414,7 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
             }
         )
     }
-    
+
     // MARK: - Conditional Action Editor
 
     private final class SheetDismisser {
@@ -488,31 +488,31 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
     private func executeBundle(parameters: ActionParameters, context: PluginContext) throws {
         let stopOnFailure = parameters.bool(for: "stop_on_failure") ?? false
         let parallel = parameters.bool(for: "parallel_execution") ?? false
-        
+
         guard let bundleData = parameters["bundle_actions"] else {
             context.logger.log("No bundle actions provided", file: #file, function: #function, line: #line)
             return
         }
-        
+
         let bundledActions = Self.decodeBundledActions(from: bundleData)
         guard !bundledActions.isEmpty else {
             context.logger.log("Bundle actions empty or could not be decoded", file: #file, function: #function, line: #line)
             return
         }
-        
+
         let executionId = UUID()
         activeExecutions.insert(executionId)
         defer { activeExecutions.remove(executionId) }
-        
+
         context.logger.log("Executing bundle with \(bundledActions.count) actions", file: #file, function: #function, line: #line)
-        
+
         if parallel {
             executeActionsInParallel(bundledActions, context: context)
         } else {
             executeActionsSequentially(bundledActions, stopOnFailure: stopOnFailure, context: context)
         }
     }
-    
+
     /// Execute a single bundled sub-action directly through its plugin, bypassing
     /// the full sandbox enter/exit cycle that can interfere when multiple actions
     /// target the same plugin in rapid succession.
@@ -597,7 +597,7 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
         group.wait()
         context.logger.log("Parallel bundle execution completed", file: #file, function: #function, line: #line)
     }
-    
+
     private func executeConditional(parameters: ActionParameters, context: PluginContext) throws {
         let conditionType = parameters.string(for: "condition_type") ?? "always"
         let negate = parameters.bool(for: "condition_negate") ?? false
@@ -671,19 +671,19 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
             }
         }
     }
-    
+
     private func executeRepeat(parameters: ActionParameters, context: PluginContext) throws {
         guard let actionId = parameters.string(for: "action_id") else {
             context.logger.log("No action specified for repeat", file: #file, function: #function, line: #line)
             return
         }
-        
+
         let count = Int(parameters.number(for: "count") ?? 3)
         let delay = parameters.number(for: "delay") ?? 0.2
         let actionParams = (parameters.dictionary(for: "parameters") as? [String: AnyCodable]) ?? [:]
-        
+
         context.logger.log("Repeating action \(actionId) \(count) times with \(delay)s delay", file: #file, function: #function, line: #line)
-        
+
         guard PluginManager.shared.getAction(identifier: actionId) != nil else {
             context.logger.log("Action not found: \(actionId)", file: #file, function: #function, line: #line)
             return
@@ -706,7 +706,7 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
             }
         }
     }
-    
+
     /// Decode a list of BundledActions from an AnyCodable value, handling all persistence formats:
     /// - `[[String: Any]]` — in-memory representation before serialisation
     /// - `[Any]` — AnyCodable-decoded JSON array (produced after app restart)

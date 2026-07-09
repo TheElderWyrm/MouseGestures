@@ -82,7 +82,7 @@ class SavedActionsManager {
         saveToDisk()
         log.log("Deleted saved action: \(action.name)")
     }
-    
+
     func clearAll() {
         savedActions.removeAll()
         saveToDisk()
@@ -92,7 +92,7 @@ class SavedActionsManager {
     func getAction(byId id: UUID) -> SavedAction? {
         return savedActions.first { $0.id == id }
     }
-    
+
     // MARK: - Persistence
 
     private func loadSavedActions() {
@@ -113,11 +113,11 @@ class SavedActionsManager {
     }
 
     // MARK: - Export/Import
-    
+
     func exportAction(_ action: SavedAction) -> Data? {
         return try? JSONEncoder().encode(action)
     }
-    
+
     func importAction(from data: Data) -> SavedAction? {
         if let action = try? JSONDecoder().decode(SavedAction.self, from: data) {
             // Assign a new ID to avoid conflicts
@@ -133,7 +133,7 @@ class SavedActionsManager {
         }
         return nil
     }
-    
+
     func exportAllActions() -> Data? {
         return try? JSONEncoder().encode(savedActions)
     }

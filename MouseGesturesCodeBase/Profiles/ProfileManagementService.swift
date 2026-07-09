@@ -3,31 +3,31 @@ import AppKit
 
 /// Service responsible for profile management operations
 class ProfileManagementService: ObservableObject {
-    
+
     // MARK: - Singleton
-    
+
     static let shared = ProfileManagementService()
-    
+
     // MARK: - Published Properties
-    
+
     @Published var profiles: [ConfigurationProfile] = []
     @Published var activeProfileId: UUID?
     @Published var isLoading = false
     @Published var lastError: Error?
-    
+
     // MARK: - Properties
-    
+
     private let configuration = Configuration.shared
     private let profileManager = ProfileManager.shared
     private let importExportService = ProfileImportExportService.shared
-    
+
     // MARK: - Initialization
-    
+
     private init() {
         loadProfiles()
         setupNotificationObservers()
     }
-    
+
     private func setupNotificationObservers() {
         NotificationCenter.default.addObserver(
             self,
@@ -35,7 +35,7 @@ class ProfileManagementService: ObservableObject {
             name: .profilesDidChange,
             object: nil
         )
-        
+
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleProfileChanged),
@@ -43,9 +43,9 @@ class ProfileManagementService: ObservableObject {
             object: nil
         )
     }
-    
+
     // MARK: - Profile Loading
-    
+
     func loadProfiles() {
         let update = {
             self.profiles = self.configuration.profiles
@@ -53,17 +53,17 @@ class ProfileManagementService: ObservableObject {
         }
         if Thread.isMainThread { update() } else { DispatchQueue.main.async { update() } }
     }
-    
+
     @objc private func handleProfilesChanged() {
         loadProfiles()
     }
-    
+
     @objc private func handleProfileChanged() {
         loadProfiles()
     }
-    
+
     // MARK: - Profile CRUD Operations
-    
+
     /// Creates a new profile
     /// - Parameters:
     ///   - name: Name for the new profile
@@ -75,23 +75,23 @@ class ProfileManagementService: ObservableObject {
             log.log("Cannot create profile with empty name")
             return nil
         }
-        
+
         // Check for duplicate names
         if profiles.contains(where: { $0.name == name }) {
             log.log("Profile with name '\(name)' already exists")
             return nil
         }
-        
+
         let baseProfile = baseProfileId.flatMap { id in
             profiles.first { $0.id == id }
         }
-        
+
         let newProfile = profileManager.createProfile(named: name, basedOn: baseProfile)
         loadProfiles()
-        
+
         return newProfile
     }
-    
+
     /// Updates an existing profile
     /// - Parameters:
     ///   - profileId: ID of the profile to update
@@ -104,9 +104,9 @@ class ProfileManagementService: ObservableObject {
             log.log("Profile not found for update: \(profileId)")
             return false
         }
-        
+
         var profile = configuration.profiles[profileIndex]
-        
+
         // Update name if provided
         if let newName = name {
             // Check for duplicate names (excluding current profile)
@@ -116,31 +116,31 @@ class ProfileManagementService: ObservableObject {
             }
             profile.name = newName
         }
-        
+
         // Update gestures if provided
         if let newGestures = gestures {
             profile.gestures = newGestures
         }
-        
+
         // Update keyboard shortcut if provided (double-optional: nil means no change, .some(nil) means clear)
         if let newShortcut = keyboardShortcut {
             profile.keyboardShortcut = newShortcut
         }
-        
+
         // Update shortcut enabled state if provided
         if let enabled = keyboardShortcutEnabled {
             profile.keyboardShortcutEnabled = enabled
         }
-        
+
         configuration.profiles[profileIndex] = profile
         configuration.save()
-        
+
         NotificationCenter.default.post(name: .profilesDidChange, object: nil)
         loadProfiles()
-        
+
         return true
     }
-    
+
     /// Deletes a profile
     /// - Parameter profileId: ID of the profile to delete
     /// - Returns: True if deletion was successful
@@ -152,21 +152,21 @@ class ProfileManagementService: ObservableObject {
             log.log("Cannot delete active profile — switch to another profile first")
             return false
         }
-        
+
         // Prevent deletion if it's the last profile
         if configuration.profiles.count <= 1 {
             log.log("Cannot delete the last profile")
             return false
         }
-        
+
         let success = profileManager.deleteProfile(withId: profileId)
         if success {
             loadProfiles()
         }
-        
+
         return success
     }
-    
+
     /// Duplicates a profile
     /// - Parameter profileId: ID of the profile to duplicate
     /// - Returns: The duplicated profile, or nil if duplication failed
@@ -177,9 +177,9 @@ class ProfileManagementService: ObservableObject {
         }
         return duplicate
     }
-    
+
     // MARK: - Profile Activation
-    
+
     /// Activates a profile
     /// - Parameter profileId: ID of the profile to activate
     /// - Returns: True if activation was successful
@@ -191,15 +191,15 @@ class ProfileManagementService: ObservableObject {
         }
         return success
     }
-    
+
     /// Gets the currently active profile
     /// - Returns: The active profile, or nil if none
     func getActiveProfile() -> ConfigurationProfile? {
         return profileManager.activeProfile
     }
-    
+
     // MARK: - Import/Export Operations
-    
+
     /// Exports a profile
     /// - Parameter profileId: ID of the profile to export
     /// - Returns: True if export was successful
@@ -209,7 +209,7 @@ class ProfileManagementService: ObservableObject {
             log.log("Profile not found for export: \(profileId)")
             return false
         }
-        
+
         do {
             try importExportService.exportProfile(profile, to: url)
             return true
@@ -218,7 +218,7 @@ class ProfileManagementService: ObservableObject {
             return false
         }
     }
-    
+
     /// Exports multiple profiles
     /// - Parameter profileIds: Array of profile IDs to export
     /// - Returns: Number of successfully exported profiles
@@ -233,7 +233,7 @@ class ProfileManagementService: ObservableObject {
             return 0
         }
     }
-    
+
     /// Imports a profile from file
     /// - Returns: The imported profile, or nil if import failed
     func importProfile(from url: URL) -> ConfigurationProfile? {
@@ -248,7 +248,7 @@ class ProfileManagementService: ObservableObject {
             return nil
         }
     }
-    
+
     /// Imports multiple profiles from files
     /// - Returns: Array of imported profiles
     func importMultipleProfiles(from url: URL) -> [ConfigurationProfile] {
@@ -267,9 +267,9 @@ class ProfileManagementService: ObservableObject {
             return []
         }
     }
-    
+
     // MARK: - Default Profiles
-    
+
     /// Imports a default profile template
     /// - Parameter type: The type of default profile to import
     /// - Returns: The imported profile, or nil if import failed
@@ -278,10 +278,10 @@ class ProfileManagementService: ObservableObject {
             log.log("Default profile not found for type: \(type)")
             return nil
         }
-        
+
         // Generate new ID
         profile.id = UUID()
-        
+
         // Handle name conflicts
         var importName = profile.name
         var counter = 2
@@ -290,21 +290,21 @@ class ProfileManagementService: ObservableObject {
             counter += 1
         }
         profile.name = importName
-        
+
         // Mark as non-default
         profile.isDefault = false
-        
+
         // Add to configuration
         configuration.profiles.append(profile)
         configuration.save()
-        
+
         NotificationCenter.default.post(name: .profilesDidChange, object: nil)
         loadProfiles()
-        
+
         log.log("Imported default profile: \(profile.name)")
         return profile
     }
-    
+
     /// Resets the current active profile's gestures to factory defaults
     func resetToDefaults() {
         guard let activeId = configuration.activeProfileId,
@@ -312,34 +312,34 @@ class ProfileManagementService: ObservableObject {
             log.log("Cannot reset: no active profile")
             return
         }
-        
+
         // Replace the active profile's gestures with the Minimal profile defaults
         let minimalGestures = DefaultProfiles.getProfile(for: .minimal)?.gestures ?? Configuration.defaultGestures
         configuration.profiles[index].gestures = minimalGestures
         configuration.profiles[index].updateModifiedDate()
-        
+
         configuration.save()
-        
+
         NotificationCenter.default.post(name: .profilesDidChange, object: nil)
         loadProfiles()
-        
+
         log.log("Reset active profile '\(configuration.profiles[index].name)' gestures to defaults")
     }
-    
+
     // MARK: - Search and Filter
-    
+
     /// Searches profiles by name
     /// - Parameter query: Search query
     /// - Returns: Array of matching profiles
     func searchProfiles(query: String) -> [ConfigurationProfile] {
         guard !query.isEmpty else { return profiles }
-        
+
         let lowercaseQuery = query.lowercased()
         return profiles.filter { profile in
             profile.name.lowercased().contains(lowercaseQuery)
         }
     }
-    
+
     /// Gets profiles sorted by various criteria
     /// - Parameter sortBy: Sort criteria
     /// - Returns: Sorted array of profiles
@@ -355,9 +355,9 @@ class ProfileManagementService: ObservableObject {
             return profiles.sorted(by: { $0.modifiedDate > $1.modifiedDate })
         }
     }
-    
+
     // MARK: - Validation
-    
+
     /// Validates a profile name
     /// - Parameters:
     ///   - name: Name to validate
@@ -365,23 +365,23 @@ class ProfileManagementService: ObservableObject {
     /// - Returns: Validation result
     func validateProfileName(_ name: String, excludingId: UUID? = nil) -> ProfileNameValidation {
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        
+
         if trimmedName.isEmpty {
             return .invalid(reason: "Profile name cannot be empty")
         }
-        
+
         if trimmedName.count > 50 {
             return .invalid(reason: "Profile name is too long (max 50 characters)")
         }
-        
+
         let isDuplicate = profiles.contains { profile in
             profile.id != excludingId && profile.name == trimmedName
         }
-        
+
         if isDuplicate {
             return .invalid(reason: "A profile with this name already exists")
         }
-        
+
         return .valid
     }
 }
@@ -398,7 +398,7 @@ enum ProfileSortCriteria {
 enum ProfileNameValidation {
     case valid
     case invalid(reason: String)
-    
+
     var isValid: Bool {
         switch self {
         case .valid:
@@ -407,7 +407,7 @@ enum ProfileNameValidation {
             return false
         }
     }
-    
+
     var errorMessage: String? {
         switch self {
         case .valid:

@@ -4,9 +4,9 @@ import Cocoa
 
 /// Built-in plugin for system control actions
 class SystemControlPlugin: NSObject, GestureActionPlugin {
-    
+
     // MARK: - Plugin Properties
-    
+
     let identifier = "com.mousegestures.system"
     let name = "System Control"
     override var description: String { "Control system settings and display" }
@@ -14,9 +14,9 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
     let author = "MouseGestures"
     let category = ActionCategory.system
     let icon: NSImage? = nil
-    
+
     // MARK: - NX Media Key Types for Brightness
-    
+
     /// System media key types (from IOKit/hidsystem)
     private enum NXKeyType: UInt32 {
         case brightnessUp       = 2   // NX_KEYTYPE_BRIGHTNESS_UP
@@ -24,9 +24,9 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
         case keyboardBrightUp   = 21  // NX_KEYTYPE_ILLUMINATION_UP
         case keyboardBrightDown = 22  // NX_KEYTYPE_ILLUMINATION_DOWN
     }
-    
+
     // MARK: - Actions
-    
+
     lazy var providedActions: [PluginAction] = [
         // Consolidated: brightness_up + brightness_down → display_brightness
         PluginAction(
@@ -117,7 +117,7 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
             supportsRepeat: true,
             icon: "keyboard.badge.ellipsis"
         ),
-        
+
         // System features
         PluginAction(
             id: "toggle_dark_mode",
@@ -131,7 +131,7 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
             description: "Enable/disable Do Not Disturb mode",
             icon: "moon.zzz"
         ),
-        
+
         // Consolidated: all screenshot actions → screenshot
         PluginAction(
             id: "screenshot",
@@ -187,7 +187,7 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
             ],
             icon: "camera"
         ),
-        
+
         // Power management
         PluginAction(
             id: "system_sleep",
@@ -244,23 +244,23 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
             icon: "person.crop.circle.badge.xmark"
         )
     ]
-    
+
     // MARK: - Plugin Lifecycle
-    
+
     private var context: PluginContext?
-    
+
     func initialize(context: PluginContext) throws {
         self.context = context
         context.logger.log("System Control Plugin initialized", file: #file, function: #function, line: #line)
     }
-    
+
     func cleanup() {
         context?.logger.log("System Control Plugin cleaned up", file: #file, function: #function, line: #line)
         context = nil
     }
-    
+
     // MARK: - Action Execution
-    
+
     func execute(action: PluginAction, with parameters: ActionParameters, context: PluginContext) throws {
         switch action.id {
         // Consolidated display brightness
@@ -284,21 +284,19 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
                 let steps = max(1, Int(parameters.number(for: "amount") ?? 1))
                 for _ in 0..<steps { adjustKeyboardBrightness(increase: direction == "up") }
             }
-            
 
         // System features
         case "toggle_dark_mode":
             toggleDarkMode(context: context)
         case "toggle_do_not_disturb":
             toggleDoNotDisturb(context: context)
-            
+
         // Consolidated screenshot
         case "screenshot":
             let type = parameters.string(for: "type") ?? "interactive"
             let destination = parameters.string(for: "destination") ?? "clipboard"
             let saveFolder = parameters.string(for: "save_folder")
             takeScreenshot(type: type, destination: destination, saveFolder: saveFolder, context: context)
-            
 
         // Power management
         case "system_sleep":
@@ -312,22 +310,22 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
         case "logout":
             let confirm = parameters.bool(for: "confirm") ?? true
             logOut(showConfirmation: confirm, context: context)
-            
+
         default:
             throw PluginError.actionNotFound(action.id)
         }
     }
-    
+
     func validate(action: PluginAction, with parameters: ActionParameters) -> ValidationResult {
         return .valid
     }
-    
+
     func configurationView(for action: PluginAction) -> NSView? {
         return nil
     }
-    
+
     // MARK: - NX Media Key Sending
-    
+
     /// Send a system NX key event (used for brightness keys that the OS intercepts).
     /// This uses the same mechanism as physical keyboard brightness keys.
     private func sendNXKeyEvent(_ key: NXKeyType) {
@@ -344,7 +342,7 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
             data1: keyDownData,
             data2: -1
         )
-        
+
         // Key up: state 0x0B (up) in bits 8-15
         let keyUpData = Int((key.rawValue << 16) | (0x0B << 8))
         let keyUp = NSEvent.otherEvent(
@@ -358,7 +356,7 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
             data1: keyUpData,
             data2: -1
         )
-        
+
         if let keyDown = keyDown {
             keyDown.cgEvent?.post(tap: .cghidEventTap)
         }
@@ -366,7 +364,7 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
             keyUp.cgEvent?.post(tap: .cghidEventTap)
         }
     }
-    
+
     // MARK: - Brightness (fixed: now uses NX media keys)
 
     private func adjustBrightness(increase: Bool) {
@@ -393,9 +391,9 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
         let steps = Int((Double(clamped) * 16).rounded())
         for _ in 0..<steps { sendNXKeyEvent(.keyboardBrightUp); usleep(20_000) }
     }
-    
+
     // MARK: - System Features
-    
+
     private func toggleDarkMode(context: PluginContext) {
         let script = """
             tell application "System Events"
@@ -406,7 +404,7 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
         """
         try? context.executeAppleScript(script)
     }
-    
+
     private func toggleDoNotDisturb(context: PluginContext) {
         // Primary: toggle via defaults + usernoted signal (works on macOS 12+)
         let script = """
@@ -436,9 +434,9 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
             }
         }
     }
-    
+
     // MARK: - Screenshots (consolidated)
-    
+
     private func takeScreenshot(type: String, destination: String, saveFolder: String?, context: PluginContext) {
         if type == "interactive" {
             // Open the screenshot toolbar (same as Cmd+Shift+5)
@@ -455,16 +453,16 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
             }
             return
         }
-        
+
         // Use screencapture CLI for specific capture modes
         var args: [String] = []
-        
+
         let toClipboard = (destination == "clipboard")
-        
+
         if toClipboard {
             args.append("-c") // Copy to clipboard
         }
-        
+
         switch type {
         case "full":
             break
@@ -475,10 +473,10 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
         default:
             break
         }
-        
+
         // Suppress the shutter sound
         args.append("-x")
-        
+
         // When saving to file, generate a timestamped filename
         if !toClipboard {
             let folder: String
@@ -487,10 +485,10 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
             } else {
                 folder = NSString(string: "~/Desktop").expandingTildeInPath
             }
-            
+
             // Ensure the folder exists
             try? FileManager.default.createDirectory(atPath: folder, withIntermediateDirectories: true)
-            
+
             let dateFormatter = DateFormatter()
             dateFormatter.dateFormat = "yyyy-MM-dd 'at' HH.mm.ss"
             let timestamp = dateFormatter.string(from: Date())
@@ -498,7 +496,7 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
             let filePath = (folder as NSString).appendingPathComponent(filename)
             args.append(filePath)
         }
-        
+
         DispatchQueue.global(qos: .userInitiated).async {
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
@@ -511,9 +509,9 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
             }
         }
     }
-    
+
     // MARK: - Power Management
-    
+
     private func systemSleep(context: PluginContext) {
         let script = """
             tell application "System Events"
@@ -522,7 +520,7 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
         """
         try? context.executeAppleScript(script)
     }
-    
+
     /// Shared helper: optionally show a confirmation dialog, then run an AppleScript command.
     private func executeWithConfirmation(title: String, message: String, buttonTitle: String,
                                          showConfirmation: Bool, script: String, context: PluginContext) {
@@ -540,21 +538,21 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
             if alert.runModal() == .alertFirstButtonReturn { run() }
         }
     }
-    
+
     private func restart(showConfirmation: Bool, context: PluginContext) {
         executeWithConfirmation(title: "Restart Computer",
                                message: "Are you sure you want to restart your computer?",
                                buttonTitle: "Restart", showConfirmation: showConfirmation,
                                script: "tell application \"System Events\" to restart", context: context)
     }
-    
+
     private func shutdown(showConfirmation: Bool, context: PluginContext) {
         executeWithConfirmation(title: "Shutdown Computer",
                                message: "Are you sure you want to shut down your computer?",
                                buttonTitle: "Shutdown", showConfirmation: showConfirmation,
                                script: "tell application \"System Events\" to shut down", context: context)
     }
-    
+
     private func logOut(showConfirmation: Bool, context: PluginContext) {
         executeWithConfirmation(title: "Log Out",
                                message: "Are you sure you want to log out?",

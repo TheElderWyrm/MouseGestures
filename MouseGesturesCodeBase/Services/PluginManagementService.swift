@@ -6,18 +6,18 @@ import AppKit
 
 class PluginManagementService {
     static let shared = PluginManagementService()
-    
+
     private let pluginManager = PluginManager.shared
-    
+
     private init() {}
-    
+
     // MARK: - Plugin Information
-    
+
     func getLoadedPlugins() -> [PluginInfo] {
         return pluginManager.getAllPlugins().map { plugin in
             let actions = pluginManager.getActionsForPlugin(identifier: plugin.identifier)
             let permissions = pluginManager.getPermissions(for: plugin.identifier) ?? .restricted
-            
+
             return PluginInfo(
                 identifier: plugin.identifier,
                 name: plugin.name,
@@ -32,13 +32,13 @@ class PluginManagementService {
             )
         }
     }
-    
+
     func getPluginActions(_ identifier: String) -> [PluginAction] {
         return pluginManager.getActionsForPlugin(identifier: identifier)
     }
-    
+
     // MARK: - Plugin Operations
-    
+
     func installPlugin(from url: URL) -> (success: Bool, error: String?) {
         do {
             try pluginManager.installPlugin(from: url)
@@ -50,7 +50,7 @@ class PluginManagementService {
             return (false, errorMessage)
         }
     }
-    
+
     func uninstallPlugin(_ identifier: String) -> (success: Bool, error: String?) {
         do {
             try pluginManager.uninstallPlugin(identifier: identifier)
@@ -62,10 +62,10 @@ class PluginManagementService {
             return (false, errorMessage)
         }
     }
-    
+
     func reloadPlugin(_ identifier: String) -> Bool {
         let permissions = pluginManager.getPermissions(for: identifier) ?? .restricted
-        
+
         if permissions == .builtIn {
             let success = pluginManager.reloadBuiltInPlugin(identifier: identifier)
             log.log(success ? "Reloaded built-in plugin: \(identifier)" : "Failed to reload built-in plugin: \(identifier)")
@@ -76,23 +76,23 @@ class PluginManagementService {
             return success
         }
     }
-    
+
     func reloadAllPlugins() {
         let plugins = getLoadedPlugins()
-        
+
         for plugin in plugins where !plugin.isBuiltIn {
             _ = reloadPlugin(plugin.identifier)
         }
-        
+
         log.log("All plugins reloaded")
     }
-    
+
     // MARK: - Permissions
-    
+
     func getPluginPermissions(_ identifier: String) -> PluginPermissions? {
         return pluginManager.getPermissions(for: identifier)
     }
-    
+
     func updatePluginPermissions(_ identifier: String, permissions: PluginPermissions) {
         pluginManager.updatePermissions(for: identifier, permissions: permissions)
         log.log("Updated permissions for plugin \(identifier)")

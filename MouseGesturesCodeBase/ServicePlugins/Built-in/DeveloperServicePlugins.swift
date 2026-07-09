@@ -10,7 +10,7 @@ enum DeveloperServicePluginFactory {
                            category: .developer, permissions: .basic,
                            factory: { LogFileService.shared })
     }
-    
+
     static func applicationReset() -> ServicePlugin {
         SimpleServicePlugin(id: "com.mousegestures.service.appreset",
                            name: "Application Reset Service",
@@ -18,7 +18,7 @@ enum DeveloperServicePluginFactory {
                            category: .utility,
                            factory: { ApplicationResetService.shared })
     }
-    
+
     static func settingsImportExport() -> ServicePlugin {
         SimpleServicePlugin(id: "com.mousegestures.service.settingsimportexport",
                            name: "Settings Import/Export Service",
@@ -26,7 +26,7 @@ enum DeveloperServicePluginFactory {
                            category: .importExport, permissions: .basic,
                            factory: { SettingsImportExportService.shared })
     }
-    
+
     static func systemInformation() -> ServicePlugin {
         SimpleServicePlugin(id: "com.mousegestures.service.systeminfo",
                            name: "System Information Service",
@@ -34,7 +34,7 @@ enum DeveloperServicePluginFactory {
                            category: .monitoring,
                            factory: { SystemInformationService.shared })
     }
-    
+
     static func applicationDiscovery() -> ServicePlugin {
         SimpleServicePlugin(id: "com.mousegestures.service.appdiscovery",
                            name: "Application Discovery Service",
@@ -42,7 +42,7 @@ enum DeveloperServicePluginFactory {
                            category: .system, permissions: .basic,
                            factory: { ApplicationDiscoveryService.shared })
     }
-    
+
     static func debugReport() -> ServicePlugin {
         SimpleServicePlugin(id: "com.mousegestures.service.debugreport",
                            name: "Debug Report Service",
@@ -50,7 +50,7 @@ enum DeveloperServicePluginFactory {
                            category: .developer,
                            factory: { DebugReportService.shared })
     }
-    
+
     static func developerModeToggle() -> ServicePlugin {
         SimpleServicePlugin(id: "com.mousegestures.service.devmode",
                            name: "Developer Mode Service",
@@ -58,7 +58,7 @@ enum DeveloperServicePluginFactory {
                            category: .developer,
                            factory: { DeveloperModeToggleService.shared })
     }
-    
+
     static func pluginManagement() -> ServicePlugin {
         SimpleServicePlugin(id: "com.mousegestures.service.pluginmanagement",
                            name: "Plugin Management Service",
@@ -66,7 +66,7 @@ enum DeveloperServicePluginFactory {
                            category: .plugin,
                            factory: { PluginManagementService.shared })
     }
-    
+
     static func windowTargeting() -> ServicePlugin {
         SimpleServicePlugin(id: "com.mousegestures.service.windowtargeting",
                            name: "Window Targeting Service",
@@ -82,21 +82,21 @@ class DebugLoggingServicePlugin: BaseServicePlugin {
     override var name: String { "Debug Logging Service" }
     override var description: String { "Manages debug logging and log level configuration" }
     override var category: ServiceCategory { .developer }
-    
+
     private var service: DebugLoggingService?
-    
+
     override func initialize() throws {
         service = DebugLoggingService.shared
         log.log("DebugLoggingServicePlugin: Initialized")
     }
-    
+
     override func cleanup() {
         service = nil
         log.log("DebugLoggingServicePlugin: Cleaned up")
     }
-    
+
     override func getServiceInstance() -> Any? { return service }
-    
+
     override func getConfigurationOptions() -> [ServiceConfigOption] {
         [
             ServiceConfigOption(key: "enabled", label: "Enable Debug Logging", type: .boolean,
@@ -117,22 +117,22 @@ class PerformanceMonitorServicePlugin: BaseServicePlugin {
     override var name: String { "Performance Monitor Service" }
     override var description: String { "Monitors application performance metrics" }
     override var category: ServiceCategory { .monitoring }
-    
+
     private var service: PerformanceMonitorService?
-    
+
     override func initialize() throws {
         service = PerformanceMonitorService.shared
         log.log("PerformanceMonitorServicePlugin: Initialized")
     }
-    
+
     override func cleanup() {
         service?.stopMonitoring()
         service = nil
         log.log("PerformanceMonitorServicePlugin: Cleaned up")
     }
-    
+
     override func getServiceInstance() -> Any? { return service }
-    
+
     override func getConfigurationOptions() -> [ServiceConfigOption] {
         [
             ServiceConfigOption(key: "enabled", label: "Enable Performance Monitoring", type: .boolean,

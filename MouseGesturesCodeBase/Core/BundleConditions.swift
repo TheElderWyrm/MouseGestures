@@ -46,7 +46,7 @@ struct BundleCondition: Codable, Equatable {
         case always = "Always True"
         case never = "Never True"
     }
-    
+
     var type: ConditionType
     var appBundleIdentifier: String? // For app-related conditions
     var appName: String? // Display name for UI
@@ -56,8 +56,8 @@ struct BundleCondition: Codable, Equatable {
     var modifierKey: NSEvent.ModifierFlags? // For modifier key conditions
     var scriptInfo: ScriptInfo? // For script conditions
     var negate: Bool = false // If true, inverts the condition result
-    
-    init(type: ConditionType, 
+
+    init(type: ConditionType,
          appBundleIdentifier: String? = nil,
          appName: String? = nil,
          windowTitle: String? = nil,
@@ -76,10 +76,10 @@ struct BundleCondition: Codable, Equatable {
         self.scriptInfo = scriptInfo
         self.negate = negate
     }
-    
+
     var displayString: String {
         var result = negate ? "NOT " : ""
-        
+
         switch type {
         case .appIsRunning:
             result += "If \(appName ?? "App") is running"
@@ -104,20 +104,20 @@ struct BundleCondition: Codable, Equatable {
         case .never:
             result += "Never"
         }
-        
+
         return result
     }
-    
+
     private var modifierKeyDescription: String {
         guard let modifiers = modifierKey else { return "modifier" }
         let s = modifiers.symbolString
         return s.isEmpty ? "No Modifiers" : s
     }
-    
+
     /// Evaluates the condition and returns true if it passes
     func evaluate() -> Bool {
         let result: Bool
-        
+
         switch type {
         case .appIsRunning:
             result = isAppRunning()
@@ -142,26 +142,26 @@ struct BundleCondition: Codable, Equatable {
         case .never:
             result = false
         }
-        
+
         return negate ? !result : result
     }
-    
+
     private func isAppRunning() -> Bool {
         guard let bundleId = appBundleIdentifier else { return false }
         return NSWorkspace.shared.runningApplications.contains { $0.bundleIdentifier == bundleId }
     }
-    
+
     private func isAppFrontmost() -> Bool {
         guard let bundleId = appBundleIdentifier else { return false }
         return NSWorkspace.shared.frontmostApplication?.bundleIdentifier == bundleId
     }
-    
+
     private func doesWindowTitleContain() -> Bool {
         guard let searchTitle = windowTitle else { return false }
-        
+
         // Get all windows using accessibility API
         let windows = WindowTargeting.getAllVisibleWindows()
-        
+
         for window in windows {
             if let title = window.title,
                title.localizedCaseInsensitiveContains(searchTitle) {
@@ -170,13 +170,13 @@ struct BundleCondition: Codable, Equatable {
         }
         return false
     }
-    
+
     private func doesWindowTitleEqual() -> Bool {
         guard let searchTitle = windowTitle else { return false }
-        
+
         // Get all windows using accessibility API
         let windows = WindowTargeting.getAllVisibleWindows()
-        
+
         for window in windows {
             if let title = window.title,
                title == searchTitle {
@@ -185,13 +185,13 @@ struct BundleCondition: Codable, Equatable {
         }
         return false
     }
-    
+
     private func doesWindowExist() -> Bool {
         guard let searchTitle = windowTitle else { return false }
-        
+
         // Get all windows using accessibility API
         let windows = WindowTargeting.getAllVisibleWindows()
-        
+
         return windows.contains { window in
             if let title = window.title {
                 return title.localizedCaseInsensitiveContains(searchTitle)
@@ -199,27 +199,27 @@ struct BundleCondition: Codable, Equatable {
             return false
         }
     }
-    
+
     private func isProfileActive() -> Bool {
         guard let profileId = profileId else { return false }
         return Configuration.shared.activeProfile?.id == profileId
     }
-    
+
     private func isModifierKeyPressed() -> Bool {
         guard let requiredModifiers = modifierKey else { return false }
         let currentModifiers = NSEvent.modifierFlags
         return currentModifiers.contains(requiredModifiers)
     }
-    
+
     private func doesScriptReturnTrue() -> Bool {
         guard let script = scriptInfo else { return false }
-        
+
         let semaphore = DispatchSemaphore(value: 0)
         var result = false
-        
+
         DispatchQueue.global(qos: .userInitiated).async {
             let process = Process()
-            
+
             // Get the script content
             var scriptContent: String?
             if script.isFile, let path = script.scriptPath {
@@ -234,43 +234,43 @@ struct BundleCondition: Codable, Equatable {
             } else {
                 scriptContent = script.scriptContent
             }
-            
+
             guard let finalScript = scriptContent else {
                 log.log("No script content available for condition")
                 semaphore.signal()
                 return
             }
-            
+
             // Configure process based on script type
             switch script.scriptType {
             case .shellScript:
                 process.executableURL = URL(fileURLWithPath: "/bin/sh")
                 process.arguments = ["-c", finalScript]
-                
+
             case .appleScript:
                 process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
                 process.arguments = ["-e", finalScript]
-                
+
             case .pythonScript:
                 process.executableURL = URL(fileURLWithPath: "/usr/bin/python3")
                 process.arguments = ["-c", finalScript]
-                
+
             case .jsScript:
                 process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
                 process.arguments = ["-l", "JavaScript", "-e", finalScript]
             }
-            
+
             // Capture output
             let pipe = Pipe()
             process.standardOutput = pipe
             process.standardError = Pipe() // Ignore errors for condition evaluation
-            
+
             do {
                 try process.run()
                 process.waitUntilExit()
-                
+
                 let exitCode = process.terminationStatus
-                
+
                 // Check exit code (0 = true, non-zero = false)
                 if exitCode == 0 {
                     // Also check if output contains "true" or "1"
@@ -288,13 +288,13 @@ struct BundleCondition: Codable, Equatable {
                 log.log("Error executing condition script: \(error)")
                 result = false
             }
-            
+
             semaphore.signal()
         }
-        
+
         // Wait for script to complete (with timeout)
         _ = semaphore.wait(timeout: .now() + 2.0) // 2 second timeout for condition scripts
-        
+
         return result
     }
 }
@@ -305,15 +305,15 @@ struct BundleConditionGroup: Codable, Equatable {
         case and = "AND"
         case or = "OR"
     }
-    
+
     var conditions: [BundleCondition]
     var logicalOperator: LogicalOperator
-    
+
     init(conditions: [BundleCondition] = [], logicalOperator: LogicalOperator = .and) {
         self.conditions = conditions
         self.logicalOperator = logicalOperator
     }
-    
+
     var displayString: String {
         if conditions.isEmpty {
             return "No conditions"
@@ -323,11 +323,11 @@ struct BundleConditionGroup: Codable, Equatable {
         }
         return conditions.map { $0.displayString }.joined(separator: " \(logicalOperator.rawValue) ")
     }
-    
+
     /// Evaluates all conditions with the specified logical operator
     func evaluate() -> Bool {
         guard !conditions.isEmpty else { return true } // No conditions = always true
-        
+
         switch logicalOperator {
         case .and:
             // All conditions must be true

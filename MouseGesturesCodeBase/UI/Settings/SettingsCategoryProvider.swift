@@ -49,7 +49,7 @@ struct SettingsEntry {
     let searchableItems: [SearchableSettingItem]
     /// Builds the SwiftUI view for this entry
     let viewBuilder: @MainActor (_ showAdvanced: Binding<Bool>) -> AnyView
-    
+
     init(
         category: SettingsCategoryDescriptor,
         subcategory: SettingsSubcategoryDescriptor? = nil,
@@ -74,14 +74,14 @@ struct SearchableSettingItem: Identifiable {
     let title: String
     let description: String
     let keywords: [String]
-    
+
     init(title: String, description: String, keywords: [String]) {
         self.id = UUID().uuidString
         self.title = title
         self.description = description
         self.keywords = keywords
     }
-    
+
     func matches(query: String) -> Bool {
         let q = query.lowercased()
         return title.lowercased().contains(q) ||
@@ -111,10 +111,10 @@ struct ResolvedCategory {
     let topLevelEntries: [SettingsEntry]
     /// Subcategories with their entries (rendered behind a segmented picker)
     let subcategories: [ResolvedSubcategory]
-    
+
     /// Whether this category uses subcategories
     var hasSubcategories: Bool { !subcategories.isEmpty }
-    
+
     /// All searchable items across everything in this category
     var allSearchableItems: [SearchableSettingItem] {
         let topLevel = topLevelEntries.flatMap(\.searchableItems)
@@ -128,31 +128,31 @@ struct ResolvedCategory {
 /// Central registry. Collects entries, auto-groups by category and subcategory.
 class SettingsCategoryRegistry: ObservableObject {
     static let shared = SettingsCategoryRegistry()
-    
+
     @Published private(set) var entries: [SettingsEntry] = []
-    
+
     private init() {}
-    
+
     // MARK: - Registration
-    
+
     func register(_ provider: any SettingsProvider) {
         entries.append(contentsOf: provider.settingsEntries)
     }
-    
+
     func register(entry: SettingsEntry) {
         entries.append(entry)
     }
-    
+
     func clear() {
         entries.removeAll()
     }
-    
+
     // MARK: - Resolved Categories
-    
+
     var categories: [ResolvedCategory] {
         // Group entries by category ID
         var grouped: [String: (descriptor: SettingsCategoryDescriptor, entries: [SettingsEntry])] = [:]
-        
+
         for entry in entries {
             let catId = entry.category.id
             if var existing = grouped[catId] {
@@ -165,15 +165,15 @@ class SettingsCategoryRegistry: ObservableObject {
                 grouped[catId] = (entry.category, [entry])
             }
         }
-        
+
         return grouped.values.map { info in
             // Separate top-level entries from subcategorized entries
             let topLevel = info.entries
                 .filter { $0.subcategory == nil }
                 .sorted { $0.order < $1.order }
-            
+
             let subcategorized = info.entries.filter { $0.subcategory != nil }
-            
+
             // Group subcategorized entries by subcategory ID
             var subGrouped: [String: (descriptor: SettingsSubcategoryDescriptor, entries: [SettingsEntry])] = [:]
             for entry in subcategorized {
@@ -188,7 +188,7 @@ class SettingsCategoryRegistry: ObservableObject {
                     subGrouped[sub.id] = (sub, [entry])
                 }
             }
-            
+
             let subs = subGrouped.values
                 .map { subInfo in
                     ResolvedSubcategory(
@@ -200,7 +200,7 @@ class SettingsCategoryRegistry: ObservableObject {
                     )
                 }
                 .sorted { $0.order < $1.order }
-            
+
             return ResolvedCategory(
                 id: info.descriptor.id,
                 title: info.descriptor.title,
@@ -212,19 +212,19 @@ class SettingsCategoryRegistry: ObservableObject {
         }
         .sorted { $0.order < $1.order }
     }
-    
+
     func category(id: String) -> ResolvedCategory? {
         categories.first { $0.id == id }
     }
-    
+
     // MARK: - Search
-    
+
     private var allSearchableItems: [(categoryId: String, categoryTitle: String, item: SearchableSettingItem)] {
         categories.flatMap { cat in
             cat.allSearchableItems.map { (cat.id, cat.title, $0) }
         }
     }
-    
+
     func matchingCategoryIds(for query: String) -> Set<String> {
         guard !query.isEmpty else { return Set(categories.map(\.id)) }
         var result = Set<String>()
@@ -235,7 +235,7 @@ class SettingsCategoryRegistry: ObservableObject {
         }
         return result
     }
-    
+
     func searchResults(for query: String) -> [(categoryId: String, categoryTitle: String, item: SearchableSettingItem)] {
         guard !query.isEmpty else { return [] }
         return allSearchableItems.filter { $0.item.matches(query: query) }

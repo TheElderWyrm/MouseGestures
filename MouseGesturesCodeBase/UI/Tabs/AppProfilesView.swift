@@ -5,7 +5,7 @@ import AppKit
 enum AppProfileRuleType: String, CaseIterable {
     case useProfile = "Use Specific Profile"
     case disabled = "Disable Gestures"
-    
+
     var description: String {
         switch self {
         case .useProfile:
@@ -33,7 +33,7 @@ struct AppProfilesView: View {
     @State private var showSearch = false
     @State private var showDeleteConfirmation = false
     @State private var itemToDelete: String?
-    
+
     var body: some View {
         VStack(spacing: 0) {
             MGCompactHeader(
@@ -45,21 +45,21 @@ struct AppProfilesView: View {
                         .frame(width: MGStyle.Layout.searchFieldWidth)
                         .transition(.opacity.combined(with: .move(edge: .trailing)))
                 }
-                
+
                 Button(action: { withAnimation(.easeInOut(duration: 0.2)) { showSearch.toggle() } }) {
                     Image(systemName: showSearch ? "xmark" : "magnifyingglass")
                         .font(.system(size: 13))
                 }
                 .buttonStyle(.borderless)
                 .help("Search applications")
-                
+
                 Button(action: { activeSheet = .addRule }) {
                     Label("Add Rule", systemImage: "plus")
                 }
             }
-            
+
             Divider()
-            
+
             if allRules.isEmpty {
                 MGEmptyState(
                     icon: "app.badge.checkmark",
@@ -96,7 +96,7 @@ struct AppProfilesView: View {
                     .padding(MGStyle.Spacing.xl)
                 }
             }
-            
+
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -122,16 +122,16 @@ struct AppProfilesView: View {
             Text("Are you sure you want to delete this app rule?")
         }
     }
-    
+
     // MARK: - Unified Rule Model
-    
+
     struct AppRule {
         let bundleId: String
         let appName: String
         let profileId: UUID?   // nil = disabled
         let profileName: String?
     }
-    
+
     private var allRules: [AppRule] {
         let mappingRules = appMappings.map { m in
             AppRule(
@@ -147,7 +147,7 @@ struct AppProfilesView: View {
         return (mappingRules + disabledRules)
             .sorted { $0.appName.localizedCaseInsensitiveCompare($1.appName) == .orderedAscending }
     }
-    
+
     private var filteredRules: [AppRule] {
         if searchText.isEmpty { return allRules }
         return allRules.filter {
@@ -155,14 +155,14 @@ struct AppProfilesView: View {
             $0.bundleId.localizedCaseInsensitiveContains(searchText)
         }
     }
-    
+
     // MARK: - Methods
-    
+
     private func loadData() {
         appMappings = uiServices.getAppProfileMappings()
         disabledApps = uiServices.getDisabledApps()
     }
-    
+
     private func addAppRule(bundleId: String, appName: String, ruleType: AppProfileRuleType, profileId: UUID?) {
         switch ruleType {
         case .useProfile:
@@ -174,7 +174,7 @@ struct AppProfilesView: View {
         }
         loadData()
     }
-    
+
     private func deleteAppRule(bundleId: String) {
         uiServices.removeAppProfileMapping(bundleId: bundleId)
         uiServices.removeDisabledApp(bundleId: bundleId)
@@ -189,13 +189,13 @@ struct UnifiedAppRuleRow: View {
     let onChangeToProfile: (UUID) -> Void
     let onChangeToDisabled: () -> Void
     let onDelete: () -> Void
-    
+
     @StateObject private var uiServices = UIServices.shared
     @State private var isHovered = false
-    
+
     /// Sentinel UUID for the "Disable" option in the picker
     private static let disableSentinel = UUID(uuidString: "00000000-0000-0000-0000-000000000000")!
-    
+
     private var pickerSelection: Binding<UUID> {
         Binding(
             get: { rule.profileId ?? Self.disableSentinel },
@@ -208,7 +208,7 @@ struct UnifiedAppRuleRow: View {
             }
         )
     }
-    
+
     var body: some View {
         HStack(spacing: MGStyle.Spacing.lg) {
             // App icon
@@ -223,7 +223,7 @@ struct UnifiedAppRuleRow: View {
                     .frame(width: 28, height: 28)
                     .foregroundColor(.secondary)
             }
-            
+
             VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
                 Text(rule.appName)
                     .font(.system(size: MGStyle.FontSize.body, weight: .medium))
@@ -233,9 +233,9 @@ struct UnifiedAppRuleRow: View {
                     .foregroundColor(.secondary)
                     .lineLimit(1)
             }
-            
+
             Spacer()
-            
+
             // Unified dropdown: profiles + disable option
             Picker("", selection: pickerSelection) {
                 ForEach(uiServices.profiles.sorted(by: { $0.name < $1.name }), id: \.id) { profile in
@@ -246,7 +246,7 @@ struct UnifiedAppRuleRow: View {
             }
             .pickerStyle(.menu)
             .frame(width: 160)
-            
+
             MGActionButton("trash", help: "Remove rule", destructive: true) { onDelete() }
         }
         .padding(.horizontal, MGStyle.Spacing.lg)
@@ -269,14 +269,14 @@ struct AddAppRuleSheet: View {
     @State private var searchText = ""
     @State private var installedApps: [(bundleId: String, name: String, icon: NSImage?)] = []
     @State private var isLoadingApps = true
-    
+
     let onAdd: (String, String, AppProfileRuleType, UUID?) -> Void
     let onCancel: () -> Void
-    
+
     var body: some View {
         VStack(spacing: 0) {
             MGSheetHeader("Add App Rule", onCancel: onCancel)
-            
+
             ScrollView {
                 VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {
                     // App selection
@@ -284,14 +284,14 @@ struct AddAppRuleSheet: View {
                         VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
                             HStack(spacing: MGStyle.Spacing.md) {
                                 MGSearchField("Search applications...", text: $searchText)
-                                
+
                                 Button(action: browseForApp) {
                                     Label("Browse...", systemImage: "folder")
                                 }
                                 .controlSize(.small)
                                 .help("Select an application from Finder")
                             }
-                            
+
                             if isLoadingApps {
                                 HStack {
                                     Spacer()
@@ -321,7 +321,7 @@ struct AddAppRuleSheet: View {
                                 .background(MGStyle.Colors.cardBackground)
                                 .cornerRadius(MGStyle.Corner.lg)
                             }
-                            
+
                             // Selected app indicator
                             if let app = selectedApp {
                                 HStack(spacing: MGStyle.Spacing.md) {
@@ -333,7 +333,7 @@ struct AddAppRuleSheet: View {
                                     }
                                     Text("Selected: **\(app.name)**")
                                         .font(.system(size: MGStyle.FontSize.caption))
-                                    
+
                                     Text("(\(app.bundleId))")
                                         .font(.system(size: MGStyle.FontSize.badge))
                                         .foregroundColor(.secondary)
@@ -348,7 +348,7 @@ struct AddAppRuleSheet: View {
                             }
                         }
                     }
-                    
+
                     // Rule type as radio buttons with inline profile dropdown
                     MGDetailSection("Rule Configuration", icon: "gearshape") {
                         VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
@@ -357,11 +357,11 @@ struct AddAppRuleSheet: View {
                                 RadioButton(isSelected: ruleType == .useProfile) {
                                     ruleType = .useProfile
                                 }
-                                
+
                                 Text("Use specific profile:")
                                     .font(.system(size: MGStyle.FontSize.body))
                                     .onTapGesture { ruleType = .useProfile }
-                                
+
                                 Picker("", selection: $selectedProfileId) {
                                     Text("Select...").tag(nil as UUID?)
                                     ForEach(uiServices.profiles.sorted(by: { $0.name < $1.name }), id: \.id) { profile in
@@ -374,13 +374,13 @@ struct AddAppRuleSheet: View {
                                 .disabled(ruleType != .useProfile)
                                 .opacity(ruleType == .useProfile ? 1 : 0.5)
                             }
-                            
+
                             // Option 2: Disable gestures
                             HStack(spacing: MGStyle.Spacing.md) {
                                 RadioButton(isSelected: ruleType == .disabled) {
                                     ruleType = .disabled
                                 }
-                                
+
                                 Text("Disable gestures")
                                     .font(.system(size: MGStyle.FontSize.body))
                                     .onTapGesture { ruleType = .disabled }
@@ -390,7 +390,7 @@ struct AddAppRuleSheet: View {
                 }
                 .padding(MGStyle.Spacing.xl)
             }
-            
+
             MGSheetFooter("Add Rule", disabled: !canAddRule) {
                 if let app = selectedApp {
                     onAdd(app.bundleId, app.name, ruleType, selectedProfileId)
@@ -405,7 +405,7 @@ struct AddAppRuleSheet: View {
             }
         }
     }
-    
+
     private var filteredApps: [(bundleId: String, name: String, icon: NSImage?)] {
         let sorted = installedApps.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
         if searchText.isEmpty { return sorted }
@@ -414,19 +414,19 @@ struct AddAppRuleSheet: View {
             app.bundleId.localizedCaseInsensitiveContains(searchText)
         }
     }
-    
+
     private var canAddRule: Bool {
         guard let app = selectedApp else { return false }
         if isAppAlreadyConfigured(bundleId: app.bundleId) { return false }
         if ruleType == .useProfile && selectedProfileId == nil { return false }
         return true
     }
-    
+
     private func isAppAlreadyConfigured(bundleId: String) -> Bool {
         return uiServices.getAppProfileMappings().contains { $0.appBundleIdentifier == bundleId } ||
                uiServices.getDisabledApps().contains { $0.appBundleIdentifier == bundleId }
     }
-    
+
     private func loadInstalledApps() {
         DispatchQueue.global(qos: .userInitiated).async {
             let apps = uiServices.getAllInstalledApps()
@@ -436,7 +436,7 @@ struct AddAppRuleSheet: View {
             }
         }
     }
-    
+
     private func browseForApp() {
         let panel = NSOpenPanel()
         panel.title = "Select Application"
@@ -445,7 +445,7 @@ struct AddAppRuleSheet: View {
         panel.canChooseDirectories = false
         panel.directoryURL = URL(fileURLWithPath: "/Applications")
         panel.message = "Choose an application to create a rule for"
-        
+
         if panel.runModal() == .OK, let url = panel.url {
             if let bundle = Bundle(url: url), let bundleId = bundle.bundleIdentifier {
                 let name = bundle.infoDictionary?["CFBundleName"] as? String
@@ -463,7 +463,7 @@ struct AddAppRuleSheet: View {
 struct RadioButton: View {
     let isSelected: Bool
     let action: () -> Void
-    
+
     var body: some View {
         Button(action: action) {
             ZStack {
@@ -488,7 +488,7 @@ struct AppSelectionRow: View {
     let isSelected: Bool
     let isDisabled: Bool
     let onSelect: () -> Void
-    
+
     var body: some View {
         HStack(spacing: MGStyle.Spacing.md) {
             if let icon = app.icon {
@@ -502,7 +502,7 @@ struct AppSelectionRow: View {
                     .frame(width: 22, height: 22)
                     .foregroundColor(.secondary)
             }
-            
+
             VStack(alignment: .leading, spacing: 0) {
                 Text(app.name)
                     .font(.system(size: MGStyle.FontSize.body))
@@ -512,9 +512,9 @@ struct AppSelectionRow: View {
                     .foregroundColor(.secondary)
                     .lineLimit(1)
             }
-            
+
             Spacer()
-            
+
             if isDisabled {
                 Text("Configured")
                     .font(.caption)

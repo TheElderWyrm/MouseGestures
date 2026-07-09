@@ -9,32 +9,32 @@ class AccessibilityPermissionServicePlugin: BaseServicePlugin {
     override var description: String { "Manages accessibility permissions required for mouse gesture detection" }
     override var category: ServiceCategory { .accessibility }
     override var requiredPermissions: ServicePermissions { .accessibility }
-    
+
     private var service: AccessibilityPermissionService?
-    
+
     override func initialize() throws {
         service = AccessibilityPermissionService.shared
         log.log("AccessibilityPermissionServicePlugin: Initialized")
     }
-    
+
     override func cleanup() {
         service = nil
         log.log("AccessibilityPermissionServicePlugin: Cleaned up")
     }
-    
+
     override func getServiceInstance() -> Any? {
         return service
     }
-    
+
     override func validateEnvironment() -> ServiceValidationResult {
         #if !os(macOS)
         return .failure("This service requires macOS")
         #endif
-        
+
         if !AXIsProcessTrusted() {
             return .warning("Accessibility permissions not granted. Some features may not work.")
         }
-        
+
         return .success
     }
 }
@@ -46,25 +46,25 @@ class LaunchAtLoginServicePlugin: BaseServicePlugin, SettingsProvider {
     override var name: String { "Launch at Login Service" }
     override var description: String { "Manages automatic app launch at system login" }
     override var category: ServiceCategory { .system }
-    
+
     private var service: LaunchAtLoginService?
-    
+
     override func initialize() throws {
         service = LaunchAtLoginService.shared
         log.log("LaunchAtLoginServicePlugin: Initialized")
     }
-    
+
     override func cleanup() {
         service = nil
         log.log("LaunchAtLoginServicePlugin: Cleaned up")
     }
-    
+
     override func getServiceInstance() -> Any? {
         return service
     }
-    
+
     // MARK: - Settings
-    
+
     var settingsEntries: [SettingsEntry] {
         [SettingsEntry(
             category: SettingsCategories.general,
@@ -80,7 +80,7 @@ class LaunchAtLoginServicePlugin: BaseServicePlugin, SettingsProvider {
 /// Setting view provided by LaunchAtLoginServicePlugin
 private struct LaunchAtLoginSettingView: View {
     @State private var launchAtLogin = false
-    
+
     var body: some View {
         settingsToggle(
             isOn: $launchAtLogin,
@@ -98,32 +98,32 @@ class HapticFeedbackServicePlugin: BaseServicePlugin, SettingsProvider {
     override var name: String { "Haptic Feedback Service" }
     override var description: String { "Provides haptic feedback for gesture interactions" }
     override var category: ServiceCategory { .ui }
-    
+
     private var service: HapticFeedbackService?
-    
+
     override func initialize() throws {
         service = HapticFeedbackService.shared
         log.log("HapticFeedbackServicePlugin: Initialized")
     }
-    
+
     override func cleanup() {
         service = nil
         log.log("HapticFeedbackServicePlugin: Cleaned up")
     }
-    
+
     override func getServiceInstance() -> Any? {
         return service
     }
-    
+
     override func validateEnvironment() -> ServiceValidationResult {
         if !NSHapticFeedbackManager.defaultPerformer.isKind(of: NSHapticFeedbackManager.self) {
             return .warning("Haptic feedback may not be available on this device")
         }
         return .success
     }
-    
+
     // MARK: - Settings
-    
+
     var settingsEntries: [SettingsEntry] {
         [SettingsEntry(
             category: SettingsCategories.general,
@@ -139,7 +139,7 @@ class HapticFeedbackServicePlugin: BaseServicePlugin, SettingsProvider {
 /// Setting view provided by HapticFeedbackServicePlugin
 private struct HapticFeedbackSettingView: View {
     @State private var hapticFeedback = true
-    
+
     var body: some View {
         settingsToggle(
             isOn: $hapticFeedback,
@@ -157,25 +157,25 @@ class MenuBarVisibilityServicePlugin: BaseServicePlugin, SettingsProvider {
     override var name: String { "Menu Bar Visibility Service" }
     override var description: String { "Controls the visibility of the menu bar icon" }
     override var category: ServiceCategory { .ui }
-    
+
     private var service: MenuBarVisibilityService?
-    
+
     override func initialize() throws {
         service = MenuBarVisibilityService.shared
         log.log("MenuBarVisibilityServicePlugin: Initialized")
     }
-    
+
     override func cleanup() {
         service = nil
         log.log("MenuBarVisibilityServicePlugin: Cleaned up")
     }
-    
+
     override func getServiceInstance() -> Any? {
         return service
     }
-    
+
     // MARK: - Settings
-    
+
     var settingsEntries: [SettingsEntry] {
         [SettingsEntry(
             category: SettingsCategories.general,
@@ -191,7 +191,7 @@ class MenuBarVisibilityServicePlugin: BaseServicePlugin, SettingsProvider {
 /// Setting view provided by MenuBarVisibilityServicePlugin
 private struct MenuBarSettingView: View {
     @State private var hideMenuBarIcon = false
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Toggle(isOn: Binding(
@@ -209,7 +209,7 @@ private struct MenuBarSettingView: View {
             .onChange(of: hideMenuBarIcon) { newValue in
                 UIServices.shared.setMenuBarIconHidden(newValue)
             }
-            
+
             if hideMenuBarIcon {
                 Label("You can still access settings through the dock icon", systemImage: "info.circle")
                     .font(.caption)
@@ -227,20 +227,20 @@ class ZoneVisualizationServicePlugin: BaseServicePlugin {
     private var customColors: [String: String] = [:]
     private var animationDuration: Double = 0.2
     private var fadeOutDelay: Double = 1.0
-    
+
     override var identifier: String { "com.mousegestures.service.zonevisualization" }
     override var name: String { "Zone Visualization Service" }
     override var description: String { "Provides visual feedback for screen zones and gesture areas" }
     override var category: ServiceCategory { .ui }
-    override var requiredPermissions: ServicePermissions { 
+    override var requiredPermissions: ServicePermissions {
         ServicePermissions(requiresScreenRecording: true)
     }
-    
+
     private var service: ZoneVisualizationService?
-    
+
     override func initialize() throws {
         service = ZoneVisualizationService.shared
-        
+
         if let savedConfig = loadConfiguration() {
             if let colors = savedConfig["customColors"] as? [String: String] {
                 customColors = colors
@@ -254,20 +254,20 @@ class ZoneVisualizationServicePlugin: BaseServicePlugin {
             }
             applyConfiguration(savedConfig)
         }
-        
+
         log.log("ZoneVisualizationServicePlugin: Initialized")
     }
-    
+
     override func cleanup() {
         service?.hideAllHighlights()
         service = nil
         log.log("ZoneVisualizationServicePlugin: Cleaned up")
     }
-    
+
     override func getServiceInstance() -> Any? {
         return service
     }
-    
+
     override func getConfigurationOptions() -> [ServiceConfigOption] {
         return [
             ServiceConfigOption(key: "showHighlights", label: "Show Zone Highlights", type: .boolean, defaultValue: true, description: "Display visual highlights when hovering over zones"),
@@ -278,10 +278,10 @@ class ZoneVisualizationServicePlugin: BaseServicePlugin {
             ServiceConfigOption(key: "fadeOutDelay", label: "Fade Out Delay", type: .double(min: 0.5, max: 5.0), defaultValue: 1.0, description: "Delay before zone highlights fade out")
         ]
     }
-    
+
     override func applyConfiguration(_ config: [String: Any]) {
         guard let service = service else { return }
-        
+
         if let showHighlights = config["showHighlights"] as? Bool { service.setShowZoneHighlights(showHighlights) }
         if let showLabels = config["showLabels"] as? Bool { service.setShowZoneLabels(showLabels) }
         if let edgeThreshold = config["edgeThreshold"] as? CGFloat { service.setEdgeThreshold(edgeThreshold) }
@@ -289,10 +289,10 @@ class ZoneVisualizationServicePlugin: BaseServicePlugin {
         if let duration = config["animationDuration"] as? Double { animationDuration = duration }
         if let delay = config["fadeOutDelay"] as? Double { fadeOutDelay = delay }
         if let colors = config["customColors"] as? [String: String] { customColors = colors }
-        
+
         saveConfiguration(config)
     }
-    
+
     func setZoneColor(for zone: String, color: String) {
         customColors[zone] = color
         var config = loadConfiguration() ?? [:]
@@ -300,7 +300,7 @@ class ZoneVisualizationServicePlugin: BaseServicePlugin {
         saveConfiguration(config)
         log.log("ZoneVisualizationServicePlugin: Set color \(color) for zone \(zone)")
     }
-    
+
     func getAnimationSettings() -> (duration: Double, fadeOutDelay: Double) {
         return (animationDuration, fadeOutDelay)
     }

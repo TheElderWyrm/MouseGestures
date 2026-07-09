@@ -6,52 +6,52 @@ import SwiftUI
 public protocol ServicePlugin: AnyObject {
     /// Unique identifier for the service
     var identifier: String { get }
-    
+
     /// Display name of the service
     var name: String { get }
-    
+
     /// Description of what the service does
     var description: String { get }
-    
+
     /// Category of the service
     var category: ServiceCategory { get }
-    
+
     /// Version of the service plugin
     var version: String { get }
-    
+
     /// Author of the service plugin
     var author: String { get }
-    
+
     /// Whether this is a built-in service or external
     var isBuiltIn: Bool { get }
-    
+
     /// Whether the service requires special permissions
     var requiredPermissions: ServicePermissions { get }
-    
+
     /// Whether the service is currently enabled
     var isEnabled: Bool { get set }
-    
+
     /// Initialize the service
     func initialize() throws
-    
+
     /// Cleanup when service is being unloaded
     func cleanup()
-    
+
     /// Get the service instance (singleton or new instance based on service type)
     func getServiceInstance() -> Any?
-    
+
     /// Validate that the service can run in the current environment
     func validateEnvironment() -> ServiceValidationResult
-    
+
     /// Get any configuration options for the service
     func getConfigurationOptions() -> [ServiceConfigOption]
-    
+
     /// Apply configuration changes
     func applyConfiguration(_ config: [String: Any])
-    
+
     /// Load configuration from persistent storage
     func loadConfiguration() -> [String: Any]?
-    
+
     /// Save configuration to persistent storage
     func saveConfiguration(_ config: [String: Any])
 }
@@ -70,7 +70,7 @@ public enum ServiceCategory: String, CaseIterable, Codable {
     case utility = "Utility"
     case monitoring = "Monitoring"
     case importExport = "Import/Export"
-    
+
     var icon: String {
         switch self {
         case .system: return "gear"
@@ -98,7 +98,7 @@ public struct ServicePermissions: Codable, Equatable {
     public var requiresScreenRecording: Bool = false
     public var requiresAutomation: Bool = false
     public var requiresFullDiskAccess: Bool = false
-    
+
     public init(requiresAccessibility: Bool = false, requiresFileAccess: Bool = false,
                 requiresNetworkAccess: Bool = false, requiresNotifications: Bool = false,
                 requiresScreenRecording: Bool = false, requiresAutomation: Bool = false,
@@ -111,19 +111,19 @@ public struct ServicePermissions: Codable, Equatable {
         self.requiresAutomation = requiresAutomation
         self.requiresFullDiskAccess = requiresFullDiskAccess
     }
-    
+
     public static var none: ServicePermissions {
         return ServicePermissions()
     }
-    
+
     public static var basic: ServicePermissions {
         return ServicePermissions(requiresFileAccess: true)
     }
-    
+
     public static var accessibility: ServicePermissions {
         return ServicePermissions(requiresAccessibility: true)
     }
-    
+
     public static var full: ServicePermissions {
         return ServicePermissions(
             requiresAccessibility: true,
@@ -142,15 +142,15 @@ public struct ServiceValidationResult {
     let isValid: Bool
     let errors: [String]
     let warnings: [String]
-    
+
     static var success: ServiceValidationResult {
         return ServiceValidationResult(isValid: true, errors: [], warnings: [])
     }
-    
+
     static func failure(_ error: String) -> ServiceValidationResult {
         return ServiceValidationResult(isValid: false, errors: [error], warnings: [])
     }
-    
+
     static func warning(_ warning: String) -> ServiceValidationResult {
         return ServiceValidationResult(isValid: true, errors: [], warnings: [warning])
     }
@@ -165,7 +165,7 @@ public struct ServiceConfigOption: Identifiable {
     let defaultValue: Any?
     let description: String?
     let validation: ((Any) -> Bool)?
-    
+
     public init(key: String, label: String, type: ConfigOptionType, defaultValue: Any? = nil, description: String? = nil, validation: ((Any) -> Bool)? = nil) {
         self.key = key
         self.label = label
@@ -174,7 +174,7 @@ public struct ServiceConfigOption: Identifiable {
         self.description = description
         self.validation = validation
     }
-    
+
     public enum ConfigOptionType {
         case boolean
         case integer(min: Int?, max: Int?)
@@ -182,7 +182,7 @@ public struct ServiceConfigOption: Identifiable {
         case string(maxLength: Int?)
         case selection(options: [String])
         case path(type: PathType)
-        
+
         public enum PathType {
             case file
             case directory
@@ -202,34 +202,34 @@ open class BaseServicePlugin: ServicePlugin {
     public var isBuiltIn: Bool { true }
     public var requiredPermissions: ServicePermissions { .none }
     public var isEnabled: Bool = true
-    
+
     public init() {}
-    
+
     open func initialize() throws {
         // Default implementation - override in subclasses
     }
-    
+
     open func cleanup() {
         // Default implementation - override in subclasses
     }
-    
+
     open func getServiceInstance() -> Any? {
         return nil
     }
-    
+
     open func validateEnvironment() -> ServiceValidationResult {
         return .success
     }
-    
+
     open func getConfigurationOptions() -> [ServiceConfigOption] {
         return []
     }
-    
+
     open func applyConfiguration(_ config: [String: Any]) {
         // Default implementation - save to persistent storage
         saveConfiguration(config)
     }
-    
+
     open func loadConfiguration() -> [String: Any]? {
         // Default implementation - load from Configuration storage
         guard let config = Configuration.shared.getPluginConfiguration(for: identifier),
@@ -238,7 +238,7 @@ open class BaseServicePlugin: ServicePlugin {
         }
         return dict
     }
-    
+
     open func saveConfiguration(_ config: [String: Any]) {
         // Default implementation - save to Configuration storage
         Configuration.shared.setPluginConfiguration(for: identifier, configuration: AnyCodable(config))
@@ -258,11 +258,11 @@ public struct ServicePluginInfo: Identifiable, Codable {
     public let isBuiltIn: Bool
     public let isEnabled: Bool
     public let requiredPermissions: ServicePermissions
-    
+
     private enum CodingKeys: String, CodingKey {
         case identifier, name, description, category, version, author, isBuiltIn, isEnabled, requiredPermissions
     }
-    
+
     public init(from plugin: ServicePlugin) {
         self.id = UUID()
         self.identifier = plugin.identifier
@@ -275,7 +275,7 @@ public struct ServicePluginInfo: Identifiable, Codable {
         self.isEnabled = plugin.isEnabled
         self.requiredPermissions = plugin.requiredPermissions
     }
-    
+
     public init(from decoder: Decoder) throws {
         self.id = UUID()
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -309,7 +309,7 @@ public class SimpleServicePlugin<T>: BaseServicePlugin {
     private let _permissions: ServicePermissions
     private let factory: () -> T
     private var service: T?
-    
+
     public init(id: String, name: String, description: String,
                 category: ServiceCategory = .utility,
                 permissions: ServicePermissions = .none,
@@ -322,23 +322,23 @@ public class SimpleServicePlugin<T>: BaseServicePlugin {
         self.factory = factory
         super.init()
     }
-    
+
     public override var identifier: String { _identifier }
     public override var name: String { _name }
     public override var description: String { _description }
     public override var category: ServiceCategory { _category }
     public override var requiredPermissions: ServicePermissions { _permissions }
-    
+
     public override func initialize() throws {
         service = factory()
         log.log("\(_name): Initialized")
     }
-    
+
     public override func cleanup() {
         service = nil
         log.log("\(_name): Cleaned up")
     }
-    
+
     public override func getServiceInstance() -> Any? {
         return service
     }

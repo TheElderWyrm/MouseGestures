@@ -12,25 +12,25 @@ class ServicesUIPlugin: BaseUIPlugin {
     override var sortOrder: Int { 700 }
     var isBuiltIn: Bool { true }
     override var isVisibleByDefault: Bool { false }
-    
+
     override func createView() -> AnyView {
         AnyView(ServicesView())
     }
-    
+
     override func shouldBeVisible(context: UIPluginContext) -> Bool {
         // Services are accessed through the Developer tab's Services section
         return false
     }
-    
+
     func validate() -> Bool {
         // Services view is always available
         return true
     }
-    
+
     override func onActivate() {
         MouseGestures.log.log("ServicesUIPlugin: Activated")
     }
-    
+
     override func onDeactivate() {
         MouseGestures.log.log("ServicesUIPlugin: Deactivated")
     }

@@ -10,7 +10,7 @@ struct ActionExecutionContext {
     let modifiers: NSEvent.ModifierFlags
     let timestamp: Date
     let additionalInfo: [String: Any]
-    
+
     enum ActionSource {
         case gesture(zone: ScreenZone, dragState: DragModifier)
         case keyboard(trigger: KeyboardTrigger)
@@ -21,8 +21,8 @@ struct ActionExecutionContext {
         case longPress
         case external // For external API calls
     }
-    
-    init(source: ActionSource, 
+
+    init(source: ActionSource,
          gesture: Gesture? = nil,
          modifiers: NSEvent.ModifierFlags = [],
          additionalInfo: [String: Any] = [:]) {
@@ -43,8 +43,8 @@ struct ActionExecutionResult {
     let error: Error?
     let executionTime: TimeInterval
     let metadata: [String: Any]
-    
-    init(success: Bool, 
+
+    init(success: Bool,
          actionId: String? = nil,
          error: Error? = nil,
          executionTime: TimeInterval = 0,
@@ -78,44 +78,44 @@ extension ActionExecutionDelegate {
 /// Centralized manager for all action executions in the app
 /// Works with the new plugin-based gesture system
 class ActionExecutionManager {
-    
+
     // In MouseGestures/ActionExecutionManager.swift
 
     deinit {
         NotificationCenter.default.removeObserver(self)
     }
-    
+
     // MARK: - Singleton
-    
+
     static let shared = ActionExecutionManager()
-    
+
     // MARK: - Properties
-    
+
     private let pluginManager = PluginManager.shared
-    
+
     // Execution tracking
     private var activeExecutions: Set<UUID> = []
     private var executionHistory: [ActionExecutionRecord] = []
     private let executionQueue = DispatchQueue(label: "com.mousegestures.execution", attributes: .concurrent)
     private let historyQueue = DispatchQueue(label: "com.mousegestures.execution.history")
-    
+
     // Delegates
     private var delegates: [ActionExecutionDelegate] = []
-    
+
     // Configuration
     private var maxHistorySize = 100
     private var enableHapticFeedback = true
-    
+
     // Statistics
     private var executionStats = ActionExecutionStatistics()
-    
+
     // MARK: - Initialization
-    
+
     private init() {
         setupNotificationObservers()
         loadConfiguration()
     }
-    
+
     private func setupNotificationObservers() {
         NotificationCenter.default.addObserver(
             self,
@@ -124,40 +124,40 @@ class ActionExecutionManager {
             object: nil
         )
     }
-    
+
     private func loadConfiguration() {
         enableHapticFeedback = Configuration.shared.hapticFeedbackEnabled
         // Load other configuration as needed
     }
-    
+
     @objc private func configurationChanged() {
         loadConfiguration()
     }
-    
+
     // MARK: - Main Execution Methods (Plugin-based)
-    
+
     /// Execute a plugin-based gesture
     func executeGesture(_ gesture: Gesture,
                        fromZone zone: ScreenZone? = nil,
                        withDragState dragState: DragModifier = .none,
                        modifiers: NSEvent.ModifierFlags = []) {
-        
+
         let source: ActionExecutionContext.ActionSource
         if let zone = zone {
             source = .gesture(zone: zone, dragState: dragState)
         } else {
             source = .gesture(zone: gesture.zone, dragState: gesture.dragModifier)
         }
-        
+
         let context = ActionExecutionContext(
             source: source,
             gesture: gesture,
             modifiers: modifiers.isEmpty ? gesture.modifiers : modifiers
         )
-        
+
         executeAction(gesture.actionIdentifier, parameters: ActionParameters(values: gesture.parameters), context: context)
     }
-    
+
     /// Execute a keyboard-triggered gesture
     func executeKeyboardTriggeredGesture(_ gesture: Gesture, trigger: KeyboardTrigger) {
         let context = ActionExecutionContext(
@@ -165,10 +165,10 @@ class ActionExecutionManager {
             gesture: gesture,
             modifiers: trigger.modifiers
         )
-        
+
         executeAction(gesture.actionIdentifier, parameters: ActionParameters(values: gesture.parameters), context: context)
     }
-    
+
     /// Execute a mouse button-triggered gesture
     func executeMouseButtonTriggeredGesture(_ gesture: Gesture,
                                            button: MouseButtonTrigger.MouseButton,
@@ -178,33 +178,33 @@ class ActionExecutionManager {
             gesture: gesture,
             modifiers: modifiers
         )
-        
+
         executeAction(gesture.actionIdentifier, parameters: ActionParameters(values: gesture.parameters), context: context)
     }
-    
+
     /// Execute a profile switch
     func executeProfileSwitch(_ profile: ConfigurationProfile) {
         let context = ActionExecutionContext(
             source: .profileSwitch,
             additionalInfo: ["profile_id": profile.id.uuidString, "profile_name": profile.name]
         )
-        
+
         // Profile switching is handled directly
         DispatchQueue.main.async {
             ProfileManager.shared.switchToProfile(withId: profile.id)
             self.provideHapticFeedback()
-            
+
             let result = ActionExecutionResult(
                 success: true,
                 actionId: "profile.switch.\(profile.id.uuidString)",
                 executionTime: 0,
                 metadata: ["profile_name": profile.name]
             )
-            
+
             self.recordExecution(actionId: "profile.switch", result: result, context: context)
         }
     }
-    
+
     /// Execute a repeated gesture
     func executeRepeatedGesture(_ gesture: Gesture) {
         let context = ActionExecutionContext(
@@ -212,12 +212,12 @@ class ActionExecutionManager {
             gesture: gesture,
             modifiers: gesture.modifiers
         )
-        
+
         executeAction(gesture.actionIdentifier,
                      parameters: ActionParameters(values: gesture.parameters),
                      context: context)
     }
-    
+
     /// Execute bundled actions
     func executeBundledActions(_ bundledActions: [BundledAction],
                               stopOnFailure: Bool = false,
@@ -226,10 +226,10 @@ class ActionExecutionManager {
             source: .bundled(parentAction: "manual_bundle"),
             additionalInfo: ["bundle_count": bundledActions.count]
         )
-        
+
         // Create parameters for the bundle plugin
         var parameters: [String: AnyCodable] = [:]
-        
+
         // Encode bundled actions
         if let data = try? JSONEncoder().encode(bundledActions) {
             parameters["bundle_actions"] = AnyCodable(data)
@@ -245,29 +245,29 @@ class ActionExecutionManager {
             }
             parameters["bundle_actions"] = AnyCodable(actionsArray)
         }
-        
+
         parameters["stop_on_failure"] = AnyCodable(stopOnFailure)
         parameters["parallel_execution"] = AnyCodable(parallel)
-        
+
         // Execute through the bundle plugin
         executeAction("com.mousegestures.bundle.execute_bundle",
                      parameters: ActionParameters(values: parameters),
                      context: context)
     }
-    
+
     /// Execute a long press gesture
     func executeLongPressGesture(_ gesture: Gesture) {
         guard gesture.timing.longPressEnabled else {
             executeGesture(gesture)
             return
         }
-        
+
         let context = ActionExecutionContext(
             source: .longPress,
             gesture: gesture,
             modifiers: gesture.modifiers
         )
-        
+
         if let longPressId = gesture.longPressActionIdentifier {
             let params = ActionParameters(values: gesture.longPressParameters ?? gesture.parameters)
             executeAction(longPressId, parameters: params, context: context)
@@ -275,17 +275,17 @@ class ActionExecutionManager {
             executeAction(gesture.actionIdentifier, parameters: ActionParameters(values: gesture.parameters), context: context)
         }
     }
-    
+
     // MARK: - Core Execution Logic
-    
+
     private func executeAction(_ actionId: String,
                               parameters: ActionParameters,
                               context: ActionExecutionContext) {
-        
+
         // Enforce license limits: some actions require Pro
         if !LicenseService.shared.isActionAllowed(actionId) {
             log.log("Access Denied: Action '\(actionId)' requires a Pro license.")
-            
+
             // Show a notification so the user knows why it didn't fire
             DispatchQueue.main.async {
                 PluginManager.shared.showPluginNotification(
@@ -297,7 +297,7 @@ class ActionExecutionManager {
             }
             return
         }
-        
+
         let executionId = UUID()
         let startTime = Date()
 
@@ -349,28 +349,28 @@ class ActionExecutionManager {
             }
         }
     }
-    
+
     private func handleExecutionSuccess(actionId: String,
                                        result: ActionExecutionResult,
                                        context: ActionExecutionContext,
                                        executionId: UUID) {
         // Update statistics
         executionStats.recordSuccess(actionId: actionId, executionTime: result.executionTime)
-        
+
         // Record execution
         recordExecution(actionId: actionId, result: result, context: context)
-        
+
         // Notify delegates - did execute
         notifyDelegatesDidExecute(actionId: actionId, result: result, context: context)
-        
+
         // Remove from active executions
         executionQueue.async(flags: .barrier) {
             self.activeExecutions.remove(executionId)
         }
-        
+
         log.log("Successfully executed action: \(actionId) in \(result.executionTime)s")
     }
-    
+
     private func handleExecutionFailure(actionId: String,
                                        error: Error,
                                        context: ActionExecutionContext,
@@ -382,26 +382,26 @@ class ActionExecutionManager {
             error: error,
             executionTime: Date().timeIntervalSince(startTime)
         )
-        
+
         // Update statistics
         executionStats.recordFailure(actionId: actionId, error: error)
-        
+
         // Record execution
         recordExecution(actionId: actionId, result: result, context: context)
-        
+
         // Notify delegates - did fail
         notifyDelegatesDidFail(actionId: actionId, error: error, context: context)
-        
+
         // Remove from active executions
         executionQueue.async(flags: .barrier) {
             self.activeExecutions.remove(executionId)
         }
-        
+
         log.log("Failed to execute action: \(actionId) - Error: \(error)")
     }
-    
+
     // MARK: - Helper Methods
-    
+
     private func provideHapticFeedback() {
         guard enableHapticFeedback else { return }
 
@@ -420,10 +420,10 @@ class ActionExecutionManager {
     ///   {VARIABLE_NAME}       — user-defined variable set via the "Set Variable" action
     private func resolveTokens(in parameters: ActionParameters) -> ActionParameters {
         let tokens: [String: () -> String] = [
-            "{clipboard}":          { NSPasteboard.general.string(forType: .string) ?? "" },
-            "{frontmost_app}":      { NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "" },
+            "{clipboard}": { NSPasteboard.general.string(forType: .string) ?? "" },
+            "{frontmost_app}": { NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "" },
             "{frontmost_app_name}": { NSWorkspace.shared.frontmostApplication?.localizedName ?? "" },
-            "{selected_text}":      { self.getSelectedText() },
+            "{selected_text}": { self.getSelectedText() }
         ]
 
         var resolved = parameters
@@ -470,9 +470,9 @@ class ActionExecutionManager {
             )
         }
     }
-    
+
     // MARK: - Execution History
-    
+
     private func recordExecution(actionId: String, result: ActionExecutionResult, context: ActionExecutionContext) {
         let record = ActionExecutionRecord(
             id: UUID(),
@@ -482,17 +482,17 @@ class ActionExecutionManager {
             result: result,
             context: context
         )
-        
+
         historyQueue.async {
             self.executionHistory.append(record)
-            
+
             // Trim history if needed
             if self.executionHistory.count > self.maxHistorySize {
                 self.executionHistory.removeFirst(self.executionHistory.count - self.maxHistorySize)
             }
         }
     }
-    
+
     func getExecutionHistory(limit: Int? = nil) -> [ActionExecutionRecord] {
         return historyQueue.sync {
             if let limit = limit {
@@ -501,76 +501,76 @@ class ActionExecutionManager {
             return executionHistory
         }
     }
-    
+
     func clearExecutionHistory() {
         historyQueue.async {
             self.executionHistory.removeAll()
         }
     }
-    
+
     // MARK: - Statistics
-    
+
     func getExecutionStatistics() -> ActionExecutionStatistics {
         return executionQueue.sync {
             return executionStats
         }
     }
-    
+
     func resetStatistics() {
         executionQueue.async(flags: .barrier) {
             self.executionStats = ActionExecutionStatistics()
         }
     }
-    
+
     // MARK: - Active Executions
-    
+
     func getActiveExecutionCount() -> Int {
         return executionQueue.sync {
             return activeExecutions.count
         }
     }
-    
+
     func isExecuting() -> Bool {
         return getActiveExecutionCount() > 0
     }
-    
+
     // MARK: - Delegate Management
-    
+
     func addDelegate(_ delegate: ActionExecutionDelegate) {
         delegates.append(delegate)
     }
-    
+
     func removeDelegate(_ delegate: ActionExecutionDelegate) {
         delegates.removeAll { $0 === delegate }
     }
-    
+
     private func notifyDelegatesWillExecute(actionId: String, context: ActionExecutionContext) {
         delegates.forEach { delegate in
             delegate.actionExecutionManager(self, willExecuteAction: actionId, context: context)
         }
     }
-    
+
     private func notifyDelegatesDidExecute(actionId: String, result: ActionExecutionResult, context: ActionExecutionContext) {
         delegates.forEach { delegate in
             delegate.actionExecutionManager(self, didExecuteAction: actionId, result: result, context: context)
         }
     }
-    
+
     private func notifyDelegatesDidFail(actionId: String, error: Error, context: ActionExecutionContext) {
         delegates.forEach { delegate in
             delegate.actionExecutionManager(self, didFailToExecuteAction: actionId, error: error, context: context)
         }
     }
-    
+
     // MARK: - Configuration
-    
+
     func setHapticFeedback(enabled: Bool) {
         enableHapticFeedback = enabled
     }
-    
+
     func setMaxHistorySize(_ size: Int) {
         maxHistorySize = max(0, size)
-        
+
         // Trim history if needed
         historyQueue.async {
             if self.executionHistory.count > self.maxHistorySize {
@@ -578,7 +578,6 @@ class ActionExecutionManager {
             }
         }
     }
-    
 
 // MARK: - Supporting Types
 
@@ -601,35 +600,34 @@ struct ActionExecutionStatistics {
     private(set) var actionCounts: [String: Int] = [:]
     private(set) var errorCounts: [String: Int] = [:]
     private(set) var sourceCounts: [String: Int] = [:]
-    
+
     mutating func recordSuccess(actionId: String, executionTime: TimeInterval) {
         totalExecutions += 1
         successfulExecutions += 1
-        
+
         // Update average execution time
         let totalTime = averageExecutionTime * Double(totalExecutions - 1) + executionTime
         averageExecutionTime = totalTime / Double(totalExecutions)
-        
+
         // Update action count
         actionCounts[actionId, default: 0] += 1
     }
-    
+
     mutating func recordFailure(actionId: String, error: Error) {
         totalExecutions += 1
         failedExecutions += 1
-        
+
         // Update action count
         actionCounts[actionId, default: 0] += 1
-        
+
         // Update error count
         let errorKey = String(describing: type(of: error))
         errorCounts[errorKey, default: 0] += 1
     }
-    
+
     var successRate: Double {
         guard totalExecutions > 0 else { return 0 }
         return Double(successfulExecutions) / Double(totalExecutions)
     }
 }
 }
-

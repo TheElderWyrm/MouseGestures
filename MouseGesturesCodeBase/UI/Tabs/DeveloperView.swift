@@ -4,29 +4,29 @@ import UniformTypeIdentifiers
 // MARK: - Developer Tab
 struct DeveloperView: View {
     @StateObject private var uiServices = UIServices.shared
-    
+
     @State private var selectedSection: DeveloperSection = .settings
     @State private var debugLoggingEnabled: Bool = false
     @State private var logFiles: [LogFileInfo] = []
     @State private var selectedLogFile: LogFileInfo?
     @State private var logContent: String = ""
     @State private var isLoadingLogContent = false
-    
+
     @State private var unifiedPlugins: [UnifiedPluginInfo] = []
     @State private var selectedUnifiedPlugin: UnifiedPluginInfo?
     @State private var pluginSearchText = ""
     @State private var selectedPluginType: UnifiedPluginType? = nil
     @State private var showingPluginDetails = false
     @State private var showingInstallPlugin = false
-    
+
     enum UnifiedPluginType: String, CaseIterable, Identifiable {
         case action = "Action"
         case detection = "Detection"
         case service = "Service"
         case ui = "UI"
-        
+
         var id: String { self.rawValue }
-        
+
         var icon: String {
             switch self {
             case .action: return "bolt.fill"
@@ -35,7 +35,7 @@ struct DeveloperView: View {
             case .ui: return "uiwindow.split.2x1"
             }
         }
-        
+
         var color: Color {
             switch self {
             case .action: return .blue
@@ -45,7 +45,7 @@ struct DeveloperView: View {
             }
         }
     }
-    
+
     struct UnifiedPluginInfo: Identifiable {
         let id: String
         let identifier: String
@@ -56,19 +56,19 @@ struct DeveloperView: View {
         let description: String
         let isBuiltIn: Bool
         var isEnabled: Bool
-        
+
         // Additional info
         var actionCount: Int? = nil
         var serviceCategory: ServiceCategory? = nil
         var uiCategory: UIPluginCategory? = nil
         var permissions: String = ""
     }
-    
+
     private let perfMonitor = PerformanceMonitorService.shared
     @State private var memoryUsage: (resident: String, virtual: String) = ("", "")
     @State private var cpuUsage: Double = 0.0
     @State private var updateTimer: Timer?
-    
+
     @State private var debugReport: String = ""
     @State private var showingExportReport = false
 
@@ -77,9 +77,9 @@ struct DeveloperView: View {
     @State private var developerModeEnabled: Bool = false
     @State private var successMessage: String?
     @State private var errorMessage: String?
-    
+
     @State private var coordinatorStates: [ActivationCoordinator.ActivationStateInfo] = []
-    
+
     enum DeveloperSection: String, CaseIterable {
         case settings = "Developer Settings"
         case logging = "Logging"
@@ -99,7 +99,7 @@ struct DeveloperView: View {
             }
         }
     }
-    
+
     var body: some View {
         HSplitView {
             MGSidebar(title: "Developer Tools") {
@@ -113,7 +113,7 @@ struct DeveloperView: View {
                 }
             }
             .frame(minWidth: MGStyle.Layout.sidebarMinWidth, idealWidth: 230, maxWidth: 260)
-            
+
             ScrollView {
                 VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {
                     switch selectedSection {
@@ -148,13 +148,13 @@ struct DeveloperView: View {
             defaultFilename: "MouseGestures_Debug_\(Date().formatted(date: .numeric, time: .omitted).replacingOccurrences(of: "/", with: "-")).txt"
         ) { result in handleReportExport(result: result) }
     }
-    
+
     // MARK: - Developer Settings Section
-    
+
     private var developerSettingsSection: some View {
         VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {
             MGSectionHeader("Developer Settings")
-            
+
             MGContentCard {
                 if LicenseService.shared.status != .free {
                     Toggle(isOn: $developerModeEnabled) {
@@ -169,10 +169,10 @@ struct DeveloperView: View {
                     .onChange(of: developerModeEnabled) { newValue in
                         uiServices.setDeveloperModeEnabled(newValue)
                     }
-                    
+
                     Divider()
                 }
-                
+
                 Toggle(isOn: $debugLoggingEnabled) {
                     VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
                         Text("Debug Logging")
@@ -186,7 +186,7 @@ struct DeveloperView: View {
                     uiServices.setDebugModeEnabled(newValue)
                 }
             }
-            
+
             if !developerModeEnabled {
                 Label("Developer mode is disabled. This tab will be hidden when you navigate away.", systemImage: "exclamationmark.triangle")
                     .font(.caption)
@@ -194,13 +194,13 @@ struct DeveloperView: View {
             }
         }
     }
-    
+
     // MARK: - Logging Section
-    
+
     private var loggingSection: some View {
         VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {
             MGSectionHeader("Debug Logging")
-            
+
             MGContentCard {
                 Toggle(isOn: $debugLoggingEnabled) {
                     VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
@@ -215,7 +215,7 @@ struct DeveloperView: View {
                     uiServices.setDebugModeEnabled(newValue)
                     if newValue { refreshLogFiles() }
                 }
-                
+
                 if debugLoggingEnabled {
                     HStack {
                         Button("Open Logs Folder") { openLogsFolder() }
@@ -228,12 +228,12 @@ struct DeveloperView: View {
                     }
                 }
             }
-            
+
             if debugLoggingEnabled && !logFiles.isEmpty {
                 MGContentCard {
                     Text("Log Files")
                         .font(.system(size: MGStyle.FontSize.heading, weight: .semibold))
-                    
+
                     ScrollView {
                         VStack(alignment: .leading, spacing: MGStyle.Spacing.sm) {
                             ForEach(logFiles, id: \.url) { logFile in
@@ -244,7 +244,7 @@ struct DeveloperView: View {
                     .frame(maxHeight: 200)
                     .background(RoundedRectangle(cornerRadius: MGStyle.Corner.md).stroke(MGStyle.Colors.separator))
                 }
-                
+
                 if let selectedLog = selectedLogFile {
                     MGContentCard {
                         HStack {
@@ -257,7 +257,7 @@ struct DeveloperView: View {
                             }
                             Button("Export") { exportLogFile(selectedLog) }
                         }
-                        
+
                         ScrollView {
                             Text(logContent.isEmpty ? "Loading..." : logContent)
                                 .font(.system(.caption, design: .monospaced))
@@ -275,7 +275,7 @@ struct DeveloperView: View {
             }
         }
     }
-    
+
     private func logFileRow(_ logFile: LogFileInfo) -> some View {
         HStack {
             VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
@@ -299,36 +299,36 @@ struct DeveloperView: View {
         .contentShape(Rectangle())
         .onTapGesture { selectLogFile(logFile) }
     }
-    
+
     // MARK: - Plugin Management Section
-    
+
     private var pluginsSection: some View {
         VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {
             MGSectionHeader("Plugin Management")
-            
+
             // Search and Filters
             VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
                 MGContentCard {
                     VStack(spacing: MGStyle.Spacing.lg) {
                         HStack(spacing: MGStyle.Spacing.lg) {
                             MGSearchField("Search plugins...", text: $pluginSearchText)
-                            
+
                             Button(action: { refreshUnifiedPlugins() }) {
                                 Label("Refresh", systemImage: "arrow.clockwise")
                             }
                             .buttonStyle(.bordered)
-                            
+
                             Button(action: { showingInstallPlugin = true }) {
                                 Label("Install Plugin", systemImage: "plus.circle")
                             }
                             .buttonStyle(.borderedProminent)
                         }
-                        
+
                         HStack(spacing: MGStyle.Spacing.md) {
                             Text("Filter:")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
-                            
+
                             Button(action: { selectedPluginType = nil }) {
                                 Text("All")
                                     .padding(.horizontal, 10)
@@ -338,7 +338,7 @@ struct DeveloperView: View {
                                     .cornerRadius(12)
                             }
                             .buttonStyle(.plain)
-                            
+
                             ForEach(UnifiedPluginType.allCases) { type in
                                 Button(action: { selectedPluginType = type }) {
                                     HStack(spacing: 4) {
@@ -354,9 +354,9 @@ struct DeveloperView: View {
                                 }
                                 .buttonStyle(.plain)
                             }
-                            
+
                             Spacer()
-                            
+
                             Text("\(filteredPlugins.count) plugins")
                                 .font(.caption2)
                                 .foregroundColor(.secondary)
@@ -364,7 +364,7 @@ struct DeveloperView: View {
                     }
                 }
             }
-            
+
             // Unified Plugin List
             if filteredPlugins.isEmpty {
                 MGContentCard {
@@ -392,33 +392,33 @@ struct DeveloperView: View {
                     .frame(maxHeight: 500)
                 }
             }
-            
+
             if let plugin = selectedUnifiedPlugin {
                 unifiedPluginDetailsView(plugin)
             }
         }
     }
-    
+
     private var filteredPlugins: [UnifiedPluginInfo] {
         unifiedPlugins.filter { plugin in
-            let matchesSearch = pluginSearchText.isEmpty || 
+            let matchesSearch = pluginSearchText.isEmpty ||
                 plugin.name.localizedCaseInsensitiveContains(pluginSearchText) ||
                 plugin.identifier.localizedCaseInsensitiveContains(pluginSearchText) ||
                 plugin.description.localizedCaseInsensitiveContains(pluginSearchText)
-            
+
             let matchesType = selectedPluginType == nil || plugin.type == selectedPluginType
-            
+
             return matchesSearch && matchesType
         }
     }
-    
+
     private func unifiedPluginRow(_ plugin: UnifiedPluginInfo) -> some View {
         HStack(spacing: MGStyle.Spacing.lg) {
             VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
                 HStack(spacing: MGStyle.Spacing.md) {
                     Text(plugin.name)
                         .font(.system(size: MGStyle.FontSize.body, weight: .medium))
-                    
+
                     // Type Chip
                     HStack(spacing: 4) {
                         Image(systemName: plugin.type.icon)
@@ -432,7 +432,7 @@ struct DeveloperView: View {
                     .background(plugin.type.color.opacity(0.15))
                     .foregroundColor(plugin.type.color)
                     .cornerRadius(4)
-                    
+
                     if plugin.isBuiltIn {
                         Text("BUILT-IN")
                             .font(.system(size: 9, weight: .bold))
@@ -441,22 +441,22 @@ struct DeveloperView: View {
                             .overlay(RoundedRectangle(cornerRadius: 2).stroke(Color.secondary.opacity(0.3), lineWidth: 0.5))
                     }
                 }
-                
+
                 Text(plugin.description)
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .lineLimit(1)
             }
-            
+
             Spacer()
-            
+
             HStack(spacing: MGStyle.Spacing.xl) {
                 if plugin.type == .action, let count = plugin.actionCount {
                     Text("\(count) actions")
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 }
-                
+
                 VStack(alignment: .trailing, spacing: 2) {
                     Text("v\(plugin.version)")
                         .font(.caption2)
@@ -465,7 +465,7 @@ struct DeveloperView: View {
                         .font(.system(size: 8, design: .monospaced))
                         .foregroundColor(.secondary.opacity(0.5))
                 }
-                
+
                 Toggle("", isOn: Binding(
                     get: { plugin.isEnabled },
                     set: { togglePlugin(plugin, enabled: $0) }
@@ -473,7 +473,7 @@ struct DeveloperView: View {
                 .toggleStyle(.switch)
                 .controlSize(.small)
                 .labelsHidden()
-                
+
                 MGActionButton("info.circle", help: "View details") {
                     selectedUnifiedPlugin = plugin
                 }
@@ -507,9 +507,9 @@ struct DeveloperView: View {
                         Text("Engaged").frame(width: 80).font(.system(size: MGStyle.FontSize.caption, weight: .bold))
                     }
                     .foregroundColor(.secondary)
-                    
+
                     Divider()
-                    
+
                     ForEach(coordinatorStates) { state in
                         HStack {
                             VStack(alignment: .leading, spacing: 2) {
@@ -523,7 +523,7 @@ struct DeveloperView: View {
                             Text("\(state.efficiency)")
                                 .font(.system(.body, design: .monospaced))
                                 .frame(width: 80)
-                            
+
                             HStack {
                                 Circle()
                                     .fill(state.isEnabled ? Color.green : Color.gray.opacity(0.3))
@@ -533,7 +533,7 @@ struct DeveloperView: View {
                                     .foregroundColor(state.isEnabled ? .primary : .secondary)
                             }
                             .frame(width: 80, alignment: .leading)
-                            
+
                             HStack {
                                 Circle()
                                     .fill(state.isEngaged ? Color.blue : Color.gray.opacity(0.1))
@@ -547,7 +547,7 @@ struct DeveloperView: View {
                     }
                 }
             }
-            
+
             MGContentCard {
                 Text("Coordination Logic")
                     .font(.system(size: MGStyle.FontSize.heading, weight: .semibold))
@@ -558,16 +558,14 @@ struct DeveloperView: View {
         }
     }
 
-    
-    
     private var performanceSection: some View {
         VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {
             MGSectionHeader("Performance Monitoring")
-            
+
             MGContentCard {
                 Text("System Permissions")
                     .font(.system(size: MGStyle.FontSize.heading, weight: .semibold))
-                
+
                 HStack(spacing: MGStyle.Spacing.lg) {
                     Text("Accessibility:").foregroundColor(.secondary)
                     if hasAccessibilityPermissions() {
@@ -581,7 +579,7 @@ struct DeveloperView: View {
                 Text("Accessibility permissions are required for MouseGestures to detect and respond to mouse and keyboard events.")
                     .font(.caption).foregroundColor(.secondary)
             }
-            
+
             MGContentCard {
                 Text("Memory Usage")
                     .font(.system(size: MGStyle.FontSize.heading, weight: .semibold))
@@ -600,7 +598,7 @@ struct DeveloperView: View {
                     }
                 }
             }
-            
+
             MGContentCard {
                 Text("CPU Usage")
                     .font(.system(size: MGStyle.FontSize.heading, weight: .semibold))
@@ -612,7 +610,7 @@ struct DeveloperView: View {
                 Text("Processor: \(perfMonitor.getProcessorCount()) cores")
                     .font(.caption).foregroundColor(.secondary)
             }
-            
+
             MGContentCard {
                 Text("System Information")
                     .font(.system(size: MGStyle.FontSize.heading, weight: .semibold))
@@ -625,19 +623,19 @@ struct DeveloperView: View {
             }
         }
     }
-    
+
     // MARK: - Diagnostics Section
-    
+
     private var diagnosticsSection: some View {
         VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {
             MGSectionHeader("System Diagnostics")
-            
+
             MGContentCard {
                 Text("Debug Report")
                     .font(.system(size: MGStyle.FontSize.heading, weight: .semibold))
                 Text("Generate a comprehensive debug report containing system information, configuration, and diagnostics")
                     .font(.caption).foregroundColor(.secondary)
-                
+
                 HStack {
                     Button("Generate Report") { generateDebugReport() }.buttonStyle(.borderedProminent)
                     if !debugReport.isEmpty {
@@ -649,7 +647,7 @@ struct DeveloperView: View {
                         Button("Export") { showingExportReport = true }
                     }
                 }
-                
+
                 if !debugReport.isEmpty {
                     ScrollView {
                         Text(debugReport)
@@ -662,11 +660,11 @@ struct DeveloperView: View {
                     .overlay(RoundedRectangle(cornerRadius: MGStyle.Corner.md).stroke(MGStyle.Colors.separator))
                 }
             }
-            
+
             MGContentCard {
                 Text("Quick Actions")
                     .font(.system(size: MGStyle.FontSize.heading, weight: .semibold))
-                
+
                 VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
                     Button("Reset All Preferences") { resetPreferences() }.foregroundColor(.red)
                     Button("Clear All Caches") { clearCaches() }
@@ -674,7 +672,7 @@ struct DeveloperView: View {
                     Button("Export All Logs") { exportAllLogs() }
                 }
             }
-            
+
             if let message = successMessage {
                 Label(message, systemImage: "checkmark.circle.fill").font(.caption).foregroundColor(.green)
             }
@@ -683,9 +681,9 @@ struct DeveloperView: View {
             }
         }
     }
-    
+
     // MARK: - Helper Functions
-    
+
     private func loadInitialData() {
         developerModeEnabled = uiServices.isDeveloperModeEnabled()
         debugLoggingEnabled = uiServices.isDebugModeEnabled()
@@ -693,26 +691,26 @@ struct DeveloperView: View {
         refreshUnifiedPlugins()
         refreshPerformanceMetrics()
     }
-    
+
     private func startPerformanceMonitoring() {
         perfMonitor.startMonitoring(updateInterval: 2.0)
         updateTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { _ in
             refreshPerformanceMetrics()
         }
     }
-    
+
     private func stopPerformanceMonitoring() {
         updateTimer?.invalidate()
         updateTimer = nil
         perfMonitor.stopMonitoring()
     }
-    
+
     private func refreshPerformanceMetrics() {
         memoryUsage = perfMonitor.getMemoryUsage()
         cpuUsage = perfMonitor.getCPUUsage()
         coordinatorStates = ActivationCoordinator.shared.getActivationStates()
     }
-    
+
     private func refreshLogFiles() {
         let urls = uiServices.getLogFiles()
         logFiles = urls.map { url in
@@ -726,7 +724,7 @@ struct DeveloperView: View {
             )
         }
     }
-    
+
     private func selectLogFile(_ logFile: LogFileInfo) {
         selectedLogFile = logFile
         isLoadingLogContent = true
@@ -739,23 +737,23 @@ struct DeveloperView: View {
             }
         }
     }
-    
+
     private func deleteLogFile(_ logFile: LogFileInfo) {
         if uiServices.deleteLogFile(logFile.url) {
             refreshLogFiles()
             if selectedLogFile?.url == logFile.url { selectedLogFile = nil; logContent = "" }
         }
     }
-    
+
     private func clearAllLogs() {
         if uiServices.clearAllLogs() { refreshLogFiles(); selectedLogFile = nil; logContent = ""; successMessage = "All logs cleared" }
     }
-    
+
     private func openLogsFolder() {
         let logsPath = NSHomeDirectory() + "/Library/Logs/MouseGestures"
         NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: logsPath)
     }
-    
+
     private func exportLogFile(_ logFile: LogFileInfo) {
         let savePanel = NSSavePanel()
         savePanel.allowedContentTypes = [.log]
@@ -769,10 +767,10 @@ struct DeveloperView: View {
             }
         }
     }
-    
+
     private func refreshUnifiedPlugins() {
         var allPlugins: [UnifiedPluginInfo] = []
-        
+
         // 1. Action Plugins
         let actionPlugins = uiServices.getLoadedPlugins()
         for p in actionPlugins {
@@ -790,7 +788,7 @@ struct DeveloperView: View {
                 permissions: describePermissions(p.permissions)
             ))
         }
-        
+
         // 2. Detection Plugins
         let detectionPlugins = DetectionPluginManager.shared.getAllPlugins()
         for p in detectionPlugins {
@@ -807,7 +805,7 @@ struct DeveloperView: View {
                 permissions: "Low-level Input"
             ))
         }
-        
+
         // 3. Service Plugins
         let services = servicePluginManager.getAllPlugins()
         for p in services {
@@ -825,7 +823,7 @@ struct DeveloperView: View {
                 permissions: describeServicePermissions(p.requiredPermissions)
             ))
         }
-        
+
         // 4. UI Plugins
         let uiPlugs = UIPluginManager.shared.getAllPlugins()
         for p in uiPlugs {
@@ -843,13 +841,13 @@ struct DeveloperView: View {
                 permissions: "UI/Management"
             ))
         }
-        
+
         unifiedPlugins = allPlugins
         if let selected = selectedUnifiedPlugin {
             selectedUnifiedPlugin = unifiedPlugins.first(where: { $0.id == selected.id })
         }
     }
-    
+
     private func describeServicePermissions(_ p: ServicePermissions) -> String {
         var perms: [String] = []
         if p.requiresAccessibility { perms.append("Accessibility") }
@@ -861,39 +859,37 @@ struct DeveloperView: View {
         if p.requiresFullDiskAccess { perms.append("Full Disk") }
         return perms.isEmpty ? "None" : perms.joined(separator: ", ")
     }
-    
+
     private func togglePlugin(_ plugin: UnifiedPluginInfo, enabled: Bool) {
         switch plugin.type {
         case .action:
-            if enabled { _ = uiServices.reloadPlugin(plugin.identifier) }
-            else { _ = uiServices.uninstallPlugin(plugin.identifier) }
+            if enabled { _ = uiServices.reloadPlugin(plugin.identifier) } else { _ = uiServices.uninstallPlugin(plugin.identifier) }
         case .detection:
             DetectionPluginManager.shared.setPluginEnabled(plugin.identifier, enabled: enabled)
         case .service:
-            if enabled { _ = servicePluginManager.enablePlugin(identifier: plugin.identifier) }
-            else { _ = servicePluginManager.disablePlugin(identifier: plugin.identifier) }
+            if enabled { _ = servicePluginManager.enablePlugin(identifier: plugin.identifier) } else { _ = servicePluginManager.disablePlugin(identifier: plugin.identifier) }
         case .ui:
             UIPluginManager.shared.setPluginEnabled(identifier: plugin.identifier, enabled: enabled)
         }
         refreshUnifiedPlugins()
     }
-    
+
     private func handlePluginInstall(result: Result<[URL], Error>) {
         switch result {
         case .success(let urls):
             guard let url = urls.first else { return }
-            
+
             // Unified installation logic: autodetect by extension
             let ext = url.pathExtension.lowercased()
-            
+
             if ext == "plugin" || ext == "auraplugin" {
-                if uiServices.installPlugin(from: url) { 
+                if uiServices.installPlugin(from: url) {
                     successMessage = "Action plugin installed"
                     refreshUnifiedPlugins()
                 } else { errorMessage = uiServices.errorMessage ?? "Failed to install action plugin" }
             } else if ext == "service" {
                 let res = servicePluginManager.installPlugin(from: url)
-                if res.success { 
+                if res.success {
                     successMessage = "Service installed"
                     refreshUnifiedPlugins()
                 } else { errorMessage = res.error ?? "Failed to install service" }
@@ -907,7 +903,7 @@ struct DeveloperView: View {
                     refreshUnifiedPlugins()
                 } catch { errorMessage = "Failed to install UI plugin: \(error.localizedDescription)" }
             } else {
-                if uiServices.installPlugin(from: url) { 
+                if uiServices.installPlugin(from: url) {
                     successMessage = "Plugin installed"
                     refreshUnifiedPlugins()
                 } else { errorMessage = "Unsupported plugin format" }
@@ -915,7 +911,7 @@ struct DeveloperView: View {
         case .failure(let error): errorMessage = "Install failed: \(error.localizedDescription)"
         }
     }
-    
+
     private func uninstallUnifiedPlugin(_ plugin: UnifiedPluginInfo) {
         switch plugin.type {
         case .action: _ = uiServices.uninstallPlugin(plugin.identifier)
@@ -926,7 +922,7 @@ struct DeveloperView: View {
         refreshUnifiedPlugins()
         selectedUnifiedPlugin = nil
     }
-    
+
     private func reloadUnifiedPlugin(_ plugin: UnifiedPluginInfo) {
         switch plugin.type {
         case .action: _ = uiServices.reloadPlugin(plugin.identifier)
@@ -937,7 +933,7 @@ struct DeveloperView: View {
         }
         refreshUnifiedPlugins()
     }
-    
+
     private func unifiedPluginDetailsView(_ plugin: UnifiedPluginInfo) -> some View {
         MGContentCard {
             VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
@@ -970,11 +966,9 @@ struct DeveloperView: View {
             .padding(MGStyle.Spacing.lg)
         }
     }
-    
+
     private func describePermissions(_ permissions: PluginPermissions) -> String {
-        if permissions == .builtIn { return "Full Access (Built-in)" }
-        else if permissions == .restricted { return "Restricted" }
-        else {
+        if permissions == .builtIn { return "Full Access (Built-in)" } else if permissions == .restricted { return "Restricted" } else {
             var perms: [String] = []
             if permissions.canAccessFileSystem { perms.append("Files") }
             if permissions.canAccessNetwork { perms.append("Network") }
@@ -984,40 +978,37 @@ struct DeveloperView: View {
             return perms.isEmpty ? "None" : perms.joined(separator: ", ")
         }
     }
-    
-    
+
     private func generateDebugReport() { debugReport = uiServices.generateDebugReport(); successMessage = "Debug report generated" }
-    
+
     private func handleReportExport(result: Result<URL, Error>) {
         switch result {
         case .success: successMessage = "Report exported successfully"
         case .failure(let error): errorMessage = "Export failed: \(error.localizedDescription)"
         }
     }
-    
 
     private func resetPreferences() { uiServices.resetAppToDefaults(); successMessage = "Preferences reset to defaults" }
     private func clearCaches() { successMessage = "Caches cleared" }
-    
+
     private func reloadAllPlugins() {
         for plugin in unifiedPlugins where !plugin.isBuiltIn { reloadUnifiedPlugin(plugin) }
         successMessage = "All plugins reloaded"
     }
-    
+
     private func exportAllLogs() {
         let savePanel = NSSavePanel()
         savePanel.allowedContentTypes = [UTType(filenameExtension: "zip") ?? .item]
         savePanel.nameFieldStringValue = "MouseGestures_Logs_\(Date().formatted(date: .numeric, time: .omitted).replacingOccurrences(of: "/", with: "-")).zip"
         savePanel.begin { response in
             if response == .OK, let url = savePanel.url {
-                if uiServices.exportLogs(to: url) { successMessage = "Logs exported successfully" }
-                else { errorMessage = uiServices.errorMessage ?? "Failed to export logs" }
+                if uiServices.exportLogs(to: url) { successMessage = "Logs exported successfully" } else { errorMessage = uiServices.errorMessage ?? "Failed to export logs" }
             }
         }
     }
-    
+
     private func hasAccessibilityPermissions() -> Bool { return AXIsProcessTrusted() }
-    
+
     private func openAccessibilityPreferences() {
         NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
     }

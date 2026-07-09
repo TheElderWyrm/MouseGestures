@@ -14,16 +14,16 @@ public struct PluginSettingDefinition {
     public let isAdvanced: Bool
     public let dependsOn: SettingDependency?
     public let validation: SettingValidation?
-    
+
     // MARK: - Setting Category
-    
+
     public enum SettingCategory: String, Codable, CaseIterable {
         case general
         case detection
         case appearance
         case performance
         case advanced
-        
+
         public var displayName: String {
             switch self {
             case .general: return "General"
@@ -33,7 +33,7 @@ public struct PluginSettingDefinition {
             case .advanced: return "Advanced"
             }
         }
-        
+
         public var sortOrder: Int {
             switch self {
             case .general: return 0
@@ -43,7 +43,7 @@ public struct PluginSettingDefinition {
             case .advanced: return 4
             }
         }
-        
+
         public var icon: String {
             switch self {
             case .general: return "gearshape"
@@ -54,9 +54,9 @@ public struct PluginSettingDefinition {
             }
         }
     }
-    
+
     // MARK: - Setting Type
-    
+
     public enum SettingType {
         case toggle(label: String)
         case slider(min: Double, max: Double, step: Double, unit: String?)
@@ -71,36 +71,36 @@ public struct PluginSettingDefinition {
         case button(title: String, style: ButtonStyle, action: () -> Void)
         case info(text: String) // Read-only informational text
         case custom(viewBuilder: () -> NSView)
-        
+
         public enum ButtonStyle {
             case normal
             case destructive
             case primary
         }
     }
-    
+
     public struct PickerOption: Equatable {
         public let value: String
         public let displayName: String
         public let icon: NSImage?
-        
+
         public init(value: String, displayName: String, icon: NSImage? = nil) {
             self.value = value
             self.displayName = displayName
             self.icon = icon
         }
-        
+
         public static func == (lhs: PickerOption, rhs: PickerOption) -> Bool {
             return lhs.value == rhs.value && lhs.displayName == rhs.displayName
         }
     }
-    
+
     // MARK: - Setting Dependency
-    
+
     public struct SettingDependency {
         public let key: String
         public let condition: Condition
-        
+
         public enum Condition {
             case equals(Any)
             case notEquals(Any)
@@ -111,12 +111,12 @@ public struct PluginSettingDefinition {
             case isEmpty
             case isNotEmpty
         }
-        
+
         public init(key: String, condition: Condition) {
             self.key = key
             self.condition = condition
         }
-        
+
         public func isSatisfied(by value: Any?) -> Bool {
             switch condition {
             case .isTrue:
@@ -141,7 +141,7 @@ public struct PluginSettingDefinition {
                 return value != nil
             }
         }
-        
+
         private func areEqual(_ lhs: Any?, _ rhs: Any) -> Bool {
             if let l = lhs as? String, let r = rhs as? String { return l == r }
             if let l = lhs as? Int, let r = rhs as? Int { return l == r }
@@ -150,13 +150,13 @@ public struct PluginSettingDefinition {
             return "\(lhs ?? "nil")" == "\(rhs)"
         }
     }
-    
+
     // MARK: - Setting Validation
-    
+
     public struct SettingValidation {
         public let rule: ValidationRule
         public let errorMessage: String
-        
+
         public enum ValidationRule {
             case range(min: Double, max: Double)
             case intRange(min: Int, max: Int)
@@ -165,12 +165,12 @@ public struct PluginSettingDefinition {
             case maxLength(Int)
             case custom((Any) -> Bool)
         }
-        
+
         public init(rule: ValidationRule, errorMessage: String) {
             self.rule = rule
             self.errorMessage = errorMessage
         }
-        
+
         public func validate(_ value: Any) -> Bool {
             switch rule {
             case .range(let min, let max):
@@ -193,9 +193,9 @@ public struct PluginSettingDefinition {
             }
         }
     }
-    
+
     // MARK: - Convenience Initializers
-    
+
     public init(
         key: String,
         displayName: String,
@@ -227,47 +227,47 @@ public class PluginSettings {
     private var values: [String: Any] = [:]
     private let definitions: [PluginSettingDefinition]
     private weak var delegate: PluginSettingsDelegate?
-    
+
     public init(pluginId: String, definitions: [PluginSettingDefinition], delegate: PluginSettingsDelegate? = nil) {
         self.pluginId = pluginId
         self.definitions = definitions
         self.delegate = delegate
-        
+
         // Initialize with default values
         for def in definitions {
             values[def.key] = def.defaultValue
         }
     }
-    
+
     // MARK: - Value Access
-    
+
     public func get<T>(_ key: String) -> T? {
         return values[key] as? T
     }
-    
+
     public func get<T>(_ key: String, default defaultValue: T) -> T {
         return values[key] as? T ?? defaultValue
     }
-    
+
     public func set(_ key: String, value: Any, notify: Bool = true) {
         let oldValue = values[key]
         values[key] = value
-        
+
         if notify {
             delegate?.pluginSettings(self, didChangeValue: value, forKey: key, oldValue: oldValue)
         }
     }
-    
+
     // MARK: - Typed Accessors
-    
+
     public func getBool(_ key: String, default defaultValue: Bool = false) -> Bool {
         return get(key, default: defaultValue)
     }
-    
+
     public func getInt(_ key: String, default defaultValue: Int = 0) -> Int {
         return get(key, default: defaultValue)
     }
-    
+
     public func getDouble(_ key: String, default defaultValue: Double = 0.0) -> Double {
         // Handle CGFloat stored as Double
         if let cgFloat = values[key] as? CGFloat {
@@ -275,18 +275,18 @@ public class PluginSettings {
         }
         return get(key, default: defaultValue)
     }
-    
+
     public func getCGFloat(_ key: String, default defaultValue: CGFloat = 0.0) -> CGFloat {
         if let double = values[key] as? Double {
             return CGFloat(double)
         }
         return get(key, default: defaultValue)
     }
-    
+
     public func getString(_ key: String, default defaultValue: String = "") -> String {
         return get(key, default: defaultValue)
     }
-    
+
     public func getColor(_ key: String, default defaultValue: NSColor = .white) -> NSColor {
         // Handle color stored as data (for persistence)
         if let data = values[key] as? Data {
@@ -294,26 +294,26 @@ public class PluginSettings {
         }
         return get(key, default: defaultValue)
     }
-    
+
     // MARK: - Subscript Access
-    
+
     public subscript<T>(key: String, default defaultValue: T) -> T {
         get { get(key, default: defaultValue) }
         set { set(key, value: newValue) }
     }
-    
+
     // MARK: - Validation
-    
+
     public func validate(_ key: String, value: Any) -> (isValid: Bool, errorMessage: String?) {
         guard let definition = definitions.first(where: { $0.key == key }),
               let validation = definition.validation else {
             return (true, nil)
         }
-        
+
         let isValid = validation.validate(value)
         return (isValid, isValid ? nil : validation.errorMessage)
     }
-    
+
     public func validateAll() -> [(key: String, errorMessage: String)] {
         var errors: [(String, String)] = []
         for def in definitions {
@@ -326,21 +326,21 @@ public class PluginSettings {
         }
         return errors
     }
-    
+
     // MARK: - Dependency Checking
-    
+
     public func isSettingVisible(_ key: String) -> Bool {
         guard let definition = definitions.first(where: { $0.key == key }),
               let dependency = definition.dependsOn else {
             return true
         }
-        
+
         let dependencyValue = values[dependency.key]
         return dependency.isSatisfied(by: dependencyValue)
     }
-    
+
     // MARK: - Serialization
-    
+
     public func toDictionary() -> [String: Any] {
         var dict: [String: Any] = [:]
         for (key, value) in values {
@@ -355,21 +355,21 @@ public class PluginSettings {
         }
         return dict
     }
-    
+
     public func load(from dictionary: [String: Any]) {
         for (key, value) in dictionary {
             values[key] = value
         }
     }
-    
+
     // MARK: - Reset
-    
+
     public func resetToDefaults() {
         for def in definitions {
             set(def.key, value: def.defaultValue)
         }
     }
-    
+
     public func resetToDefault(_ key: String) {
         if let def = definitions.first(where: { $0.key == key }) {
             set(key, value: def.defaultValue)
@@ -389,10 +389,10 @@ public protocol PluginSettingsDelegate: AnyObject {
 public protocol PluginSettingsProvider {
     /// All setting definitions for this plugin
     var settingsDefinitions: [PluginSettingDefinition] { get }
-    
+
     /// Current settings instance
     var settings: PluginSettings { get }
-    
+
     /// Called when a setting value changes
     func settingChanged(_ key: String, value: Any, oldValue: Any?)
 }

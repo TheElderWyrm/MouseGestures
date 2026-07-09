@@ -27,7 +27,7 @@ struct BuiltInSettingsProvider: SettingsProvider {
                 ],
                 viewBuilder: { _ in AnyView(EnableGesturesSettingView()) }
             ),
-            
+
             // Notification on activation
             SettingsEntry(
                 category: SettingsCategories.general,
@@ -48,7 +48,7 @@ struct BuiltInSettingsProvider: SettingsProvider {
                 ],
                 viewBuilder: { _ in AnyView(DeveloperModeSettingView()) }
             ),
-            
+
             // Data Management
             SettingsEntry(
                 category: SettingsCategories.about,
@@ -60,7 +60,7 @@ struct BuiltInSettingsProvider: SettingsProvider {
                 ],
                 viewBuilder: { _ in AnyView(DataManagementSettingsView()) }
             ),
-            
+
             // About
             SettingsEntry(
                 category: SettingsCategories.about,
@@ -108,12 +108,12 @@ struct DetectionPluginSettingsProvider: SettingsProvider {
         let allSettings = DetectionPluginManager.shared.getAllSettingsDefinitions()
         let allItems = allSettings.values.flatMap { $0 }
         guard !allItems.isEmpty else { return [] }
-        
+
         // Partition items into subcategories
         var appProfileItems: [(plugin: DetectionPlugin, definition: PluginSettingDefinition)] = []
         var zoneItems: [(plugin: DetectionPlugin, definition: PluginSettingDefinition)] = []
         var generalItems: [(plugin: DetectionPlugin, definition: PluginSettingDefinition)] = []
-        
+
         for item in allItems {
             switch item.plugin.identifier {
             case AppConfigurationDetectorPlugin.pluginIdentifier:
@@ -124,9 +124,9 @@ struct DetectionPluginSettingsProvider: SettingsProvider {
                 generalItems.append(item)
             }
         }
-        
+
         var entries: [SettingsEntry] = []
-        
+
         func makeEntry(_ sub: SettingsSubcategoryDescriptor,
                        _ items: [(plugin: DetectionPlugin, definition: PluginSettingDefinition)]) -> SettingsEntry {
             SettingsEntry(
@@ -143,10 +143,10 @@ struct DetectionPluginSettingsProvider: SettingsProvider {
                 }
             )
         }
-        
-        if !generalItems.isEmpty     { entries.append(makeEntry(DetectionSubcategories.general, generalItems)) }
-        if !zoneItems.isEmpty        { entries.append(makeEntry(DetectionSubcategories.zones, zoneItems)) }
-        if !appProfileItems.isEmpty  { entries.append(makeEntry(DetectionSubcategories.appProfiles, appProfileItems)) }
+
+        if !generalItems.isEmpty { entries.append(makeEntry(DetectionSubcategories.general, generalItems)) }
+        if !zoneItems.isEmpty { entries.append(makeEntry(DetectionSubcategories.zones, zoneItems)) }
+        if !appProfileItems.isEmpty { entries.append(makeEntry(DetectionSubcategories.appProfiles, appProfileItems)) }
         return entries
     }
 }
@@ -158,11 +158,11 @@ struct DetectionSubcategoryView: View {
     let items: [(plugin: DetectionPlugin, definition: PluginSettingDefinition)]
     @Binding var showAdvanced: Bool
     @State private var visibilityTrigger = UUID()
-    
+
     private var visibleItems: [(plugin: DetectionPlugin, definition: PluginSettingDefinition)] {
         items.filter { !$0.definition.isAdvanced || showAdvanced }
     }
-    
+
     var body: some View {
         if visibleItems.isEmpty {
             Text("No settings available")
@@ -214,7 +214,7 @@ private struct NotificationOnActivationSettingView: View {
 
 private struct DeveloperModeSettingView: View {
     @State private var developerModeEnabled = false
-    
+
     var body: some View {
         Toggle(isOn: $developerModeEnabled) {
             VStack(alignment: .leading, spacing: 2) {
@@ -245,7 +245,7 @@ private struct DeveloperModeSettingView: View {
 
 struct DataManagementSettingsView: View {
     @StateObject private var uiServices = UIServices.shared
-    
+
     @State private var showingImportDialog = false
     @State private var showingExportDialog = false
     @State private var showingResetConfirmation = false
@@ -254,30 +254,30 @@ struct DataManagementSettingsView: View {
     @State private var importSuccessMessage: String?
     @State private var exportSuccessMessage: String?
     @State private var errorMessage: String?
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {
             VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
                 Text("Settings Backup")
                     .font(.system(size: MGStyle.FontSize.heading, weight: .semibold))
-                
+
                 Text("Export or import all application settings, including profiles, gestures, and preferences")
                     .font(.caption)
                     .foregroundColor(.secondary)
-                
+
                 HStack(spacing: MGStyle.Spacing.lg) {
                     Button(action: { showingExportDialog = true }) {
                         Label("Export Settings", systemImage: "square.and.arrow.up")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
-                    
+
                     Button(action: { showingImportOptions = true }) {
                         Label("Import Settings", systemImage: "square.and.arrow.down")
                             .frame(maxWidth: .infinity)
                     }
                 }
-                
+
                 if let msg = importSuccessMessage {
                     Label(msg, systemImage: "checkmark.circle.fill").font(.caption).foregroundColor(.green)
                 }
@@ -288,15 +288,15 @@ struct DataManagementSettingsView: View {
                     Label(err, systemImage: "exclamationmark.triangle.fill").font(.caption).foregroundColor(.red)
                 }
             }
-            
+
             Divider()
-            
+
             VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
                 Text("Reset Application")
                     .font(.system(size: MGStyle.FontSize.heading, weight: .semibold))
                 Text("Reset all settings, profiles, and gestures to factory defaults")
                     .font(.caption).foregroundColor(.secondary)
-                
+
                 Button(action: { showingResetConfirmation = true }) {
                     Label("Reset to Defaults", systemImage: "arrow.counterclockwise")
                         .foregroundColor(.white).frame(maxWidth: .infinity)
@@ -327,7 +327,7 @@ struct DataManagementSettingsView: View {
             defaultFilename: "MouseGestures_Settings_\(Date().formatted(date: .numeric, time: .omitted).replacingOccurrences(of: "/", with: "-")).json"
         ) { result in handleExport(result: result) }
     }
-    
+
     private func handleImport(result: Result<[URL], Error>) {
         errorMessage = nil; importSuccessMessage = nil
         switch result {
@@ -341,7 +341,7 @@ struct DataManagementSettingsView: View {
             errorMessage = "Import failed: \(error.localizedDescription)"
         }
     }
-    
+
     private func handleExport(result: Result<URL, Error>) {
         errorMessage = nil; exportSuccessMessage = nil
         switch result {
@@ -352,7 +352,7 @@ struct DataManagementSettingsView: View {
             errorMessage = "Export failed: \(error.localizedDescription)"
         }
     }
-    
+
     private func resetApplication() {
         uiServices.resetAppToDefaults()
         errorMessage = nil
@@ -365,12 +365,12 @@ struct DataManagementSettingsView: View {
 
 struct AboutSettingsView: View {
     @ObservedObject var updateService = UpdateService.shared
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {
             VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
                 Text("Version Information").font(.system(size: MGStyle.FontSize.heading, weight: .semibold))
-                
+
                 HStack(spacing: 20) {
                     VStack(alignment: .leading, spacing: 4) {
                         HStack {
@@ -384,9 +384,9 @@ struct AboutSettingsView: View {
                                 .font(.system(size: MGStyle.FontSize.body, weight: .medium))
                         }
                     }
-                    
+
                     Divider().frame(height: 40)
-                    
+
                     VStack(alignment: .leading, spacing: 4) {
                         if updateService.isChecking {
                             HStack {
@@ -404,7 +404,7 @@ struct AboutSettingsView: View {
                         }
                     }
                 }
-                
+
                 Button(action: {
                     updateService.checkForUpdates()
                 }) {
@@ -412,12 +412,12 @@ struct AboutSettingsView: View {
                 }
                 .disabled(updateService.isChecking)
             }
-            
+
             Divider()
-            
+
             VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
                 Text("Automatic Updates").font(.system(size: MGStyle.FontSize.heading, weight: .semibold))
-                
+
                 Toggle(isOn: Binding(
                     get: { updateService.isAutoUpdateEnabled },
                     set: { updateService.isAutoUpdateEnabled = $0 }
@@ -428,12 +428,12 @@ struct AboutSettingsView: View {
                     }
                 }
             }
-            
+
             Divider()
-            
+
             VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
                 Text("Support & Help").font(.system(size: MGStyle.FontSize.heading, weight: .semibold))
-                
+
                 Button(action: {
                     UIServices.shared.setOnboardingCompleted(false)
                 }) {
@@ -477,16 +477,16 @@ struct SettingsExportDocument: FileDocument {
 func registerAllSettings() {
     let registry = SettingsCategoryRegistry.shared
     registry.clear()
-    
+
     // Core app entries
     registry.register(BuiltInSettingsProvider())
-    
+
     // License and Pro features
     registry.register(LicenseSettingsProvider())
-    
+
     // Detection plugin settings (bridged from PluginSettingDefinition system)
     registry.register(DetectionPluginSettingsProvider())
-    
+
     // Service plugins that provide settings
     for pluginInfo in ServicePluginManager.shared.getAllPlugins() {
         guard let plugin = ServicePluginManager.shared.getPlugin(identifier: pluginInfo.identifier) else { continue }

@@ -7,18 +7,18 @@ import UserNotifications
 public class PluginManager: NSObject {
 
     // MARK: - Singleton
-    
+
     public static let shared = PluginManager()
-    
+
     // MARK: - Properties
-    
+
     private var loadedPlugins: [String: GestureActionPlugin] = [:]
-    
+
     // Public accessor for loaded plugins
     public var allLoadedPlugins: [GestureActionPlugin] {
         return Array(loadedPlugins.values)
     }
-    
+
     // Get actions for a specific plugin
     public func getActionsForPlugin(identifier: String) -> [PluginAction] {
         return actionRegistry.compactMap { key, value in
@@ -31,44 +31,44 @@ public class PluginManager: NSObject {
     private var lifecycleDelegates: [PluginLifecycleDelegate] = []
     private let pluginQueue = DispatchQueue(label: "com.mousegestures.plugins", attributes: .concurrent)
     private var pluginPermissions: [String: PluginPermissions] = [:] // Permissions per plugin
-    
+
     // Directories
     private let systemPluginsDirectory: URL
     private let userPluginsDirectory: URL
-    
+
     // Plugin discovery
     private let fileManager = FileManager.default
-    
+
     // MARK: - Initialization
-    
+
     private override init() {
         // Set up plugin directories
         let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
         let appDirectory = appSupport.appendingPathComponent("MouseGestures", isDirectory: true)
-        
+
         self.userPluginsDirectory = appDirectory.appendingPathComponent("Plugins", isDirectory: true)
-        
+
         // System plugins are in the app bundle
         if let resourcePath = Bundle.main.resourcePath {
             self.systemPluginsDirectory = URL(fileURLWithPath: resourcePath).appendingPathComponent("Plugins", isDirectory: true)
         } else {
             self.systemPluginsDirectory = Bundle.main.bundleURL.appendingPathComponent("Contents/Resources/Plugins", isDirectory: true)
         }
-        
+
         super.init()
-        
+
         // Create directories if needed
         createPluginDirectories()
-        
+
         // Load built-in plugins
         loadBuiltInPlugins()
-        
+
         // Discover and load external plugins
         discoverAndLoadPlugins()
     }
-    
+
     // MARK: - Directory Management
-    
+
     private func createPluginDirectories() {
         do {
             if !fileManager.fileExists(atPath: userPluginsDirectory.path) {
@@ -79,30 +79,30 @@ public class PluginManager: NSObject {
             log.log("Failed to create plugin directories: \(error)")
         }
     }
-    
+
     // MARK: - Plugin Discovery
-    
+
     private func discoverAndLoadPlugins() {
         log.log("Discovering plugins...")
-        
+
         // Discover system plugins
         discoverPluginsIn(directory: systemPluginsDirectory, isSystem: true)
-        
+
         // Discover user plugins
         discoverPluginsIn(directory: userPluginsDirectory, isSystem: false)
-        
+
         log.log("Plugin discovery complete. Loaded \(loadedPlugins.count) plugins.")
     }
-    
+
     private func discoverPluginsIn(directory: URL, isSystem: Bool) {
         guard fileManager.fileExists(atPath: directory.path) else {
             log.log("Plugin directory does not exist: \(directory.path)")
             return
         }
-        
+
         do {
             let contents = try fileManager.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
-            
+
             for item in contents {
                 if item.pathExtension == "plugin" || item.pathExtension == "bundle" {
                     loadPlugin(at: item, isSystem: isSystem)
@@ -112,63 +112,63 @@ public class PluginManager: NSObject {
             log.log("Error discovering plugins in \(directory.path): \(error)")
         }
     }
-    
+
     // MARK: - Plugin Loading
-    
+
     private func loadPlugin(at url: URL, isSystem: Bool) {
         log.log("Loading plugin at: \(url.path)")
-        
+
         guard let bundle = Bundle(url: url) else {
             log.log("Failed to create bundle for plugin at: \(url.path)")
             return
         }
-        
+
         // Load the bundle
         guard bundle.load() else {
             log.log("Failed to load bundle for plugin at: \(url.path)")
             return
         }
-        
+
         // Get the principal class, which must be an NSObject subclass
         guard let principalClass = bundle.principalClass as? NSObject.Type else {
             log.log("No principal class found in plugin at: \(url.path)")
             bundle.unload()
             return
         }
-        
+
         // Instantiate the class and check if the instance conforms to our protocol
         guard let plugin = principalClass.init() as? GestureActionPlugin else {
             log.log("Principal class '\(principalClass)' does not conform to GestureActionPlugin protocol or failed to instantiate.")
             bundle.unload()
             return
         }
-        
+
         // Determine permissions for external plugin
         let permissions = isSystem ? PluginPermissions.default : PluginPermissions.restricted
-        
+
         // Set external flag (if it's not a system plugin)
         plugin.isExternal = !isSystem
-        
+
         // Initialize the plugin in sandbox
         do {
             let sandbox = PluginSandbox(plugin: plugin, permissions: permissions)
             try sandbox.initialize()
-            
+
             // Store the plugin and sandbox
             loadedPlugins[plugin.identifier] = plugin
             sandboxedPlugins[plugin.identifier] = sandbox
             pluginPermissions[plugin.identifier] = permissions
             pluginBundles[plugin.identifier] = bundle
-            
+
             // Register actions
             for action in plugin.providedActions {
                 let actionId = "\(plugin.identifier).\(action.id)"
                 actionRegistry[actionId] = (plugin, action)
             }
-            
+
             // Notify delegates
             lifecycleDelegates.forEach { $0.pluginDidLoad(plugin) }
-            
+
             log.log("Successfully loaded plugin: \(plugin.name) v\(plugin.version) (sandboxed)")
         } catch {
             log.log("Failed to initialize plugin \(plugin.name): \(error)")
@@ -176,7 +176,7 @@ public class PluginManager: NSObject {
             bundle.unload() // Unload if initialization fails
         }
     }
-    
+
     private func loadBuiltInPlugins() {
         // Register built-in plugins with appropriate permissions
         let builtInPlugins: [(plugin: GestureActionPlugin, permissions: PluginPermissions)] = [
@@ -188,43 +188,43 @@ public class PluginManager: NSObject {
             (AutomationPlugin(), .builtIn),
             (BundleActionsPlugin(), .builtIn)
         ]
-        
+
         for (plugin, permissions) in builtInPlugins {
             do {
                 // Built-in plugins are never external
                 plugin.isExternal = false
-                
+
                 // Create sandboxed wrapper
                 let sandbox = PluginSandbox(plugin: plugin, permissions: permissions)
                 try sandbox.initialize()
-                
+
                 // Store both the plugin and its sandbox
                 loadedPlugins[plugin.identifier] = plugin
                 sandboxedPlugins[plugin.identifier] = sandbox
                 pluginPermissions[plugin.identifier] = permissions
-                
+
                 // Register actions
                 for action in plugin.providedActions {
                     let actionId = "\(plugin.identifier).\(action.id)"
                     actionRegistry[actionId] = (plugin, action)
                 }
-                
+
                 log.log("Loaded built-in plugin: \(plugin.name) (sandboxed)")
             } catch {
                 log.log("Failed to load built-in plugin \(plugin.name): \(error)")
             }
         }
     }
-    
+
     // MARK: - Plugin Reload
-    
+
     /// Reload a built-in plugin by re-instantiating and re-registering it
     public func reloadBuiltInPlugin(identifier: String) -> Bool {
         guard loadedPlugins[identifier] != nil else {
             log.log("Cannot reload: plugin \(identifier) not found")
             return false
         }
-        
+
         // Map identifier to a fresh instance of the built-in plugin
         let builtInMap: [String: () -> GestureActionPlugin] = [
             "com.mousegestures.core": { CoreActionsPlugin() },
@@ -239,25 +239,25 @@ public class PluginManager: NSObject {
             log.log("Plugin \(identifier) is not a recognized built-in plugin")
             return false
         }
-        
+
         // Unload old instance
         unloadPlugin(identifier: identifier)
-        
+
         // Create and register fresh instance
         let plugin = factory()
         do {
             let sandbox = PluginSandbox(plugin: plugin, permissions: .builtIn)
             try sandbox.initialize()
-            
+
             loadedPlugins[plugin.identifier] = plugin
             sandboxedPlugins[plugin.identifier] = sandbox
             pluginPermissions[plugin.identifier] = .builtIn
-            
+
             for action in plugin.providedActions {
                 let actionId = "\(plugin.identifier).\(action.id)"
                 actionRegistry[actionId] = (plugin, action)
             }
-            
+
             lifecycleDelegates.forEach { $0.pluginDidLoad(plugin) }
             log.log("Successfully reloaded built-in plugin: \(plugin.name)")
             return true
@@ -266,68 +266,68 @@ public class PluginManager: NSObject {
             return false
         }
     }
-    
+
     /// Reload an external plugin from its bundle
     public func reloadExternalPlugin(identifier: String) -> Bool {
         guard let bundle = pluginBundles[identifier] else {
             log.log("Cannot reload external plugin \(identifier): no bundle found")
             return false
         }
-        
+
         let bundleURL = bundle.bundleURL
         let wasSystem = pluginPermissions[identifier] == .default
-        
+
         // Unload the plugin (this also unloads the bundle)
         unloadPlugin(identifier: identifier)
-        
+
         // Reload from disk
         loadPlugin(at: bundleURL, isSystem: wasSystem)
         return loadedPlugins[identifier] != nil
     }
-    
+
     // MARK: - Plugin Unloading
-    
+
     public func unloadPlugin(identifier: String) {
         guard let plugin = loadedPlugins[identifier] else {
             log.log("Plugin not found: \(identifier)")
             return
         }
-        
+
         // Notify delegates
         lifecycleDelegates.forEach { $0.pluginWillUnload(plugin) }
-        
+
         // Clean up the sandbox first
         if let sandbox = sandboxedPlugins[identifier] {
             sandbox.cleanup()
         }
-        
+
         // Clean up the plugin
         plugin.cleanup()
-        
+
         // Unload the bundle if it exists
         if let bundle = pluginBundles[identifier] {
             bundle.unload()
         }
-        
+
         // Remove from registry
         loadedPlugins.removeValue(forKey: identifier)
         sandboxedPlugins.removeValue(forKey: identifier)
         pluginPermissions.removeValue(forKey: identifier)
         pluginBundles.removeValue(forKey: identifier)
-        
+
         // Remove actions
         actionRegistry = actionRegistry.filter { !$0.key.hasPrefix("\(identifier).") }
-        
+
         log.log("Unloaded plugin: \(plugin.name)")
     }
-    
+
     // MARK: - Plugin Execution
-    
+
     public func executeAction(identifier: String, parameters: ActionParameters = ActionParameters()) throws {
         guard let (plugin, action) = actionRegistry[identifier] else {
             throw PluginError.actionNotFound(identifier)
         }
-        
+
         // Use sandboxed execution if available
         if let sandbox = sandboxedPlugins[plugin.identifier] {
             // Execute through sandbox for safety
@@ -337,7 +337,7 @@ public class PluginManager: NSObject {
             throw PluginError.executionFailed("Plugin \(plugin.identifier) has no sandbox!")
         }
     }
-    
+
     /// Execute an action requested by another plugin (with permission checking)
     internal func executeActionFromPlugin(identifier: String, parameters: ActionParameters, requestingPlugin: String) {
         // Check if requesting plugin has permission
@@ -346,10 +346,10 @@ public class PluginManager: NSObject {
             log.log("⚠️ Plugin '\(requestingPlugin)' denied permission to execute action '\(identifier)'")
             return
         }
-        
+
         // Log the cross-plugin execution
         log.log("Plugin '\(requestingPlugin)' executing action '\(identifier)'")
-        
+
         // Execute the action
         do {
             try executeAction(identifier: identifier, parameters: parameters)
@@ -357,7 +357,7 @@ public class PluginManager: NSObject {
             log.log("Failed to execute action '\(identifier)' requested by plugin '\(requestingPlugin)': \(error)")
         }
     }
-    
+
     /// Show a notification from a plugin
     internal func showPluginNotification(title: String, message: String, style: NotificationStyle, pluginId: String) {
         let content = UNMutableNotificationContent()
@@ -380,37 +380,37 @@ public class PluginManager: NSObject {
             }
         }
     }
-    
+
     // MARK: - Permission Management
-    
+
     /// Update permissions for a specific plugin
     public func updatePermissions(for pluginId: String, permissions: PluginPermissions) {
         pluginPermissions[pluginId] = permissions
-        
+
         // If plugin is loaded, update its sandbox
         if let plugin = loadedPlugins[pluginId] {
             // Recreate sandbox with new permissions
             sandboxedPlugins[pluginId] = PluginSandbox(plugin: plugin, permissions: permissions)
         }
-        
+
         log.log("Updated permissions for plugin '\(pluginId)'")
     }
-    
+
     /// Get current permissions for a plugin
     public func getPermissions(for pluginId: String) -> PluginPermissions? {
         return pluginPermissions[pluginId]
     }
-    
+
     // MARK: - Plugin Query
-    
+
     public func getAllPlugins() -> [GestureActionPlugin] {
         Array(loadedPlugins.values)
     }
-    
+
     public func getPlugin(identifier: String) -> GestureActionPlugin? {
         loadedPlugins[identifier]
     }
-    
+
     public func getAllActions() -> [(pluginId: String, action: PluginAction)] {
         actionRegistry.compactMap { key, value in
             let components = key.split(separator: ".")
@@ -420,64 +420,64 @@ public class PluginManager: NSObject {
             return (pluginId, value.action)
         }
     }
-    
+
     public func getActionsForCategory(_ category: ActionCategory) -> [(plugin: GestureActionPlugin, action: PluginAction)] {
         loadedPlugins.values.flatMap { plugin -> [(GestureActionPlugin, PluginAction)] in
             guard plugin.category == category else { return [] }
             return plugin.providedActions.map { (plugin, $0) }
         }
     }
-    
+
     public func getAction(identifier: String) -> (plugin: GestureActionPlugin, action: PluginAction)? {
         actionRegistry[identifier]
     }
-    
+
     // MARK: - Lifecycle Delegates
-    
+
     public func addLifecycleDelegate(_ delegate: PluginLifecycleDelegate) {
         lifecycleDelegates.append(delegate)
     }
-    
+
     public func removeLifecycleDelegate(_ delegate: PluginLifecycleDelegate) {
         lifecycleDelegates.removeAll { $0 === delegate }
     }
-    
+
     // MARK: - Plugin Installation
-    
+
     public func installPlugin(from url: URL) throws {
         let pluginName = url.lastPathComponent
         let destination = userPluginsDirectory.appendingPathComponent(pluginName)
-        
+
         // Copy the plugin to the user plugins directory
         if fileManager.fileExists(atPath: destination.path) {
             try fileManager.removeItem(at: destination)
         }
-        
+
         try fileManager.copyItem(at: url, to: destination)
-        
+
         // Load the plugin
         loadPlugin(at: destination, isSystem: false)
     }
-    
+
     public func uninstallPlugin(identifier: String) throws {
         guard let bundle = pluginBundles[identifier] else {
             throw PluginError.actionNotFound(identifier)
         }
-        
+
         // Unload the plugin first
         unloadPlugin(identifier: identifier)
-        
+
         // Delete the plugin bundle
         try fileManager.removeItem(at: bundle.bundleURL)
     }
-    
+
     // MARK: - Configuration
-    
+
     public func getConfigurationView(for actionIdentifier: String) -> NSView? {
         guard let (plugin, action) = actionRegistry[actionIdentifier] else {
             return nil
         }
-        
+
         return plugin.configurationView(for: action)
     }
 }
@@ -485,11 +485,11 @@ public class PluginManager: NSObject {
 // MARK: - Plugin Request Handler Implementation
 
 class PluginRequestHandlerImpl: PluginRequestHandler {
-    
+
     func handleRequest(_ request: PluginRequest, completion: @escaping (Result<Any?, Error>) -> Void) {
         // Log the request
         log.log("Plugin '\(request.pluginId)' requesting: \(request.type)")
-        
+
         // Check if should auto-approve
         if shouldAutoApprove(request) {
             // Execute the request
@@ -505,18 +505,18 @@ class PluginRequestHandlerImpl: PluginRequestHandler {
             }
         }
     }
-    
+
     func shouldAutoApprove(_ request: PluginRequest) -> Bool {
         // Built-in plugins can auto-approve certain requests
         if let permissions = PluginManager.shared.getPermissions(for: request.pluginId),
            permissions.canAccessSystemAPIs {
             return true
         }
-        
+
         // Otherwise require user approval
         return false
     }
-    
+
     private func executeRequest(_ request: PluginRequest, completion: @escaping (Result<Any?, Error>) -> Void) {
         switch request.type {
         case .executeAction(let identifier, let parameters):
@@ -526,26 +526,26 @@ class PluginRequestHandlerImpl: PluginRequestHandler {
             } catch {
                 completion(.failure(error))
             }
-            
-        case .accessFile(_, _):
+
+        case .accessFile:
             // Handle file access request
             completion(.failure(PluginSandboxError.permissionDenied("File access not implemented")))
-            
+
         case .openURL(let url):
             NSWorkspace.shared.open(url)
             completion(.success(nil))
-            
-        case .accessSystemAPI(_):
+
+        case .accessSystemAPI:
             // Handle system API access
             completion(.failure(PluginSandboxError.permissionDenied("System API access not implemented")))
-            
+
         case .elevatePermissions(let permissions):
             // Handle permission elevation request
             PluginManager.shared.updatePermissions(for: request.pluginId, permissions: permissions)
             completion(.success(nil))
         }
     }
-    
+
     private func promptUserForApproval(_ request: PluginRequest, completion: @escaping (Bool) -> Void) {
         DispatchQueue.main.async {
             let alert = NSAlert()
@@ -554,7 +554,7 @@ class PluginRequestHandlerImpl: PluginRequestHandler {
             alert.alertStyle = .warning
             alert.addButton(withTitle: "Allow")
             alert.addButton(withTitle: "Deny")
-            
+
             let response = alert.runModal()
             completion(response == .alertFirstButtonReturn)
         }

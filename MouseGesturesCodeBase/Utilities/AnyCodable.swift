@@ -3,11 +3,11 @@ import Foundation
 // Type-erased Codable wrapper for userInfo dictionary
 public struct AnyCodable: Codable, Equatable {
     public let value: Any
-    
+
     public init(_ value: Any) {
         self.value = value
     }
-    
+
     public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         if let intValue = try? container.decode(Int.self) {
@@ -26,7 +26,7 @@ public struct AnyCodable: Codable, Equatable {
             value = NSNull()
         }
     }
-    
+
     public func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
         switch value {
@@ -48,7 +48,7 @@ public struct AnyCodable: Codable, Equatable {
             try container.encodeNil()
         }
     }
-    
+
     public static func == (lhs: AnyCodable, rhs: AnyCodable) -> Bool {
         switch (lhs.value, rhs.value) {
         case (let lhsInt as Int, let rhsInt as Int):

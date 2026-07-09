@@ -7,37 +7,37 @@ import Cocoa
 protocol DetectionPlugin: AnyObject, PluginSettingsProvider {
     /// Unique identifier for the plugin
     var identifier: String { get }
-    
+
     /// Display name of the plugin
     var name: String { get }
-    
+
     /// Description of what the plugin detects
     var description: String { get }
-    
+
     /// Version of the plugin
     var version: String { get }
-    
+
     /// Whether the plugin is currently enabled
     var isEnabled: Bool { get set }
-    
+
     /// Priority for plugin execution (higher = earlier)
     var priority: Int { get }
-    
+
     /// Plugin dependencies (identifiers of plugins this one depends on)
     var dependencies: [String] { get }
-    
+
     /// Initialize the plugin with context
     func initialize(context: DetectionContext) throws
-    
+
     /// Start detection
     func start() throws
-    
+
     /// Stop detection
     func stop()
-    
+
     /// Clean up resources
     func cleanup()
-    
+
     /// Configuration view for the plugin (for per-gesture trigger configuration)
     func configurationView() -> NSView?
 
@@ -52,7 +52,7 @@ protocol DetectionPlugin: AnyObject, PluginSettingsProvider {
 
     /// Handle global configuration changes (gestures, profiles, etc.)
     func configurationChanged()
-    
+
     /// Get plugin statistics
     func getStatistics() -> DetectionPluginStatistics
 }
@@ -63,19 +63,19 @@ protocol DetectionPlugin: AnyObject, PluginSettingsProvider {
 class DetectionContext {
     /// Delegate for triggering gestures
     weak var delegate: DetectionPluginDelegate?
-    
+
     /// Logger for the plugin
     let logger: PluginLogger
-    
+
     /// Configuration access
     let configuration: ConfigurationAccess
-    
+
     /// Access to other detection plugins
     weak var pluginManager: DetectionPluginManager?
-    
+
     /// Plugin-specific storage directory
     let storageDirectory: URL
-    
+
     init(delegate: DetectionPluginDelegate?,
          logger: PluginLogger,
          configuration: ConfigurationAccess,
@@ -95,16 +95,16 @@ class DetectionContext {
 protocol DetectionPluginDelegate: AnyObject {
     /// Called when a gesture is detected
     func detectionPlugin(_ plugin: DetectionPlugin, didDetectGesture gesture: Gesture, context: GestureContext)
-    
+
     /// Called when a profile switch is triggered
     func detectionPlugin(_ plugin: DetectionPlugin, didTriggerProfileSwitch profile: ConfigurationProfile)
-    
+
     /// Called when plugin state changes
     func detectionPlugin(_ plugin: DetectionPlugin, stateChanged state: DetectionPluginState)
-    
+
     /// Called when plugin encounters an error
     func detectionPlugin(_ plugin: DetectionPlugin, didEncounterError error: Error)
-    
+
     /// Query if detection should continue
     func detectionPluginShouldContinue(_ plugin: DetectionPlugin) -> Bool
 }
@@ -121,19 +121,19 @@ struct GestureContext {
         case `repeat`
         case custom(String)
     }
-    
+
     /// The source that triggered this gesture
     let source: TriggerSource
-    
+
     /// Current modifier keys pressed
     let modifiers: NSEvent.ModifierFlags
-    
+
     /// Timestamp of the trigger
     let timestamp: Date
-    
+
     /// Additional metadata
     let metadata: [String: Any]
-    
+
     init(source: TriggerSource,
                 modifiers: NSEvent.ModifierFlags = [],
                 timestamp: Date = Date(),
@@ -156,7 +156,7 @@ enum DetectionPluginState: Equatable {
     case stopping
     case stopped
     case error(Error)
-    
+
     static func == (lhs: DetectionPluginState, rhs: DetectionPluginState) -> Bool {
         switch (lhs, rhs) {
         case (.uninitialized, .uninitialized),
@@ -181,25 +181,25 @@ enum DetectionPluginState: Equatable {
 struct DetectionPluginStatistics {
     /// Number of events detected
     let eventsDetected: Int
-    
+
     /// Number of gestures triggered
     let gesturesTriggered: Int
-    
+
     /// Number of errors encountered
     let errorsEncountered: Int
-    
+
     /// Time since last event
     let timeSinceLastEvent: TimeInterval?
-    
+
     /// CPU usage percentage
     let cpuUsage: Double
-    
+
     /// Memory usage in bytes
     let memoryUsage: Int
-    
+
     /// Custom statistics
     let customStats: [String: Any]
-    
+
     init(eventsDetected: Int = 0,
                 gesturesTriggered: Int = 0,
                 errorsEncountered: Int = 0,
@@ -223,59 +223,57 @@ struct DetectionPluginStatistics {
 protocol ConfigurationAccess {
     /// Get current gestures
     var gestures: [Gesture] { get }
-    
+
     /// Get current profiles
     var profiles: [ConfigurationProfile] { get }
-    
+
     /// Get active profile ID
     var activeProfileId: String? { get }
-    
+
     /// Get edge threshold
     var edgeThreshold: CGFloat { get }
-    
+
     /// Get corner size
     var cornerSize: CGFloat { get }
-    
+
     /// Get corner buffer
     var cornerBuffer: CGFloat { get }
-    
+
     /// Check if haptic feedback is enabled
     var hapticFeedbackEnabled: Bool { get }
-    
+
     /// Check if gestures are enabled globally
     var isEnabled: Bool { get }
-    
+
     /// Get app-specific configuration
     func getAppConfiguration(bundleId: String) -> AppConfiguration?
-    
+
     /// Check if app is disabled
     func isAppDisabled(bundleId: String) -> Bool
 }
-
-
 
 // MARK: - Base Detection Plugin
 
 /// Base class for detection plugins with common functionality
 open class BaseDetectionPlugin: NSObject, DetectionPlugin, PluginSettingsDelegate {
     // MARK: - Properties
-    
-    open var identifier: String { 
-        fatalError("Subclasses must override identifier") 
+
+    open var identifier: String {
+        fatalError("Subclasses must override identifier")
     }
-    
-    open var name: String { 
-        fatalError("Subclasses must override name") 
+
+    open var name: String {
+        fatalError("Subclasses must override name")
     }
-    
-    open override var description: String { 
-        fatalError("Subclasses must override description") 
+
+    open override var description: String {
+        fatalError("Subclasses must override description")
     }
-    
+
     open var version: String { "1.0.0" }
-    
+
     var isEnabled: Bool = true
-    
+
     open var priority: Int { 100 }
 
     /// Plugin dependencies - override in subclasses if needed
@@ -286,16 +284,16 @@ open class BaseDetectionPlugin: NSObject, DetectionPlugin, PluginSettingsDelegat
     open var triggerTitle: String { name }
     open var triggerDescription: String { "" }
     open var providesTriggerUI: Bool { false }
-    
+
     internal var context: DetectionContext?
     internal var state: DetectionPluginState = .uninitialized
     internal var statistics = DetectionPluginStatistics()
-    
+
     // MARK: - Settings
-    
+
     /// Override in subclasses to provide setting definitions
     open var settingsDefinitions: [PluginSettingDefinition] { [] }
-    
+
     /// Settings storage - lazily initialized
     private var _settings: PluginSettings?
     public var settings: PluginSettings {
@@ -304,102 +302,102 @@ open class BaseDetectionPlugin: NSObject, DetectionPlugin, PluginSettingsDelegat
         }
         return _settings!
     }
-    
+
     // MARK: - Initialization
-    
+
     override init() {
         super.init()
     }
-    
+
     // MARK: - DetectionPlugin Protocol
-    
+
     func initialize(context: DetectionContext) throws {
         self.context = context
         state = .initialized
         context.logger.log("\(name) initialized", file: #file, function: #function, line: #line)
     }
-    
+
     func start() throws {
         guard state == .initialized || state == .stopped else {
             throw DetectionPluginError.invalidState("Cannot start from state: \(state)")
         }
-        
+
         state = .starting
         context?.logger.log("\(name) starting...", file: #file, function: #function, line: #line)
-        
+
         // Subclasses override to add specific start logic
-        
+
         state = .running
         context?.logger.log("\(name) started", file: #file, function: #function, line: #line)
         context?.delegate?.detectionPlugin(self, stateChanged: state)
     }
-    
+
     func stop() {
         guard state == .running else { return }
-        
+
         state = .stopping
         context?.logger.log("\(name) stopping...", file: #file, function: #function, line: #line)
-        
+
         // Subclasses override to add specific stop logic
-        
+
         state = .stopped
         context?.logger.log("\(name) stopped", file: #file, function: #function, line: #line)
         context?.delegate?.detectionPlugin(self, stateChanged: state)
     }
-    
+
     func cleanup() {
         stop()
         context = nil
         state = .uninitialized
     }
-    
+
     func configurationView() -> NSView? {
         // Subclasses can override to provide configuration UI
         return nil
     }
-    
+
     func configurationChanged() {
         // Subclasses override to handle configuration changes
         context?.logger.log("\(name) configuration changed", file: #file, function: #function, line: #line)
     }
-    
+
     func getStatistics() -> DetectionPluginStatistics {
         return statistics
     }
-    
+
     // MARK: - Helper Methods
-    
+
     /// Trigger a gesture detection
     internal func triggerGesture(_ gesture: Gesture, context: GestureContext) {
         self.context?.delegate?.detectionPlugin(self, didDetectGesture: gesture, context: context)
     }
-    
+
     /// Trigger a profile switch
     internal func triggerProfileSwitch(_ profile: ConfigurationProfile) {
         self.context?.delegate?.detectionPlugin(self, didTriggerProfileSwitch: profile)
     }
-    
+
     /// Report an error
     internal func reportError(_ error: Error) {
         state = .error(error)
         context?.logger.log("Error in \(name): \(error)", file: #file, function: #function, line: #line)
         context?.delegate?.detectionPlugin(self, didEncounterError: error)
     }
-    
+
     /// Check if detection should continue
     internal func shouldContinue() -> Bool {
         return context?.delegate?.detectionPluginShouldContinue(self) ?? false
     }
-    
+
     // MARK: - PluginSettingsDelegate
-    
+
     public func pluginSettings(_ settings: PluginSettings, didChangeValue value: Any, forKey key: String, oldValue: Any?) {
         // Forward to the settingChanged method that subclasses can override
         settingChanged(key, value: value, oldValue: oldValue)
     }
-    
+
     // MARK: - PluginSettingsProvider
-    
+
     /// Override in subclasses to react to setting changes
     open func settingChanged(_ key: String, value: Any, oldValue: Any?) {
         context?.logger.log("\(name) setting changed: \(key)", file: #file, function: #function, line: #line)
@@ -415,7 +413,7 @@ enum DetectionPluginError: LocalizedError {
     case startFailed(String)
     case configurationError(String)
     case resourceUnavailable(String)
-    
+
     var errorDescription: String? {
         switch self {
         case .invalidState(let message):

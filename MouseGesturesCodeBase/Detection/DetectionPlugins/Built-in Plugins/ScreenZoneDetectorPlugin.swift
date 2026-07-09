@@ -11,13 +11,13 @@ import Cocoa
 ///
 /// Implements ActivationProvider for efficiency-based gating.
 class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
-    
+
     // MARK: - Constants
-    
+
     public static let pluginIdentifier = "com.mousegestures.detection.screenzone"
-    
+
     // MARK: - Setting Keys
-    
+
     enum SettingKeys {
         static let edgeThreshold = "edgeThreshold"
         static let cornerSize = "cornerSize"
@@ -27,9 +27,9 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         static let zoneHighlightColor = "zoneHighlightColor"
         static let mouseTrackingThrottle = "mouseTrackingThrottle"
     }
-    
+
     // MARK: - Properties
-    
+
     override var identifier: String { Self.pluginIdentifier }
     override var name: String { "Screen Zone Detector" }
     override var description: String { "Detects mouse movement in screen edge and corner zones" }
@@ -39,9 +39,9 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     override var triggerTitle: String { "Screen Zone" }
     override var triggerDescription: String { "Activate in a specific screen zone" }
     override var providesTriggerUI: Bool { true }
-    
+
     // MARK: - Settings Definitions
-    
+
     override var settingsDefinitions: [PluginSettingDefinition] {
         [
             PluginSettingDefinition(
@@ -123,30 +123,30 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
                 defaultValue: 16.0, // ~60 FPS
                 isAdvanced: true,
                 validation: .init(rule: .range(min: 8, max: 50), errorMessage: "Update rate must be between 8 and 50 ms")
-            ),
+            )
         ]
     }
-    
+
     // MARK: - Computed Settings Properties
-    
+
     var edgeThreshold: CGFloat {
         settings.getCGFloat(SettingKeys.edgeThreshold, default: 30)
     }
-    
+
     var cornerSize: CGFloat {
         settings.getCGFloat(SettingKeys.cornerSize, default: 100)
     }
-    
+
     var cornerBuffer: CGFloat {
         settings.getCGFloat(SettingKeys.cornerBuffer, default: 50)
     }
-    
+
     // Event monitors
     private var globalMoveMonitor: Any?
     private var localMoveMonitor: Any?
     private var globalDragMonitor: Any?   // Only installed when drag gestures exist
     private var localDragMonitor: Any?    // Only installed when drag gestures exist
-    
+
     // State tracking (zone detection only — no button/drag ownership)
     private var isMouseTrackingActive = false
     private var isDragMonitorInstalled = false
@@ -154,17 +154,17 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     private var lastTriggeredZone: ScreenZone?
     private var lastTriggeredDrag: DragModifier = .none
     private var lastTriggeredModifiers: NSEvent.ModifierFlags = []
-    
+
     // Cached system state to avoid repeated queries
     private var cachedDragModifier: DragModifier = .none
     private var cachedModifiers: NSEvent.ModifierFlags = []
-    
+
     // Performance optimizations
     private var lastProcessedMouseTime = Date()
     private var mouseProcessingInterval: TimeInterval {
          settings.getDouble(SettingKeys.mouseTrackingThrottle, default: 16.0) / 1000.0
      }
-    
+
     // Zone boundary caching
     private struct ZoneBounds {
         let rect: CGRect
@@ -172,11 +172,11 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     }
     private var zoneBoundsCache: [ZoneBounds] = []
     private var lastScreenFrame: CGRect = .zero
-    
+
     // Repeat timer for gestures
     private var repeatTimer: Timer?
     private var currentRepeatingGesture: Gesture?
-    
+
     // Gesture lookup for efficient matching
     private var gestureLookup: GestureLookup?
 
@@ -187,13 +187,13 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     // Statistics
     private var zoneEnterCount = 0
     private var gestureTriggeredCount = 0
-    
+
     // MARK: - ActivationProvider Protocol
-    
+
     var providedActivationTypes: [ActivationType] {
         return [.screenZone]
     }
-    
+
     func getActivationState(for type: ActivationType) -> ActivationState? {
         guard type == .screenZone else { return nil }
         return ActivationState(
@@ -205,68 +205,68 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
             ]
         )
     }
-    
+
     // MARK: - Plugin-Declared Behavioral Properties
-    
+
     func efficiencyScore(for type: ActivationType) -> Int {
         guard type == .screenZone else { return 50 }
         return 20  // Requires active mouse tracking — expensive
     }
-    
+
     func isAlwaysActive(for type: ActivationType) -> Bool {
         return false // Gated by higher-efficiency types (modifiers, mouse button)
     }
-    
+
     func isInfrastructure(for type: ActivationType) -> Bool {
         return false
     }
-    
+
     // REMOVED: gestureUsesActivation - moved to ActivationMapper
     // Plugin no longer needs to understand gesture structure
-    
+
     func enableDetection(for type: ActivationType) {
         guard type == .screenZone else { return }
         enableMouseTracking()
     }
-    
+
     func disableDetection(for type: ActivationType) {
         guard type == .screenZone else { return }
         disableMouseTracking()
     }
-    
+
     func isDetectionActive(for type: ActivationType) -> Bool {
         guard type == .screenZone else { return false }
         return isMouseTrackingActive
     }
-    
+
     // MARK: - Plugin Lifecycle
-    
+
     override func initialize(context: DetectionContext) throws {
         try super.initialize(context: context)
-        
+
         gestureLookup = GestureLookup()
-        
+
         ActivationCoordinator.shared.registerProvider(self, for: providedActivationTypes)
-        
+
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(screenConfigurationChanged),
             name: NSApplication.didChangeScreenParametersNotification,
             object: nil
         )
-        
+
         rebuildZoneBoundsCache()
         rebuildDragGestureFlag()
     }
-    
+
     override func start() throws {
         try super.start()
         syncSettingsToConfiguration()
         ActivationCoordinator.shared.rebuildDependencies()
-        
+
         context?.logger.log("Screen zone detector started (drag gestures: \(hasDragGestures))", file: #file, function: #function, line: #line)
     }
-    
+
     override func stop() {
         ActivationCoordinator.shared.pluginStopping(self)
         disableMouseTracking()
@@ -277,7 +277,7 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         zoneBoundsCache.removeAll()
         super.stop()
     }
-    
+
     override func cleanup() {
         NotificationCenter.default.removeObserver(self)
         ActivationCoordinator.shared.unregisterProvider(self)
@@ -285,15 +285,15 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         gestureLookup = nil
         super.cleanup()
     }
-    
+
     // MARK: - Drag Gesture Detection
-    
+
     /// Rebuild the cached flag for whether any enabled gesture uses drag.
     /// Called on config change to avoid per-event gesture scanning.
     private func rebuildDragGestureFlag() {
         let gestures = context?.configuration.gestures ?? Configuration.shared.gestures
         hasDragGestures = gestures.contains { $0.isEnabled && $0.hasZoneTrigger && $0.dragModifier != .none }
-        
+
         // If tracking is active, update drag monitors to match
         if isMouseTrackingActive {
             if hasDragGestures && !isDragMonitorInstalled {
@@ -303,15 +303,15 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
             }
         }
     }
-    
+
     // MARK: - Mouse Tracking Control
-    
+
     /// Enable mouse tracking (called by ActivationCoordinator).
     /// Always installs mouseMoved monitors.
     /// Only installs mouseDragged monitors when drag gestures are configured.
     private func enableMouseTracking() {
         guard !isMouseTrackingActive else { return }
-        
+
         // mouseMoved — always needed for zone detection
         globalMoveMonitor = NSEvent.addGlobalMonitorForEvents(matching: .mouseMoved) { [weak self] e in
             self?.handleMousePosition(e)
@@ -319,79 +319,79 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         localMoveMonitor = NSEvent.addLocalMonitorForEvents(matching: .mouseMoved) { [weak self] e in
             self?.handleMousePosition(e); return e
         }
-        
+
         isMouseTrackingActive = true
-        
+
         // mouseDragged — only if drag gestures exist
         if hasDragGestures {
             installDragMonitors()
         }
-        
+
         if context?.logger.isDebugEnabled ?? false {
             context?.logger.log("Zone tracking ENABLED (drag monitors: \(hasDragGestures))", file: #file, function: #function, line: #line)
         }
-        
+
         checkCurrentMousePosition()
     }
-    
+
     /// Disable all mouse tracking (called by ActivationCoordinator)
     private func disableMouseTracking() {
         guard isMouseTrackingActive else { return }
-        
+
         if let m = globalMoveMonitor { NSEvent.removeMonitor(m) }
         if let m = localMoveMonitor { NSEvent.removeMonitor(m) }
         globalMoveMonitor = nil; localMoveMonitor = nil
-        
+
         removeDragMonitors()
-        
+
         isMouseTrackingActive = false
         lastTriggeredZone = nil
         stopRepeatTimer()
-        
+
         // Clear cached state
         cachedDragModifier = .none
         cachedModifiers = []
-        
+
         if context?.logger.isDebugEnabled ?? false {
             context?.logger.log("Zone tracking DISABLED", file: #file, function: #function, line: #line)
         }
     }
-    
+
     /// Install mouseDragged monitors (macOS stops mouseMoved during drags)
     private func installDragMonitors() {
         guard !isDragMonitorInstalled else { return }
-        
+
         let dragEvents: NSEvent.EventTypeMask = [.leftMouseDragged, .rightMouseDragged, .otherMouseDragged]
-        
+
         globalDragMonitor = NSEvent.addGlobalMonitorForEvents(matching: dragEvents) { [weak self] e in
             self?.handleMousePosition(e)
         }
         localDragMonitor = NSEvent.addLocalMonitorForEvents(matching: dragEvents) { [weak self] e in
             self?.handleMousePosition(e); return e
         }
-        
+
         isDragMonitorInstalled = true
-        
+
         if context?.logger.isDebugEnabled ?? false {
             context?.logger.log("Drag monitors INSTALLED", file: #file, function: #function, line: #line)
         }
     }
-    
+
     /// Remove mouseDragged monitors
     private func removeDragMonitors() {
         guard isDragMonitorInstalled else { return }
-        
+
         if let m = globalDragMonitor { NSEvent.removeMonitor(m) }
         if let m = localDragMonitor { NSEvent.removeMonitor(m) }
         globalDragMonitor = nil; localDragMonitor = nil
-        
+
         isDragMonitorInstalled = false
-        
+
         if context?.logger.isDebugEnabled ?? false {
             context?.logger.log("Drag monitors REMOVED", file: #file, function: #function, line: #line)
         }
     }
-    
+
     /// Check if mouse is currently in a zone
     private func checkCurrentMousePosition() {
         let mouseLocation = NSEvent.mouseLocation
@@ -402,31 +402,31 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
             processZoneEntry(zone)
         }
     }
-    
+
     // MARK: - Event Handler
-    
+
     /// Unified handler for all mouse position events (moved + dragged).
     /// Caches system state to avoid repeated queries during continuous movement.
     private func handleMousePosition(_ event: NSEvent) {
         let now = Date()
         guard now.timeIntervalSince(lastProcessedMouseTime) >= mouseProcessingInterval else { return }
         lastProcessedMouseTime = now
-        
+
         let mouseLocation = NSEvent.mouseLocation
-        
+
         // Update cached state on every mouse event (but only query once per event)
         cachedDragModifier = DragModifier.currentSystem
         cachedModifiers = NSEvent.ModifierFlags.currentSystem
-        
+
         if let zone = detectZoneFromCache(point: mouseLocation) {
             processZoneEntry(zone)
         } else {
             processZoneExit()
         }
     }
-    
+
     // MARK: - Zone Processing
-    
+
     private func processZoneEntry(_ zone: ScreenZone) {
         // Use cached state from handleMousePosition (single query per mouse event)
         // Normalize modifiers to only track user-meaningful keys (⌘⌃⌥⇧),
@@ -437,30 +437,30 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         let isNewTrigger = lastTriggeredZone != zone ||
                            lastTriggeredDrag != currentDrag ||
                            lastTriggeredModifiers != currentModifiers
-        
+
         if isNewTrigger {
             stopRepeatTimer()
-            
+
             lastTriggeredZone = zone
             lastTriggeredDrag = currentDrag
             lastTriggeredModifiers = currentModifiers
             zoneEnterCount += 1
-            
+
             if context?.logger.isDebugEnabled ?? false {
                 context?.logger.log("Zone: \(zone.rawValue) drag: \(currentDrag.rawValue) mods: \(currentModifiers.symbolString)", file: #file, function: #function, line: #line)
             }
-            
+
             detectGesture(zone: zone, dragModifier: currentDrag)
         }
     }
-    
+
     private func processZoneExit() {
         if lastTriggeredZone != nil {
             lastTriggeredZone = nil
             stopRepeatTimer()
         }
     }
-    
+
     /// Called by MouseButtonDetectorPlugin after a combined gesture fires via click.
     /// Prevents this plugin from re-firing the same gesture when zone tracking starts.
     func suppressClickFiring(forKey key: String) {
@@ -491,29 +491,29 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
 
         if let gesture = matching.first {
             gestureTriggeredCount += 1
-            
+
             triggerGesture(gesture, context: GestureContext(
                 source: .screenZone(zone: zone, dragState: dragModifier),
                 modifiers: modifiers, timestamp: Date()
             ))
-            
+
             if gesture.repeatOnHold && gesture.repeatInterval > 0 {
                 startRepeatTimer(for: gesture)
             }
         }
     }
-    
+
     // MARK: - Repeat Timer
-    
+
     private func startRepeatTimer(for gesture: Gesture) {
         guard gesture.repeatOnHold else { return }
         stopRepeatTimer()
         currentRepeatingGesture = gesture
-        
+
         let startRepeating = { [weak self] in
             guard let self = self, let g = self.currentRepeatingGesture,
                   self.shouldContinueRepeating() else { return }
-            
+
             self.repeatTimer = Timer.scheduledTimer(withTimeInterval: g.repeatInterval, repeats: true) { [weak self] timer in
                 guard let self = self, let g = self.currentRepeatingGesture,
                       self.shouldContinueRepeating() else { timer.invalidate(); return }
@@ -521,7 +521,7 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
             }
             self.repeatTimer?.fire()
         }
-        
+
         if gesture.repeatInitialDelay > 0 {
             Timer.scheduledTimer(withTimeInterval: gesture.repeatInitialDelay, repeats: false) { _ in
                 startRepeating()
@@ -530,13 +530,13 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
             startRepeating()
         }
     }
-    
+
     private func stopRepeatTimer() {
         repeatTimer?.invalidate()
         repeatTimer = nil
         currentRepeatingGesture = nil
     }
-    
+
     private func repeatGesture(_ gesture: Gesture) {
         triggerGesture(gesture, context: GestureContext(
             source: .`repeat`,
@@ -544,7 +544,7 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
             timestamp: Date()
         ))
     }
-    
+
     /// Check if conditions for the repeating gesture are still held.
     /// Queries system state once per check (timer-based, not per-event).
     private func shouldContinueRepeating() -> Bool {
@@ -582,26 +582,25 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         }
         return mods.contains(required)
     }
-    
+
     // MARK: - Settings Sync
-    
+
     private func syncSettingsToConfiguration() {
         Configuration.shared.edgeThreshold = edgeThreshold
         Configuration.shared.cornerSize = cornerSize
         Configuration.shared.cornerBuffer = cornerBuffer
-        
+
         let highlightsEnabled = settings.getBool(SettingKeys.showZoneHighlights, default: false)
         Configuration.shared.showZoneHighlights = highlightsEnabled
         Configuration.shared.showZoneLabels = settings.getBool(SettingKeys.showZoneLabels, default: false)
         Configuration.shared.zoneHighlightColor = settings.getColor(SettingKeys.zoneHighlightColor, default: NSColor.systemBlue.withAlphaComponent(0.3))
         Configuration.shared.save()
-        
-        if highlightsEnabled { ZoneHighlightManager.shared.startHighlighting() }
-        else { ZoneHighlightManager.shared.stopHighlighting() }
+
+        if highlightsEnabled { ZoneHighlightManager.shared.startHighlighting() } else { ZoneHighlightManager.shared.stopHighlighting() }
     }
-    
+
     // MARK: - Zone Detection
-    
+
     private func detectZoneFromCache(point: CGPoint) -> ScreenZone? {
         if let screen = NSScreen.main, screen.frame != lastScreenFrame {
             rebuildZoneBoundsCache()
@@ -611,29 +610,29 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         }
         return nil
     }
-    
+
     @objc private func screenConfigurationChanged() {
         context?.logger.log("Screen configuration changed - rebuilding zone cache", file: #file, function: #function, line: #line)
         rebuildZoneBoundsCache()
     }
-    
+
     private func rebuildZoneBoundsCache() {
         guard let screen = NSScreen.main else { return }
         let sf = screen.frame
         if sf == lastScreenFrame && !zoneBoundsCache.isEmpty { return }
-        
+
         lastScreenFrame = sf
         zoneBoundsCache.removeAll()
-        
+
         let t = edgeThreshold, cs = cornerSize, cb = cornerBuffer
-        
+
         for zone in ScreenZone.allCases {
             if let bounds = calculateZoneBounds(zone: zone, sf: sf, t: t, cs: cs, cb: cb) {
                 zoneBoundsCache.append(ZoneBounds(rect: bounds, zone: zone))
             }
         }
     }
-    
+
     private func calculateZoneBounds(zone: ScreenZone, sf: CGRect, t: CGFloat, cs: CGFloat, cb: CGFloat) -> CGRect? {
         switch zone {
         case .topLeft:     return CGRect(x: sf.minX, y: sf.maxY - cs, width: cs + 1, height: cs + 1)
@@ -654,9 +653,9 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
                          width: t, height: sf.height - 2 * (cs + cb) + 1)
         }
     }
-    
+
     // MARK: - Configuration
-    
+
     override func configurationChanged() {
         super.configurationChanged()
         rebuildZoneBoundsCache()
@@ -664,54 +663,50 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         rebuildDragGestureFlag()
         ActivationCoordinator.shared.rebuildDependencies()
     }
-    
+
     override func settingChanged(_ key: String, value: Any, oldValue: Any?) {
         super.settingChanged(key, value: value, oldValue: oldValue)
-        
+
         switch key {
         case SettingKeys.edgeThreshold:
             lastScreenFrame = .zero; rebuildZoneBoundsCache()
-            if let v = value as? Double { Configuration.shared.edgeThreshold = CGFloat(v) }
-            else if let v = value as? CGFloat { Configuration.shared.edgeThreshold = v }
+            if let v = value as? Double { Configuration.shared.edgeThreshold = CGFloat(v) } else if let v = value as? CGFloat { Configuration.shared.edgeThreshold = v }
             Configuration.shared.save()
             NotificationCenter.default.post(name: Notification.Name("zoneDimensionsChanged"), object: nil)
-            
+
         case SettingKeys.cornerSize:
             lastScreenFrame = .zero; rebuildZoneBoundsCache()
-            if let v = value as? Double { Configuration.shared.cornerSize = CGFloat(v) }
-            else if let v = value as? CGFloat { Configuration.shared.cornerSize = v }
+            if let v = value as? Double { Configuration.shared.cornerSize = CGFloat(v) } else if let v = value as? CGFloat { Configuration.shared.cornerSize = v }
             Configuration.shared.save()
             NotificationCenter.default.post(name: Notification.Name("zoneDimensionsChanged"), object: nil)
-            
+
         case SettingKeys.cornerBuffer:
             lastScreenFrame = .zero; rebuildZoneBoundsCache()
-            if let v = value as? Double { Configuration.shared.cornerBuffer = CGFloat(v) }
-            else if let v = value as? CGFloat { Configuration.shared.cornerBuffer = v }
+            if let v = value as? Double { Configuration.shared.cornerBuffer = CGFloat(v) } else if let v = value as? CGFloat { Configuration.shared.cornerBuffer = v }
             Configuration.shared.save()
             NotificationCenter.default.post(name: Notification.Name("zoneDimensionsChanged"), object: nil)
-            
+
         case SettingKeys.showZoneHighlights:
             if let show = value as? Bool {
                 Configuration.shared.showZoneHighlights = show; Configuration.shared.save()
-                if show { ZoneHighlightManager.shared.startHighlighting() }
-                else { ZoneHighlightManager.shared.stopHighlighting() }
+                if show { ZoneHighlightManager.shared.startHighlighting() } else { ZoneHighlightManager.shared.stopHighlighting() }
             }
-            
+
         case SettingKeys.showZoneLabels:
             if let v = value as? Bool { Configuration.shared.showZoneLabels = v; Configuration.shared.save() }
-            
+
         case SettingKeys.zoneHighlightColor:
             if let c = value as? NSColor {
                 Configuration.shared.zoneHighlightColor = c
                 NotificationCenter.default.post(name: Notification.Name("zoneDimensionsChanged"), object: nil)
             }
-            
+
         default: break
         }
     }
-    
+
     // MARK: - Statistics
-    
+
     override func getStatistics() -> DetectionPluginStatistics {
         return DetectionPluginStatistics(
             eventsDetected: zoneEnterCount,
@@ -729,13 +724,13 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
             ]
         )
     }
-    
+
     // MARK: - Zone Preview
-    
+
     /// Temporarily shows zone highlights for preview (called from button action)
     private func previewZoneHighlights() {
         context?.logger.log("Zone preview started", file: #file, function: #function, line: #line)
-        
+
         // Show zones in preview mode for 5 seconds
         ZoneHighlightManager.shared.showPreview(duration: 5.0)
     }

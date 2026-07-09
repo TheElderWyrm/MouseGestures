@@ -5,7 +5,7 @@ struct ProfileExportData: Codable {
     let profile: ConfigurationProfile
     let exportDate: Date
     let appVersion: String
-    
+
     init(profile: ConfigurationProfile) {
         self.profile = profile
         self.exportDate = Date()
@@ -13,19 +13,17 @@ struct ProfileExportData: Codable {
     }
 }
 
-
 struct ProfileBundleExportData: Codable {
     let profiles: [ConfigurationProfile]
     let exportDate: Date
     let appVersion: String
-    
+
     init(profiles: [ConfigurationProfile]) {
         self.profiles = profiles
         self.exportDate = Date()
         self.appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown"
     }
 }
-
 
 // Structure to store configuration profile
 struct ConfigurationProfile: Codable, Equatable, Identifiable {
@@ -44,7 +42,7 @@ struct ConfigurationProfile: Codable, Equatable, Identifiable {
         set { _keyboardShortcutEnabled = newValue }
     }
     var userInfo: [String: AnyCodable] = [:] // For extensibility
-    
+
     init(name: String, gestures: [Gesture] = [],
          isDefault: Bool = false, keyboardShortcut: KeyboardTrigger? = nil,
          keyboardShortcutEnabled: Bool = true) {
@@ -58,12 +56,11 @@ struct ConfigurationProfile: Codable, Equatable, Identifiable {
         self._keyboardShortcutEnabled = keyboardShortcutEnabled
         self.userInfo = [:]
     }
-    
+
     mutating func updateModifiedDate() {
         self.modifiedDate = Date()
     }
 }
-
 
 // Structure to store app-profile mappings
 struct AppProfileMapping: Codable, Equatable {
@@ -73,7 +70,7 @@ struct AppProfileMapping: Codable, Equatable {
     var profileId: UUID              // Profile to use for this app
     var createdDate: Date
     var modifiedDate: Date
-    
+
     init(appBundleIdentifier: String, appName: String, profileId: UUID) {
         self.id = UUID()
         self.appBundleIdentifier = appBundleIdentifier
@@ -82,12 +79,11 @@ struct AppProfileMapping: Codable, Equatable {
         self.createdDate = Date()
         self.modifiedDate = Date()
     }
-    
+
     mutating func updateModifiedDate() {
         self.modifiedDate = Date()
     }
 }
-
 
 // Structure to store disabled app information
 struct DisabledApp: Codable, Equatable {
@@ -95,7 +91,7 @@ struct DisabledApp: Codable, Equatable {
     var appBundleIdentifier: String  // Bundle ID of the app
     var appName: String              // Display name for the UI
     var createdDate: Date
-    
+
     init(appBundleIdentifier: String, appName: String) {
         self.id = UUID()
         self.appBundleIdentifier = appBundleIdentifier

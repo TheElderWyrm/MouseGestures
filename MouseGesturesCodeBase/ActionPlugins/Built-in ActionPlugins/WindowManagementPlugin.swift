@@ -110,9 +110,9 @@ struct WindowPositionParameters: Codable, Equatable {
 
 /// Built-in plugin for window management actions
 class WindowManagementPlugin: NSObject, GestureActionPlugin {
-    
+
     // MARK: - Plugin Properties
-    
+
     let identifier = "com.mousegestures.window"
     let name = "Window Management"
     override var description: String { "Window positioning and sizing actions" }
@@ -120,12 +120,12 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
     let author = "MouseGestures"
     let category = ActionCategory.window
     let icon: NSImage? = nil
-    
+
     // MARK: - Internal State Management
-    
+
     private var savedWindowPositions: [String: WindowPosition] = [:]
     private var savedLayouts: [String: WindowLayout] = [:]
-    
+
     struct WindowPosition: Codable {
         let x: CGFloat
         let y: CGFloat
@@ -133,9 +133,9 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
         let height: CGFloat
         let appIdentifier: String
     }
-    
+
     // MARK: - Common Parameter Definitions
-    
+
     private var windowTargetParameters: [ParameterDefinition] {
         [
             ParameterDefinition(
@@ -198,16 +198,16 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
             )
         ]
     }
-    
+
     // MARK: - Actions
-    
+
     lazy var providedActions: [PluginAction] = [
 
         // MARK: Window Controls (moved from Core for architectural clarity)
-        PluginAction(id: "close_window",   name: "Close Window",      description: "Close a window",           requiresParameters: true, supportedParameters: windowTargetParameters, icon: "xmark.circle"),
-        PluginAction(id: "minimize",       name: "Minimize Window",   description: "Minimize a window",        requiresParameters: true, supportedParameters: windowTargetParameters, icon: "minus.circle"),
-        PluginAction(id: "maximize",       name: "Maximize Window",   description: "Fill screen (not fullscreen)", requiresParameters: true, supportedParameters: windowTargetParameters, icon: "plus.circle"),
-        PluginAction(id: "fullscreen",     name: "Toggle Fullscreen", description: "Toggle fullscreen mode",   requiresParameters: true, supportedParameters: windowTargetParameters, icon: "arrow.up.left.and.arrow.down.right"),
+        PluginAction(id: "close_window", name: "Close Window", description: "Close a window", requiresParameters: true, supportedParameters: windowTargetParameters, icon: "xmark.circle"),
+        PluginAction(id: "minimize", name: "Minimize Window", description: "Minimize a window", requiresParameters: true, supportedParameters: windowTargetParameters, icon: "minus.circle"),
+        PluginAction(id: "maximize", name: "Maximize Window", description: "Fill screen (not fullscreen)", requiresParameters: true, supportedParameters: windowTargetParameters, icon: "plus.circle"),
+        PluginAction(id: "fullscreen", name: "Toggle Fullscreen", description: "Toggle fullscreen mode", requiresParameters: true, supportedParameters: windowTargetParameters, icon: "arrow.up.left.and.arrow.down.right"),
 
         // MARK: Move to Display
         PluginAction(
@@ -290,7 +290,7 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
             ] + windowTargetParameters,
             icon: "rectangle.split.2x1"
         ),
-        
+
         // MARK: Resize to Percent (replaces resize_25 / resize_50 / resize_75)
         PluginAction(
             id: "resize_to_percent",
@@ -310,7 +310,7 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
             ] + windowTargetParameters,
             icon: "arrow.down.right.and.arrow.up.left"
         ),
-        
+
         // MARK: Adjust Size (replaces grow / shrink with configurable percent)
         PluginAction(
             id: "adjust_size",
@@ -363,7 +363,7 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
             supportsRepeat: true,
             icon: "arrow.up.backward.and.arrow.down.forward"
         ),
-        
+
         PluginAction(
             id: "switch_to_window",
             name: "Switch to Window",
@@ -372,7 +372,7 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
             supportedParameters: windowTargetParameters,
             icon: "rectangle.portrait.and.arrow.right"
         ),
-        
+
         // MARK: Window Position Memory (replaces save_position / restore_position)
         PluginAction(
             id: "window_position_memory",
@@ -404,7 +404,7 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
             ] + windowTargetParameters,
             icon: "square.and.arrow.down"
         ),
-        
+
         // MARK: Advanced Layouts (replaces save_layout / restore_layout / delete_layout)
         PluginAction(
             id: "window_layout",
@@ -444,7 +444,7 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
             ],
             icon: "rectangle.3.group"
         ),
-        
+
         // MARK: Tile / Cascade
         PluginAction(
             id: "tile_all",
@@ -538,7 +538,7 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
             ],
             icon: "rectangle.stack"
         ),
-        
+
         // MARK: Custom Size / Position
         PluginAction(
             id: "set_size",
@@ -667,28 +667,28 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
             icon: "arrow.up.and.down.and.arrow.left.and.right"
         )
     ]
-    
+
     // MARK: - Plugin Lifecycle
-    
+
     private var context: PluginContext?
-    
+
     func initialize(context: PluginContext) throws {
         self.context = context
         loadSavedPositions(context: context)
         loadLayoutsFromDisk(context: context)
         context.logger.log("Window Management Plugin initialized", file: #file, function: #function, line: #line)
     }
-    
+
     func cleanup() {
         context?.logger.log("Window Management Plugin cleaned up", file: #file, function: #function, line: #line)
         context = nil
     }
-    
+
     // MARK: - Action Execution
-    
+
     func execute(action: PluginAction, with parameters: ActionParameters, context: PluginContext) throws {
         let target = parseWindowTarget(from: parameters)
-        
+
         switch action.id {
 
         // MARK: Window Controls (moved from Core)
@@ -721,7 +721,7 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
                 var origin = CGPoint(x: sf.minX, y: sf.minY)
                 var size   = CGSize(width: sf.width, height: sf.height)
                 if let p = AXValueCreate(.cgPoint, &origin) { _ = context.setAccessibilityAttribute(window, attribute: kAXPositionAttribute as String, value: p) }
-                if let s = AXValueCreate(.cgSize,  &size)   { _ = context.setAccessibilityAttribute(window, attribute: kAXSizeAttribute  as String, value: s) }
+                if let s = AXValueCreate(.cgSize, &size) { _ = context.setAccessibilityAttribute(window, attribute: kAXSizeAttribute  as String, value: s) }
             }
 
         case "fullscreen":
@@ -751,12 +751,12 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
         case "snap_window":
             let position = parameters.string(for: "position") ?? "left_half"
             snapWindow(to: position, target: target, context: context)
-            
+
         // MARK: Resize
         case "resize_to_percent":
             let percent = parameters.number(for: "percent") ?? 50
             resizeToPercent(percent, target: target, context: context)
-            
+
         case "adjust_size":
             let direction = parameters.string(for: "direction") ?? "grow"
             let unit = parameters.string(for: "unit") ?? "percent"
@@ -773,11 +773,11 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
                 let msg = direction == "grow" ? "Grew window by \(Int(percent))%" : "Shrank window by \(Int(percent))%"
                 resizeWindowByFactor(factor, target: target, logMessage: msg, context: context)
             }
-            
+
         // MARK: Window Navigation
         case "switch_to_window":
             switchToWindow(target: target, context: context)
-            
+
         // MARK: Position Memory
         case "window_position_memory":
             let operation = parameters.string(for: "operation") ?? "save"
@@ -792,7 +792,7 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
             default:
                 break
             }
-            
+
         // MARK: Layouts
         case "window_layout":
             let operation = parameters.string(for: "operation") ?? "save"
@@ -808,7 +808,7 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
             default:
                 break
             }
-            
+
         // MARK: Tile / Cascade
         case "tile_all":
             let tileScope = parameters.string(for: "scope") ?? "current_app"
@@ -839,7 +839,7 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
             } else {
                 cascadeWindows(target: nil, resize: resizeWindows, context: context)
             }
-            
+
         // MARK: Custom Size / Position
         case "set_size":
             let params = WindowSizeParameters(
@@ -850,7 +850,7 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
                 maintainAspectRatio: parameters.bool(for: "maintain_aspect_ratio") ?? false
             )
             setWindowSize(params: params, target: target, context: context)
-            
+
         case "set_position":
             let positionTypeStr = parameters.string(for: "position_type") ?? "absolute"
             let positionType: WindowPositionParameters.PositionType
@@ -860,7 +860,7 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
             case "preset":            positionType = .preset
             default:                  positionType = .absolute
             }
-            
+
             var preset: WindowPositionParameters.PresetPosition? = nil
             if let presetStr = parameters.string(for: "preset") {
                 let formatted = presetStr
@@ -875,7 +875,7 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
                     .replacingOccurrences(of: "bottomRight", with: "Bottom Right")
                 preset = WindowPositionParameters.PresetPosition(rawValue: formatted)
             }
-            
+
             let params = WindowPositionParameters(
                 positionType: positionType,
                 x: parameters.number(for: "x").map { Int($0) },
@@ -885,29 +885,29 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
                 preset: preset
             )
             setWindowPosition(params: params, target: target, context: context)
-            
+
         default:
             throw PluginError.actionNotFound(action.id)
         }
     }
-    
+
     func validate(action: PluginAction, with parameters: ActionParameters) -> ValidationResult {
         switch action.id {
         case "snap_window":
             if parameters.string(for: "position") == nil {
                 return .invalid(error: "A position is required")
             }
-            
+
         case "resize_to_percent":
             guard let pct = parameters.number(for: "percent"), pct >= 1, pct <= 100 else {
                 return .invalid(error: "Percent must be between 1 and 100")
             }
-            
+
         case "window_layout":
             if parameters.string(for: "layout_name") == nil {
                 return .invalid(error: "Layout name is required")
             }
-            
+
         case "set_size":
             let hasWidth        = parameters.number(for: "width") != nil
             let hasHeight       = parameters.number(for: "height") != nil
@@ -916,7 +916,7 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
             if !hasWidth && !hasHeight && !hasWidthPct && !hasHeightPct {
                 return .invalid(error: "At least one size parameter is required")
             }
-            
+
         case "set_position":
             let positionType = parameters.string(for: "position_type") ?? "absolute"
             switch positionType {
@@ -931,7 +931,7 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
             default:
                 break
             }
-            
+
         default:
             if let targetType = parameters.string(for: "target") {
                 switch targetType {
@@ -954,13 +954,13 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
         }
         return .valid
     }
-    
+
     func configurationView(for action: PluginAction) -> NSView? {
         return nil
     }
-    
+
     // MARK: - Snap Window
-    
+
     private func snapWindow(to position: String, target: WindowTargeting.WindowTarget?, context: PluginContext) {
         switch position {
         case "maximize":
@@ -968,56 +968,56 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
         case "center":
             centerWindow(target: target, context: context)
         case "left_half":
-            positionWindowWithTarget(target: target, x: 0,       y: 0,   width: 0.5,     height: 1,   logMessage: "Snapped window to left half", context: context)
+            positionWindowWithTarget(target: target, x: 0, y: 0, width: 0.5, height: 1, logMessage: "Snapped window to left half", context: context)
         case "right_half":
-            positionWindowWithTarget(target: target, x: 0.5,     y: 0,   width: 0.5,     height: 1,   logMessage: "Snapped window to right half", context: context)
+            positionWindowWithTarget(target: target, x: 0.5, y: 0, width: 0.5, height: 1, logMessage: "Snapped window to right half", context: context)
         case "top_half":
-            positionWindowWithTarget(target: target, x: 0,       y: 0,   width: 1,       height: 0.5, logMessage: "Snapped window to top half", context: context)
+            positionWindowWithTarget(target: target, x: 0, y: 0, width: 1, height: 0.5, logMessage: "Snapped window to top half", context: context)
         case "bottom_half":
-            positionWindowWithTarget(target: target, x: 0,       y: 0.5, width: 1,       height: 0.5, logMessage: "Snapped window to bottom half", context: context)
+            positionWindowWithTarget(target: target, x: 0, y: 0.5, width: 1, height: 0.5, logMessage: "Snapped window to bottom half", context: context)
         case "top_left":
-            positionWindowWithTarget(target: target, x: 0,       y: 0,   width: 0.5,     height: 0.5, logMessage: "Snapped window to top left", context: context)
+            positionWindowWithTarget(target: target, x: 0, y: 0, width: 0.5, height: 0.5, logMessage: "Snapped window to top left", context: context)
         case "top_right":
-            positionWindowWithTarget(target: target, x: 0.5,     y: 0,   width: 0.5,     height: 0.5, logMessage: "Snapped window to top right", context: context)
+            positionWindowWithTarget(target: target, x: 0.5, y: 0, width: 0.5, height: 0.5, logMessage: "Snapped window to top right", context: context)
         case "bottom_left":
-            positionWindowWithTarget(target: target, x: 0,       y: 0.5, width: 0.5,     height: 0.5, logMessage: "Snapped window to bottom left", context: context)
+            positionWindowWithTarget(target: target, x: 0, y: 0.5, width: 0.5, height: 0.5, logMessage: "Snapped window to bottom left", context: context)
         case "bottom_right":
-            positionWindowWithTarget(target: target, x: 0.5,     y: 0.5, width: 0.5,     height: 0.5, logMessage: "Snapped window to bottom right", context: context)
+            positionWindowWithTarget(target: target, x: 0.5, y: 0.5, width: 0.5, height: 0.5, logMessage: "Snapped window to bottom right", context: context)
         case "left_third":
-            positionWindowWithTarget(target: target, x: 0,       y: 0,   width: 1.0/3.0, height: 1,   logMessage: "Snapped window to left third", context: context)
+            positionWindowWithTarget(target: target, x: 0, y: 0, width: 1.0 / 3.0, height: 1, logMessage: "Snapped window to left third", context: context)
         case "center_third":
-            positionWindowWithTarget(target: target, x: 1.0/3.0, y: 0,   width: 1.0/3.0, height: 1,   logMessage: "Snapped window to center third", context: context)
+            positionWindowWithTarget(target: target, x: 1.0 / 3.0, y: 0, width: 1.0 / 3.0, height: 1, logMessage: "Snapped window to center third", context: context)
         case "right_third":
-            positionWindowWithTarget(target: target, x: 2.0/3.0, y: 0,   width: 1.0/3.0, height: 1,   logMessage: "Snapped window to right third", context: context)
+            positionWindowWithTarget(target: target, x: 2.0 / 3.0, y: 0, width: 1.0 / 3.0, height: 1, logMessage: "Snapped window to right third", context: context)
         default:
             context.logger.log("Unknown snap position: \(position)", file: #file, function: #function, line: #line)
         }
     }
-    
+
     // MARK: - Core Window Management Functions
-    
+
     private func getTargetWindow(_ target: WindowTargeting.WindowTarget?, context: PluginContext) -> (AXUIElement, pid_t)? {
         let actualTarget = target ?? WindowTargeting.WindowTarget(targetType: .frontmost)
         let params = targetToParams(actualTarget)
         return context.getTargetWindow(params)
     }
-    
+
     private func getTargetWindows(_ target: WindowTargeting.WindowTarget?, context: PluginContext) -> [(AXUIElement, pid_t)] {
         let actualTarget = target ?? WindowTargeting.WindowTarget(targetType: .frontmost)
         let params = targetToParams(actualTarget)
         return context.getTargetWindows(params)
     }
-    
+
     private func targetToParams(_ target: WindowTargeting.WindowTarget) -> [String: Any] {
         var params: [String: Any] = [:]
         params["targetType"] = target.targetType.rawValue
         if let bundleId = target.applicationBundleId { params["bundleId"] = bundleId }
-        if let title = target.windowTitle           { params["windowTitle"] = title }
+        if let title = target.windowTitle { params["windowTitle"] = title }
         if let titleContains = target.windowTitleContains { params["windowTitleContains"] = titleContains }
-        if let age = target.windowAge               { params["windowAge"] = age }
+        if let age = target.windowAge { params["windowAge"] = age }
         return params
     }
-    
+
     private func getWindowFrame(_ window: AXUIElement, context: PluginContext) -> CGRect? {
         guard let positionValue = context.getAccessibilityAttribute(window, attribute: kAXPositionAttribute as String),
               let sizeValue = context.getAccessibilityAttribute(window, attribute: kAXSizeAttribute as String) else {
@@ -1029,11 +1029,11 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
         AXValueGetValue(sizeValue as! AXValue, .cgSize, &size)
         return CGRect(origin: position, size: size)
     }
-    
+
     private func setWindowFrame(_ window: AXUIElement, frame: CGRect, context: PluginContext) {
         var position = frame.origin
         var size = frame.size
-        size.width  = max(size.width,  200)
+        size.width  = max(size.width, 200)
         size.height = max(size.height, 150)
         if let positionValue = AXValueCreate(.cgPoint, &position),
            let sizeValue = AXValueCreate(.cgSize, &size) {
@@ -1044,7 +1044,7 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
             }
         }
     }
-    
+
     private func getScreenForWindow(_ window: AXUIElement, context: PluginContext) -> NSScreen? {
         if let frame = getWindowFrame(window, context: context) {
             let windowCenter = CGPoint(x: frame.midX, y: frame.midY)
@@ -1061,20 +1061,20 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
         }
         return NSScreen.main
     }
-    
+
     // MARK: - Positioning Helpers
-    
+
     private func positionWindow(_ window: AXUIElement, relativeTo screen: NSScreen, x: CGFloat, y: CGFloat, width: CGFloat, height: CGFloat, context: PluginContext) {
         let frame = screen.visibleFrame
         let newFrame = CGRect(
             x: frame.minX + x * frame.width,
             y: NSStatusBar.system.thickness + y * frame.height,
-            width: width  * frame.width,
+            width: width * frame.width,
             height: height * frame.height
         )
         setWindowFrame(window, frame: newFrame, context: context)
     }
-    
+
     private func positionWindowWithTarget(target: WindowTargeting.WindowTarget?, x: CGFloat, y: CGFloat, width: CGFloat, height: CGFloat, logMessage: String, context: PluginContext) {
         let windows = getTargetWindows(target, context: context)
         guard !windows.isEmpty else { return }
@@ -1084,9 +1084,9 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
         }
         context.logger.log("\(logMessage) (\(windows.count) window\(windows.count == 1 ? "" : "s"))", file: #file, function: #function, line: #line)
     }
-    
+
     // MARK: - Sizing and Centering
-    
+
     private func centerWindow(target: WindowTargeting.WindowTarget? = nil, context: PluginContext) {
         let windows = getTargetWindows(target, context: context)
         for (window, _) in windows {
@@ -1094,35 +1094,35 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
                   let screen = getScreenForWindow(window, context: context) else { continue }
             let sf = screen.visibleFrame
             let newFrame = CGRect(
-                x: sf.midX - currentFrame.width  / 2,
+                x: sf.midX - currentFrame.width / 2,
                 y: sf.midY - currentFrame.height / 2,
-                width:  currentFrame.width,
+                width: currentFrame.width,
                 height: currentFrame.height
             )
             setWindowFrame(window, frame: newFrame, context: context)
         }
         context.logger.log("Centered \(windows.count) window(s)", file: #file, function: #function, line: #line)
     }
-    
+
     private func resizeToPercent(_ percent: CGFloat, target: WindowTargeting.WindowTarget? = nil, context: PluginContext) {
         let windows = getTargetWindows(target, context: context)
         for (window, _) in windows {
             guard let screen = getScreenForWindow(window, context: context) else { continue }
             let sf    = screen.visibleFrame
             let scale = percent / 100.0
-            let w     = sf.width  * scale
+            let w     = sf.width * scale
             let h     = sf.height * scale
             let newFrame = CGRect(x: sf.midX - w / 2, y: sf.midY - h / 2, width: w, height: h)
             setWindowFrame(window, frame: newFrame, context: context)
         }
         context.logger.log("Resized \(windows.count) window(s) to \(Int(percent))%", file: #file, function: #function, line: #line)
     }
-    
+
     private func resizeWindowByFactor(_ factor: CGFloat, target: WindowTargeting.WindowTarget?, logMessage: String, context: PluginContext) {
         let windows = getTargetWindows(target, context: context)
         for (window, _) in windows {
             guard let currentFrame = getWindowFrame(window, context: context) else { continue }
-            let nw = currentFrame.width  * factor
+            let nw = currentFrame.width * factor
             let nh = currentFrame.height * factor
             let newFrame = CGRect(x: currentFrame.origin.x, y: currentFrame.origin.y, width: nw, height: nh)
             setWindowFrame(window, frame: newFrame, context: context)
@@ -1167,12 +1167,12 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
             )
             // Clamp size so window fits on destination screen
             let newSize = CGSize(
-                width:  min(currentFrame.width,  dstF.width),
+                width: min(currentFrame.width, dstF.width),
                 height: min(currentFrame.height, dstF.height)
             )
             var o = newOrigin; var s = newSize
             if let pv = AXValueCreate(.cgPoint, &o) { _ = context.setAccessibilityAttribute(window, attribute: kAXPositionAttribute as String, value: pv) }
-            if let sv = AXValueCreate(.cgSize,  &s) { _ = context.setAccessibilityAttribute(window, attribute: kAXSizeAttribute  as String, value: sv) }
+            if let sv = AXValueCreate(.cgSize, &s) { _ = context.setAccessibilityAttribute(window, attribute: kAXSizeAttribute  as String, value: sv) }
         }
         context.logger.log("Moved window(s) to display: \(displayParam)", file: #file, function: #function, line: #line)
     }
@@ -1181,14 +1181,14 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
         let windows = getTargetWindows(target, context: context)
         for (window, _) in windows {
             guard let currentFrame = getWindowFrame(window, context: context) else { continue }
-            let nw = max(100, currentFrame.width  + delta)
+            let nw = max(100, currentFrame.width + delta)
             let nh = max(100, currentFrame.height + delta)
             let newFrame = CGRect(x: currentFrame.origin.x, y: currentFrame.origin.y, width: nw, height: nh)
             setWindowFrame(window, frame: newFrame, context: context)
         }
         context.logger.log(logMessage, file: #file, function: #function, line: #line)
     }
-    
+
     // MARK: - Window Navigation
 
     private func switchToWindow(target: WindowTargeting.WindowTarget?, context: PluginContext) {
@@ -1201,9 +1201,9 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
         let result = context.performAccessibilityAction(window, action: kAXRaiseAction as String)
         context.logger.log(result ? "Switched to target window" : "Failed to switch to window", file: #file, function: #function, line: #line)
     }
-    
+
     // MARK: - Advanced Window Management
-    
+
     private func getAppWindows(target: WindowTargeting.WindowTarget?, context: PluginContext) -> [AXUIElement] {
         if let target = target {
             switch target.targetType {
@@ -1224,10 +1224,10 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
         guard let frontApp = context.getFrontmostApplication() else { return [] }
         return context.getWindowsForApplication(frontApp.processIdentifier)
     }
-    
+
     /// Bundle ID prefixes for desktop widgets that should be excluded from tiling and cascading
     private static let widgetBundlePrefixes = ["com.apple.notificationcenterui", "com.apple.WidgetKit"]
-    
+
     /// Filter out desktop widget windows
     private func filterOutWidgets(_ windows: [AXUIElement], context: PluginContext) -> [AXUIElement] {
         return windows.filter { window in
@@ -1247,7 +1247,7 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
             return true
         }
     }
-    
+
     private func tileAllWindows(target: WindowTargeting.WindowTarget? = nil, resize: Bool = true, constantSize: Bool = false, fixedWidth: CGFloat? = nil, fixedHeight: CGFloat? = nil, context: PluginContext) {
         let rawWindows = getAppWindows(target: target, context: context)
         let windows = filterOutWidgets(rawWindows, context: context)
@@ -1326,7 +1326,7 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
         }
         context.logger.log("Tiled \(cnt) windows in \(cols)x\(rows) grid", file: #file, function: #function, line: #line)
     }
-    
+
     private func cascadeWindows(target: WindowTargeting.WindowTarget? = nil, resize: Bool = true, context: PluginContext) {
         let rawWindows = getAppWindows(target: target, context: context)
         let windows = filterOutWidgets(rawWindows, context: context)
@@ -1336,19 +1336,19 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
         let winSize = CGSize(width: sf.width * 0.6, height: sf.height * 0.6)
         // Top of visible area in AX coordinates (below menu bar)
         let topY = NSStatusBar.system.thickness
-        
+
         // Maximum cascade offset before wrapping to a new stack
         let effectiveWidth = resize ? winSize.width : (windows.compactMap { getWindowFrame($0, context: context)?.width }.max() ?? winSize.width)
         let effectiveHeight = resize ? winSize.height : (windows.compactMap { getWindowFrame($0, context: context)?.height }.max() ?? winSize.height)
         let maxOffset = max(offset, min(sf.width - effectiveWidth, sf.height - effectiveHeight))
-        
+
         // How many windows fit in one cascade stack
         let windowsPerStack = max(1, Int(maxOffset / offset))
         // Stagger offset for subsequent stacks so all title bars remain visible.
         // Each new stack shifts by half the cascade step, ensuring the previous
         // stack's title bars peek out from behind the new stack.
         let stackStagger = offset / 2.0
-        
+
         // Reverse offset so the last-placed window (visually frontmost) is at top-left
         let count = windows.count
         for (idx, window) in windows.enumerated() {
@@ -1356,7 +1356,7 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
             let stackIndex = reverseIdx / windowsPerStack
             let posInStack = reverseIdx % windowsPerStack
             let off = CGFloat(posInStack) * offset + CGFloat(stackIndex) * stackStagger
-            
+
             if resize {
                 let frame = CGRect(
                     x: sf.minX + off,
@@ -1378,9 +1378,9 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
         }
         context.logger.log("Cascaded \(windows.count) windows\(resize ? "" : " (no resize)")", file: #file, function: #function, line: #line)
     }
-    
+
     // MARK: - Window Position Memory
-    
+
     /// Returns the storage key for a position slot. If `slot` is provided it is used directly;
     /// otherwise the app bundle ID of the targeted window is used.
     private func positionKey(target: WindowTargeting.WindowTarget?, slot: String?, context: PluginContext) -> String? {
@@ -1391,7 +1391,7 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
               let bundleId = NSRunningApplication(processIdentifier: pid)?.bundleIdentifier else { return nil }
         return "app:\(bundleId)"
     }
-    
+
     private func saveCurrentWindowPosition(target: WindowTargeting.WindowTarget? = nil, slot: String?, context: PluginContext) {
         guard let (window, pid) = getTargetWindow(target, context: context),
               let frame = getWindowFrame(window, context: context) else { return }
@@ -1406,7 +1406,7 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
         saveSavedPositions()
         context.logger.log("Saved window position [\(key)]", file: #file, function: #function, line: #line)
     }
-    
+
     private func restoreWindowPosition(target: WindowTargeting.WindowTarget? = nil, slot: String?, context: PluginContext) {
         guard let (window, pid) = getTargetWindow(target, context: context) else { return }
         let app = NSRunningApplication(processIdentifier: pid)
@@ -1419,7 +1419,7 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
         setWindowFrame(window, frame: CGRect(x: saved.x, y: saved.y, width: saved.width, height: saved.height), context: context)
         context.logger.log("Restored window position [\(key)]", file: #file, function: #function, line: #line)
     }
-    
+
     private func deleteWindowPosition(target: WindowTargeting.WindowTarget? = nil, slot: String?, context: PluginContext) {
         guard let (_, pid) = getTargetWindow(target, context: context) else { return }
         let bundleId = NSRunningApplication(processIdentifier: pid)?.bundleIdentifier ?? "unknown"
@@ -1428,9 +1428,9 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
         saveSavedPositions()
         context.logger.log("Deleted saved position [\(key)]", file: #file, function: #function, line: #line)
     }
-    
+
     // MARK: - Window Layouts
-    
+
     func getAvailableLayouts() -> [String] {
         return Array(savedLayouts.keys).sorted()
     }
@@ -1441,17 +1441,17 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
             .map { String($0.dropFirst("slot:".count)) }
             .sorted()
     }
-    
+
     func hasLayout(named name: String) -> Bool {
         return savedLayouts[name] != nil
     }
-    
+
     func deleteLayout(named name: String) {
         savedLayouts.removeValue(forKey: name)
         saveLayoutsToDisk()
         context?.logger.log("Deleted window layout: \(name)", file: #file, function: #function, line: #line)
     }
-    
+
     private func saveWindowLayout(name: String, context: PluginContext) {
         var windowInfos: [WindowLayout.WindowInfo] = []
         for winInfo in context.getAllVisibleWindows() {
@@ -1480,7 +1480,7 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
         saveLayoutsToDisk()
         context.logger.log("Saved layout '\(name)' with \(windowInfos.count) windows", file: #file, function: #function, line: #line)
     }
-    
+
     private func restoreWindowLayout(name: String, reopenApps: Bool = true, context: PluginContext) {
         guard let layout = savedLayouts[name] else {
             context.logger.log("No saved layout: \(name)", file: #file, function: #function, line: #line)
@@ -1511,38 +1511,35 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
         }
         context.logger.log("Restored layout '\(name)'", file: #file, function: #function, line: #line)
     }
-    
+
     // MARK: - Custom Size / Position
-    
+
     private func setWindowSize(params: WindowSizeParameters, target: WindowTargeting.WindowTarget? = nil, context: PluginContext) {
         let windows = getTargetWindows(target, context: context)
         for (window, _) in windows { setWindowSizeSingle(window, params: params, context: context) }
         context.logger.log("Set window size: \(params.displayString) (\(windows.count) window(s))", file: #file, function: #function, line: #line)
     }
-    
+
     private func setWindowSizeSingle(_ window: AXUIElement, params: WindowSizeParameters, context: PluginContext) {
         guard let screen = getScreenForWindow(window, context: context) ?? NSScreen.main,
               let currentFrame = getWindowFrame(window, context: context) else { return }
         let sf = screen.visibleFrame
         var newSize = currentFrame.size
-        if let w = params.width           { newSize.width  = CGFloat(w) }
-        else if let wp = params.widthPercent  { newSize.width  = sf.width  * CGFloat(wp) / 100 }
-        if let h = params.height          { newSize.height = CGFloat(h) }
-        else if let hp = params.heightPercent { newSize.height = sf.height * CGFloat(hp) / 100 }
+        if let w = params.width { newSize.width  = CGFloat(w) } else if let wp = params.widthPercent { newSize.width  = sf.width * CGFloat(wp) / 100 }
+        if let h = params.height { newSize.height = CGFloat(h) } else if let hp = params.heightPercent { newSize.height = sf.height * CGFloat(hp) / 100 }
         if params.maintainAspectRatio {
             let ratio = currentFrame.width / currentFrame.height
-            if params.width != nil || params.widthPercent != nil { newSize.height = newSize.width / ratio }
-            else { newSize.width = newSize.height * ratio }
+            if params.width != nil || params.widthPercent != nil { newSize.height = newSize.width / ratio } else { newSize.width = newSize.height * ratio }
         }
         setWindowFrame(window, frame: CGRect(origin: currentFrame.origin, size: newSize), context: context)
     }
-    
+
     private func setWindowPosition(params: WindowPositionParameters, target: WindowTargeting.WindowTarget? = nil, context: PluginContext) {
         let windows = getTargetWindows(target, context: context)
         for (window, _) in windows { setWindowPositionSingle(window, params: params, context: context) }
         context.logger.log("Set window position: \(params.displayString) (\(windows.count) window(s))", file: #file, function: #function, line: #line)
     }
-    
+
     private func setWindowPositionSingle(_ window: AXUIElement, params: WindowPositionParameters, context: PluginContext) {
         guard let screen = getScreenForWindow(window, context: context) ?? NSScreen.main,
               let currentFrame = getWindowFrame(window, context: context) else { return }
@@ -1556,7 +1553,7 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
             if let x = params.x { newPos.x += CGFloat(x) }
             if let y = params.y { newPos.y += CGFloat(y) }
         case .screenPercentage:
-            if let xp = params.xPercent { newPos.x = sf.minX + sf.width  * CGFloat(xp) / 100 }
+            if let xp = params.xPercent { newPos.x = sf.minX + sf.width * CGFloat(xp) / 100 }
             if let yp = params.yPercent { newPos.y = sf.minY + sf.height * CGFloat(yp) / 100 }
         case .preset:
             guard let preset = params.preset else { break }
@@ -1568,22 +1565,22 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
             let w = currentFrame.width
             let h = currentFrame.height
             switch preset {
-            case .topLeft:      newPos = CGPoint(x: sf.minX,             y: axTop)
-            case .topCenter:    newPos = CGPoint(x: sf.midX - w / 2,     y: axTop)
-            case .topRight:     newPos = CGPoint(x: sf.maxX - w,          y: axTop)
-            case .middleLeft:   newPos = CGPoint(x: sf.minX,             y: axMid - h / 2)
-            case .center:       newPos = CGPoint(x: sf.midX - w / 2,     y: axMid - h / 2)
-            case .middleRight:  newPos = CGPoint(x: sf.maxX - w,          y: axMid - h / 2)
-            case .bottomLeft:   newPos = CGPoint(x: sf.minX,             y: axBottom - h)
-            case .bottomCenter: newPos = CGPoint(x: sf.midX - w / 2,     y: axBottom - h)
-            case .bottomRight:  newPos = CGPoint(x: sf.maxX - w,          y: axBottom - h)
+            case .topLeft:      newPos = CGPoint(x: sf.minX, y: axTop)
+            case .topCenter:    newPos = CGPoint(x: sf.midX - w / 2, y: axTop)
+            case .topRight:     newPos = CGPoint(x: sf.maxX - w, y: axTop)
+            case .middleLeft:   newPos = CGPoint(x: sf.minX, y: axMid - h / 2)
+            case .center:       newPos = CGPoint(x: sf.midX - w / 2, y: axMid - h / 2)
+            case .middleRight:  newPos = CGPoint(x: sf.maxX - w, y: axMid - h / 2)
+            case .bottomLeft:   newPos = CGPoint(x: sf.minX, y: axBottom - h)
+            case .bottomCenter: newPos = CGPoint(x: sf.midX - w / 2, y: axBottom - h)
+            case .bottomRight:  newPos = CGPoint(x: sf.maxX - w, y: axBottom - h)
             }
         }
         setWindowFrame(window, frame: CGRect(origin: newPos, size: currentFrame.size), context: context)
     }
-    
+
     // MARK: - Parse Window Target
-    
+
     private func parseWindowTarget(from parameters: ActionParameters) -> WindowTargeting.WindowTarget {
         let typeStr = parameters.string(for: "target") ?? "frontmost"
         var target = WindowTargeting.WindowTarget()
@@ -1611,16 +1608,16 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
         }
         return target
     }
-    
+
     // MARK: - Persistence
-    
+
     private func savedPositionsURL() -> URL {
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
         let folder = appSupport.appendingPathComponent("MouseGestures")
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         return folder.appendingPathComponent("saved_positions.json")
     }
-    
+
     private func saveSavedPositions() {
         do {
             let data = try JSONEncoder().encode(savedWindowPositions)
@@ -1629,7 +1626,7 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
             context?.logger.log("Error saving window positions: \(error)", file: #file, function: #function, line: #line)
         }
     }
-    
+
     private func loadSavedPositions(context: PluginContext) {
         let url = savedPositionsURL()
         guard FileManager.default.fileExists(atPath: url.path) else { return }
@@ -1640,14 +1637,14 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
             context.logger.log("Error loading saved positions: \(error)", file: #file, function: #function, line: #line)
         }
     }
-    
+
     private func layoutsURL() -> URL {
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
         let folder = appSupport.appendingPathComponent("MouseGestures")
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         return folder.appendingPathComponent("window_layouts.json")
     }
-    
+
     private func saveLayoutsToDisk() {
         do {
             let data = try JSONEncoder().encode(savedLayouts)
@@ -1656,7 +1653,7 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
             context?.logger.log("Error saving window layouts: \(error)", file: #file, function: #function, line: #line)
         }
     }
-    
+
     private func loadLayoutsFromDisk(context: PluginContext) {
         let url = layoutsURL()
         guard FileManager.default.fileExists(atPath: url.path) else { return }

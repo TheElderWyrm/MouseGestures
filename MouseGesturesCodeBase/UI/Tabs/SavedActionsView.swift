@@ -11,7 +11,7 @@ struct SavedActionsView: View {
     enum ActiveSheet: Identifiable {
         case addAction
         case editAction(SavedAction)
-        
+
         var id: String {
             switch self {
             case .addAction: return "add"
@@ -25,19 +25,19 @@ struct SavedActionsView: View {
     @State private var showingExportPanel = false
     @State private var showingImportPanel = false
     @State private var sortOrder = SavedActionsSortService.SortOrder.dateModified
-    
+
     private var anySelected: Bool { selectedActions.count > 0 }
-    
+
     var body: some View {
         VStack(spacing: 0) {
             headerView
-            
+
             Divider()
-            
+
             if anySelected {
                 selectionBar
             }
-            
+
             if filteredAndSortedActions.isEmpty && searchText.isEmpty {
                 MGEmptyState(
                     icon: "star.square.on.square",
@@ -76,7 +76,7 @@ struct SavedActionsView: View {
         }
         .fileExporter(
             isPresented: $showingExportPanel,
-            document: SavedActionsDocument(actions: Array(selectedActions.compactMap { id in 
+            document: SavedActionsDocument(actions: Array(selectedActions.compactMap { id in
                 uiServices.getSavedAction(byId: id)
             })),
             contentType: .json,
@@ -100,32 +100,32 @@ struct SavedActionsView: View {
             }
         }
     }
-    
+
     // MARK: - Selection Bar
-    
+
     private var selectionBar: some View {
         HStack(spacing: MGStyle.Spacing.lg) {
             Text("\(selectedActions.count) actions selected")
                 .font(.system(size: MGStyle.FontSize.caption, weight: .medium))
                 .foregroundColor(.accentColor)
-            
+
             Spacer()
-            
+
             Button(action: duplicateSelectedAction) {
                 Label("Duplicate", systemImage: "plus.square.on.square")
             }
             .controlSize(.small)
-            
+
             Button(action: { showingExportPanel = true }) {
                 Label("Export", systemImage: "square.and.arrow.up")
             }
             .controlSize(.small)
-            
+
             Button(role: .destructive, action: confirmDeleteSelectedActions) {
                 Label("Delete", systemImage: "trash")
             }
             .controlSize(.small)
-            
+
             Button("Clear Selection") {
                 selectedActions.removeAll()
             }
@@ -135,9 +135,9 @@ struct SavedActionsView: View {
         .padding(.vertical, MGStyle.Spacing.md)
         .background(Color.accentColor.opacity(0.08))
     }
-    
+
     // MARK: - View Components
-    
+
     private var headerView: some View {
         MGCompactHeader(
             "Saved Actions",
@@ -157,13 +157,13 @@ struct SavedActionsView: View {
                     .frame(width: 180)
                     .transition(.opacity.combined(with: .move(edge: .trailing)))
             }
-            
+
             Button(action: { withAnimation(.easeInOut(duration: 0.2)) { showSearch.toggle() } }) {
                 Image(systemName: showSearch ? "xmark" : "magnifyingglass")
                     .font(.system(size: 13))
             }
             .buttonStyle(.borderless)
-            
+
             // Sort picker (right of search)
             Picker("", selection: $sortOrder) {
                 ForEach(SavedActionsSortService.SortOrder.allCases, id: \.self) { order in
@@ -172,13 +172,13 @@ struct SavedActionsView: View {
             }
             .pickerStyle(.menu)
             .frame(width: 140)
-            
+
             Button(action: { activeSheet = .addAction }) {
                 Label("Add", systemImage: "plus")
             }
         }
     }
-    
+
     private var actionListView: some View {
         ScrollView {
             LazyVStack(spacing: MGStyle.Spacing.sm) {
@@ -193,7 +193,7 @@ struct SavedActionsView: View {
                         onDoubleClick: { editAction(action) }
                     )
                 }
-                
+
                 if filteredAndSortedActions.isEmpty && !searchText.isEmpty {
                     MGEmptyState(
                         icon: "magnifyingglass",
@@ -206,37 +206,36 @@ struct SavedActionsView: View {
             .padding(MGStyle.Spacing.xl)
         }
     }
-    
+
     // MARK: - Helper Methods
-    
+
     private var filteredAndSortedActions: [SavedAction] {
         let actions = uiServices.savedActions
         let filtered = uiServices.filterSavedActions(actions, searchText: searchText)
         return uiServices.sortSavedActions(filtered, by: sortOrder)
     }
-    
+
     private func toggleSelection(for action: SavedAction) {
-        if selectedActions.contains(action.id) { selectedActions.remove(action.id) }
-        else { selectedActions.insert(action.id) }
+        if selectedActions.contains(action.id) { selectedActions.remove(action.id) } else { selectedActions.insert(action.id) }
     }
-    
+
     private func editSelectedAction() {
         if let id = selectedActions.first,
            let action = uiServices.getSavedAction(byId: id) { editAction(action) }
     }
-    
+
     private func editAction(_ action: SavedAction) { activeSheet = .editAction(action) }
-    
+
     private func confirmDeleteAction(_ action: SavedAction) {
         actionsToDelete = [action]
         showingDeleteConfirmation = true
     }
-    
+
     private func confirmDeleteSelectedActions() {
         actionsToDelete = selectedActions.compactMap { id in uiServices.getSavedAction(byId: id) }
         showingDeleteConfirmation = true
     }
-    
+
     private func deleteSelectedActions() {
         for action in actionsToDelete {
             uiServices.deleteSavedAction(action)
@@ -244,7 +243,7 @@ struct SavedActionsView: View {
         }
         actionsToDelete = []
     }
-    
+
     private func duplicateSelectedAction() {
         for id in selectedActions {
             if let action = uiServices.getSavedAction(byId: id) {
@@ -252,7 +251,7 @@ struct SavedActionsView: View {
             }
         }
     }
-    
+
     private func duplicateAction(_ action: SavedAction) {
         var dupName = "\(action.name) Copy"
         var counter = 2
@@ -268,7 +267,7 @@ struct SavedActionsView: View {
         )
         uiServices.addSavedAction(dup)
     }
-    
+
     private func importActions(from url: URL) {
         guard url.startAccessingSecurityScopedResource() else { return }
         defer { url.stopAccessingSecurityScopedResource() }
@@ -291,9 +290,9 @@ struct SavedActionRow: View {
     let onDelete: () -> Void
     let onDuplicate: () -> Void
     let onDoubleClick: () -> Void
-    
+
     @State private var isHovered = false
-    
+
     var body: some View {
         HStack(spacing: MGStyle.Spacing.lg) {
             // Selection checkbox with expanded hit target
@@ -305,16 +304,16 @@ struct SavedActionRow: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            
+
             Image(systemName: getActionIcon())
                 .font(.system(size: 14))
                 .foregroundColor(.accentColor)
                 .frame(width: 24)
-            
+
             VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
                 Text(action.name)
                     .font(.system(size: MGStyle.FontSize.body, weight: .medium))
-                
+
                 HStack(spacing: MGStyle.Spacing.md) {
                     Text(action.typeDisplayName)
                         .font(.system(size: MGStyle.FontSize.caption))
@@ -329,13 +328,13 @@ struct SavedActionRow: View {
                     }
                 }
             }
-            
+
             Spacer()
-            
+
             Text(formatDate(action.dateModified))
                 .font(.system(size: MGStyle.FontSize.badge))
                 .foregroundColor(.secondary.opacity(0.6))
-            
+
             MGRowActions(actions: [
                 .init("plus.square.on.square", help: "Duplicate") { onDuplicate() },
                 .init("pencil", help: "Edit") { onEdit() },
@@ -354,11 +353,11 @@ struct SavedActionRow: View {
             Button(role: .destructive, action: onDelete) { Label("Delete", systemImage: "trash") }
         }
     }
-    
+
     private func getActionIcon() -> String {
         return UIServices.shared.getIconForSavedAction(action)
     }
-    
+
     private func formatDate(_ date: Date) -> String {
         let f = DateFormatter()
         f.dateStyle = .short
@@ -371,16 +370,16 @@ struct SavedActionRow: View {
 
 struct SavedActionsDocument: FileDocument {
     static var readableContentTypes: [UTType] { [.json] }
-    
+
     let actions: [SavedAction]
-    
+
     init(actions: [SavedAction]) { self.actions = actions }
-    
+
     init(configuration: ReadConfiguration) throws {
         guard let data = configuration.file.regularFileContents else { throw CocoaError(.fileReadCorruptFile) }
         actions = try JSONDecoder().decode([SavedAction].self, from: data)
     }
-    
+
     func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
         let data = try JSONEncoder().encode(actions)
         return FileWrapper(regularFileWithContents: data)

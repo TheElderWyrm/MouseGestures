@@ -7,13 +7,12 @@ extension NSEvent.ModifierFlags: @retroactive Codable {
         let rawValue = try container.decode(UInt.self)
         self.init(rawValue: rawValue)
     }
-    
+
     public func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
         try container.encode(self.rawValue)
     }
 }
-
 
 extension CGEventFlags: @retroactive Codable {
     public init(from decoder: Decoder) throws {
@@ -21,32 +20,31 @@ extension CGEventFlags: @retroactive Codable {
         let rawValue = try container.decode(UInt64.self)
         self.init(rawValue: rawValue)
     }
-    
+
     public func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
         try container.encode(self.rawValue)
     }
 }
 
-
 // MARK: - Prefixed Logger
 /// A reusable logger that prefixes all messages. Replaces SandboxedLogger, DetectionPluginLogger, etc.
 class PrefixedLogger: PluginLogger {
     private let prefix: String
-    
+
     init(prefix: String) {
         self.prefix = prefix
     }
-    
+
     /// Convenience initializer for plugin loggers
     convenience init(pluginId: String) {
         self.init(prefix: "[\(pluginId)]")
     }
-    
+
     func log(_ message: String, file: String = #file, function: String = #function, line: Int = #line) {
         Logger.shared.log("\(prefix) \(message)", file: file, function: function, line: line)
     }
-    
+
     var isDebugEnabled: Bool {
         return Logger.shared.isDebugEnabled
     }
@@ -68,34 +66,34 @@ extension NSEvent.ModifierFlags {
         var n: NSEvent.ModifierFlags = []
         if contains(.command) { n.insert(.command) }
         if contains(.control) { n.insert(.control) }
-        if contains(.option)  { n.insert(.option) }
-        if contains(.shift)   { n.insert(.shift) }
+        if contains(.option) { n.insert(.option) }
+        if contains(.shift) { n.insert(.shift) }
         return n
     }
-    
+
     /// Returns the real-time modifier state from the OS.
     /// This is a direct system query — no cross-plugin dependency.
     static var currentSystem: NSEvent.ModifierFlags {
         return NSEvent.modifierFlags.normalized
     }
-    
+
     /// Human-readable modifier string (e.g. "⌘⌃⇧")
     var symbolString: String {
         var parts: [String] = []
         if contains(.command) { parts.append("⌘") }
         if contains(.control) { parts.append("⌃") }
-        if contains(.option)  { parts.append("⌥") }
-        if contains(.shift)   { parts.append("⇧") }
+        if contains(.option) { parts.append("⌥") }
+        if contains(.shift) { parts.append("⇧") }
         return parts.joined(separator: "")
     }
-    
+
     /// Verbose modifier description (e.g. "Command ⌘ + Shift ⇧")
     var verboseDescription: String {
         var parts: [String] = []
         if contains(.command) { parts.append("Command ⌘") }
         if contains(.control) { parts.append("Control ⌃") }
-        if contains(.option)  { parts.append("Option ⌥") }
-        if contains(.shift)   { parts.append("Shift ⇧") }
+        if contains(.option) { parts.append("Option ⌥") }
+        if contains(.shift) { parts.append("Shift ⇧") }
         return parts.isEmpty ? "None" : parts.joined(separator: " + ")
     }
 }
@@ -164,20 +162,20 @@ private func anyModifierHeld() -> Bool {
     let cgBits: CGEventFlags = [.maskCommand, .maskControl, .maskAlternate, .maskShift]
     // NSEvent mask for the same
     let nsBits: NSEvent.ModifierFlags = [.command, .control, .option, .shift]
-    
+
     // Check all three state sources — if ANY reports a modifier held, return true.
     // .hidSystemState: hardware-level state
     // .combinedSessionState: merged hardware + synthetic state
     // NSEvent.modifierFlags: AppKit's view of modifier state
     let hid = CGEventSource.flagsState(.hidSystemState).intersection(cgBits)
     if !hid.isEmpty { return true }
-    
+
     let combined = CGEventSource.flagsState(.combinedSessionState).intersection(cgBits)
     if !combined.isEmpty { return true }
-    
+
     let appkit = NSEvent.modifierFlags.intersection(nsBits)
     if !appkit.isEmpty { return true }
-    
+
     return false
 }
 
@@ -194,7 +192,7 @@ private func anyModifierHeld() -> Bool {
 func waitForModifierRelease(timeout: TimeInterval = 1.5) -> Bool {
     let deadline = Date().addingTimeInterval(timeout)
     var consecutiveClean = 0
-    
+
     while Date() < deadline {
         if !anyModifierHeld() {
             consecutiveClean += 1

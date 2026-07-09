@@ -6,52 +6,52 @@ import Cocoa
 public protocol GestureActionPlugin: AnyObject {
     /// Unique identifier for the plugin
     var identifier: String { get }
-    
+
     /// Display name for the plugin
     var name: String { get }
-    
+
     /// Description of what the plugin does
     var description: String { get }
-    
+
     /// Version of the plugin
     var version: String { get }
-    
+
     /// Author of the plugin
     var author: String { get }
-    
+
     /// Category for grouping in UI
     var category: ActionCategory { get }
-    
+
     /// Whether this is an advanced plugin (Pro only)
     var isAdvanced: Bool { get }
-    
+
     /// Whether this is an external plugin (Pro only)
     var isExternal: Bool { get set }
-    
+
     /// Icon for the plugin (optional)
     var icon: NSImage? { get }
-    
+
     /// Actions provided by this plugin
     var providedActions: [PluginAction] { get }
-    
+
     /// Called when the plugin is loaded
     func initialize(context: PluginContext) throws
-    
+
     /// Called when the plugin is about to be unloaded
     func cleanup()
-    
+
     /// Execute a specific action provided by this plugin
     func execute(action: PluginAction, with parameters: ActionParameters, context: PluginContext) throws
-    
+
     /// Validate that an action can be executed with given parameters
     func validate(action: PluginAction, with parameters: ActionParameters) -> ValidationResult
-    
+
     /// Get the configuration UI for a specific action (optional)
     func configurationView(for action: PluginAction) -> NSView?
-    
+
     /// Whether the action has advanced configuration that requires a custom editor
     func hasAdvancedConfiguration(for action: PluginAction) -> Bool
-    
+
     /// Present the advanced configuration editor as a sheet
     /// - Parameters:
     ///   - action: The action to configure
@@ -102,7 +102,7 @@ public enum ActionCategory: String, CaseIterable, Codable {
     case security = "Security"
     case accessibility = "Accessibility"
     case custom = "Custom"
-    
+
     var icon: String {
         switch self {
         case .core: return "star.circle"
@@ -305,7 +305,7 @@ public struct ValidationRule: Codable, Equatable {
     public let allowedValues: [AnyCodable]?
     public let fileExists: Bool?
     public let isDirectory: Bool?
-    
+
     public init(
         minValue: Double? = nil,
         maxValue: Double? = nil,
@@ -330,44 +330,44 @@ public struct ValidationRule: Codable, Equatable {
 /// Parameters passed to an action
 public struct ActionParameters: Codable {
     private var values: [String: AnyCodable]
-    
+
     public init() {
         self.values = [:]
     }
-    
+
     public init(values: [String: AnyCodable]) {
         self.values = values
     }
-    
+
     public subscript(key: String) -> AnyCodable? {
         get { values[key] }
         set { values[key] = newValue }
     }
-    
+
     public func string(for key: String) -> String? {
         values[key]?.value as? String
     }
-    
+
     public func number(for key: String) -> Double? {
         values[key]?.value as? Double
     }
-    
+
     public func bool(for key: String) -> Bool? {
         values[key]?.value as? Bool
     }
-    
+
     public func array(for key: String) -> [Any]? {
         values[key]?.value as? [Any]
     }
-    
+
     public func dictionary(for key: String) -> [String: Any]? {
         values[key]?.value as? [String: Any]
     }
-    
+
     public var keys: [String] {
         Array(values.keys)
     }
-    
+
     public var isEmpty: Bool {
         values.isEmpty
     }
@@ -378,17 +378,17 @@ public struct ValidationResult {
     public let isValid: Bool
     public let errors: [String]
     public let warnings: [String]
-    
+
     public init(isValid: Bool = true, errors: [String] = [], warnings: [String] = []) {
         self.isValid = isValid
         self.errors = errors
         self.warnings = warnings
     }
-    
+
     public static var valid: ValidationResult {
         ValidationResult()
     }
-    
+
     public static func invalid(error: String) -> ValidationResult {
         ValidationResult(isValid: false, errors: [error])
     }
@@ -417,93 +417,93 @@ public protocol PluginLogger {
 public protocol PluginContext {
     /// Access to the gesture configuration
     var configuration: Configuration { get }
-    
+
     /// Access to the logger
     var logger: PluginLogger { get }
-    
+
     /// Register a notification observer
     func observeNotification(name: NSNotification.Name, handler: @escaping (Notification) -> Void) -> NSObjectProtocol
-    
+
     /// Post a notification
     func postNotification(name: NSNotification.Name, userInfo: [String: Any]?)
-    
+
     /// Get a preference value
     func preference(for key: String) -> Any?
-    
+
     /// Set a preference value
     func setPreference(_ value: Any?, for key: String)
-    
+
     /// Execute an action by its identifier
     func executeAction(identifier: String, parameters: ActionParameters) throws
-    
+
     /// Show a user notification
     func showNotification(title: String, message: String, style: NotificationStyle)
-    
+
     // MARK: - System Services (Sandboxed)
-    
+
     /// Send a keyboard shortcut
     func sendKeyboardShortcut(keyCode: CGKeyCode, modifiers: CGEventFlags)
-    
+
     /// Execute AppleScript
     func executeAppleScript(_ script: String) throws
-    
+
     /// Get frontmost application
     func getFrontmostApplication() -> NSRunningApplication?
-    
+
     /// Get all running applications
     func getRunningApplications() -> [NSRunningApplication]
-    
+
     /// Terminate an application
     func terminateApplication(_ app: NSRunningApplication) -> Bool
-    
+
     /// Hide an application
     func hideApplication(_ app: NSRunningApplication) -> Bool
-    
+
     /// Get windows for application
     func getWindowsForApplication(_ pid: pid_t) -> [AXUIElement]
-    
+
     /// Perform accessibility action on UI element
     func performAccessibilityAction(_ element: AXUIElement, action: String) -> Bool
-    
+
     /// Set accessibility attribute value
     func setAccessibilityAttribute(_ element: AXUIElement, attribute: String, value: CFTypeRef) -> Bool
-    
+
     /// Get accessibility attribute value
     func getAccessibilityAttribute(_ element: AXUIElement, attribute: String) -> CFTypeRef?
-    
+
     /// Get target window based on targeting parameters
     func getTargetWindow(_ params: [String: Any]) -> (AXUIElement, pid_t)?
-    
+
     /// Get target windows (supports multi-window targets like allWindowsOfApp/allWindows)
     func getTargetWindows(_ params: [String: Any]) -> [(AXUIElement, pid_t)]
-    
+
     /// Get all visible windows
     func getAllVisibleWindows() -> [(window: AXUIElement, pid: pid_t)]
-    
+
     /// Save data to plugin storage
     func saveData(_ data: Data, to filename: String) throws
-    
+
     /// Load data from plugin storage
     func loadData(from filename: String) throws -> Data
-    
+
     /// Check if file exists in plugin storage
     func fileExists(_ filename: String) -> Bool
-    
+
     /// Delete file from plugin storage
     func deleteFile(_ filename: String) throws
-    
+
     /// Release all currently held modifier keys (call before any synthetic key event that must arrive modifier-free)
     func releaseModifiers()
-    
+
     /// Get list of saved profiles
     func getProfiles() -> [[String: Any]]
-    
+
     /// Get active profile ID
     func getActiveProfileId() -> UUID?
-    
+
     /// Apply a profile by ID
     func applyProfile(profileId: UUID)
-    
+
     /// Save configuration
     func saveConfiguration()
 }
@@ -527,7 +527,7 @@ public enum PluginError: LocalizedError {
     case configurationError(String)
     case dependencyMissing(String)
     case incompatibleVersion(String)
-    
+
     public var errorDescription: String? {
         switch self {
         case .initializationFailed(let message):
@@ -565,7 +565,7 @@ public struct PluginMetadata: Codable {
     public let dependencies: [String]?
     public let bundleIdentifier: String?
     public let mainClass: String?
-    
+
     public init(
         identifier: String,
         name: String,

@@ -5,12 +5,12 @@ struct TutorialPopoverModifier: ViewModifier {
     @Binding var currentState: TutorialState
     let text: String
     let edge: Edge
-    
+
     func body(content: Content) -> some View {
         content
             .popover(isPresented: Binding(
                 get: { currentState == targetState },
-                set: { show in 
+                set: { show in
                     if !show && currentState == targetState {
                         // If user clicks outside, we don't automatically advance 
                         // unless it's the last step.
@@ -25,12 +25,12 @@ struct TutorialPopoverModifier: ViewModifier {
                             .font(.headline)
                         Spacer()
                     }
-                    
+
                     Text(text)
                         .font(.body)
                         .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: 250, alignment: .leading)
-                    
+
                     HStack {
                         Button("Skip Tutorial") {
                             TutorialService.shared.cancel()
@@ -38,9 +38,9 @@ struct TutorialPopoverModifier: ViewModifier {
                         .buttonStyle(.link)
                         .font(.caption)
                         .foregroundColor(.secondary)
-                        
+
                         Spacer()
-                        
+
                         Button("Got it") {
                             advanceState()
                         }
@@ -51,7 +51,7 @@ struct TutorialPopoverModifier: ViewModifier {
                 .padding()
             }
     }
-    
+
     private func advanceState() {
         switch targetState {
         case .clickAddGesture:

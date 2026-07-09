@@ -6,7 +6,7 @@ import AppKit
 /// Central namespace for all UI style constants used throughout the app.
 /// All views should reference these values instead of using hardcoded numbers.
 enum MGStyle {
-    
+
     // MARK: Spacing
     enum Spacing {
         static let xs: CGFloat = 2
@@ -16,7 +16,7 @@ enum MGStyle {
         static let xl: CGFloat = 16
         static let xxl: CGFloat = 20
     }
-    
+
     // MARK: Corner Radii
     enum Corner {
         static let xs: CGFloat = 2
@@ -25,7 +25,7 @@ enum MGStyle {
         static let lg: CGFloat = 8
         static let xl: CGFloat = 10
     }
-    
+
     // MARK: Font Sizes
     enum FontSize {
         static let badge: CGFloat = 10
@@ -33,14 +33,14 @@ enum MGStyle {
         static let body: CGFloat = 13
         static let heading: CGFloat = 14
     }
-    
+
     // MARK: Icon Sizes
     enum IconSize {
         static let inline: CGFloat = 11
         static let row: CGFloat = 13
         static let emptyState: CGFloat = 48
     }
-    
+
     // MARK: Colors
     enum Colors {
         static var cardBackground: Color { Color(NSColor.controlBackgroundColor) }
@@ -51,7 +51,7 @@ enum MGStyle {
         static var hoveredRow: Color { Color(NSColor.controlBackgroundColor) }
         static var subtleOverlay: Color { Color(NSColor.controlBackgroundColor).opacity(0.5) }
     }
-    
+
     // MARK: Layout
     enum Layout {
         static let searchFieldWidth: CGFloat = 200
@@ -70,12 +70,12 @@ enum MGStyle {
 struct MGSearchField: View {
     let placeholder: String
     @Binding var text: String
-    
+
     init(_ placeholder: String = "Search...", text: Binding<String>) {
         self.placeholder = placeholder
         self._text = text
     }
-    
+
     var body: some View {
         HStack(spacing: MGStyle.Spacing.md) {
             Image(systemName: "magnifyingglass")
@@ -110,29 +110,29 @@ struct MGPageHeader<Actions: View>: View {
     let title: String
     let subtitle: String?
     @ViewBuilder let actions: () -> Actions
-    
+
     init(_ title: String, subtitle: String? = nil, @ViewBuilder actions: @escaping () -> Actions) {
         self.title = title
         self.subtitle = subtitle
         self.actions = actions
     }
-    
+
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: MGStyle.Spacing.sm) {
                 Text(title)
                     .font(.title2)
                     .fontWeight(.bold)
-                
+
                 if let subtitle {
                     Text(subtitle)
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
             }
-            
+
             Spacer()
-            
+
             HStack(spacing: MGStyle.Spacing.lg) {
                 actions()
             }
@@ -148,13 +148,13 @@ struct MGSheetHeader: View {
     let title: String
     let subtitle: String?
     let onCancel: (() -> Void)?
-    
+
     init(_ title: String, subtitle: String? = nil, onCancel: (() -> Void)? = nil) {
         self.title = title
         self.subtitle = subtitle
         self.onCancel = onCancel
     }
-    
+
     var body: some View {
         VStack(spacing: 0) {
             HStack {
@@ -162,22 +162,22 @@ struct MGSheetHeader: View {
                     Text(title)
                         .font(.title2)
                         .fontWeight(.bold)
-                    
+
                     if let subtitle {
                         Text(subtitle)
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
                 }
-                
+
                 Spacer()
-                
+
                 if let onCancel {
                     Button("Cancel", action: onCancel)
                 }
             }
             .padding(MGStyle.Spacing.xl)
-            
+
             Divider()
         }
     }
@@ -192,7 +192,7 @@ struct MGSheetFooter<LeadingContent: View>: View {
     let primaryDisabled: Bool
     let cancelAction: (() -> Void)?
     @ViewBuilder let leading: () -> LeadingContent
-    
+
     init(
         _ primaryLabel: String,
         disabled: Bool = false,
@@ -206,16 +206,16 @@ struct MGSheetFooter<LeadingContent: View>: View {
         self.cancelAction = cancel
         self.leading = leading
     }
-    
+
     var body: some View {
         VStack(spacing: 0) {
             Divider()
-            
+
             HStack {
                 leading()
-                
+
                 Spacer()
-                
+
                 HStack(spacing: MGStyle.Spacing.md) {
                     if let cancelAction {
                         Button("Cancel", action: cancelAction)
@@ -236,11 +236,11 @@ struct MGSheetFooter<LeadingContent: View>: View {
 /// Consistent card background used for content sections.
 struct MGContentCard<Content: View>: View {
     let content: () -> Content
-    
+
     init(@ViewBuilder content: @escaping () -> Content) {
         self.content = content
     }
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: MGStyle.Spacing.xl) {
             content()
@@ -260,13 +260,13 @@ struct MGBadge: View {
     let text: String
     let color: Color
     let icon: String?
-    
+
     init(_ text: String, color: Color = .accentColor, icon: String? = nil) {
         self.text = text
         self.color = color
         self.icon = icon
     }
-    
+
     var body: some View {
         HStack(spacing: MGStyle.Spacing.sm) {
             if let icon {
@@ -293,7 +293,7 @@ struct MGEmptyState: View {
     let description: String?
     let actionLabel: String?
     let action: (() -> Void)?
-    
+
     init(icon: String, title: String, description: String? = nil, actionLabel: String? = nil, action: (() -> Void)? = nil) {
         self.icon = icon
         self.title = title
@@ -301,17 +301,17 @@ struct MGEmptyState: View {
         self.actionLabel = actionLabel
         self.action = action
     }
-    
+
     var body: some View {
         VStack(spacing: MGStyle.Spacing.xl) {
             Image(systemName: icon)
                 .font(.system(size: MGStyle.IconSize.emptyState))
                 .foregroundColor(.secondary.opacity(0.5))
-            
+
             Text(title)
                 .font(.headline)
                 .foregroundColor(.secondary)
-            
+
             if let description {
                 Text(description)
                     .font(.subheadline)
@@ -319,7 +319,7 @@ struct MGEmptyState: View {
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: 400)
             }
-            
+
             if let actionLabel, let action {
                 Button(action: action) {
                     Label(actionLabel, systemImage: "plus.circle")
@@ -339,29 +339,29 @@ struct MGListSectionHeader: View {
     let title: String
     let count: Int?
     let trailing: AnyView?
-    
+
     init(_ title: String, count: Int? = nil, trailing: AnyView? = nil) {
         self.title = title
         self.count = count
         self.trailing = trailing
     }
-    
+
     var body: some View {
         HStack {
             HStack(spacing: MGStyle.Spacing.md) {
                 Text(title)
                     .font(.headline)
                     .foregroundColor(.secondary)
-                
+
                 if let count {
                     Text("(\(count))")
                         .font(.headline)
                         .foregroundColor(.secondary)
                 }
             }
-            
+
             Spacer()
-            
+
             if let trailing {
                 trailing
             }
@@ -380,7 +380,7 @@ struct MGSidebarItem: View {
     let icon: String
     let isSelected: Bool
     let action: () -> Void
-    
+
     var body: some View {
         Button(action: action) {
             HStack(spacing: MGStyle.Spacing.md) {
@@ -410,7 +410,7 @@ struct MGSidebar<Content: View, Header: View, Footer: View>: View {
     @ViewBuilder let header: () -> Header
     @ViewBuilder let content: () -> Content
     @ViewBuilder let footer: () -> Footer
-    
+
     init(
         title: String,
         @ViewBuilder content: @escaping () -> Content,
@@ -422,7 +422,7 @@ struct MGSidebar<Content: View, Header: View, Footer: View>: View {
         self.content = content
         self.footer = footer
     }
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text(title)
@@ -431,22 +431,22 @@ struct MGSidebar<Content: View, Header: View, Footer: View>: View {
                 .padding(.horizontal, MGStyle.Spacing.xxl)
                 .padding(.top, MGStyle.Spacing.xxl)
                 .padding(.bottom, MGStyle.Spacing.lg)
-            
+
             header()
-            
+
             Divider()
                 .padding(.horizontal, MGStyle.Spacing.xxl)
                 .padding(.bottom, MGStyle.Spacing.md)
-            
+
             ScrollView {
                 VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
                     content()
                 }
                 .padding(.horizontal, MGStyle.Spacing.lg)
             }
-            
+
             Spacer()
-            
+
             footer()
         }
         .background(MGStyle.Colors.cardBackground)
@@ -460,13 +460,13 @@ struct MGListRowModifier: ViewModifier {
     let isSelected: Bool
     let isHovered: Bool
     let showBorder: Bool
-    
+
     init(isSelected: Bool, isHovered: Bool, showBorder: Bool = false) {
         self.isSelected = isSelected
         self.isHovered = isHovered
         self.showBorder = showBorder
     }
-    
+
     func body(content: Content) -> some View {
         content
             .padding(.horizontal, MGStyle.Spacing.lg)
@@ -502,13 +502,13 @@ struct MGListCardModifier: ViewModifier {
     let isHovered: Bool
     let isExpanded: Bool
     let isSelected: Bool
-    
+
     init(isHovered: Bool, isExpanded: Bool = false, isSelected: Bool = false) {
         self.isHovered = isHovered
         self.isExpanded = isExpanded
         self.isSelected = isSelected
     }
-    
+
     func body(content: Content) -> some View {
         content
             .background(
@@ -545,14 +545,14 @@ struct MGActionButton: View {
     let isDestructive: Bool
     let helpText: String
     let action: () -> Void
-    
+
     init(_ icon: String, help: String = "", destructive: Bool = false, action: @escaping () -> Void) {
         self.icon = icon
         self.helpText = help
         self.isDestructive = destructive
         self.action = action
     }
-    
+
     var body: some View {
         Button(action: action) {
             Image(systemName: icon)
@@ -575,7 +575,7 @@ struct MGRowActions: View {
         let isDestructive: Bool
         let helpText: String
         let handler: () -> Void
-        
+
         init(_ icon: String, help: String = "", destructive: Bool = false, action: @escaping () -> Void) {
             self.icon = icon
             self.helpText = help
@@ -583,9 +583,9 @@ struct MGRowActions: View {
             self.handler = action
         }
     }
-    
+
     let actions: [Action]
-    
+
     var body: some View {
         HStack(spacing: MGStyle.Spacing.xs) {
             ForEach(actions.indices, id: \.self) { i in
@@ -606,12 +606,12 @@ struct MGRowActions: View {
 struct MGSectionHeader: View {
     let title: String
     let icon: String?
-    
+
     init(_ title: String, icon: String? = nil) {
         self.title = title
         self.icon = icon
     }
-    
+
     var body: some View {
         HStack(spacing: MGStyle.Spacing.md) {
             if let icon {
@@ -640,10 +640,10 @@ struct MGHeaderDivider: View {
 /// Zones map to edges and corners of the screen.
 struct MGZonePicker: View {
     @Binding var selected: ScreenZone
-    
+
     private let rows = 3
     private let cols = 3
-    
+
     // Map grid positions to zones (row, col) — center cell is nil (no zone)
     private func zone(row: Int, col: Int) -> ScreenZone? {
         switch (row, col) {
@@ -659,11 +659,11 @@ struct MGZonePicker: View {
         default: return nil
         }
     }
-    
+
     private func isCorner(row: Int, col: Int) -> Bool {
         (row == 0 || row == 2) && (col == 0 || col == 2)
     }
-    
+
     var body: some View {
         VStack(spacing: 2) {
             ForEach(0..<rows, id: \.self) { row in
@@ -684,26 +684,26 @@ struct MGZonePicker: View {
                 .stroke(MGStyle.Colors.separator, lineWidth: 1)
         )
     }
-    
+
     @ViewBuilder
     private func zoneCell(row: Int, col: Int) -> some View {
         let z = zone(row: row, col: col)
         let isSel = z == selected
         let corner = isCorner(row: row, col: col)
         let isCenter = row == 1 && col == 1
-        
+
         let w: CGFloat = col == 1 ? 64 : (corner ? 36 : 36)
         let h: CGFloat = row == 1 ? 40 : (corner ? 28 : 28)
-        
+
         if let z = z {
             Button(action: { withAnimation(.easeInOut(duration: 0.15)) { selected = z } }) {
                 ZStack {
                     RoundedRectangle(cornerRadius: corner ? MGStyle.Corner.sm : MGStyle.Corner.xs)
                         .fill(isSel ? Color.accentColor : Color(NSColor.controlBackgroundColor))
-                    
+
                     RoundedRectangle(cornerRadius: corner ? MGStyle.Corner.sm : MGStyle.Corner.xs)
                         .stroke(isSel ? Color.accentColor : MGStyle.Colors.separator.opacity(0.6), lineWidth: isSel ? 1.5 : 0.5)
-                    
+
                     if isSel {
                         Image(systemName: "checkmark")
                             .font(.system(size: 9, weight: .bold))
@@ -731,7 +731,7 @@ struct MGZonePicker: View {
 /// Compact inline zone indicator (non-interactive)
 struct MGZoneIndicator: View {
     let zone: ScreenZone
-    
+
     private func pos() -> (row: Int, col: Int) {
         switch zone {
         case .topLeft: return (0, 0)
@@ -744,7 +744,7 @@ struct MGZoneIndicator: View {
         case .bottomRight: return (2, 2)
         }
     }
-    
+
     var body: some View {
         let p = pos()
         VStack(spacing: 1) {
@@ -771,13 +771,13 @@ struct MGTriggerPill: View {
     let icon: String
     let text: String
     let color: Color
-    
+
     init(_ text: String, icon: String, color: Color = .secondary) {
         self.text = text
         self.icon = icon
         self.color = color
     }
-    
+
     var body: some View {
         HStack(spacing: MGStyle.Spacing.xs) {
             Image(systemName: icon)
@@ -800,13 +800,13 @@ struct MGDetailSection<Content: View>: View {
     let title: String
     let icon: String?
     let content: () -> Content
-    
+
     init(_ title: String, icon: String? = nil, @ViewBuilder content: @escaping () -> Content) {
         self.title = title
         self.icon = icon
         self.content = content
     }
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
             HStack(spacing: MGStyle.Spacing.md) {
@@ -819,7 +819,7 @@ struct MGDetailSection<Content: View>: View {
                     .font(.system(size: MGStyle.FontSize.heading, weight: .semibold))
                     .foregroundColor(.primary)
             }
-            
+
             VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
                 content()
             }
@@ -844,14 +844,14 @@ struct MGDetailRow: View {
     let value: String
     let icon: String?
     let valueColor: Color
-    
+
     init(_ label: String, value: String, icon: String? = nil, valueColor: Color = .primary) {
         self.label = label
         self.value = value
         self.icon = icon
         self.valueColor = valueColor
     }
-    
+
     var body: some View {
         HStack(alignment: .firstTextBaseline) {
             if let icon {
@@ -879,25 +879,25 @@ struct MGSelectionBanner: View {
     let title: String
     let subtitle: String?
     let accentColor: Color
-    
+
     init(icon: String, title: String, subtitle: String? = nil, accentColor: Color = .accentColor) {
         self.icon = icon
         self.title = title
         self.subtitle = subtitle
         self.accentColor = accentColor
     }
-    
+
     var body: some View {
         HStack(spacing: MGStyle.Spacing.md) {
             Image(systemName: icon)
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(accentColor)
-            
+
             VStack(alignment: .leading, spacing: 1) {
                 Text(title)
                     .font(.system(size: MGStyle.FontSize.body, weight: .semibold))
                     .lineLimit(1)
-                
+
                 if let subtitle {
                     Text(subtitle)
                         .font(.system(size: MGStyle.FontSize.caption))
@@ -905,9 +905,9 @@ struct MGSelectionBanner: View {
                         .lineLimit(1)
                 }
             }
-            
+
             Spacer()
-            
+
             Image(systemName: "checkmark.square.fill")
                 .font(.system(size: 14))
                 .foregroundColor(accentColor)
@@ -933,7 +933,7 @@ struct MGCompactHeader<Leading: View>: View {
     let subtitle: String?
     @ViewBuilder let leading: () -> Leading
     let menuItems: [MGMenuItem]
-    
+
     init(
         _ title: String,
         subtitle: String? = nil,
@@ -945,7 +945,7 @@ struct MGCompactHeader<Leading: View>: View {
         self.menuItems = menuItems
         self.leading = leading
     }
-    
+
     var body: some View {
         HStack(spacing: MGStyle.Spacing.lg) {
             // Title area
@@ -953,21 +953,21 @@ struct MGCompactHeader<Leading: View>: View {
                 Text(title)
                     .font(.title2)
                     .fontWeight(.bold)
-                
+
                 if let subtitle {
                     Text(subtitle)
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
             }
-            
+
             Spacer()
-            
+
             // Primary actions
             HStack(spacing: MGStyle.Spacing.md) {
                 leading()
             }
-            
+
             // Overflow menu (secondary actions)
             if !menuItems.isEmpty {
                 Menu {
@@ -1004,7 +1004,7 @@ struct MGMenuItem: Identifiable {
     let isDisabled: Bool
     let isDivider: Bool
     let isDestructive: Bool
-    
+
     init(_ label: String, icon: String, disabled: Bool = false, destructive: Bool = false, action: @escaping () -> Void) {
         self.label = label
         self.icon = icon
@@ -1013,11 +1013,11 @@ struct MGMenuItem: Identifiable {
         self.isDivider = false
         self.isDestructive = destructive
     }
-    
+
     static var divider: MGMenuItem {
         MGMenuItem(isDivider: true)
     }
-    
+
     private init(isDivider: Bool) {
         self.label = ""
         self.icon = ""

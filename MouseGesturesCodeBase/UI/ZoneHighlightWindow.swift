@@ -6,14 +6,14 @@ import Cocoa
 class ZoneWindow: NSWindow {
     let zone: ScreenZone
     private var zoneView: ZoneView?
-    
+
     init(zone: ScreenZone, frame: NSRect) {
         self.zone = zone
         super.init(contentRect: frame, styleMask: .borderless, backing: .buffered, defer: true)
         setupWindow()
         setupView()
     }
-    
+
     private func setupWindow() {
         isOpaque = false
         backgroundColor = NSColor.clear
@@ -23,19 +23,19 @@ class ZoneWindow: NSWindow {
         hasShadow = false
         isReleasedWhenClosed = false
     }
-    
+
     private func setupView() {
         zoneView = ZoneView(frame: NSRect(origin: .zero, size: frame.size), zone: zone)
         contentView = zoneView
     }
-    
+
     func updateState(isActive: Bool, label: String?, forceLabel: Bool = false) {
         zoneView?.isActive = isActive
         zoneView?.label = label
         zoneView?.forceShowLabel = forceLabel
         zoneView?.needsDisplay = true
     }
-    
+
     override func close() {
         zoneView = nil
         super.close()
@@ -48,7 +48,7 @@ class ZoneView: NSView {
     var isActive: Bool = false
     var label: String?
     var forceShowLabel: Bool = false
-    
+
     private var inactiveColor: NSColor {
         Configuration.shared.zoneHighlightColor.withAlphaComponent(0.1)
     }
@@ -56,70 +56,70 @@ class ZoneView: NSView {
         Configuration.shared.zoneHighlightColor.withAlphaComponent(0.3)
     }
     private let borderColor = NSColor.white.withAlphaComponent(0.5)
-    
+
     init(frame: NSRect, zone: ScreenZone) {
         self.zone = zone
         super.init(frame: frame)
     }
-    
+
     required init?(coder: NSCoder) {
         fatalError("init(coder:) not implemented")
     }
-    
+
     override func draw(_ dirtyRect: NSRect) {
         // Fill the entire view (the window is already sized to the zone)
         let fillColor = isActive ? activeColor : inactiveColor
         fillColor.setFill()
         bounds.fill()
-        
+
         // Draw border
         borderColor.setStroke()
         let borderPath = NSBezierPath(rect: bounds.insetBy(dx: 0.5, dy: 0.5))
         borderPath.lineWidth = 1.0
         borderPath.stroke()
-        
+
         // Draw label if present (forceShowLabel bypasses the global setting for preview mode)
-        if let label = label, (forceShowLabel || Configuration.shared.showZoneLabels) {
+        if let label = label, forceShowLabel || Configuration.shared.showZoneLabels {
             // Use smaller font for narrow zones
             let isNarrow = min(bounds.width, bounds.height) < 50
             let fontSize: CGFloat = isNarrow ? 9 : 11
             let font = NSFont.systemFont(ofSize: fontSize, weight: .medium)
-            
+
             let attrs: [NSAttributedString.Key: Any] = [
                 .font: font,
                 .foregroundColor: NSColor.white
             ]
             let size = label.size(withAttributes: attrs)
             let pad: CGFloat = 3
-            
+
             // Rotate text for narrow vertical zones (left/right edges)
             let needsRotation = bounds.width < 50 && bounds.height > bounds.width * 2
-            
+
             if needsRotation {
                 // Draw rotated: use height as available width for text
                 let availableW = bounds.height - pad * 2
                 let labelW = min(size.width, availableW)
                 let labelH = size.height
-                
+
                 let ctx = NSGraphicsContext.current!.cgContext
                 ctx.saveGState()
-                
+
                 // Translate to center, rotate 90° CCW, then offset
                 let cx = bounds.width / 2
                 let cy = bounds.height / 2
                 ctx.translateBy(x: cx, y: cy)
                 ctx.rotate(by: .pi / 2)
-                
+
                 // Draw pill background
                 let pillRect = NSRect(x: -labelW / 2 - 3, y: -labelH / 2 - 1, width: labelW + 6, height: labelH + 2)
                 let pill = NSBezierPath(roundedRect: pillRect, xRadius: 3, yRadius: 3)
                 NSColor.black.withAlphaComponent(0.5).setFill()
                 pill.fill()
-                
+
                 // Draw text
                 let drawRect = NSRect(x: -labelW / 2, y: -labelH / 2, width: labelW, height: labelH)
                 label.draw(with: drawRect, options: [.usesLineFragmentOrigin, .truncatesLastVisibleLine], attributes: attrs, context: nil)
-                
+
                 ctx.restoreGState()
             } else {
                 // Normal horizontal drawing
@@ -127,13 +127,13 @@ class ZoneView: NSView {
                 let labelH = size.height
                 let x = max(pad, min((bounds.width - labelW) / 2, bounds.width - labelW - pad))
                 let y = max(pad, min((bounds.height - labelH) / 2, bounds.height - labelH - pad))
-                
+
                 // Draw background pill for readability
                 let pillRect = NSRect(x: x - 3, y: y - 1, width: labelW + 6, height: labelH + 2)
                 let pill = NSBezierPath(roundedRect: pillRect, xRadius: 3, yRadius: 3)
                 NSColor.black.withAlphaComponent(0.5).setFill()
                 pill.fill()
-                
+
                 // Draw text clipped to zone
                 let drawRect = NSRect(x: x, y: y, width: labelW, height: labelH)
                 label.draw(with: drawRect, options: [.usesLineFragmentOrigin, .truncatesLastVisibleLine], attributes: attrs, context: nil)
@@ -147,7 +147,7 @@ class ZoneView: NSView {
 /// Manages zone highlight windows using individual small windows per zone
 class ZoneHighlightManager {
     static let shared = ZoneHighlightManager()
-    
+
     private var zoneWindows: [ScreenZone: ZoneWindow] = [:]
     private var modifierMonitor: Any?
     private var hideTimer: Timer?
@@ -159,7 +159,7 @@ class ZoneHighlightManager {
     private var modifierCheckTimer: Timer?
     private var appEventObservers: [Any] = []
     private var isHiding = false
-    
+
     private init() {
         configChangeObserver = NotificationCenter.default.addObserver(
             forName: NSNotification.Name("GestureConfigurationChanged"),
@@ -168,7 +168,7 @@ class ZoneHighlightManager {
         ) { [weak self] _ in
             self?.refreshZoneStates()
         }
-        
+
         // Listen for modifier state changes from ModifierKeyDetectorPlugin
         // This ensures zones are hidden even if flagsChanged events are missed
         NotificationCenter.default.addObserver(
@@ -186,7 +186,7 @@ class ZoneHighlightManager {
                 }
             }
         }
-        
+
         // Listen for zone dimension changes to rebuild windows
         dimensionChangeObserver = NotificationCenter.default.addObserver(
             forName: NSNotification.Name("zoneDimensionsChanged"),
@@ -196,17 +196,17 @@ class ZoneHighlightManager {
             self?.rebuildZoneWindows()
         }
     }
-    
+
     deinit {
         cleanup()
     }
-    
+
     private func cleanup() {
         hideTimer?.invalidate()
         hideTimer = nil
         modifierCheckTimer?.invalidate()
         modifierCheckTimer = nil
-        
+
         if let observer = configChangeObserver {
             NotificationCenter.default.removeObserver(observer)
             configChangeObserver = nil
@@ -231,51 +231,51 @@ class ZoneHighlightManager {
             NSEvent.removeMonitor(monitor)
             localModifierMonitor = nil
         }
-        
+
         closeAllWindows()
     }
-    
+
     private func closeAllWindows() {
         for (_, window) in zoneWindows {
             window.close()
         }
         zoneWindows.removeAll()
     }
-    
+
     // MARK: - Public Interface
-    
+
     /// Show zone highlights in preview mode (all zones visible regardless of gestures)
     func showPreview(duration: TimeInterval = 5.0) {
         guard let screen = NSScreen.main else { return }
-        
+
         // Cancel any pending hide
         hideTimer?.invalidate()
         hideTimer = nil
         isHiding = false
-        
+
         // Show all zones in inactive state (no gesture matching)
         for zone in ScreenZone.allCases {
             let frame = frameForZone(zone, screen: screen)
-            
+
             // Create window on demand
             if zoneWindows[zone] == nil {
                 zoneWindows[zone] = ZoneWindow(zone: zone, frame: frame)
             }
-            
+
             guard let window = zoneWindows[zone] else { continue }
-            
+
             // Update frame if screen changed
             if window.frame != frame {
                 window.setFrame(frame, display: true)
             }
-            
+
             // Preview mode: show zones without labels
             window.updateState(isActive: false, label: nil)
             window.animations = [:]
             window.alphaValue = 1.0
             window.orderFront(nil)
         }
-        
+
         // Auto-hide after duration
         if duration > 0 {
             hideTimer = Timer.scheduledTimer(withTimeInterval: duration, repeats: false) { [weak self] _ in
@@ -283,18 +283,18 @@ class ZoneHighlightManager {
             }
         }
     }
-    
+
     func startHighlighting() {
         guard Configuration.shared.showZoneHighlights else { return }
-        
+
         startModifierMonitoring()
-        
+
         // Clean up any previous app event observers to prevent buildup
         for observer in appEventObservers {
             NotificationCenter.default.removeObserver(observer)
         }
         appEventObservers.removeAll()
-        
+
         // Hide zones when app becomes inactive or enters fullscreen
         appEventObservers.append(NotificationCenter.default.addObserver(
             forName: NSApplication.didResignActiveNotification,
@@ -303,7 +303,7 @@ class ZoneHighlightManager {
         ) { [weak self] _ in
             self?.hideZones()
         })
-        
+
         appEventObservers.append(NotificationCenter.default.addObserver(
             forName: NSWindow.willEnterFullScreenNotification,
             object: nil,
@@ -311,7 +311,7 @@ class ZoneHighlightManager {
         ) { [weak self] _ in
             self?.hideZones()
         })
-        
+
         // Also hide on space change which can miss modifier releases
         appEventObservers.append(NotificationCenter.default.addObserver(
             forName: NSWorkspace.activeSpaceDidChangeNotification,
@@ -320,7 +320,7 @@ class ZoneHighlightManager {
         ) { [weak self] _ in
             self?.hideZones()
         })
-        
+
         if screenChangeObserver == nil {
             screenChangeObserver = NotificationCenter.default.addObserver(
                 forName: NSApplication.didChangeScreenParametersNotification,
@@ -330,30 +330,30 @@ class ZoneHighlightManager {
                 self?.screenDidChange()
             }
         }
-        
+
         // Start periodic modifier check as a fallback for stuck highlights
         startModifierCheckTimer()
     }
-    
+
     func stopHighlighting() {
         stopModifierMonitoring()
         modifierCheckTimer?.invalidate()
         modifierCheckTimer = nil
         closeAllWindows()
-        
+
         for observer in appEventObservers {
             NotificationCenter.default.removeObserver(observer)
         }
         appEventObservers.removeAll()
-        
+
         if let observer = screenChangeObserver {
             NotificationCenter.default.removeObserver(observer)
             screenChangeObserver = nil
         }
     }
-    
+
     // MARK: - Zone Frame Calculations
-    
+
     private func frameForZone(_ zone: ScreenZone, screen: NSScreen) -> NSRect {
         let config = Configuration.shared
         let threshold = config.edgeThreshold
@@ -362,7 +362,7 @@ class ZoneHighlightManager {
         let screenFrame = screen.frame
         let menuBarHeight: CGFloat = 38
         let adjustedMaxY = screenFrame.maxY - menuBarHeight
-        
+
         switch zone {
         case .topLeft:
             return NSRect(x: screenFrame.minX, y: adjustedMaxY - cornerSize,
@@ -398,33 +398,33 @@ class ZoneHighlightManager {
                          width: cornerSize, height: cornerSize)
         }
     }
-    
+
     // MARK: - Window Management
-    
+
     private func showZones(modifiers: NSEvent.ModifierFlags) {
         guard let screen = NSScreen.main else { return }
         let config = Configuration.shared
-        
+
         // Cancel any pending hide
         hideTimer?.invalidate()
         hideTimer = nil
         isHiding = false
-        
+
         for zone in ScreenZone.allCases {
             let frame = frameForZone(zone, screen: screen)
-            
+
             // Create window on demand
             if zoneWindows[zone] == nil {
                 zoneWindows[zone] = ZoneWindow(zone: zone, frame: frame)
             }
-            
+
             guard let window = zoneWindows[zone] else { continue }
-            
+
             // Update frame if screen changed
             if window.frame != frame {
                 window.setFrame(frame, display: true)
             }
-            
+
             // Check if zone has active gesture
             let gesture = config.gestures.first { g in
                 g.zone == zone &&
@@ -432,11 +432,11 @@ class ZoneHighlightManager {
                 g.isEnabled &&
                 g.hasZoneTrigger
             }
-            
+
             let isActive = gesture != nil
             // Show assigned action name only for zones with matching gestures
             let label: String? = isActive ? getLabel(for: gesture) : nil
-            
+
             window.updateState(isActive: isActive, label: label)
             // Cancel any running fade-out animation before making visible
             window.animations = [:]
@@ -444,7 +444,7 @@ class ZoneHighlightManager {
             window.orderFront(nil)
         }
     }
-    
+
     /// Schedule a debounced hide that verifies real modifier state before hiding.
     /// This prevents flashing when modifiers are pressed in rapid succession.
     private func scheduleHide() {
@@ -463,7 +463,7 @@ class ZoneHighlightManager {
             self.hideZones()
         }
     }
-    
+
     private func hideZones() {
         guard !isHiding else { return }
         isHiding = true
@@ -481,26 +481,26 @@ class ZoneHighlightManager {
             }
         }
     }
-    
+
     private func getLabel(for gesture: Gesture?) -> String? {
         guard let gesture = gesture else { return nil }
-        
+
         // Priority 1: Gesture Title (if user provided one)
         if let name = gesture.name, !name.isEmpty {
             return name
         }
-        
+
         // Priority 2: Special case: show shortcut name for run_shortcut
         if gesture.actionIdentifier == "com.mousegestures.automation.run_shortcut",
            let name = gesture.parameters["shortcut_name"]?.value as? String {
             return name
         }
-        
+
         // Priority 3: Look up action name from plugin registry
         if let (_, action) = PluginManager.shared.getAction(identifier: gesture.actionIdentifier) {
             return action.name
         }
-        
+
         // Fallback: extract readable name from action identifier
         // e.g. "com.mousegestures.core.close_window" -> "Close Window"
         let lastComponent = gesture.actionIdentifier.split(separator: ".").last.map(String.init) ?? gesture.actionIdentifier
@@ -508,19 +508,19 @@ class ZoneHighlightManager {
             .replacingOccurrences(of: "_", with: " ")
             .localizedCapitalized
     }
-    
+
     private func refreshZoneStates() {
         if !currentModifiers.isEmpty && !zoneWindows.isEmpty {
             showZones(modifiers: currentModifiers)
         }
     }
-    
+
     private func screenDidChange() {
         closeAllWindows()
     }
-    
+
     // MARK: - Zone Rebuilding
-    
+
     /// Rebuild all zone windows when dimensions change
     private func rebuildZoneWindows() {
         let wasShowing = !zoneWindows.isEmpty && zoneWindows.values.contains(where: { $0.isVisible })
@@ -530,9 +530,9 @@ class ZoneHighlightManager {
             showZones(modifiers: currentModifiers)
         }
     }
-    
+
     // MARK: - Stuck Highlight Protection
-    
+
     /// Periodically checks if modifiers are still held; hides zones if they were released
     /// without the event being captured (e.g., during fullscreen transitions)
     private func startModifierCheckTimer() {
@@ -546,9 +546,9 @@ class ZoneHighlightManager {
             }
         }
     }
-    
+
     // MARK: - Modifier Monitoring
-    
+
     private func startModifierMonitoring() {
         modifierMonitor = NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
             self?.handleModifierChange(event)
@@ -559,7 +559,7 @@ class ZoneHighlightManager {
             return event
         }
     }
-    
+
     private func stopModifierMonitoring() {
         if let monitor = modifierMonitor {
             NSEvent.removeMonitor(monitor)
@@ -572,24 +572,24 @@ class ZoneHighlightManager {
         hideTimer?.invalidate()
         hideTimer = nil
     }
-    
+
     private func handleModifierChange(_ event: NSEvent) {
         guard Configuration.shared.showZoneHighlights else { return }
-        
+
         let modifiers = event.modifierFlags.normalized
         currentModifiers = modifiers
-        
+
         if !modifiers.isEmpty {
             // Cancel any pending hide since modifiers are held
             hideTimer?.invalidate()
             hideTimer = nil
-            
+
             let hasMatchingGestures = Configuration.shared.gestures.contains { g in
                 g.modifiers == modifiers &&
                 g.isEnabled &&
                 g.hasZoneTrigger
             }
-            
+
             if hasMatchingGestures {
                 showZones(modifiers: modifiers)
             }
@@ -597,7 +597,7 @@ class ZoneHighlightManager {
             scheduleHide()
         }
     }
-    
+
     // Modifier normalization uses shared NSEvent.ModifierFlags.normalized
     // from Extensions.swift.
 }
@@ -609,7 +609,7 @@ class ZoneHighlightManager {
 @available(*, deprecated, message: "Use ZoneHighlightManager with individual ZoneWindows instead")
 class ZoneHighlightWindow: NSWindow {
     private var highlightView: ZoneHighlightView?
-    
+
     override init(contentRect: NSRect, styleMask style: NSWindow.StyleMask, backing backingStoreType: NSWindow.BackingStoreType, defer flag: Bool) {
         super.init(contentRect: contentRect, styleMask: .borderless, backing: .buffered, defer: false)
         isOpaque = false
@@ -622,12 +622,12 @@ class ZoneHighlightWindow: NSWindow {
         highlightView = ZoneHighlightView(frame: frame)
         contentView = highlightView
     }
-    
+
     override func close() {
         highlightView = nil
         super.close()
     }
-    
+
     func showZones(withModifiers modifiers: NSEvent.ModifierFlags = []) {
         if let screen = NSScreen.main {
             setFrame(screen.frame, display: true)
@@ -638,7 +638,7 @@ class ZoneHighlightWindow: NSWindow {
         orderFront(nil)
         alphaValue = 1.0
     }
-    
+
     func hideZones() {
         NSAnimationContext.runAnimationGroup { context in
             context.duration = 0.2
@@ -647,7 +647,7 @@ class ZoneHighlightWindow: NSWindow {
             self?.orderOut(nil)
         }
     }
-    
+
     func updateModifiers(_ modifiers: NSEvent.ModifierFlags) {
         if let screen = NSScreen.main {
             setFrame(screen.frame, display: true)
@@ -662,11 +662,11 @@ class ZoneHighlightWindow: NSWindow {
 @available(*, deprecated, message: "Use ZoneView instead")
 class ZoneHighlightView: NSView {
     var currentModifiers: NSEvent.ModifierFlags = []
-    
+
     private let inactiveColor = NSColor.systemBlue.withAlphaComponent(0.1)
     private let activeColor = NSColor.systemGreen.withAlphaComponent(0.3)
     private let borderColor = NSColor.white.withAlphaComponent(0.5)
-    
+
     override func draw(_ dirtyRect: NSRect) {
         // Minimal implementation for compatibility
     }

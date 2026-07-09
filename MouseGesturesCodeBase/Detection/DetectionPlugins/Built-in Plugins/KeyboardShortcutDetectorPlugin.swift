@@ -14,7 +14,7 @@ struct KeyboardTrigger: Codable, Equatable {
         self.modifiers = modifiers
         self.displayString = displayString
     }
-    
+
     /// Helper to create display string from key code and modifiers
     static func createDisplayString(keyCode: CGKeyCode, modifiers: NSEvent.ModifierFlags) -> String {
         let modStr = modifiers.symbolString
@@ -31,20 +31,20 @@ struct KeyboardTrigger: Codable, Equatable {
 /// of ModifierKeyDetectorPlugin. This plugin only monitors keyDown events and
 /// reads modifiers from each event directly.
 class KeyboardShortcutDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
-    
+
     // MARK: - Constants
-    
+
     public static let pluginIdentifier = "com.mousegestures.detection.keyboard"
-    
+
     // MARK: - Setting Keys
-    
+
     enum SettingKeys {
         static let doubleTapPrevention = "doubleTapPrevention"
         static let preventionInterval = "preventionInterval"
     }
-    
+
     // MARK: - Properties
-    
+
     override var identifier: String { Self.pluginIdentifier }
     override var name: String { "Keyboard Shortcut Detector" }
     override var description: String { "Detects keyboard shortcuts and key combinations" }
@@ -55,7 +55,7 @@ class KeyboardShortcutDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     override var providesTriggerUI: Bool { true }
 
     // MARK: - Settings Definitions
-    
+
     override var settingsDefinitions: [PluginSettingDefinition] {
         [
             PluginSettingDefinition(
@@ -79,35 +79,35 @@ class KeyboardShortcutDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
             )
         ]
     }
-    
+
     // MARK: - Computed Settings
-    
+
     private var doubleTapPreventionEnabled: Bool {
         settings.getBool(SettingKeys.doubleTapPrevention, default: true)
     }
-    
+
     private var preventionInterval: TimeInterval {
         settings.getDouble(SettingKeys.preventionInterval, default: 0.3)
     }
-    
+
     // Event monitors — keyDown only (modifier tracking is ModifierKeyDetectorPlugin's job)
     private var globalKeyboardMonitor: Any?
     private var localKeyboardMonitor: Any?
-    
+
     // State tracking
     private var lastKeyPressTime: Date?
     private var lastTriggeredShortcut: String?
-    
+
     // Statistics
     private var shortcutsTriggered = 0
     private var profileSwitches = 0
-    
+
     // MARK: - ActivationProvider Protocol
-    
+
     var providedActivationTypes: [ActivationType] {
         return [.keyboardShortcut]
     }
-    
+
     func getActivationState(for type: ActivationType) -> ActivationState? {
         guard type == .keyboardShortcut else { return nil }
         return ActivationState(
@@ -116,67 +116,67 @@ class KeyboardShortcutDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
             metadata: ["lastShortcut": lastTriggeredShortcut ?? "none"]
         )
     }
-    
+
     func enableDetection(for type: ActivationType) {
         guard type == .keyboardShortcut else { return }
         enableKeyboardMonitors()
     }
-    
+
     func disableDetection(for type: ActivationType) {
         guard type == .keyboardShortcut else { return }
         disableKeyboardMonitors()
     }
-    
+
     func isDetectionActive(for type: ActivationType) -> Bool {
         guard type == .keyboardShortcut else { return false }
         return globalKeyboardMonitor != nil
     }
-    
+
     // MARK: - Plugin-Declared Behavioral Properties
-    
+
     func efficiencyScore(for type: ActivationType) -> Int {
         guard type == .keyboardShortcut else { return 50 }
         return 95 // Event monitoring + lookup
     }
-    
+
     func isAlwaysActive(for type: ActivationType) -> Bool {
         return false // Gated by activation coordinator based on gesture requirements
     }
-    
+
     func isInfrastructure(for type: ActivationType) -> Bool {
         return false
     }
-    
+
     // REMOVED: gestureUsesActivation - moved to ActivationMapper
     // Plugin no longer needs to understand gesture structure
-    
+
     // MARK: - Plugin Lifecycle
-    
+
     override func initialize(context: DetectionContext) throws {
         try super.initialize(context: context)
-        
+
         // Register with ActivationCoordinator
         ActivationCoordinator.shared.registerProvider(self, for: providedActivationTypes)
     }
-    
+
     override func start() throws {
         try super.start()
-        
+
         // Detection is now enabled/disabled via ActivationCoordinator
         // which calls enableDetection/disableDetection.
         ActivationCoordinator.shared.rebuildDependencies()
-        
+
         context?.logger.log("Keyboard shortcut detector started (waiting for activation)", file: #file, function: #function, line: #line)
     }
-    
+
     private func enableKeyboardMonitors() {
         guard globalKeyboardMonitor == nil else { return }
-        
+
         // Monitor key presses only — both global and local
         globalKeyboardMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
             _ = self?.handleKeyPress(event)
         }
-        
+
         // Local monitor for when app has focus
         localKeyboardMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             if let handled = self?.handleKeyPress(event), handled {
@@ -184,51 +184,51 @@ class KeyboardShortcutDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
             }
             return event
         }
-        
+
         logActiveShortcuts()
-        
+
         if context?.logger.isDebugEnabled ?? false {
             context?.logger.log("Keyboard shortcut monitoring ENABLED", file: #file, function: #function, line: #line)
         }
     }
-    
+
     override func stop() {
         // Notify coordinator that this plugin is stopping
         ActivationCoordinator.shared.pluginStopping(self)
-        
+
         disableKeyboardMonitors()
-        
+
         super.stop()
     }
-    
+
     private func disableKeyboardMonitors() {
         // Remove key monitors
         if let monitor = globalKeyboardMonitor {
             NSEvent.removeMonitor(monitor)
             globalKeyboardMonitor = nil
         }
-        
+
         if let monitor = localKeyboardMonitor {
             NSEvent.removeMonitor(monitor)
             localKeyboardMonitor = nil
         }
-        
+
         // Reset state
         lastKeyPressTime = nil
         lastTriggeredShortcut = nil
-        
+
         if context?.logger.isDebugEnabled ?? false {
             context?.logger.log("Keyboard shortcut monitoring DISABLED", file: #file, function: #function, line: #line)
         }
     }
-    
+
     override func cleanup() {
         ActivationCoordinator.shared.unregisterProvider(self)
         super.cleanup()
     }
-    
+
     // MARK: - Event Handlers
-    
+
     private func handleKeyPress(_ event: NSEvent) -> Bool {
         // Prevent double-triggering
         if doubleTapPreventionEnabled,
@@ -236,46 +236,46 @@ class KeyboardShortcutDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
            Date().timeIntervalSince(lastTime) < preventionInterval {
             return false
         }
-        
+
         // NOTE: App-disabled filtering is handled centrally by DetectionPluginManager
         // in its detectionPlugin(_:didDetectGesture:context:) delegate method.
         // This plugin only reports what it detects.
-        
+
         let keyCode = event.keyCode
         let modifiers = event.modifierFlags.normalized
-        
+
         guard let config = context?.configuration else { return false }
-        
+
         // First, check for profile keyboard shortcuts (these are global and take priority)
         for profile in config.profiles {
             if let trigger = profile.keyboardShortcut,
                profile.keyboardShortcutEnabled,
                trigger.keyCode == CGKeyCode(keyCode) &&
                trigger.modifiers.normalized == modifiers {
-                
+
                 lastKeyPressTime = Date()
                 lastTriggeredShortcut = trigger.displayString
                 profileSwitches += 1
-                
+
                 context?.logger.log("✓ Profile shortcut triggered: \(trigger.displayString) -> Profile '\(profile.name)'", file: #file, function: #function, line: #line)
-                
+
                 // Notify coordinator
                 ActivationCoordinator.shared.activationEngaged(.keyboardShortcut, metadata: [
                     "shortcut": trigger.displayString,
                     "profileSwitch": true
                 ])
-                
+
                 triggerProfileSwitch(profile)
-                
+
                 // Brief disengage to allow re-triggering
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                     ActivationCoordinator.shared.activationDisengaged(.keyboardShortcut)
                 }
-                
+
                 return true
             }
         }
-        
+
         // Then check regular gesture keyboard shortcuts
         // Use ActivationMapper to determine which gestures use keyboard shortcuts
         let enabledKeyboardGestures = config.gestures.filter {
@@ -283,63 +283,63 @@ class KeyboardShortcutDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
             $0.keyboardTrigger != nil &&
             ActivationMapper.shared.activationTypes(for: $0).contains(.keyboardShortcut)
         }
-        
+
         // Skip if no keyboard shortcuts are configured
         guard !enabledKeyboardGestures.isEmpty else { return false }
-        
+
         // Check if this key combination matches any gesture's keyboard trigger
         for gesture in enabledKeyboardGestures {
             guard let trigger = gesture.keyboardTrigger else { continue }
-            
+
             if trigger.keyCode == CGKeyCode(keyCode) &&
                trigger.modifiers.normalized == modifiers {
-                
+
                 lastKeyPressTime = Date()
                 lastTriggeredShortcut = trigger.displayString
                 shortcutsTriggered += 1
-                
+
                 context?.logger.log("✓ Keyboard shortcut triggered: \(trigger.displayString) -> \(gesture.actionIdentifier)", file: #file, function: #function, line: #line)
-                
+
                 // Notify coordinator
                 ActivationCoordinator.shared.activationEngaged(.keyboardShortcut, metadata: [
                     "shortcut": trigger.displayString,
                     "action": gesture.actionIdentifier
                 ])
-                
+
                 // Create gesture context
                 let gestureContext = GestureContext(
                     source: .keyboard(trigger: trigger),
                     modifiers: modifiers,
                     timestamp: Date()
                 )
-                
+
                 triggerGesture(gesture, context: gestureContext)
-                
+
                 // Brief disengage to allow re-triggering
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                     ActivationCoordinator.shared.activationDisengaged(.keyboardShortcut)
                 }
-                
+
                 return true
             }
         }
-        
+
         return false
     }
-    
+
     // MARK: - Helper Methods
     // Modifier normalization uses shared NSEvent.ModifierFlags.normalized
     // from Extensions.swift.
-    
+
     private func logActiveShortcuts() {
         guard let config = context?.configuration else { return }
-        
+
         let shortcutCount = config.gestures.filter {
             $0.keyboardTrigger != nil && $0.isEnabled
         }.count
-        
+
         context?.logger.log("Keyboard shortcut detection started (monitoring \(shortcutCount) shortcuts)", file: #file, function: #function, line: #line)
-        
+
         if context?.logger.isDebugEnabled ?? false {
             for gesture in config.gestures {
                 if let trigger = gesture.keyboardTrigger,
@@ -350,9 +350,9 @@ class KeyboardShortcutDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
             }
         }
     }
-    
+
     // MARK: - Statistics
-    
+
     override func getStatistics() -> DetectionPluginStatistics {
         return DetectionPluginStatistics(
             eventsDetected: shortcutsTriggered + profileSwitches,

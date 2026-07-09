@@ -6,17 +6,17 @@ import AppKit
 
 class DebugReportService {
     static let shared = DebugReportService()
-    
+
     private let configuration = Configuration.shared
     private let performanceMonitor = PerformanceMonitorService.shared
-    
+
     private init() {}
-    
+
     func generateReport() -> String {
         var report = "MouseGestures Debug Report\n"
         report += "Generated: \(Date())\n"
         report += String(repeating: "=", count: 60) + "\n\n"
-        
+
         // System Information
         report += "=== System Information ===\n"
         report += "App Version: \(performanceMonitor.getAppVersion())\n"
@@ -24,7 +24,7 @@ class DebugReportService {
         report += "Process ID: \(performanceMonitor.getProcessID())\n"
         report += "Uptime: \(performanceMonitor.getUptime())\n"
         report += "\n"
-        
+
         // Configuration
         report += "=== Configuration ===\n"
         report += "Gestures Enabled: \(configuration.isEnabled)\n"
@@ -39,14 +39,14 @@ class DebugReportService {
         report += "Developer Mode: \(configuration.developerModeEnabled)\n"
         report += "Debug Mode: \(configuration.debugModeEnabled)\n"
         report += "\n"
-        
+
         // Zone Configuration
         report += "=== Zone Configuration ===\n"
         report += "Edge Threshold: \(configuration.edgeThreshold) pixels\n"
         report += "Corner Size: \(configuration.cornerSize) pixels\n"
         report += "Corner Buffer: \(configuration.cornerBuffer) pixels\n"
         report += "\n"
-        
+
         // Plugins
         report += "=== Loaded Plugins ===\n"
         let plugins = PluginManagementService.shared.getLoadedPlugins()
@@ -55,7 +55,7 @@ class DebugReportService {
             report += "  Actions: \(plugin.actionCount), Built-in: \(plugin.isBuiltIn)\n"
         }
         report += "\n"
-        
+
         // Memory Usage
         report += "=== Memory Usage ===\n"
         report += "Physical Memory: \(performanceMonitor.getSystemMemory())\n"
@@ -63,12 +63,12 @@ class DebugReportService {
         report += "App Resident Memory: \(memoryUsage.resident)\n"
         report += "App Virtual Memory: \(memoryUsage.virtual)\n"
         report += "\n"
-        
+
         // Accessibility
         report += "=== Accessibility ===\n"
         report += "Permissions: \(AccessibilityPermissionService.shared.getPermissionStatus())\n"
         report += "\n"
-        
+
         // Active Profiles
         if !configuration.profiles.isEmpty {
             report += "=== Profiles ===\n"
@@ -78,7 +78,7 @@ class DebugReportService {
             }
             report += "\n"
         }
-        
+
         // Recent Gestures (if available)
         if !configuration.gestures.isEmpty {
             report += "=== Recent Gestures (First 10) ===\n"
@@ -88,15 +88,15 @@ class DebugReportService {
             }
             report += "\n"
         }
-        
+
         report += "=== End of Report ===\n"
-        
+
         return report
     }
-    
+
     func exportReport(to url: URL) -> Bool {
         let report = generateReport()
-        
+
         do {
             try report.write(to: url, atomically: true, encoding: .utf8)
             log.log("Debug report exported to: \(url.path)")
@@ -106,12 +106,12 @@ class DebugReportService {
             return false
         }
     }
-    
+
     func copyReportToClipboard() {
         let report = generateReport()
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(report, forType: .string)
-        
+
         log.log("Debug report copied to clipboard")
     }
 }

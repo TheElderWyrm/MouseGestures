@@ -4,32 +4,32 @@ import SwiftUI
 
 struct SettingsView: View {
     @StateObject private var registry = SettingsCategoryRegistry.shared
-    
+
     @State private var selectedCategoryId: String = "general"
     @State private var showAdvanced: Bool = false
     @State private var searchText: String = ""
     @State private var selectedSubcategoryIds: [String: String] = [:]
-    
+
     private var isDeveloperModeEnabled: Bool {
         UIServices.shared.isDeveloperModeEnabled()
     }
-    
+
     private var filteredCategories: [ResolvedCategory] {
         let cats = registry.categories
         if searchText.isEmpty { return cats }
         let matching = registry.matchingCategoryIds(for: searchText)
         return cats.filter { matching.contains($0.id) }
     }
-    
+
     private var searchResults: [(categoryId: String, categoryTitle: String, item: SearchableSettingItem)] {
         registry.searchResults(for: searchText)
     }
-    
+
     var body: some View {
         HSplitView {
             sidebarView
                 .frame(minWidth: MGStyle.Layout.sidebarMinWidth, idealWidth: 230, maxWidth: 260)
-            
+
             contentView
                 .frame(minWidth: 400)
         }
@@ -43,9 +43,9 @@ struct SettingsView: View {
             }
         }
     }
-    
+
     // MARK: - Sidebar
-    
+
     private var sidebarView: some View {
         MGSidebar(title: "Settings") {
             ForEach(filteredCategories, id: \.id) { cat in
@@ -56,7 +56,7 @@ struct SettingsView: View {
                     action: { selectedCategoryId = cat.id }
                 )
             }
-            
+
             if filteredCategories.isEmpty && !searchText.isEmpty {
                 Text("No matching settings")
                     .font(.caption)
@@ -69,7 +69,7 @@ struct SettingsView: View {
                 MGSearchField("Search settings…", text: $searchText)
                     .padding(.horizontal, MGStyle.Spacing.xl)
                     .padding(.bottom, MGStyle.Spacing.lg)
-                
+
                 if !searchText.isEmpty && !searchResults.isEmpty {
                     searchResultsList
                 }
@@ -79,7 +79,7 @@ struct SettingsView: View {
                 Divider()
                     .padding(.horizontal, MGStyle.Spacing.xxl)
                     .padding(.vertical, MGStyle.Spacing.md)
-                
+
                 HStack {
                     if LicenseService.shared.isPro {
                         Toggle(isOn: $showAdvanced) {
@@ -97,7 +97,7 @@ struct SettingsView: View {
                         EmptyView()
                             .onAppear { showAdvanced = false }
                     }
-                    
+
                     Spacer()
                 }
                 .padding(.horizontal, MGStyle.Spacing.xxl)
@@ -105,9 +105,9 @@ struct SettingsView: View {
             }
         }
     }
-    
+
     // MARK: - Search Results
-    
+
     private var searchResultsList: some View {
         VStack(alignment: .leading, spacing: 0) {
             ForEach(searchResults.prefix(8), id: \.item.id) { result in
@@ -136,7 +136,7 @@ struct SettingsView: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(PlainButtonStyle())
-                
+
                 if result.item.title != searchResults.prefix(8).last?.item.title {
                     Divider().padding(.horizontal, MGStyle.Spacing.lg)
                 }
@@ -155,9 +155,9 @@ struct SettingsView: View {
         .padding(.horizontal, MGStyle.Spacing.xl)
         .padding(.bottom, MGStyle.Spacing.md)
     }
-    
+
     // MARK: - Content Area
-    
+
     private var contentView: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {
@@ -177,11 +177,11 @@ struct SettingsView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
-    
+
     @ViewBuilder
     private func categoryContentView(for cat: ResolvedCategory) -> some View {
         MGSectionHeader(cat.title)
-        
+
         let visibleTopLevel = cat.topLevelEntries.filter { !$0.isAdvanced || showAdvanced }
         if !visibleTopLevel.isEmpty {
             MGContentCard {
@@ -191,18 +191,18 @@ struct SettingsView: View {
                 }
             }
         }
-        
+
         if cat.hasSubcategories {
             subcategoryView(for: cat)
         }
     }
-    
+
     @ViewBuilder
     private func subcategoryView(for cat: ResolvedCategory) -> some View {
         let visibleSubs = cat.subcategories.filter { sub in
             sub.entries.contains { !$0.isAdvanced || showAdvanced }
         }
-        
+
         if visibleSubs.count > 1 {
             Picker("", selection: subcategorySelection(for: cat, visibleSubs: visibleSubs)) {
                 ForEach(visibleSubs, id: \.id) { sub in
@@ -211,11 +211,11 @@ struct SettingsView: View {
             }
             .pickerStyle(.segmented)
         }
-        
+
         let selectedSubId = selectedSubcategoryIds[cat.id] ?? visibleSubs.first?.id ?? ""
         if let sub = visibleSubs.first(where: { $0.id == selectedSubId }) ?? visibleSubs.first {
             let visibleEntries = sub.entries.filter { !$0.isAdvanced || showAdvanced }
-            
+
             if !visibleEntries.isEmpty {
                 MGContentCard {
                     ForEach(visibleEntries.indices, id: \.self) { idx in
@@ -226,7 +226,7 @@ struct SettingsView: View {
             }
         }
     }
-    
+
     private func subcategorySelection(for cat: ResolvedCategory, visibleSubs: [ResolvedSubcategory]) -> Binding<String> {
         Binding(
             get: {

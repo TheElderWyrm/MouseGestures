@@ -6,7 +6,7 @@ import AppKit
 struct ConditionalActionEditorView: View {
 
     // Callbacks — no @Environment(\.dismiss); parent calls dismisser.end()
-    let onSave:   ([String: AnyCodable], String, [String: AnyCodable], String, [String: AnyCodable]) -> Void
+    let onSave: ([String: AnyCodable], String, [String: AnyCodable], String, [String: AnyCodable]) -> Void
     let onCancel: () -> Void
 
     // Condition state
@@ -17,20 +17,20 @@ struct ConditionalActionEditorView: View {
     @State private var conditionProfile: String
 
     // True branch
-    @State private var trueActionId:     String
+    @State private var trueActionId: String
     @State private var trueActionParams: [String: AnyCodable]
 
     // False branch
-    @State private var falseActionId:     String
+    @State private var falseActionId: String
     @State private var falseActionParams: [String: AnyCodable]
 
     init(
         initialParameters: [String: AnyCodable],
-        trueActionId:     String,
+        trueActionId: String,
         trueActionParams: [String: AnyCodable],
-        falseActionId:    String,
-        falseActionParams:[String: AnyCodable],
-        onSave:   @escaping ([String: AnyCodable], String, [String: AnyCodable], String, [String: AnyCodable]) -> Void,
+        falseActionId: String,
+        falseActionParams: [String: AnyCodable],
+        onSave: @escaping ([String: AnyCodable], String, [String: AnyCodable], String, [String: AnyCodable]) -> Void,
         onCancel: @escaping () -> Void
     ) {
         _conditionType        = State(initialValue: initialParameters["condition_type"]?.value as? String ?? "app_frontmost")
@@ -47,11 +47,11 @@ struct ConditionalActionEditorView: View {
     }
 
     private let conditionOptions: [(id: String, label: String)] = [
-        ("always",                "Always"),
-        ("app_frontmost",         "App Is Frontmost"),
-        ("app_running",           "App Is Running"),
+        ("always", "Always"),
+        ("app_frontmost", "App Is Frontmost"),
+        ("app_running", "App Is Running"),
         ("window_title_contains", "Window Title Contains"),
-        ("profile_active",        "Profile Is Active")
+        ("profile_active", "Profile Is Active")
     ]
 
     var body: some View {
@@ -189,12 +189,12 @@ struct ConditionalActionEditorView: View {
                     .keyboardShortcut(.cancelAction)
                 Button("Save") {
                     var condParams: [String: AnyCodable] = [
-                        "condition_type":   AnyCodable(conditionType),
+                        "condition_type": AnyCodable(conditionType),
                         "condition_negate": AnyCodable(conditionNegate)
                     ]
-                    if !conditionApp.isEmpty         { condParams["condition_app"]          = AnyCodable(conditionApp) }
-                    if !conditionWindowTitle.isEmpty  { condParams["condition_window_title"] = AnyCodable(conditionWindowTitle) }
-                    if !conditionProfile.isEmpty      { condParams["condition_profile"]      = AnyCodable(conditionProfile) }
+                    if !conditionApp.isEmpty { condParams["condition_app"] = AnyCodable(conditionApp) }
+                    if !conditionWindowTitle.isEmpty { condParams["condition_window_title"] = AnyCodable(conditionWindowTitle) }
+                    if !conditionProfile.isEmpty { condParams["condition_profile"] = AnyCodable(conditionProfile) }
                     onSave(condParams, trueActionId, trueActionParams, falseActionId, falseActionParams)
                 }
                 .keyboardShortcut(.defaultAction)

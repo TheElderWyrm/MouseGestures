@@ -3,9 +3,9 @@ import SwiftUI
 // MARK: - App Profiles UI Plugin
 
 class AppProfilesUIPlugin: StandardUIPlugin {
-    
+
     // MARK: - Plugin Metadata
-    
+
     override var identifier: String { "com.mousegestures.ui.appprofiles" }
     override var displayName: String { "App Profiles" }
     override var iconName: String { "app.badge" }
@@ -16,18 +16,18 @@ class AppProfilesUIPlugin: StandardUIPlugin {
     override var sortOrder: Int { 3 }
     override var isPro: Bool { true }
     override var requiredPermissions: UIPluginPermissions { [.profiles, .configuration] }
-    
+
     // MARK: - Plugin Implementation
-    
+
     @MainActor
     override func createView() -> AnyView {
         AnyView(AppProfilesView())
     }
-    
+
     override func performInitialization() async throws {
         log("Initializing App Profiles UI Plugin")
     }
-    
+
     @MainActor
     override func onActivate() {
         log("App Profiles tab activated", level: .debug)

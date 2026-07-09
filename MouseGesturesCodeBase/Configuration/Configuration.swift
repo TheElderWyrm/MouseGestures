@@ -24,16 +24,16 @@ public class Configuration: Codable {
     var developerModeEnabled: Bool = false  // When true, shows developer tab
     var notificationOnActivation: Bool = false  // When true, shows a banner notification when any gesture fires
     var freeModeProfileId: UUID?  // The single profile allowed in Free mode
-    
+
     // Plugin configuration storage - allows plugins to store arbitrary data
     var pluginConfigurations: [String: AnyCodable] = [:]
 
     // Non-persisted flag
     private var isAppBasedSwitch: Bool = false
-    
+
     // Thread safety
     private let configQueue = DispatchQueue(label: "com.mousegestures.config", attributes: .concurrent)
-    
+
     // Save batching
     private var saveTimer: Timer?
     private var pendingSave = false
@@ -64,7 +64,7 @@ public class Configuration: Codable {
         var freeModeProfileId: UUID?
         var pluginConfigurations: [String: AnyCodable]?
     }
-    
+
     // Defines which properties are saved to disk.
     enum CodingKeys: String, CodingKey {
         case isEnabled, profiles, activeProfileId, appProfileMappings, disabledApps, hapticFeedbackEnabled, edgeThreshold, cornerSize, cornerBuffer, showZoneHighlights, showZoneLabels, hideFromMenuBar, debugModeEnabled, developerModeEnabled, notificationOnActivation, freeModeProfileId, pluginConfigurations
@@ -72,7 +72,7 @@ public class Configuration: Codable {
 
     // --- Computed Properties ---
     // These act as a "window" into the settings of the currently active profile.
-    
+
     private var activeProfileIndex: Int? {
         guard let id = activeProfileId else { return nil }
         return profiles.firstIndex { $0.id == id }
@@ -95,7 +95,7 @@ public class Configuration: Codable {
 
     // hapticFeedbackEnabled, edgeThreshold, cornerSize, cornerBuffer
     // are now top-level stored properties (global settings, not per-profile)
-    
+
     var activeProfile: ConfigurationProfile? {
         get {
             configQueue.sync {
@@ -114,7 +114,7 @@ public class Configuration: Codable {
 
     private func loadConfigurationFromFile() {
         let url = Configuration.configurationURL
-        
+
         guard FileManager.default.fileExists(atPath: url.path) else {
             log.log("No configuration file found. Creating and saving a default configuration.")
             let defaultProfile = ConfigurationProfile(name: "Default", gestures: [], isDefault: true) // No default gestures initially
@@ -123,11 +123,11 @@ public class Configuration: Codable {
             self.save()
             return
         }
-        
+
         do {
             let data = try Data(contentsOf: url)
             let decoded = try JSONDecoder().decode(DecodedConfiguration.self, from: data)
-            
+
             self.isEnabled = decoded.isEnabled
             self.profiles = decoded.profiles
             self.activeProfileId = decoded.activeProfileId
@@ -135,7 +135,7 @@ public class Configuration: Codable {
             self.disabledApps = decoded.disabledApps ?? []
             self.showZoneHighlights = decoded.showZoneHighlights ?? false
             self.showZoneLabels = decoded.showZoneLabels ?? false
-            
+
             // Global zone/haptic settings
             self.hapticFeedbackEnabled = decoded.hapticFeedbackEnabled ?? true
             self.edgeThreshold = decoded.edgeThreshold ?? 30
@@ -147,12 +147,12 @@ public class Configuration: Codable {
             self.notificationOnActivation = decoded.notificationOnActivation ?? false
             self.freeModeProfileId = decoded.freeModeProfileId
             self.pluginConfigurations = decoded.pluginConfigurations ?? [:]
-            
+
             // Apply debug mode setting to logger
             log.isDebugEnabled = self.debugModeEnabled
-            
+
             log.log("Successfully loaded configuration from disk.")
-            
+
             if self.profiles.isEmpty {
                 log.log("No profiles found. Creating a default profile.")
                 let defaultProfile = ConfigurationProfile(name: "Default", isDefault: true)
@@ -173,17 +173,17 @@ public class Configuration: Codable {
         // Schedule batched save to reduce disk I/O
         scheduleSave()
     }
-    
+
     private func scheduleSave() {
         saveQueue.async { [weak self] in
             guard let self = self else { return }
-            
+
             self.pendingSave = true
-            
+
             // Cancel existing timer
             DispatchQueue.main.async {
                 self.saveTimer?.invalidate()
-                
+
                 // Create new timer for batched save (1 second delay)
                 self.saveTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: false) { [weak self] _ in
                     self?.performSave()
@@ -191,23 +191,23 @@ public class Configuration: Codable {
             }
         }
     }
-    
+
     private func performSave() {
         saveQueue.async { [weak self] in
             guard let self = self, self.pendingSave else { return }
-            
+
             self.pendingSave = false
-            
+
             log.log("Saving configuration to disk. Mappings count: \(self.appProfileMappings.count)")
-            
+
             do {
                 // Create a snapshot of the configuration to save
                 let data = try self.configQueue.sync {
                     try JSONEncoder().encode(self)
                 }
-                
+
                 try data.write(to: Configuration.configurationURL)
-                
+
                 DispatchQueue.main.async {
                     NotificationCenter.default.post(name: NSNotification.Name("GestureConfigurationChanged"), object: nil)
                 }
@@ -216,7 +216,7 @@ public class Configuration: Codable {
             }
         }
     }
-    
+
     // Force immediate save (for critical operations)
     func saveImmediate() {
         saveQueue.sync {
@@ -226,10 +226,10 @@ public class Configuration: Codable {
         }
         performSave()
     }
-    
+
     func applyProfile(_ profile: ConfigurationProfile, setAsDefault: Bool = false) {
         self.activeProfileId = profile.id
-        
+
         // If setAsDefault is true, mark this as the new default profile
         if setAsDefault {
             // Mark all profiles as non-default
@@ -244,14 +244,14 @@ public class Configuration: Codable {
     }
 
     // --- Profile Management Methods (for UI) ---
-    
+
     func createProfile(name: String) -> ConfigurationProfile? {
         // Enforce license limits: only 1 profile allowed for Free version
         if !LicenseService.shared.canUseMultipleProfiles && !profiles.isEmpty {
             log.log("Access Denied: Multiple profiles require a Pro license.")
             return nil
         }
-        
+
         // Create the new profile by copying gestures from the currently active one.
         let newProfile = ConfigurationProfile(
             name: name,
@@ -269,15 +269,15 @@ public class Configuration: Codable {
             log.log("Cannot delete profile: It is the last one or not found.")
             return false
         }
-        
+
         let wasActive = (activeProfileId == id)
         profiles.remove(at: index)
-        
+
         // If the deleted profile was active, switch to the default or the first available.
         if wasActive {
             activeProfileId = profiles.first(where: { $0.isDefault })?.id ?? profiles.first?.id
         }
-        
+
         save()
         return true
     }
@@ -288,14 +288,14 @@ public class Configuration: Codable {
             log.log("Access Denied: Multiple profiles require a Pro license.")
             return nil
         }
-        
+
         guard var profileToDuplicate = profiles.first(where: { $0.id == id }) else { return nil }
-        
+
         profileToDuplicate.id = UUID() // Assign a new unique ID
         profileToDuplicate.name = newName
         profileToDuplicate.isDefault = false
         profileToDuplicate.updateModifiedDate()
-        
+
         profiles.append(profileToDuplicate)
         save()
         return profileToDuplicate
@@ -309,7 +309,7 @@ public class Configuration: Codable {
             log.log("Access Denied: Advanced targeting (App-specific profiles) requires a Pro license.")
             return
         }
-        
+
         appProfileMappings.removeAll { $0.appBundleIdentifier == bundleId }
         let newMapping = AppProfileMapping(appBundleIdentifier: bundleId, appName: appName, profileId: profileId)
         appProfileMappings.append(newMapping)
@@ -320,7 +320,7 @@ public class Configuration: Codable {
         appProfileMappings.removeAll { $0.appBundleIdentifier == bundleId }
         save()
     }
-    
+
     func getProfileForApp(bundleId: String) -> ConfigurationProfile? {
         guard let mapping = appProfileMappings.first(where: { $0.appBundleIdentifier == bundleId }) else { return nil }
         return profiles.first { $0.id == mapping.profileId }
@@ -334,54 +334,54 @@ public class Configuration: Codable {
             // App doesn't have a mapping - keep current profile
             return
         }
-        
+
         configQueue.async(flags: .barrier) {
             self.isAppBasedSwitch = true
             self.applyProfile(targetProfile)
             self.isAppBasedSwitch = false
         }
-        
+
         // Save on main queue to avoid race conditions
         DispatchQueue.main.async {
             self.save()
         }
     }
-    
+
     // --- Disabled Apps Methods ---
-    
+
     func isAppDisabled(bundleId: String) -> Bool {
         return disabledApps.contains { $0.appBundleIdentifier == bundleId }
     }
-    
+
     func addDisabledApp(bundleId: String, appName: String) {
         // Remove any existing entry for this bundle ID
         disabledApps.removeAll { $0.appBundleIdentifier == bundleId }
-        
+
         // Add new disabled app entry
         let disabledApp = DisabledApp(appBundleIdentifier: bundleId, appName: appName)
         disabledApps.append(disabledApp)
         save()
     }
-    
+
     func removeDisabledApp(bundleId: String) {
         disabledApps.removeAll { $0.appBundleIdentifier == bundleId }
         save()
     }
-    
+
     func clearAllDisabledApps() {
         disabledApps.removeAll()
         save()
     }
-    
+
     // --- Plugin Configuration Methods ---
-    
+
     /// Get configuration for a specific plugin
     func getPluginConfiguration(for pluginIdentifier: String) -> AnyCodable? {
         return configQueue.sync {
             pluginConfigurations[pluginIdentifier]
         }
     }
-    
+
     /// Set configuration for a specific plugin
     func setPluginConfiguration(for pluginIdentifier: String, configuration: AnyCodable?) {
         configQueue.async(flags: .barrier) {
@@ -393,7 +393,7 @@ public class Configuration: Codable {
             self.save()
         }
     }
-    
+
     /// Get a specific configuration value for a plugin
     func getPluginConfigValue<T>(for pluginIdentifier: String, key: String, type: T.Type) -> T? {
         guard let pluginConfig = getPluginConfiguration(for: pluginIdentifier),
@@ -403,7 +403,7 @@ public class Configuration: Codable {
         }
         return value
     }
-    
+
     /// Set a specific configuration value for a plugin
     func setPluginConfigValue(for pluginIdentifier: String, key: String, value: Any?) {
         configQueue.async(flags: .barrier) {
@@ -415,20 +415,20 @@ public class Configuration: Codable {
             } else {
                 config = [:]
             }
-            
+
             // Update the value
             if let val = value {
                 config[key] = val
             } else {
                 config.removeValue(forKey: key)
             }
-            
+
             // Store back as AnyCodable
             self.pluginConfigurations[pluginIdentifier] = AnyCodable(config)
             self.save()
         }
     }
-    
+
     /// Clear all configuration for a plugin
     func clearPluginConfiguration(for pluginIdentifier: String) {
         configQueue.async(flags: .barrier) {
@@ -436,16 +436,16 @@ public class Configuration: Codable {
             self.save()
         }
     }
-    
+
     /// Get all plugin configurations
     func getAllPluginConfigurations() -> [String: AnyCodable] {
         return configQueue.sync {
             pluginConfigurations
         }
     }
-    
+
     // MARK: - Detection Plugin Settings (convenience methods)
-    
+
     /// Get all settings for a detection plugin as a dictionary
     func getPluginSettings(_ pluginIdentifier: String) -> [String: Any] {
         return configQueue.sync {
@@ -456,7 +456,7 @@ public class Configuration: Codable {
             return [:]
         }
     }
-    
+
     /// Set all settings for a detection plugin from a dictionary
     func setPluginSettings(_ pluginIdentifier: String, settings: [String: Any]) {
         configQueue.async(flags: .barrier) {
@@ -464,7 +464,7 @@ public class Configuration: Codable {
             self.save()
         }
     }
-    
+
     // Reset entire configuration to defaults
     func resetToDefaults() {
         let defaultProfile = ConfigurationProfile(name: "Default", gestures: Configuration.defaultGestures, isDefault: true)
@@ -479,7 +479,7 @@ public class Configuration: Codable {
         self.debugModeEnabled = false
         self.developerModeEnabled = false
         self.pluginConfigurations = [:]
-        
+
         // Reset global zone/haptic settings
         self.hapticFeedbackEnabled = true
         self.edgeThreshold = 30
@@ -488,7 +488,7 @@ public class Configuration: Codable {
     }
 
     // --- Global Settings Export/Import ---
-    
+
     // Structure for exporting ALL app settings (not just profiles)
     struct GlobalSettingsExportData: Codable {
         let profiles: [ConfigurationProfile]
@@ -507,7 +507,7 @@ public class Configuration: Codable {
         let pluginConfigurations: [String: AnyCodable]
         let exportDate: Date
         let appVersion: String
-        
+
         init(config: Configuration) {
             self.profiles = config.profiles
             self.activeProfileId = config.activeProfileId
@@ -527,10 +527,10 @@ public class Configuration: Codable {
             self.appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown"
         }
     }
-    
+
     func exportGlobalSettings() -> Data? {
         let exportData = GlobalSettingsExportData(config: self)
-        
+
         do {
             let encoder = JSONEncoder()
             encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -542,15 +542,15 @@ public class Configuration: Codable {
             return nil
         }
     }
-    
+
     func importGlobalSettings(from data: Data, mergeProfiles: Bool = false) -> (success: Bool, error: String?) {
         do {
             let decoder = JSONDecoder()
             let importData = try decoder.decode(GlobalSettingsExportData.self, from: data)
-            
+
             // Store current profiles if merging
             let existingProfiles = mergeProfiles ? self.profiles : []
-            
+
             // Import all settings
             self.isEnabled = importData.isEnabled
             self.hapticFeedbackEnabled = importData.hapticFeedbackEnabled
@@ -562,16 +562,16 @@ public class Configuration: Codable {
             self.hideFromMenuBar = importData.hideFromMenuBar
             self.debugModeEnabled = importData.debugModeEnabled
             self.pluginConfigurations = importData.pluginConfigurations
-            
+
             if mergeProfiles {
                 // Merge profiles - assign new IDs to avoid conflicts
                 var profileIdMap: [UUID: UUID] = [:]
-                
+
                 for var profile in importData.profiles {
                     let oldId = profile.id
                     profile.id = UUID()
                     profileIdMap[oldId] = profile.id
-                    
+
                     // Check for name conflicts
                     let baseName = profile.name
                     var suffix = 1
@@ -580,45 +580,45 @@ public class Configuration: Codable {
                         profile.name = "\(baseName) (\(suffix))"
                         suffix += 1
                     }
-                    
+
                     profile.isDefault = false
                     self.profiles.append(profile)
                 }
-                
+
                 // Update mappings with new profile IDs
                 for var mapping in importData.appProfileMappings {
                     if let newProfileId = profileIdMap[mapping.profileId] {
                         mapping.id = UUID()
                         mapping.profileId = newProfileId
-                        
+
                         // Only add if not already mapped
                         if !self.appProfileMappings.contains(where: { $0.appBundleIdentifier == mapping.appBundleIdentifier }) {
                             self.appProfileMappings.append(mapping)
                         }
                     }
                 }
-                
+
                 // Merge disabled apps
                 for disabledApp in importData.disabledApps {
                     if !self.disabledApps.contains(where: { $0.appBundleIdentifier == disabledApp.appBundleIdentifier }) {
                         self.disabledApps.append(disabledApp)
                     }
                 }
-                
+
             } else {
                 // Replace everything
                 self.profiles = importData.profiles
                 self.activeProfileId = importData.activeProfileId
                 self.appProfileMappings = importData.appProfileMappings
                 self.disabledApps = importData.disabledApps
-                
+
                 // Ensure we have at least one profile
                 if self.profiles.isEmpty {
                     let defaultProfile = ConfigurationProfile(name: "Default", isDefault: true)
                     self.profiles = [defaultProfile]
                     self.activeProfileId = defaultProfile.id
                 }
-                
+
                 // Ensure active profile exists
                 if let activeId = self.activeProfileId {
                     if !self.profiles.contains(where: { $0.id == activeId }) {
@@ -628,32 +628,32 @@ public class Configuration: Codable {
                     self.activeProfileId = self.profiles.first?.id
                 }
             }
-            
+
             // Apply debug mode setting to logger
             log.isDebugEnabled = self.debugModeEnabled
-            
+
             // Save configuration
             save()
-            
+
             log.log("Successfully imported global settings (merge: \(mergeProfiles))")
             return (true, nil)
-            
+
         } catch {
             log.log("Error importing global settings: \(error)")
             return (false, "Failed to import settings: \(error.localizedDescription)")
         }
     }
-    
+
     // --- Profile Import/Export Methods ---
-    
+
     func exportProfile(id: UUID) -> Data? {
         guard let profile = profiles.first(where: { $0.id == id }) else {
             log.log("Profile not found for export: \(id)")
             return nil
         }
-        
+
         let exportData = ProfileExportData(profile: profile)
-        
+
         do {
             let encoder = JSONEncoder()
             encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -665,10 +665,10 @@ public class Configuration: Codable {
             return nil
         }
     }
-    
+
     func exportAllProfiles() -> Data? {
         let exportData = ProfileBundleExportData(profiles: profiles)
-        
+
         do {
             let encoder = JSONEncoder()
             encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -680,16 +680,16 @@ public class Configuration: Codable {
             return nil
         }
     }
-    
+
     func importProfile(from data: Data) -> (success: Bool, profileName: String?, error: String?) {
         do {
             let decoder = JSONDecoder()
             let exportData = try decoder.decode(ProfileExportData.self, from: data)
             var importedProfile = exportData.profile
-            
+
             // Generate new ID for imported profile
             importedProfile.id = UUID()
-            
+
             // Check for name conflicts and rename if necessary
             let baseName = importedProfile.name
             var suffix = 1
@@ -697,36 +697,36 @@ public class Configuration: Codable {
                 importedProfile.name = "\(baseName) (\(suffix))"
                 suffix += 1
             }
-            
+
             // Mark as non-default
             importedProfile.isDefault = false
-            
+
             // Add to profiles
             profiles.append(importedProfile)
-            
+
             // Save configuration
             save()
-            
+
             log.log("Successfully imported profile: \(importedProfile.name)")
             return (true, importedProfile.name, nil)
-            
+
         } catch {
             log.log("Error importing profile: \(error)")
             return (false, nil, "Failed to import profile: \(error.localizedDescription)")
         }
     }
-    
+
     func importProfiles(from data: Data) -> (success: Bool, count: Int, error: String?) {
         do {
             let decoder = JSONDecoder()
             let exportData = try decoder.decode(ProfileBundleExportData.self, from: data)
-            
+
             var importedCount = 0
-            
+
             for var profile in exportData.profiles {
                 // Generate new ID for each imported profile
                 profile.id = UUID()
-                
+
                 // Check for name conflicts and rename if necessary
                 let baseName = profile.name
                 var suffix = 1
@@ -734,34 +734,34 @@ public class Configuration: Codable {
                     profile.name = "\(baseName) (\(suffix))"
                     suffix += 1
                 }
-                
+
                 // Mark as non-default
                 profile.isDefault = false
-                
+
                 // Add to profiles
                 profiles.append(profile)
                 importedCount += 1
             }
-            
+
             // Save configuration
             save()
-            
+
             log.log("Successfully imported \(importedCount) profiles")
             return (true, importedCount, nil)
-            
+
         } catch {
             log.log("Error importing profiles: \(error)")
             return (false, 0, "Failed to import profiles: \(error.localizedDescription)")
         }
     }
-    
+
     static var applicationSupportDirectory: URL {
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
         let appFolder = appSupport.appendingPathComponent("MouseGestures")
         try? FileManager.default.createDirectory(at: appFolder, withIntermediateDirectories: true)
         return appFolder
     }
-    
+
     private static var configurationURL: URL {
         return applicationSupportDirectory.appendingPathComponent("gestures.json")
     }

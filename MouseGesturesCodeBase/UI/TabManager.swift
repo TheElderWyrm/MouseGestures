@@ -11,9 +11,9 @@ struct TabManager: View {
     @State private var previousTabID: String = ""
     // Memory optimization: Track which tabs have been loaded to enable lazy loading
     @State private var loadedTabs: Set<String> = []
-    
+
     @State private var showingUpdateNotification = false
-    
+
     var body: some View {
         Group {
             if !uiServices.isOnboardingCompleted {
@@ -35,7 +35,7 @@ struct TabManager: View {
                     ForEach(uiPluginManager.visiblePlugins, id: \.identifier) { plugin in
                         createTabItem(for: plugin)
                     }
-                    
+
                     if !PaymentService.shared.isProUnlocked {
                         LicenseSettingsView()
                             .tabItem {
@@ -74,7 +74,7 @@ struct TabManager: View {
             }
         }
     }
-    
+
     /// Set up the initial tab selection once plugins are available
     private func initializeFirstTab() {
         guard let firstPlugin = uiPluginManager.visiblePlugins.first else { return }
@@ -88,7 +88,7 @@ struct TabManager: View {
             uiPluginManager.activatePlugin(identifier: firstID)
         }
     }
-    
+
     @ViewBuilder
     private func createTabItem(for plugin: any UIPlugin) -> some View {
         // Memory optimization: Only create the actual view if this tab has been selected
@@ -97,7 +97,7 @@ struct TabManager: View {
             if loadedTabs.contains(plugin.identifier) {
                 ZStack {
                     plugin.createView()
-                    
+
                     if plugin.isPro && !licenseService.isPro {
                         ProGatedTabOverlay()
                     }
@@ -116,17 +116,17 @@ struct TabManager: View {
         }
         .tag(plugin.identifier)
     }
-    
+
     private func handleTabChange(from oldID: String, to newID: String) {
         guard oldID != newID else { return }
-        
+
         // Deactivate old plugin
         if !oldID.isEmpty {
             Task { @MainActor in
                 uiPluginManager.deactivatePlugin(identifier: oldID)
             }
         }
-        
+
         // Activate new plugin
         if !newID.isEmpty {
             Task { @MainActor in
@@ -142,7 +142,7 @@ struct DynamicTabManager: View {
     @StateObject private var uiPluginManager = UIPluginManager.shared
     @StateObject private var uiServices = UIServices.shared
     @State private var selectedPluginID: String?
-    
+
     var body: some View {
         NavigationSplitView {
             // Sidebar with plugin list
@@ -208,7 +208,7 @@ struct DynamicTabManager: View {
             }
         }
     }
-    
+
     private func handlePluginChange(to newPluginID: String?) {
         // Deactivate all plugins
         for plugin in uiPluginManager.visiblePlugins {
@@ -218,7 +218,7 @@ struct DynamicTabManager: View {
                 }
             }
         }
-        
+
         // Activate selected plugin
         if let pluginID = newPluginID {
             Task { @MainActor in
@@ -233,16 +233,16 @@ struct DynamicTabManager: View {
 struct PluginTabManagerSettings: View {
     @StateObject private var uiPluginManager = UIPluginManager.shared
     @State private var showingPluginManager = false
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {
             MGSectionHeader("UI Plugins")
-            
+
             Text("Manage which tabs are visible in the application")
                 .foregroundColor(.secondary)
-            
+
             Divider()
-            
+
             // Plugin list
             ScrollView {
                 VStack(spacing: MGStyle.Spacing.lg) {
@@ -251,16 +251,16 @@ struct PluginTabManagerSettings: View {
                     }
                 }
             }
-            
+
             Divider()
-            
+
             HStack {
                 Button("Manage Plugins...") {
                     showingPluginManager = true
                 }
-                
+
                 Spacer()
-                
+
                 Button("Refresh") {
                     Task {
                         await refreshPlugins()
@@ -274,7 +274,7 @@ struct PluginTabManagerSettings: View {
             PluginManagerView()
         }
     }
-    
+
     private func refreshPlugins() async {
         // Reload all plugins
         for plugin in uiPluginManager.loadedPlugins.values {
@@ -286,28 +286,28 @@ struct PluginTabManagerSettings: View {
 struct PluginRow: View {
     let plugin: any UIPlugin
     @StateObject private var uiPluginManager = UIPluginManager.shared
-    
+
     var isEnabled: Bool {
         uiPluginManager.isPluginEnabled(identifier: plugin.identifier)
     }
-    
+
     var body: some View {
         HStack {
             Image(systemName: plugin.iconName)
                 .foregroundColor(.accentColor)
                 .frame(width: 30)
-            
+
             VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
                 Text(plugin.displayName)
                     .font(.headline)
-                
+
                 Text("\(plugin.category.displayName) • v\(plugin.version)")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
-            
+
             Spacer()
-            
+
             Toggle("", isOn: .constant(isEnabled))
                 .toggleStyle(.switch)
                 .onChange(of: isEnabled) { newValue in
@@ -324,23 +324,23 @@ struct PluginRow: View {
 
 struct PluginManagerView: View {
     @Environment(\.dismiss) private var dismiss
-    
+
     var body: some View {
         VStack(spacing: MGStyle.Spacing.xxl) {
             MGSectionHeader("Plugin Manager")
-            
+
             Text("Install and manage UI plugins")
                 .foregroundColor(.secondary)
-            
+
             Spacer()
-            
+
             MGEmptyState(
                 icon: "shippingbox",
                 title: "Plugin marketplace coming soon..."
             )
-            
+
             Spacer()
-            
+
             Button("Close") {
                 dismiss()
             }
@@ -357,7 +357,7 @@ struct PluginManagerView: View {
 /// This prevents all plugin views from being instantiated at startup
 struct LazyTabPlaceholder: View {
     let pluginName: String
-    
+
     var body: some View {
         VStack(spacing: 16) {
             ProgressView()
@@ -375,21 +375,21 @@ struct ProGatedTabOverlay: View {
         ZStack {
             Color.black.opacity(0.4)
                 .ignoresSafeArea()
-            
+
             VStack(spacing: 20) {
                 Image(systemName: "lock.shield.fill")
                     .font(.system(size: 64))
                     .foregroundColor(.orange)
-                
+
                 Text("Pro Feature")
                     .font(.title).fontWeight(.bold)
-                
+
                 Text("This tab is only available with a Pro license.")
                     .font(.body)
                     .multilineTextAlignment(.center)
                     .foregroundColor(.secondary)
                     .frame(maxWidth: 300)
-                
+
                 Text("Upgrade to unlock unlimited profiles, app-specific targeting, and advanced automation.")
                     .font(.caption)
                     .multilineTextAlignment(.center)

@@ -7,7 +7,7 @@ struct LicenseSettingsView: View {
     @State private var showingPurchaseAlert = false
     @State private var isPurchasing = false
     @State private var purchaseError: String?
-    
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: MGStyle.Spacing.xl) {
@@ -20,7 +20,7 @@ struct LicenseSettingsView: View {
                             .font(.system(size: 24, weight: .semibold))
                             .foregroundColor(statusColor)
                     }
-                    
+
                     VStack(alignment: .leading, spacing: 2) {
                         if paymentService.isProUnlocked {
                             if paymentService.purchasedProductIDs.contains("com.mousegestures.pro.onetime") {
@@ -32,13 +32,13 @@ struct LicenseSettingsView: View {
                             } else if paymentService.purchasedProductIDs.contains("com.mousegestures.pro.subscription") {
                                 Text("Pro (Monthly)")
                                     .font(.system(size: MGStyle.FontSize.heading, weight: .bold))
-                                
+
                                 if let expirationDate = paymentService.activeSubscriptionExpirationDate {
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text("Renews on \(expirationDate.formatted(date: .long, time: .omitted))")
                                             .font(.subheadline)
                                             .foregroundColor(.secondary)
-                                        
+
                                         Button("Manage Subscription...") {
                                             if let url = URL(string: "https://apps.apple.com/account/subscriptions") {
                                                 NSWorkspace.shared.open(url)
@@ -59,7 +59,7 @@ struct LicenseSettingsView: View {
                         } else {
                             Text(licenseService.status == .expired ? "Free" : licenseService.status.rawValue)
                                 .font(.system(size: MGStyle.FontSize.heading, weight: .bold))
-                            
+
                             if licenseService.isTrial {
                                 Text("\(licenseService.trialDaysRemaining) days remaining in your trial")
                                     .font(.subheadline)
@@ -71,18 +71,18 @@ struct LicenseSettingsView: View {
                             }
                         }
                     }
-                    
+
                     Spacer()
                 }
                 .padding(MGStyle.Spacing.lg)
                 .background(RoundedRectangle(cornerRadius: MGStyle.Corner.md).fill(MGStyle.Colors.contentBackground))
                 .overlay(RoundedRectangle(cornerRadius: MGStyle.Corner.md).stroke(MGStyle.Colors.separator, lineWidth: 0.5))
-                
+
                 if licenseService.status != .pro {
                     VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
                         Text(licenseService.isTrial ? "Purchase Pro License" : "Upgrade to Pro")
                             .font(.headline)
-                        
+
                         if paymentService.products.isEmpty {
                             HStack {
                                 ProgressView().controlSize(.small)
@@ -97,7 +97,7 @@ struct LicenseSettingsView: View {
                                 }
                             }
                         }
-                        
+
                         Button("Restore Previous Purchases") {
                             Task {
                                 await paymentService.restorePurchases()
@@ -108,10 +108,10 @@ struct LicenseSettingsView: View {
                     }
                     .padding(MGStyle.Spacing.lg)
                     .background(RoundedRectangle(cornerRadius: MGStyle.Corner.md).fill(MGStyle.Colors.subtleOverlay))
-                    
+
                     proFeaturesList
                 }
-                
+
                 /*
                 if UIServices.shared.isDeveloperModeEnabled() {
                     Divider()
@@ -164,7 +164,7 @@ struct LicenseSettingsView: View {
             }
         }
     }
-    
+
     private func purchaseRow(for product: Product) -> some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
@@ -173,9 +173,9 @@ struct LicenseSettingsView: View {
                 Text(product.description)
                     .font(.caption).foregroundColor(.secondary)
             }
-            
+
             Spacer()
-            
+
             Button(action: {
                 Task {
                     isPurchasing = true
@@ -199,12 +199,12 @@ struct LicenseSettingsView: View {
         .padding(MGStyle.Spacing.md)
         .background(RoundedRectangle(cornerRadius: MGStyle.Corner.sm).fill(Color.primary.opacity(0.05)))
     }
-    
+
     private var proFeaturesList: some View {
         VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
             Text("Pro Features")
                 .font(.system(size: MGStyle.FontSize.body, weight: .semibold))
-            
+
             VStack(alignment: .leading, spacing: MGStyle.Spacing.sm) {
                 featureRow(icon: "rectangle.stack", title: "Unlimited Profiles", description: "Create specific gesture sets for different workflows.")
                 featureRow(icon: "app.badge", title: "App-Specific Targeting", description: "Automatically switch profiles when switching apps.")
@@ -214,7 +214,7 @@ struct LicenseSettingsView: View {
             }
         }
     }
-    
+
     private func featureRow(icon: String, title: String, description: String) -> some View {
         HStack(alignment: .top, spacing: MGStyle.Spacing.md) {
             Image(systemName: icon)
@@ -222,7 +222,7 @@ struct LicenseSettingsView: View {
                 .foregroundColor(.accentColor)
                 .frame(width: 20, height: 20)
                 .background(Circle().fill(Color.accentColor.opacity(0.1)))
-            
+
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.system(size: MGStyle.FontSize.body, weight: .medium))
@@ -232,7 +232,7 @@ struct LicenseSettingsView: View {
             }
         }
     }
-    
+
     private var statusColor: Color {
         switch licenseService.status {
         case .pro: return .green
@@ -241,7 +241,7 @@ struct LicenseSettingsView: View {
         case .expired: return .red
         }
     }
-    
+
     private var statusIcon: String {
         switch licenseService.status {
         case .pro: return "checkmark.seal.fill"

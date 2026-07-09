@@ -2,9 +2,9 @@ import Cocoa
 
 /// Built-in plugin for browser-specific actions
 class BrowserActionsPlugin: NSObject, GestureActionPlugin {
-    
+
     // MARK: - Plugin Properties
-    
+
     let identifier = "com.mousegestures.browser"
     let name = "Browser Actions"
     override var description: String { "Specialized actions for web browsers (Safari, Chrome, etc.)" }
@@ -12,9 +12,9 @@ class BrowserActionsPlugin: NSObject, GestureActionPlugin {
     let author = "MouseGestures"
     let category = ActionCategory.application
     let icon: NSImage? = nil
-    
+
     // MARK: - Actions
-    
+
     lazy var providedActions: [PluginAction] = [
         PluginAction(
             id: "navigation",
@@ -44,7 +44,7 @@ class BrowserActionsPlugin: NSObject, GestureActionPlugin {
             ],
             icon: "safari"
         ),
-        
+
         PluginAction(
             id: "tab_management",
             name: "Tab Management",
@@ -75,7 +75,7 @@ class BrowserActionsPlugin: NSObject, GestureActionPlugin {
             ],
             icon: "plus.square.on.square"
         ),
-        
+
         PluginAction(
             id: "zoom",
             name: "Browser Zoom",
@@ -104,19 +104,19 @@ class BrowserActionsPlugin: NSObject, GestureActionPlugin {
             icon: "plus.magnifyingglass"
         )
     ]
-    
+
     // MARK: - Plugin Lifecycle
-    
+
     func initialize(context: PluginContext) throws {
         // Initialization if needed
     }
-    
+
     func cleanup() {
         // Cleanup if needed
     }
-    
+
     // MARK: - Action Execution
-    
+
     func execute(action: PluginAction, with parameters: ActionParameters, context: PluginContext) throws {
         switch action.id {
         case "navigation":
@@ -130,14 +130,14 @@ class BrowserActionsPlugin: NSObject, GestureActionPlugin {
             break
         }
     }
-    
+
     func validate(action: PluginAction, with parameters: ActionParameters) -> ValidationResult {
         return .valid
     }
-    
+
     private func executeNavigationAction(parameters: ActionParameters, context: PluginContext) throws {
         let action = parameters.string(for: "action") ?? "back"
-        
+
         switch action {
         case "back":
             context.sendKeyboardShortcut(keyCode: 0x7B, modifiers: .maskCommand) // Cmd + [
@@ -151,10 +151,10 @@ class BrowserActionsPlugin: NSObject, GestureActionPlugin {
             break
         }
     }
-    
+
     private func executeTabAction(parameters: ActionParameters, context: PluginContext) throws {
         let action = parameters.string(for: "action") ?? "new_tab"
-        
+
         switch action {
         case "new_tab":
             context.sendKeyboardShortcut(keyCode: 0x11, modifiers: .maskCommand) // Cmd + T
@@ -170,10 +170,10 @@ class BrowserActionsPlugin: NSObject, GestureActionPlugin {
             break
         }
     }
-    
+
     private func executeZoomAction(parameters: ActionParameters, context: PluginContext) throws {
         let action = parameters.string(for: "action") ?? "zoom_in"
-        
+
         switch action {
         case "zoom_in":
             context.sendKeyboardShortcut(keyCode: 0x18, modifiers: .maskCommand) // Cmd + =

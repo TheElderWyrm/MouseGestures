@@ -5,17 +5,17 @@ struct TrialExpiredProfileSelectionView: View {
     @StateObject private var uiServices = UIServices.shared
     @State private var selectedProfileId: UUID?
     var onComplete: () -> Void
-    
+
     var body: some View {
         VStack(spacing: MGStyle.Spacing.xl) {
             Image(systemName: "person.2.fill")
                 .font(.system(size: 48))
                 .foregroundColor(.orange)
-            
+
             VStack(spacing: MGStyle.Spacing.md) {
                 Text("MouseGestures Trial Expired")
                     .font(.title).fontWeight(.bold)
-                
+
                 Text("Your MouseGestures trial has expired. Free mode supports only one profile. Please select the profile you want to keep active.")
                     .font(.body)
                     .multilineTextAlignment(.center)
@@ -23,12 +23,12 @@ struct TrialExpiredProfileSelectionView: View {
                     .padding(.horizontal)
                     .fixedSize(horizontal: false, vertical: true) // Ensure text wraps
             }
-            
+
             MGContentCard {
                 VStack(alignment: .leading, spacing: MGStyle.Spacing.sm) {
                     Text("Select Active Profile")
                         .font(.caption).fontWeight(.semibold).foregroundColor(.secondary)
-                    
+
                     Picker("", selection: $selectedProfileId) {
                         Text("Select a profile...").tag(UUID?.none)
                         ForEach(uiServices.profiles) { profile in
@@ -42,7 +42,7 @@ struct TrialExpiredProfileSelectionView: View {
                 .padding(MGStyle.Spacing.md)
             }
             .frame(maxWidth: 350)
-            
+
             VStack(spacing: MGStyle.Spacing.md) {
                 Button(action: {
                     if let profileId = selectedProfileId {
@@ -59,7 +59,7 @@ struct TrialExpiredProfileSelectionView: View {
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
                 .disabled(selectedProfileId == nil)
-                
+
                 Button("Upgrade to Pro") {
                     // This window will close, and we'll tell the app to open the Upgrade tab
                     onComplete()

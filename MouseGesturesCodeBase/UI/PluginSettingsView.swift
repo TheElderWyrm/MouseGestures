@@ -6,12 +6,12 @@ struct PluginSettingsView: View {
     @Binding var showAdvanced: Bool
     @State private var selectedCategory: PluginSettingDefinition.SettingCategory = .detection
     @State private var visibilityTrigger = UUID()
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {
             // Header
             MGSectionHeader("Detection Plugin Settings", icon: "puzzlepiece.extension")
-            
+
             // Category Picker - only show categories that have visible settings
             let visibleCategories = getVisibleCategories()
             if visibleCategories.count > 1 {
@@ -30,11 +30,11 @@ struct PluginSettingsView: View {
                     }
                 }
             }
-            
+
             // Settings for selected category
             let items = getSettingsForCategory(selectedCategory)
             let visibleItems = items.filter { shouldShowSetting($0.definition) }
-            
+
             if visibleItems.isEmpty {
                 MGEmptyState(
                     icon: "gearshape",
@@ -56,7 +56,7 @@ struct PluginSettingsView: View {
             }
         }
     }
-    
+
     private func getVisibleCategories() -> [PluginSettingDefinition.SettingCategory] {
         let allSettings = DetectionPluginManager.shared.getAllSettingsDefinitions()
         return PluginSettingDefinition.SettingCategory.allCases.filter { category in
@@ -64,12 +64,12 @@ struct PluginSettingsView: View {
             return items.contains { shouldShowSetting($0.definition) }
         }
     }
-    
+
     private func getSettingsForCategory(_ category: PluginSettingDefinition.SettingCategory) -> [(plugin: DetectionPlugin, definition: PluginSettingDefinition)] {
         let allSettings = DetectionPluginManager.shared.getAllSettingsDefinitions()
         return allSettings[category] ?? []
     }
-    
+
     private func shouldShowSetting(_ definition: PluginSettingDefinition) -> Bool {
         if definition.isAdvanced && !showAdvanced {
             return false
@@ -83,7 +83,7 @@ struct PluginSettingRow: View {
     let plugin: DetectionPlugin
     let definition: PluginSettingDefinition
     @Binding var visibilityTrigger: UUID
-    
+
     var body: some View {
         if isSettingVisible() {
             settingControl
@@ -91,11 +91,11 @@ struct PluginSettingRow: View {
                 .opacity(plugin.isEnabled ? 1.0 : 0.5)
         }
     }
-    
+
     private func isSettingVisible() -> Bool {
         return plugin.settings.isSettingVisible(definition.key)
     }
-    
+
     @ViewBuilder
     private var settingControl: some View {
         switch definition.type {
@@ -122,9 +122,9 @@ struct PluginSettingRow: View {
                 .foregroundColor(.secondary)
         }
     }
-    
+
     // MARK: - Toggle Control
-    
+
     private func toggleControl(label: String) -> some View {
         Toggle(isOn: Binding(
             get: { plugin.settings.getBool(definition.key, default: definition.defaultValue as? Bool ?? false) },
@@ -135,9 +135,9 @@ struct PluginSettingRow: View {
             settingLabel
         }
     }
-    
+
     // MARK: - Slider Control
-    
+
     private func sliderControl(min: Double, max: Double, step: Double, unit: String?) -> some View {
         SliderSettingControl(
             plugin: plugin,
@@ -148,9 +148,9 @@ struct PluginSettingRow: View {
             unit: unit
         )
     }
-    
+
     // MARK: - Stepper Control
-    
+
     private func stepperControl(min: Int, max: Int, step: Int) -> some View {
         HStack {
             settingLabel
@@ -170,9 +170,9 @@ struct PluginSettingRow: View {
             }
         }
     }
-    
+
     // MARK: - Picker Control
-    
+
     private func pickerControl(options: [PluginSettingDefinition.PickerOption]) -> some View {
         HStack {
             settingLabel
@@ -190,9 +190,9 @@ struct PluginSettingRow: View {
             .frame(width: 200)
         }
     }
-    
+
     // MARK: - Segmented Picker Control
-    
+
     private func segmentedPickerControl(options: [PluginSettingDefinition.PickerOption]) -> some View {
         VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
             settingLabel
@@ -209,9 +209,9 @@ struct PluginSettingRow: View {
             .pickerStyle(.segmented)
         }
     }
-    
+
     // MARK: - Color Control
-    
+
     private func colorControl() -> some View {
         HStack {
             settingLabel
@@ -228,9 +228,9 @@ struct PluginSettingRow: View {
             .labelsHidden()
         }
     }
-    
+
     // MARK: - Text Control
-    
+
     private func textControl(placeholder: String?, maxLength: Int?) -> some View {
         VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
             settingLabel
@@ -250,9 +250,9 @@ struct PluginSettingRow: View {
             .textFieldStyle(.roundedBorder)
         }
     }
-    
+
     // MARK: - Button Control
-    
+
     private func buttonControl(title: String, style: PluginSettingDefinition.SettingType.ButtonStyle, action: @escaping () -> Void) -> some View {
         HStack {
             if let description = definition.description {
@@ -267,13 +267,13 @@ struct PluginSettingRow: View {
                 Text(definition.displayName)
                     .font(.system(size: MGStyle.FontSize.body, weight: .medium))
             }
-            
+
             Spacer()
-            
+
             buttonForStyle(title: title, style: style, action: action)
         }
     }
-    
+
     @ViewBuilder
     private func buttonForStyle(title: String, style: PluginSettingDefinition.SettingType.ButtonStyle, action: @escaping () -> Void) -> some View {
         switch style {
@@ -289,9 +289,9 @@ struct PluginSettingRow: View {
                 .buttonStyle(.bordered)
         }
     }
-    
+
     // MARK: - Info Control
-    
+
     private func infoControl(text: String) -> some View {
         HStack(alignment: .top, spacing: MGStyle.Spacing.md) {
             Image(systemName: "info.circle")
@@ -302,38 +302,38 @@ struct PluginSettingRow: View {
         }
         .padding(.vertical, MGStyle.Spacing.sm)
     }
-    
+
     // MARK: - Setting Label
-    
+
     private var settingLabel: some View {
         VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
             HStack(spacing: MGStyle.Spacing.sm) {
                 Text(definition.displayName)
                     .font(.system(size: MGStyle.FontSize.body, weight: .medium))
-                
+
                 if definition.isAdvanced {
                     MGBadge("Advanced", color: .orange)
                 }
             }
-            
+
             if let description = definition.description {
                 Text(description)
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
-            
+
             // Show plugin name for clarity
             Text("Plugin: \(plugin.name)")
                 .font(.system(size: MGStyle.FontSize.badge))
                 .foregroundColor(.secondary.opacity(0.7))
         }
     }
-    
+
     // MARK: - Helpers
-    
+
     private func updateSetting(value: Any, affectsDependents: Bool) {
         DetectionPluginManager.shared.updatePluginSetting(plugin.identifier, key: definition.key, value: value)
-        
+
         // Only trigger full view rebuild when dependency visibility might change
         if affectsDependents {
             DispatchQueue.main.async {
@@ -353,10 +353,10 @@ private struct SliderSettingControl: View {
     let max: Double
     let step: Double
     let unit: String?
-    
+
     @State private var localValue: Double = 0
     @State private var isInitialized = false
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
             HStack {
@@ -364,18 +364,18 @@ private struct SliderSettingControl: View {
                     HStack(spacing: MGStyle.Spacing.sm) {
                         Text(definition.displayName)
                             .font(.system(size: MGStyle.FontSize.body, weight: .medium))
-                        
+
                         if definition.isAdvanced {
                             MGBadge("Advanced", color: .orange)
                         }
                     }
-                    
+
                     if let description = definition.description {
                         Text(description)
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
-                    
+
                     Text("Plugin: \(plugin.name)")
                         .font(.system(size: MGStyle.FontSize.badge))
                         .foregroundColor(.secondary.opacity(0.7))
@@ -385,7 +385,7 @@ private struct SliderSettingControl: View {
                     .font(.system(size: MGStyle.FontSize.caption, design: .monospaced))
                     .foregroundColor(.secondary)
             }
-            
+
             Slider(value: $localValue, in: min...max, step: step)
                 .onChange(of: localValue) { newValue in
                     guard isInitialized else { return }
@@ -405,7 +405,7 @@ private struct SliderSettingControl: View {
             }
         }
     }
-    
+
     private func formatValue(_ value: Double, unit: String?) -> String {
         let formatted: String
         if value == floor(value) {
@@ -413,7 +413,7 @@ private struct SliderSettingControl: View {
         } else {
             formatted = String(format: "%.1f", value)
         }
-        
+
         if let unit = unit {
             return "\(formatted) \(unit)"
         }
@@ -427,7 +427,7 @@ struct CompactPluginSettingsSection: View {
     let category: PluginSettingDefinition.SettingCategory
     let showAdvanced: Bool
     @State private var visibilityTrigger = UUID()
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
             ForEach(getSettingsForCategory(), id: \.definition.key) { item in
@@ -437,7 +437,7 @@ struct CompactPluginSettingsSection: View {
                         definition: item.definition,
                         visibilityTrigger: $visibilityTrigger
                     )
-                    
+
                     if item.definition.key != getSettingsForCategory().last?.definition.key {
                         Divider()
                     }
@@ -446,12 +446,12 @@ struct CompactPluginSettingsSection: View {
         }
         .id(visibilityTrigger)
     }
-    
+
     private func getSettingsForCategory() -> [(plugin: DetectionPlugin, definition: PluginSettingDefinition)] {
         let allSettings = DetectionPluginManager.shared.getAllSettingsDefinitions()
         return allSettings[category] ?? []
     }
-    
+
     private func shouldShowSetting(_ definition: PluginSettingDefinition) -> Bool {
         if definition.isAdvanced && !showAdvanced {
             return false

@@ -26,17 +26,17 @@ class KeyboardShortcutField: NSTextField {
     private var localEventMonitor: Any?
     private var globalEventMonitor: Any?
     private var originalBackgroundColor: NSColor?
-    
+
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         setupField()
     }
-    
+
     required init?(coder: NSCoder) {
         super.init(coder: coder)
         setupField()
     }
-    
+
     deinit {
         if let monitor = localEventMonitor {
             NSEvent.removeMonitor(monitor)
@@ -45,7 +45,7 @@ class KeyboardShortcutField: NSTextField {
             NSEvent.removeMonitor(monitor)
         }
     }
-    
+
     private func setupField() {
         isEditable = false
         isSelectable = false
@@ -55,20 +55,20 @@ class KeyboardShortcutField: NSTextField {
         allowsEditingTextAttributes = false
         isEnabled = true
     }
-    
+
     override var acceptsFirstResponder: Bool {
         return true
     }
-    
+
     override func becomeFirstResponder() -> Bool {
         let result = super.becomeFirstResponder()
         if result {
             isListening = true
-            
+
             // Store original background color and set active color
             originalBackgroundColor = backgroundColor
             backgroundColor = NSColor.selectedTextBackgroundColor.withAlphaComponent(0.2)
-            
+
             // Don't reset capturedShortcut if we already have one (editing mode)
             if capturedShortcut == nil {
                 stringValue = "Press keyboard shortcut..."
@@ -77,15 +77,15 @@ class KeyboardShortcutField: NSTextField {
                 stringValue = capturedShortcut!.displayString + " (press new shortcut to change)"
             }
             log.log("KeyboardShortcutField became first responder, listening for input")
-            
+
             // Disable Mission Control and Spaces temporarily while capturing
             disableSystemShortcutsTemporarily()
-            
+
             // Add both local and global event monitors to ensure we capture the event
             // Local monitor captures events in our app
             localEventMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .flagsChanged]) { [weak self] event in
                 guard let self = self, self.isListening else { return event }
-                
+
                 if event.type == .flagsChanged {
                     // Update display to show current modifiers being pressed
                     self.updateModifierDisplay(event.modifierFlags)
@@ -97,7 +97,7 @@ class KeyboardShortcutField: NSTextField {
                     return nil
                 }
             }
-            
+
             // Global monitor captures system-wide events (as backup)
             globalEventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.keyDown]) { [weak self] event in
                 guard let self = self, self.isListening else { return }
@@ -107,7 +107,7 @@ class KeyboardShortcutField: NSTextField {
         }
         return result
     }
-    
+
     override func mouseDown(with event: NSEvent) {
         // Don't call super to prevent default behavior
         // Just make this field first responder
@@ -116,25 +116,25 @@ class KeyboardShortcutField: NSTextField {
             log.log("KeyboardShortcutField clicked, requesting first responder")
         }
     }
-    
+
     override func resignFirstResponder() -> Bool {
         isListening = false
-        
+
         // Re-enable system shortcuts
         restoreSystemShortcuts()
-        
+
         // Restore original background color
         if let originalColor = originalBackgroundColor {
             backgroundColor = originalColor
         }
-        
+
         if capturedShortcut == nil {
             stringValue = ""
         } else {
             // Restore the shortcut display string without the "press new shortcut" message
             stringValue = capturedShortcut!.displayString
         }
-        
+
         // Remove both event monitors
         if let monitor = localEventMonitor {
             NSEvent.removeMonitor(monitor)
@@ -144,28 +144,28 @@ class KeyboardShortcutField: NSTextField {
             NSEvent.removeMonitor(monitor)
             globalEventMonitor = nil
         }
-        
+
         log.log("KeyboardShortcutField resigned first responder")
         return super.resignFirstResponder()
     }
-    
+
     override func keyDown(with event: NSEvent) {
         // Don't process here if we have a local monitor (it will handle it)
         if localEventMonitor != nil && isListening {
             return
         }
-        
+
         log.log("KeyboardShortcutField keyDown: keyCode=\(event.keyCode), modifiers=\(event.modifierFlags.rawValue), isListening=\(isListening)")
-        
+
         // Only capture if we're actively listening
         guard isListening else {
             super.keyDown(with: event)
             return
         }
-        
+
         processKeyEvent(event)
     }
-    
+
     private func updateModifierDisplay(_ modifiers: NSEvent.ModifierFlags) {
         // Show currently pressed modifiers
         var displayParts: [String] = []
@@ -173,7 +173,7 @@ class KeyboardShortcutField: NSTextField {
         if modifiers.contains(.control) { displayParts.append("⌃") }
         if modifiers.contains(.option) { displayParts.append("⌥") }
         if modifiers.contains(.shift) { displayParts.append("⇧") }
-        
+
         if displayParts.isEmpty {
             if capturedShortcut == nil {
                 stringValue = "Press keyboard shortcut..."
@@ -184,12 +184,12 @@ class KeyboardShortcutField: NSTextField {
             stringValue = displayParts.joined(separator: " ") + " + ..."
         }
     }
-    
+
     private func processKeyEvent(_ event: NSEvent) {
         // Capture the keyboard shortcut
         let keyCode = event.keyCode
         let modifiers = event.modifierFlags
-        
+
         // Handle escape key specially - cancel capture
         if keyCode == 53 {
             log.log("Escape pressed, canceling capture")
@@ -197,56 +197,56 @@ class KeyboardShortcutField: NSTextField {
             window?.makeFirstResponder(nil)
             return
         }
-        
+
         // Don't capture modifier keys alone
         if isModifierKey(keyCode: keyCode) {
             log.log("Ignoring modifier key")
             return
         }
-        
+
         // Convert NSEvent.ModifierFlags to CGEventFlags
         var cgModifiers: CGEventFlags = []
         if modifiers.contains(.command) { cgModifiers.insert(.maskCommand) }
         if modifiers.contains(.control) { cgModifiers.insert(.maskControl) }
         if modifiers.contains(.option) { cgModifiers.insert(.maskAlternate) }
         if modifiers.contains(.shift) { cgModifiers.insert(.maskShift) }
-        
+
         // Create display string
         var displayParts: [String] = []
         if modifiers.contains(.command) { displayParts.append("⌘") }
         if modifiers.contains(.control) { displayParts.append("⌃") }
         if modifiers.contains(.option) { displayParts.append("⌥") }
         if modifiers.contains(.shift) { displayParts.append("⇧") }
-        
+
         // Add the key character
         if let keyChar = keyCharacter(for: keyCode) {
             displayParts.append(keyChar)
         } else {
             displayParts.append("Key \(keyCode)")
         }
-        
+
         let displayString = displayParts.joined(separator: " ")
-        
+
         // Create and store the shortcut
         capturedShortcut = KeyboardShortcut(keyCode: CGKeyCode(keyCode),
                                            modifiers: cgModifiers,
                                            displayString: displayString)
-        
+
         // Update display
         stringValue = displayString
-        
+
         // Stop listening
         isListening = false
-        
+
         // Notify delegate
         onShortcutCapture?(capturedShortcut!)
-        
+
         log.log("Captured shortcut: \(displayString)")
-        
+
         // Remove focus to prevent further input
         window?.makeFirstResponder(nil)
     }
-    
+
     private func isModifierKey(keyCode: UInt16) -> Bool {
         // Check if this is a modifier key
         switch Int(keyCode) {
@@ -256,7 +256,7 @@ class KeyboardShortcutField: NSTextField {
             return false
         }
     }
-    
+
     private func keyCharacter(for keyCode: UInt16) -> String? {
         // Map common key codes to their character representations
         switch Int(keyCode) {
@@ -340,7 +340,7 @@ class KeyboardShortcutField: NSTextField {
         default: return nil
         }
     }
-    
+
     // Temporarily disable system shortcuts that interfere with shortcut capture
     private func disableSystemShortcutsTemporarily() {
         if capturedShortcut == nil {
@@ -349,7 +349,7 @@ class KeyboardShortcutField: NSTextField {
             stringValue = capturedShortcut!.displayString + " (recording...)"
         }
     }
-    
+
     private func restoreSystemShortcuts() {
         // Restore normal system shortcut behavior
         // This happens automatically when we stop monitoring events

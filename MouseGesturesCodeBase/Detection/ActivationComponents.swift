@@ -17,7 +17,7 @@ struct ActivationComponentUIMetadata {
     let icon: String
     let description: String
     let uiFields: [UIField]
-    
+
     enum UIField {
         case modifierKeys
         case screenZone
@@ -32,7 +32,7 @@ struct ActivationComponentUIMetadata {
 struct ModifierKeyConfig: ActivationComponentConfig {
     var isEnabled: Bool = false
     var modifiers: NSEvent.ModifierFlags = []
-    
+
     var displayValue: String {
         guard isEnabled else { return "Not configured" }
         let symbols = modifiers.symbolString
@@ -43,7 +43,7 @@ struct ModifierKeyConfig: ActivationComponentConfig {
 struct ScreenZoneConfig: ActivationComponentConfig {
     var isEnabled: Bool = false
     var zone: ScreenZone = .topRight
-    
+
     var displayValue: String {
         guard isEnabled else { return "Not configured" }
         return zone.displayName
@@ -84,7 +84,7 @@ struct DragTypeConfig: ActivationComponentConfig {
 struct MouseButtonConfig: ActivationComponentConfig {
     var isEnabled: Bool = false
     var button: MouseButtonTrigger.MouseButton = .none
-    
+
     var displayValue: String {
         guard isEnabled else { return "Not configured" }
         return button.rawValue
@@ -94,7 +94,7 @@ struct MouseButtonConfig: ActivationComponentConfig {
 struct KeyboardShortcutConfig: ActivationComponentConfig {
     var isEnabled: Bool = false
     var keyboardTrigger: KeyboardTrigger?
-    
+
     var displayValue: String {
         guard isEnabled else { return "Not configured" }
         return keyboardTrigger?.displayString ?? "Not set"
@@ -115,7 +115,7 @@ struct GestureActivationComponents: Codable, Equatable {
 
     /// Default initializer
     init() {}
-    
+
     /// Get all enabled activation types
     var enabledTypes: Set<ActivationType> {
         var types = Set<ActivationType>()
@@ -132,12 +132,12 @@ struct GestureActivationComponents: Codable, Equatable {
         }
         return types
     }
-    
+
     /// Check if gesture is valid (has at least one enabled component)
     var isValid: Bool {
         return !enabledTypes.isEmpty || requireNoMouse
     }
-    
+
     /// All registered components as (label, config) pairs in display order
     var allComponents: [(label: String, config: any ActivationComponentConfig)] {
         var result: [(String, any ActivationComponentConfig)] = []
@@ -148,20 +148,20 @@ struct GestureActivationComponents: Codable, Equatable {
         if let c = keyboardShortcut { result.append(("Keyboard", c)) }
         return result
     }
-    
+
     /// Only enabled components with their labels and display values
     var enabledComponentDetails: [(label: String, value: String)] {
         return allComponents
             .filter { $0.config.isEnabled }
             .map { (label: $0.label, value: $0.config.displayValue) }
     }
-    
+
     /// Get display preview of all enabled components
     var previewString: String {
         let parts = enabledComponentDetails.map { $0.value }
         return parts.isEmpty ? "No triggers configured" : parts.joined(separator: " + ")
     }
-    
+
     /// Deterministic key for duplicate detection — built generically from all enabled components
     var triggerKey: String {
         // Each component contributes a deterministic segment only if enabled
@@ -171,7 +171,7 @@ struct GestureActivationComponents: Codable, Equatable {
         }
         return segments.joined(separator: "|")
     }
-    
+
 }
 
 // MARK: - Component UI Provider Protocol

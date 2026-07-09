@@ -3,7 +3,7 @@ import SwiftUI
 struct UpdateNotificationView: View {
     @ObservedObject var updateService = UpdateService.shared
     @Environment(\.dismiss) private var dismiss
-    
+
     var body: some View {
         VStack(spacing: 0) {
             // Header
@@ -22,15 +22,15 @@ struct UpdateNotificationView: View {
             }
             .padding(24)
             .background(Color.accentColor.opacity(0.05))
-            
+
             Divider()
-            
+
             // Release Notes
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("What's New:")
                         .font(.headline)
-                    
+
                     Text(updateService.updateReleaseNotes)
                         .font(.system(size: 13, design: .monospaced))
                         .lineSpacing(4)
@@ -40,18 +40,18 @@ struct UpdateNotificationView: View {
                 }
                 .padding(24)
             }
-            
+
             Divider()
-            
+
             // Footer
             HStack {
                 Button("Later") {
                     dismiss()
                 }
                 .buttonStyle(.link)
-                
+
                 Spacer()
-                
+
                 Button("Update Now") {
                     // In a real app, this would trigger Sparkle or download the DMG
                     if let url = URL(string: "https://mousegestures.app/download") {

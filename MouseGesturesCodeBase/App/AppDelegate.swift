@@ -9,22 +9,22 @@ import Foundation
 // Now using direct NSApp.sendAction approach which doesn't require hosting SwiftUI views.
 
 class AppDelegate: NSObject, NSApplicationDelegate {
-    
+
     var menuIcon: MenuIcon!
     var detectionPluginManager: DetectionPluginManager!
     var accessibilityManager: AccessibilityPermissionManager!
     private var trialExpiredWindow: NSWindow?
-    
+
     override init() {
         super.init()
     }
-    
+
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         // When app is reopened (e.g., from dock or Launchpad), show preferences
         showPreferences()
         return true
     }
-    
+
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         // Request notification permissions
         let center = UNUserNotificationCenter.current()
@@ -34,21 +34,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 log.log("Notification permission error: \(error)")
             }
         }
-        
+
         // Disable window restoration completely
         UserDefaults.standard.set(false, forKey: "NSQuitAlwaysKeepsWindows")
         UserDefaults.standard.set(false, forKey: "ApplePersistenceIgnoreState")
-        
+
         // Initialize accessibility manager
         accessibilityManager = AccessibilityPermissionManager(delegate: self)
-        
+
         // Initialize detection plugin manager (but don't start it yet)
         detectionPluginManager = DetectionPluginManager.shared
         detectionPluginManager.delegate = self
-        
+
         // Initialize menu icon
         menuIcon = MenuIcon(delegate: self)
-        
+
         // Listen for trial expiration
         NotificationCenter.default.addObserver(
             self,
@@ -56,7 +56,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             name: .trialDidExpire,
             object: nil
         )
-        
+
         // Check current permission status and start monitoring if needed
         if accessibilityManager.checkPermission(prompt: false) {
             // We already have permissions - start gesture monitoring
@@ -67,53 +67,53 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             // Request permissions with prompt
             accessibilityManager.requestPermissions()
         }
-        
+
         // Check if app should show preferences initially
         let config = Configuration.shared
         if config.hideFromMenuBar {
             // Don't create menu bar item, just show preferences
             showPreferences()
         }
-        
+
         // Memory optimization: Removed hidden window for SettingsActionHandler
         // Settings are now opened via NSApp.sendAction in showPreferences()
     }
-    
+
     func applicationWillTerminate(_ aNotification: Notification) {
         // Stop accessibility monitoring
         accessibilityManager?.stopMonitoring()
         accessibilityManager = nil
-        
+
         // Stop detection plugin monitoring
         detectionPluginManager?.stop()
         detectionPluginManager = nil
-        
+
         // Force save any pending configuration changes
         Configuration.shared.saveImmediate()
-        
+
         // Remove all observers
         NotificationCenter.default.removeObserver(self)
-        
+
         // Clean up menu icon
         menuIcon = nil
-        
+
         // Clean up any remaining UI elements
         // Note: UI cleanup is handled internally by the app lifecycle
     }
-    
+
     func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool {
         // Explicitly disable state restoration for this menu bar app
         return false
     }
-    
+
     func applicationShouldAutomaticallySaveWindows(_ sender: NSApplication) -> Bool {
         // Don't automatically save window state
         return false
     }
-    
+
     @objc func showPreferences() {
         NSApp.activate(ignoringOtherApps: true)
-        
+
         // Find and trigger the Settings/Preferences menu item
         // This works reliably for SwiftUI Settings scenes without extra memory overhead
         if let mainMenu = NSApp.mainMenu {
@@ -135,23 +135,23 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             }
         }
-        
+
         // Fallback: simulate Cmd+, keyboard shortcut
         log.log("Menu item not found, simulating Cmd+, shortcut")
         simulatePreferencesShortcut()
     }
-    
+
     private func simulatePreferencesShortcut() {
         // Simulate pressing Cmd+, to open preferences
         guard let source = CGEventSource(stateID: .combinedSessionState) else { return }
-        
+
         // Key code 43 is the comma key
         let keyDown = CGEvent(keyboardEventSource: source, virtualKey: 43, keyDown: true)
         let keyUp = CGEvent(keyboardEventSource: source, virtualKey: 43, keyDown: false)
-        
+
         keyDown?.flags = .maskCommand
         keyUp?.flags = .maskCommand
-        
+
         keyDown?.post(tap: .cghidEventTap)
         keyUp?.post(tap: .cghidEventTap)
     }
@@ -177,21 +177,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             contentRect: NSRect(x: 0, y: 0, width: 450, height: 420),
             styleMask: [.titled, .closable],
             backing: .buffered, defer: false)
-        
+
         window.title = "MouseGestures Pro Trial Expired"
         window.contentView = NSHostingView(rootView: contentView.frame(width: 450, height: 420))
         window.setContentSize(NSSize(width: 450, height: 420))
         window.center()
         window.isReleasedWhenClosed = false
         window.level = .floating
-        
+
         self.trialExpiredWindow = window
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
-    
+
     // MARK: - Private Methods
-    
+
     private func startGestureMonitoring() {
         // Only start if gestures are enabled in configuration
         if Configuration.shared.isEnabled {
@@ -201,7 +201,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             log.log("AppDelegate: Detection plugin monitoring disabled in configuration")
         }
     }
-    
+
     private func stopGestureMonitoring() {
         detectionPluginManager.stop()
         log.log("AppDelegate: Stopped detection plugin monitoring")
@@ -211,12 +211,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 // MARK: - UNUserNotificationCenterDelegate
 
 extension AppDelegate: UNUserNotificationCenterDelegate {
-    func userNotificationCenter(_ center: UNUserNotificationCenter, 
-                                didReceive response: UNNotificationResponse, 
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                didReceive response: UNNotificationResponse,
                                 withCompletionHandler completionHandler: @escaping () -> Void) {
-        
+
         let category = response.notification.request.content.categoryIdentifier
-        
+
         if category == "TRIAL_EXPIRATION" {
             // Open settings and switch to Upgrade tab
             DispatchQueue.main.async {
@@ -227,7 +227,7 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
                 }
             }
         }
-        
+
         completionHandler()
     }
 }
@@ -235,31 +235,31 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
 // MARK: - AccessibilityPermissionManagerDelegate
 
 extension AppDelegate: AccessibilityPermissionManagerDelegate {
-    
+
     func accessibilityPermissionGranted() {
         // Start gesture monitoring now that we have permissions
         startGestureMonitoring()
-        
+
         // Update preferences window if it's open
         // if let prefsWindow = preferencesWindow {
         //     prefsWindow.updateAccessibilityStatus(hasPermission: true)
         // }
-        
+
         // Update menu icon state
         menuIcon?.updateAccessibilityState(hasPermission: true)
     }
-    
+
     func accessibilityPermissionDenied() {
         // Update preferences window if it's open
         // if let prefsWindow = preferencesWindow {
         //     prefsWindow.updateAccessibilityStatus(hasPermission: false)
         // }
-        
+
         // Disable gestures if permissions are revoked
         if detectionPluginManager?.isEnabled == true {
             stopGestureMonitoring()
         }
-        
+
         // Update menu icon state
         menuIcon?.updateAccessibilityState(hasPermission: false)
     }
@@ -268,7 +268,7 @@ extension AppDelegate: AccessibilityPermissionManagerDelegate {
 // MARK: - DetectionManagerDelegate
 
 extension AppDelegate: DetectionManagerDelegate {
-    
+
     func detectionManager(_ manager: Any, executeGesture gesture: Gesture, fromZone zone: ScreenZone, withDragState dragState: DragModifier, modifiers: NSEvent.ModifierFlags) {
         // Route to ActionExecutionManager
         ActionExecutionManager.shared.executeGesture(
@@ -278,17 +278,17 @@ extension AppDelegate: DetectionManagerDelegate {
             modifiers: modifiers
         )
     }
-    
+
     func detectionManager(_ manager: Any, executeRepeatedGesture gesture: Gesture) {
         // Route to ActionExecutionManager
         ActionExecutionManager.shared.executeRepeatedGesture(gesture)
     }
-    
+
     func detectionManager(_ manager: Any, executeKeyboardTriggeredGesture gesture: Gesture, trigger: KeyboardTrigger) {
         // Route to ActionExecutionManager
         ActionExecutionManager.shared.executeKeyboardTriggeredGesture(gesture, trigger: trigger)
     }
-    
+
     func detectionManager(_ manager: Any, executeMouseButtonTriggeredGesture gesture: Gesture, button: MouseButtonTrigger.MouseButton, modifiers: NSEvent.ModifierFlags) {
         // Route to ActionExecutionManager
         ActionExecutionManager.shared.executeMouseButtonTriggeredGesture(
@@ -297,7 +297,7 @@ extension AppDelegate: DetectionManagerDelegate {
             modifiers: modifiers
         )
     }
-    
+
     func detectionManager(_ manager: Any, executeProfileSwitch profile: ConfigurationProfile) {
         // Route to ActionExecutionManager
         ActionExecutionManager.shared.executeProfileSwitch(profile)
@@ -307,42 +307,42 @@ extension AppDelegate: DetectionManagerDelegate {
 // MARK: - MenuIconDelegate
 
 extension AppDelegate: MenuIconDelegate {
-    
+
     func menuIconDidSelectPreferences() {
         showPreferences()
     }
-    
+
     func menuIconDidToggleGestures() {
         // Toggle the enabled state in configuration
         let newState = !Configuration.shared.isEnabled
         Configuration.shared.isEnabled = newState
         Configuration.shared.save()
-        
+
         // Start or stop monitoring based on new state
         if newState && accessibilityManager.checkPermission(prompt: false) {
             startGestureMonitoring()
         } else {
             stopGestureMonitoring()
         }
-        
+
         menuIcon?.updateGestureToggleState()
         menuIcon?.updateAppearance()
     }
-    
+
     func menuIconDidSelectCheckPermissions() {
         accessibilityManager.handleCheckPermissionsAction()
     }
-    
+
     func menuIconRequestsAccessibilityStatus() -> Bool {
         return accessibilityManager.checkPermission(prompt: false)
     }
-    
+
     func menuIconRequestsAccessibilityAlert() {
         accessibilityManager.showPermissionAlert()
         // Start checking for permissions if not already checking
         accessibilityManager.startMonitoring()
     }
-    
+
     func menuIconRequestsGestureEnabledState() -> Bool {
         // Return the configuration state, not the monitoring state
         // The menu shows whether gestures are enabled in settings
@@ -364,7 +364,7 @@ struct AppConfiguration: Codable, Equatable {
     let bundleId: String
     let profileId: UUID?
     let isDisabled: Bool
-    
+
     init(appName: String, bundleId: String, profileId: UUID?, isDisabled: Bool) {
         self.appName = appName
         self.bundleId = bundleId

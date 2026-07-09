@@ -7,10 +7,10 @@ struct GestureConfigurationSheet: View {
     let mode: Mode
     let existingGesture: Gesture?
     let onSave: (Gesture) -> Void
-    
+
     @Environment(\.dismiss) private var dismiss
     @StateObject private var uiServices = UIServices.shared
-    
+
     // Component-based state
     @State private var components: GestureActivationComponents
     @State private var selectedActionId: String
@@ -18,25 +18,25 @@ struct GestureConfigurationSheet: View {
     @State private var timing: TimingSettings
     @State private var isEnabled: Bool
     @State private var gestureName: String
-    
+
     // UI State
     @State private var showingConflictAlert = false
     @State private var conflictMessage = ""
     @State private var pendingGesture: Gesture?
     /// Enabled state for third-party trigger plugins (keyed by plugin identifier)
     @State private var externalTriggerStates: [String: Bool] = [:]
-    
+
     enum Mode {
         case add, edit
         var title: String { self == .add ? "Add Gesture" : "Edit Gesture" }
         var buttonTitle: String { self == .add ? "Add" : "Save" }
     }
-    
+
     init(mode: Mode, existingGesture: Gesture? = nil, onSave: @escaping (Gesture) -> Void) {
         self.mode = mode
         self.existingGesture = existingGesture
         self.onSave = onSave
-        
+
         if let g = existingGesture {
             _components = State(initialValue: g.components)
             _selectedActionId = State(initialValue: g.actionIdentifier)
@@ -56,11 +56,11 @@ struct GestureConfigurationSheet: View {
             _gestureName = State(initialValue: "")
         }
     }
-    
+
     var body: some View {
         VStack(spacing: 0) {
             MGSheetHeader(mode.title)
-            
+
             ScrollView {
                 VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {
                     // Name + Enable toggle
@@ -91,7 +91,7 @@ struct GestureConfigurationSheet: View {
                 }
                 .padding(MGStyle.Spacing.xl)
             }
-            
+
             MGSheetFooter(mode.buttonTitle, disabled: !isValid, action: {
                 saveGesture()
             }, cancel: { dismiss() }) {
@@ -117,12 +117,12 @@ struct GestureConfigurationSheet: View {
             Text(conflictMessage)
         }
     }
-    
+
     // MARK: - Gesture Preview Text
-    
+
     private var gesturePreviewText: String {
         var triggerParts: [String] = []
-        
+
         if components.screenZone?.isEnabled == true {
             triggerParts.append(components.screenZone?.zone.displayName ?? "Zone")
         }
@@ -144,9 +144,9 @@ struct GestureConfigurationSheet: View {
         if components.keyboardShortcut?.isEnabled == true {
             triggerParts.append(components.keyboardShortcut?.keyboardTrigger?.displayString ?? "Key")
         }
-        
+
         let trigger = triggerParts.isEmpty ? "No trigger" : triggerParts.joined(separator: " + ")
-        
+
         let actionName: String
         if let action = PluginManager.shared.getAction(identifier: selectedActionId)?.action {
             actionName = action.name
@@ -155,10 +155,10 @@ struct GestureConfigurationSheet: View {
         } else {
             actionName = "No action"
         }
-        
+
         return "\(trigger) \u{2192} \(actionName)"
     }
-    
+
     // MARK: - Detection Plugin Availability
 
     private func isPluginEnabled(_ id: String) -> Bool {
@@ -204,7 +204,7 @@ struct GestureConfigurationSheet: View {
                             }
                         )
                     )
-                    
+
                     if components.modifierKey?.isEnabled == true {
                         modifierKeyConfigView
                     }
@@ -231,7 +231,7 @@ struct GestureConfigurationSheet: View {
                             }
                         )
                     )
-                    
+
                     if components.screenZone?.isEnabled == true {
                         screenZoneConfigView
                     }
@@ -286,7 +286,7 @@ struct GestureConfigurationSheet: View {
                             }
                         )
                     )
-                    
+
                     if components.keyboardShortcut?.isEnabled == true {
                         keyboardShortcutConfigView
                     }
@@ -321,9 +321,9 @@ struct GestureConfigurationSheet: View {
             .padding(.vertical, MGStyle.Spacing.xs)
         }
     }
-    
+
     // MARK: - Component Configuration Views
-    
+
     private var modifierKeyConfigView: some View {
         HStack {
             Text("Keys:")
@@ -647,9 +647,9 @@ struct GestureConfigurationSheet: View {
         .background(MGStyle.Colors.subtleOverlay)
         .cornerRadius(MGStyle.Corner.md)
     }
-    
+
     // MARK: - Action Section
-    
+
     private var actionSection: some View {
         ActionSelectionView(
             selectedActionId: $selectedActionId,
@@ -657,9 +657,9 @@ struct GestureConfigurationSheet: View {
         )
         .tutorialStep(targetState: .selectAction, currentState: $uiServices.tutorialService.state, text: "Select what you want this gesture to do.")
     }
-    
+
     // MARK: - Timing
-    
+
     private var timingSettingsSection: some View {
         GroupBox("Timing Options") {
             VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
@@ -676,7 +676,7 @@ struct GestureConfigurationSheet: View {
                                 .foregroundColor(.secondary)
                         }
                         .padding(.leading, MGStyle.Spacing.xxl)
-                        
+
                         HStack {
                             Text("Repeat Interval:")
                                 .frame(width: 120, alignment: .leading)
@@ -689,9 +689,9 @@ struct GestureConfigurationSheet: View {
                         .padding(.leading, MGStyle.Spacing.xxl)
                     }
                 }
-                
+
                 Divider()
-                
+
                 Toggle("Long Press Action", isOn: $timing.longPressEnabled)
                 if timing.longPressEnabled {
                     HStack {
@@ -709,9 +709,9 @@ struct GestureConfigurationSheet: View {
             .padding(.vertical, MGStyle.Spacing.md)
         }
     }
-    
+
     // MARK: - Helper Views
-    
+
     struct ComponentToggleCard: View {
         let icon: String
         let title: String
@@ -746,16 +746,16 @@ struct GestureConfigurationSheet: View {
         let name: String
         let flag: NSEvent.ModifierFlags
         @Binding var modifiers: NSEvent.ModifierFlags
-        
+
         init(label: String, name: String = "", flag: NSEvent.ModifierFlags, modifiers: Binding<NSEvent.ModifierFlags>) {
             self.label = label
             self.name = name
             self.flag = flag
             self._modifiers = modifiers
         }
-        
+
         private var isActive: Bool { modifiers.contains(flag) }
-        
+
         var body: some View {
             Button(action: {
                 if isActive { modifiers.remove(flag) } else { modifiers.insert(flag) }
@@ -784,9 +784,9 @@ struct GestureConfigurationSheet: View {
             .help(name)
         }
     }
-    
+
     // MARK: - Validation & Save
-    
+
     private var isValid: Bool {
         guard components.isValid else { return false }
         guard !selectedActionId.isEmpty else { return false }
@@ -795,7 +795,7 @@ struct GestureConfigurationSheet: View {
         }
         return true
     }
-    
+
     private func saveGesture() {
         // Build a gesture that syncs component trigger data (keyboard shortcut,
         // mouse button) into genericActivation so detection plugins can find it.
@@ -816,7 +816,7 @@ struct GestureConfigurationSheet: View {
             parameters: actionParameters
         )
         gesture.name = gestureName.trimmingCharacters(in: .whitespaces).isEmpty ? nil : gestureName.trimmingCharacters(in: .whitespaces)
-        
+
         if mode == .add || existingGesture?.triggerKey != gesture.triggerKey {
             if uiServices.isGestureConflicting(gesture) {
                 conflictMessage = "A gesture with this trigger combination already exists. Replace the existing gesture?"
@@ -852,7 +852,7 @@ struct GestureConfigurationSheet: View {
 
 struct KeyboardShortcutFieldView: NSViewRepresentable {
     @Binding var shortcut: KeyboardTrigger?
-    
+
     func makeNSView(context: Context) -> KeyboardShortcutField {
         let field = KeyboardShortcutField()
         field.onShortcutCapture = { cap in
@@ -865,7 +865,7 @@ struct KeyboardShortcutFieldView: NSViewRepresentable {
         }
         return field
     }
-    
+
     func updateNSView(_ nsView: KeyboardShortcutField, context: Context) {
         if let t = shortcut {
             var cgFlags = CGEventFlags(rawValue: 0)
@@ -887,7 +887,7 @@ struct KeyboardShortcutFieldView: NSViewRepresentable {
 struct AddGestureSheet: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var uiServices = UIServices.shared
-    
+
     var body: some View {
         GestureConfigurationSheet(mode: .add) { gesture in
             _ = uiServices.addGesture(gesture)
@@ -899,7 +899,7 @@ struct EditGestureSheet: View {
     let gesture: Gesture
     @Environment(\.dismiss) private var dismiss
     @StateObject private var uiServices = UIServices.shared
-    
+
     var body: some View {
         GestureConfigurationSheet(mode: .edit, existingGesture: gesture) { updated in
             _ = uiServices.updateGesture(oldGesture: gesture, newGesture: updated)

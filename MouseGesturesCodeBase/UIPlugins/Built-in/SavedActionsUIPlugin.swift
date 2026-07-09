@@ -3,9 +3,9 @@ import SwiftUI
 // MARK: - Saved Actions UI Plugin
 
 class SavedActionsUIPlugin: StandardUIPlugin {
-    
+
     // MARK: - Plugin Metadata
-    
+
     override var identifier: String { "com.mousegestures.ui.savedactions" }
     override var displayName: String { "Saved Actions" }
     override var iconName: String { "square.and.arrow.down" }
@@ -15,18 +15,18 @@ class SavedActionsUIPlugin: StandardUIPlugin {
     override var category: UIPluginCategory { .core }
     override var sortOrder: Int { 1 }
     override var requiredPermissions: UIPluginPermissions { [.actions] }
-    
+
     // MARK: - Plugin Implementation
-    
+
     @MainActor
     override func createView() -> AnyView {
         AnyView(SavedActionsView())
     }
-    
+
     override func performInitialization() async throws {
         log("Initializing Saved Actions UI Plugin")
     }
-    
+
     @MainActor
     override func onActivate() {
         log("Saved Actions tab activated", level: .debug)

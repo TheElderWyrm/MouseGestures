@@ -11,36 +11,36 @@ struct BundleEditorView: View {
     @State var parallelExecution: Bool
     let onDone: ([BundledAction], Bool, Bool) -> Void
     let onCancel: () -> Void
-    
+
     @State private var selection: UUID?
-    
+
     // Right-panel editor state (shared for add & edit modes)
     @State private var editorActionId: String = ""
     @State private var editorParams: [String: AnyCodable] = [:]
     @State private var editorDelay: String = "0.2"
-    
+
     /// Tracks whether we're actively loading a selection to avoid feedback loops
     @State private var isLoadingSelection = false
-    
+
     private var isEditing: Bool { selection != nil }
-    
+
     private var editingIndex: Int? {
         guard let sel = selection else { return nil }
         return bundledActions.firstIndex(where: { $0.id == sel })
     }
-    
+
     var body: some View {
         VStack(spacing: 0) {
             headerBar
             Divider()
-            
+
             HSplitView {
                 actionListPanel
                     .frame(minWidth: 280, idealWidth: 320)
                 rightPanel
                     .frame(minWidth: 300, idealWidth: 420)
             }
-            
+
             Divider()
             footerBar
         }
@@ -49,9 +49,9 @@ struct BundleEditorView: View {
             loadSelectionIntoEditor(newSel)
         }
     }
-    
+
     // MARK: - Header
-    
+
     private var headerBar: some View {
         HStack(spacing: MGStyle.Spacing.md) {
             Image(systemName: "square.stack.3d.up")
@@ -72,9 +72,9 @@ struct BundleEditorView: View {
         .padding(.vertical, MGStyle.Spacing.lg)
         .background(MGStyle.Colors.windowBackground)
     }
-    
+
     // MARK: - Action List Panel (Left)
-    
+
     private var actionListPanel: some View {
         VStack(spacing: 0) {
             HStack {
@@ -99,22 +99,22 @@ struct BundleEditorView: View {
             .padding(.horizontal, MGStyle.Spacing.lg)
             .padding(.vertical, MGStyle.Spacing.md)
             .background(MGStyle.Colors.subtleOverlay)
-            
+
             Divider()
-            
+
             if bundledActions.isEmpty {
                 emptyListPlaceholder
             } else {
                 actionList
             }
-            
+
             Divider()
-            
+
             bundleSettingsBar
         }
         .background(MGStyle.Colors.cardBackground.opacity(0.3))
     }
-    
+
     private var emptyListPlaceholder: some View {
         VStack(spacing: MGStyle.Spacing.lg) {
             Spacer()
@@ -132,7 +132,7 @@ struct BundleEditorView: View {
         }
         .frame(maxWidth: .infinity)
     }
-    
+
     private var actionList: some View {
         List(selection: $selection) {
             ForEach(bundledActions.indices, id: \.self) { index in
@@ -159,7 +159,7 @@ struct BundleEditorView: View {
         }
         .listStyle(.bordered(alternatesRowBackgrounds: true))
     }
-    
+
     private var bundleSettingsBar: some View {
         VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
             Toggle(isOn: $stopOnFailure) {
@@ -172,7 +172,7 @@ struct BundleEditorView: View {
                 }
             }
             .toggleStyle(.checkbox)
-            
+
             Toggle(isOn: $parallelExecution) {
                 HStack(spacing: MGStyle.Spacing.sm) {
                     Image(systemName: "arrow.triangle.branch")
@@ -189,9 +189,9 @@ struct BundleEditorView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(MGStyle.Colors.subtleOverlay)
     }
-    
+
     // MARK: - Right Panel (Add / Edit)
-    
+
     private var rightPanel: some View {
         VStack(spacing: 0) {
             // Panel header
@@ -218,9 +218,9 @@ struct BundleEditorView: View {
             .padding(.horizontal, MGStyle.Spacing.lg)
             .padding(.vertical, MGStyle.Spacing.md)
             .background(MGStyle.Colors.subtleOverlay)
-            
+
             Divider()
-            
+
             // Action selection + params
             ScrollView {
                 VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
@@ -228,7 +228,7 @@ struct BundleEditorView: View {
                         selectedActionId: $editorActionId,
                         actionParameters: $editorParams
                     )
-                    
+
                     // Delay field
                     GroupBox("Delay After") {
                         HStack(spacing: MGStyle.Spacing.md) {
@@ -245,9 +245,9 @@ struct BundleEditorView: View {
                 }
                 .padding(MGStyle.Spacing.lg)
             }
-            
+
             Divider()
-            
+
             // Action buttons
             HStack {
                 if isEditing {
@@ -262,9 +262,9 @@ struct BundleEditorView: View {
                     }
                     .controlSize(.large)
                 }
-                
+
                 Spacer()
-                
+
                 if isEditing {
                     Button(action: applyEdits) {
                         HStack(spacing: MGStyle.Spacing.sm) {
@@ -305,9 +305,9 @@ struct BundleEditorView: View {
             .background(MGStyle.Colors.subtleOverlay)
         }
     }
-    
+
     // MARK: - Footer
-    
+
     private var footerBar: some View {
         HStack {
             Spacer()
@@ -321,9 +321,9 @@ struct BundleEditorView: View {
         .padding(.vertical, MGStyle.Spacing.lg)
         .background(MGStyle.Colors.windowBackground)
     }
-    
+
     // MARK: - Selection ↔ Editor Sync
-    
+
     private func loadSelectionIntoEditor(_ newSel: UUID?) {
         if let sel = newSel, let action = bundledActions.first(where: { $0.id == sel }) {
             isLoadingSelection = true
@@ -341,9 +341,9 @@ struct BundleEditorView: View {
             editorDelay = "0.2"
         }
     }
-    
+
     // MARK: - Add / Edit Actions
-    
+
     private func addActionToBundle() {
         guard !editorActionId.isEmpty else { return }
         let action = BundledAction(
@@ -354,7 +354,7 @@ struct BundleEditorView: View {
         bundledActions.append(action)
         // Do NOT clear selection — user may want to add multiple copies or continue editing
     }
-    
+
     private func applyEdits() {
         guard let sel = selection,
               let idx = bundledActions.firstIndex(where: { $0.id == sel }),
@@ -364,20 +364,20 @@ struct BundleEditorView: View {
         bundledActions[idx].delayAfter = Double(editorDelay) ?? 0.2
         selection = nil   // Deselect after update so user sees the result in the list
     }
-    
+
     // MARK: - List Manipulation
-    
+
     private func removeAction(_ action: BundledAction) {
         if selection == action.id { selection = nil }
         bundledActions.removeAll { $0.id == action.id }
     }
-    
+
     private func removeSelectedAction() {
         guard let sel = selection,
               let action = bundledActions.first(where: { $0.id == sel }) else { return }
         removeAction(action)
     }
-    
+
     private func duplicateAction(_ action: BundledAction) {
         var copy = action
         copy.id = UUID()
@@ -386,30 +386,30 @@ struct BundleEditorView: View {
             selection = copy.id
         }
     }
-    
+
     private func moveAction(_ action: BundledAction, direction: Int) {
         guard let idx = bundledActions.firstIndex(where: { $0.id == action.id }) else { return }
         let newIdx = idx + direction
         guard newIdx >= 0, newIdx < bundledActions.count else { return }
         bundledActions.swapAt(idx, newIdx)
     }
-    
+
     private func reorderActions(from source: IndexSet, to destination: Int) {
         bundledActions.move(fromOffsets: source, toOffset: destination)
     }
-    
+
     // MARK: - Computed
-    
+
     private var selectedIndex: Int? {
         guard let sel = selection else { return nil }
         return bundledActions.firstIndex(where: { $0.id == sel })
     }
-    
+
     private var canMoveUp: Bool {
         guard let idx = selectedIndex else { return false }
         return idx > 0
     }
-    
+
     private var canMoveDown: Bool {
         guard let idx = selectedIndex else { return false }
         return idx < bundledActions.count - 1
@@ -424,16 +424,16 @@ struct BundleActionRow: View {
     let isFirst: Bool
     let isLast: Bool
     @Binding var delay: TimeInterval
-    
+
     let onMoveUp: () -> Void
     let onMoveDown: () -> Void
     let onDuplicate: () -> Void
     let onRemove: () -> Void
-    
+
     @State private var isHovered = false
     @State private var isEditingDelay = false
     @State private var delayText: String = ""
-    
+
     var body: some View {
         HStack(spacing: MGStyle.Spacing.md) {
             // Order number
@@ -444,7 +444,7 @@ struct BundleActionRow: View {
                 .padding(.vertical, MGStyle.Spacing.xs)
                 .background(MGStyle.Colors.cardBackground)
                 .cornerRadius(MGStyle.Corner.sm)
-            
+
             // Condition indicator
             if action.condition != nil && !(action.condition?.conditions.isEmpty ?? true) {
                 Image(systemName: "questionmark.diamond.fill")
@@ -452,7 +452,7 @@ struct BundleActionRow: View {
                     .foregroundColor(.orange)
                     .help("Has condition: \(action.condition?.displayString ?? "")")
             }
-            
+
             // Action icon + name
             VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: MGStyle.Spacing.sm) {
@@ -466,7 +466,7 @@ struct BundleActionRow: View {
                         .font(.system(size: 12, weight: .medium))
                         .lineLimit(1)
                 }
-                
+
                 if !action.parameters.isEmpty {
                     Text(parameterSummary)
                         .font(.system(size: MGStyle.FontSize.badge))
@@ -474,9 +474,9 @@ struct BundleActionRow: View {
                         .lineLimit(1)
                 }
             }
-            
+
             Spacer()
-            
+
             // Inline control buttons (visible on hover)
             if isHovered {
                 HStack(spacing: MGStyle.Spacing.xs) {
@@ -492,7 +492,7 @@ struct BundleActionRow: View {
                     Image(systemName: "clock")
                         .font(.system(size: 9))
                         .foregroundColor(.secondary)
-                    
+
                     if isEditingDelay {
                         TextField("", text: $delayText, onCommit: commitDelay)
                             .textFieldStyle(.roundedBorder)
@@ -528,7 +528,7 @@ struct BundleActionRow: View {
             Button("Remove", role: .destructive) { onRemove() }
         }
     }
-    
+
     @ViewBuilder
     private func rowButton(icon: String, help: String, disabled: Bool = false, isDestructive: Bool = false, action: @escaping () -> Void) -> some View {
         Button(action: action) {
@@ -541,14 +541,14 @@ struct BundleActionRow: View {
         .disabled(disabled)
         .help(help)
     }
-    
+
     private var actionDisplayName: String {
         if let (_, pluginAction) = PluginManager.shared.getAction(identifier: action.actionIdentifier) {
             return pluginAction.name
         }
         return action.actionIdentifier
     }
-    
+
     private var parameterSummary: String {
         let params = action.parameters.compactMap { key, val -> String? in
             guard let v = val.value as? String, !v.isEmpty else {
@@ -561,7 +561,7 @@ struct BundleActionRow: View {
         }
         return params.prefix(2).joined(separator: ", ")
     }
-    
+
     private func commitDelay() {
         if let val = Double(delayText), val >= 0 {
             delay = val
@@ -578,10 +578,10 @@ extension BundledAction: Identifiable {}
 
 /// Manages presenting the BundleEditorView as an NSWindow sheet.
 class BundleEditorWindowHost {
-    
+
     private var hostingController: NSHostingController<BundleEditorView>?
     private var editorWindow: NSWindow?
-    
+
     func present(
         bundledActions: [BundledAction],
         stopOnFailure: Bool,
@@ -603,10 +603,10 @@ class BundleEditorWindowHost {
                 onCancel()
             }
         )
-        
+
         let controller = NSHostingController(rootView: editorView)
         self.hostingController = controller
-        
+
         let window = NSWindow(contentViewController: controller)
         window.title = "Edit Bundle Actions"
         window.styleMask = [.titled, .closable, .resizable]
@@ -614,14 +614,14 @@ class BundleEditorWindowHost {
         window.setContentSize(NSSize(width: 780, height: 640))
         window.minSize = NSSize(width: 640, height: 500)
         self.editorWindow = window
-        
+
         objc_setAssociatedObject(parentWindow, "bundleEditorHost", self, .OBJC_ASSOCIATION_RETAIN)
-        
+
         parentWindow.beginSheet(window) { _ in
             objc_setAssociatedObject(parentWindow, "bundleEditorHost", nil, .OBJC_ASSOCIATION_RETAIN)
         }
     }
-    
+
     private func dismiss(parentWindow: NSWindow) {
         if let w = editorWindow {
             parentWindow.endSheet(w)

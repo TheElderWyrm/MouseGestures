@@ -51,9 +51,9 @@ struct OnboardingView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            
+
             Divider()
-            
+
             // Footer
             HStack {
                 // Page Indicator
@@ -64,15 +64,15 @@ struct OnboardingView: View {
                             .frame(width: 8, height: 8)
                     }
                 }
-                
+
                 Spacer()
-                
+
                 if currentPage < pages.count - 1 {
                     Button("Skip") {
                         onComplete()
                     }
                     .buttonStyle(.link)
-                    
+
                     Button("Next") {
                         withAnimation {
                             currentPage += 1
@@ -87,7 +87,7 @@ struct OnboardingView: View {
                             onComplete()
                         }
                         .buttonStyle(.link)
-                        
+
                         Button("Create My First Action") {
                             onComplete()
                             uiServices.tutorialService.startTutorial()
@@ -114,34 +114,34 @@ struct OnboardingPage {
 
 struct OnboardingPageView: View {
     let page: OnboardingPage
-    
+
     var body: some View {
         VStack(spacing: 20) {
             ZStack {
                 Circle()
                     .fill(page.color.opacity(0.1))
                     .frame(width: 120, height: 120)
-                
+
                 Image(systemName: page.image)
                     .font(.system(size: 60))
                     .foregroundColor(page.color)
             }
             .padding(.top, 20)
-            
+
             Text(page.title)
                 .font(.system(size: 24, weight: .bold))
-            
+
             Text(page.description)
                 .font(.system(size: 14))
                 .multilineTextAlignment(.center)
                 .foregroundColor(.secondary)
                 .padding(.horizontal, 40)
-            
+
 //            if page.id == "zones" {
 //                ZoneQuickSettingsView()
 //                    .padding(.top, 10)
 //            }
-            
+
             Spacer()
         }
         .padding()
@@ -151,18 +151,18 @@ struct OnboardingPageView: View {
 struct ZoneQuickSettingsView: View {
     @State private var showHighlights = ZoneVisualizationService.shared.isShowZoneHighlights()
     @State private var showLabels = ZoneVisualizationService.shared.isShowZoneLabels()
-    
+
     var body: some View {
         VStack(spacing: 12) {
             Text("Quick Settings")
                 .font(.headline)
-            
+
             VStack(alignment: .leading, spacing: 8) {
                 Toggle("Show Zone Highlights", isOn: $showHighlights)
                     .onChange(of: showHighlights) { newValue in
                         ZoneVisualizationService.shared.setShowZoneHighlights(newValue)
                     }
-                    
+
                 Toggle("Show Zone Labels", isOn: $showLabels)
                     .onChange(of: showLabels) { newValue in
                         ZoneVisualizationService.shared.setShowZoneLabels(newValue)
@@ -171,7 +171,7 @@ struct ZoneQuickSettingsView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 20)
-                
+
             Button(action: {
                 ZoneHighlightManager.shared.showPreview(duration: 5.0)
             }) {

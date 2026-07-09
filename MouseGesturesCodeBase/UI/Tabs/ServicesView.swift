@@ -6,11 +6,11 @@ struct ServicesView: View {
     @State private var servicePlugins: [ServicePluginInfo] = []
     @State private var selectedCategory: ServiceCategory?
     @State private var searchText = ""
-    
+
     enum ActiveSheet: Identifiable {
         case configure(ServicePluginInfo)
         case install
-        
+
         var id: String {
             switch self {
             case .configure(let plugin): return "configure-\(plugin.id)"
@@ -19,14 +19,14 @@ struct ServicesView: View {
         }
     }
     @State private var activeSheet: ActiveSheet?
-    
+
     private let pluginManager = ServicePluginManager.shared
-    
+
     var body: some View {
         HSplitView {
             categorySidebar
                 .frame(minWidth: MGStyle.Layout.sidebarMinWidth, idealWidth: MGStyle.Layout.sidebarIdealWidth, maxWidth: MGStyle.Layout.sidebarMaxWidth)
-            
+
             servicesContent
                 .frame(minWidth: 400)
         }
@@ -40,9 +40,9 @@ struct ServicesView: View {
             }
         }
     }
-    
+
     // MARK: - Category Sidebar
-    
+
     private var categorySidebar: some View {
         MGSidebar(title: "Categories") {
             MGSidebarItem(
@@ -51,9 +51,9 @@ struct ServicesView: View {
                 isSelected: selectedCategory == nil,
                 action: { selectedCategory = nil }
             )
-            
+
             Divider().padding(.vertical, MGStyle.Spacing.sm)
-            
+
             ForEach(ServiceCategory.allCases, id: \.self) { category in
                 let count = servicePlugins.filter { $0.category == category }.count
                 if count > 0 {
@@ -67,27 +67,27 @@ struct ServicesView: View {
             }
         }
     }
-    
+
     // MARK: - Services Content
-    
+
     private var servicesContent: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {
                 HStack(spacing: MGStyle.Spacing.lg) {
                     MGSectionHeader("Services", icon: "gearshape.2")
-                    
+
                     Spacer()
-                    
+
                     MGSearchField("Search services...", text: $searchText)
                         .frame(width: 180)
-                    
+
                     Button(action: loadServicePlugins) {
                         Image(systemName: "arrow.clockwise")
                             .font(.system(size: 13))
                     }
                     .buttonStyle(.borderless)
                 }
-                
+
                 if filteredPlugins.isEmpty {
                     MGEmptyState(
                         icon: "gearshape.2",
@@ -109,9 +109,9 @@ struct ServicesView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
-    
+
     // MARK: - Filtering
-    
+
     private var filteredPlugins: [ServicePluginInfo] {
         var plugins = servicePlugins
         if let category = selectedCategory {
@@ -126,13 +126,13 @@ struct ServicesView: View {
         }
         return plugins.sorted { $0.name < $1.name }
     }
-    
+
     // MARK: - Actions
-    
+
     private func loadServicePlugins() {
         servicePlugins = pluginManager.getAllPlugins()
     }
-    
+
     private func togglePlugin(_ plugin: ServicePluginInfo) {
         if plugin.isEnabled {
             _ = pluginManager.disablePlugin(identifier: plugin.identifier)
@@ -141,7 +141,7 @@ struct ServicesView: View {
         }
         loadServicePlugins()
     }
-    
+
     private func installPlugin(from url: URL) {
         let result = pluginManager.installPlugin(from: url)
         if !result.success {
@@ -160,40 +160,40 @@ struct ServiceRow: View {
     let plugin: ServicePluginInfo
     let onConfigure: () -> Void
     let onToggle: () -> Void
-    
+
     @State private var isHovered = false
-    
+
     var body: some View {
         HStack(spacing: MGStyle.Spacing.lg) {
             Image(systemName: plugin.category.icon)
                 .font(.title2)
                 .foregroundColor(.secondary)
                 .frame(width: 30)
-            
+
             VStack(alignment: .leading, spacing: MGStyle.Spacing.sm) {
                 HStack {
                     Text(plugin.name)
                         .font(.system(size: MGStyle.FontSize.heading, weight: .medium))
-                    
+
                     if plugin.isBuiltIn {
                         MGBadge("Built-in", color: .blue)
                     }
-                    
+
                     Text("v\(plugin.version)")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
-                
+
                 Text(plugin.description)
                     .font(.system(size: MGStyle.FontSize.caption))
                     .foregroundColor(.secondary)
                     .lineLimit(2)
-                
+
                 HStack(spacing: MGStyle.Spacing.lg) {
                     Label(plugin.author, systemImage: "person")
                         .font(.caption)
                         .foregroundColor(Color.secondary.opacity(0.6))
-                    
+
                     if !plugin.requiredPermissions.requiresAccessibility &&
                        !plugin.requiredPermissions.requiresFileAccess &&
                        !plugin.requiredPermissions.requiresNetworkAccess {
@@ -205,12 +205,12 @@ struct ServiceRow: View {
                     }
                 }
             }
-            
+
             Spacer()
-            
+
             HStack(spacing: MGStyle.Spacing.md) {
                 MGActionButton("gearshape", help: "Configure Service") { onConfigure() }
-                
+
                 Toggle("", isOn: Binding(
                     get: { plugin.isEnabled },
                     set: { _ in onToggle() }
@@ -224,7 +224,7 @@ struct ServiceRow: View {
         .mgListCard(isHovered: isHovered)
         .onHover { hovering in withAnimation(.easeInOut(duration: 0.15)) { isHovered = hovering } }
     }
-    
+
     private var permissionsLabel: some View {
         HStack(spacing: MGStyle.Spacing.sm) {
             Image(systemName: "lock.shield")
@@ -233,7 +233,7 @@ struct ServiceRow: View {
         .font(.caption)
         .foregroundColor(.orange)
     }
-    
+
     private var permissionsText: String {
         var permissions: [String] = []
         if plugin.requiredPermissions.requiresAccessibility { permissions.append("Accessibility") }
@@ -250,9 +250,9 @@ struct ServiceConfigurationSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var configOptions: [ServiceConfigOption] = []
     @State private var configValues: [String: Any] = [:]
-    
+
     private let pluginManager = ServicePluginManager.shared
-    
+
     var body: some View {
         VStack(spacing: 0) {
             MGSheetHeader(
@@ -260,7 +260,7 @@ struct ServiceConfigurationSheet: View {
                 subtitle: plugin.description,
                 onCancel: { dismiss() }
             )
-            
+
             if configOptions.isEmpty {
                 MGEmptyState(icon: "gearshape.2", title: "No configuration options available")
             } else {
@@ -273,7 +273,7 @@ struct ServiceConfigurationSheet: View {
                     .padding(MGStyle.Spacing.xxl)
                 }
             }
-            
+
             MGSheetFooter("Apply") {
                 applyConfiguration()
                 dismiss()
@@ -282,21 +282,21 @@ struct ServiceConfigurationSheet: View {
         .frame(width: 500, height: 400)
         .onAppear { loadConfiguration() }
     }
-    
+
     private func binding(for key: String) -> Binding<Any?> {
         Binding(
             get: { configValues[key] },
             set: { configValues[key] = $0 }
         )
     }
-    
+
     private func loadConfiguration() {
         configOptions = pluginManager.getConfigurationOptions(for: plugin.identifier)
         for option in configOptions {
             configValues[option.key] = option.defaultValue
         }
     }
-    
+
     private func applyConfiguration() {
         pluginManager.applyConfiguration(for: plugin.identifier, config: configValues)
     }
@@ -306,22 +306,22 @@ struct ServiceConfigurationSheet: View {
 struct ConfigOptionView: View {
     let option: ServiceConfigOption
     @Binding var value: Any?
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: MGStyle.Spacing.sm) {
             Text(option.label)
                 .font(.system(size: MGStyle.FontSize.body, weight: .medium))
-            
+
             if let description = option.description {
                 Text(description)
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
-            
+
             optionControl
         }
     }
-    
+
     @ViewBuilder
     private var optionControl: some View {
         switch option.type {
@@ -331,7 +331,7 @@ struct ConfigOptionView: View {
                 set: { value = $0 }
             ))
             .toggleStyle(SwitchToggleStyle())
-            
+
         case .integer(let min, let max):
             HStack {
                 TextField("", value: Binding(
@@ -339,21 +339,21 @@ struct ConfigOptionView: View {
                     set: { value = $0 }
                 ), format: .number)
                 .textFieldStyle(RoundedBorderTextFieldStyle())
-                
+
                 if let min = min, let max = max {
                     Text("(\(min) - \(max))")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
             }
-            
+
         case .string:
             TextField("", text: Binding(
                 get: { value as? String ?? "" },
                 set: { value = $0 }
             ))
             .textFieldStyle(RoundedBorderTextFieldStyle())
-            
+
         case .selection(let options):
             Picker("", selection: Binding(
                 get: { value as? String ?? options.first ?? "" },
@@ -364,7 +364,7 @@ struct ConfigOptionView: View {
                 }
             }
             .pickerStyle(MenuPickerStyle())
-            
+
         default:
             Text("Unsupported option type")
                 .foregroundColor(.secondary)
@@ -377,16 +377,16 @@ struct ServiceInstallSheet: View {
     let onInstall: (URL) -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var selectedFile: URL?
-    
+
     var body: some View {
         VStack(spacing: 0) {
             MGSheetHeader("Install Service Plugin", subtitle: "Select a .serviceplugin file to install", onCancel: { dismiss() })
-            
+
             VStack(spacing: MGStyle.Spacing.xl) {
                 Spacer()
-                
+
                 Button("Choose File...") { chooseFile() }
-                
+
                 if let url = selectedFile {
                     HStack {
                         Image(systemName: "doc.fill")
@@ -398,11 +398,11 @@ struct ServiceInstallSheet: View {
                             .fill(MGStyle.Colors.cardBackground)
                     )
                 }
-                
+
                 Spacer()
             }
             .padding(MGStyle.Spacing.xl)
-            
+
             MGSheetFooter("Install", disabled: selectedFile == nil) {
                 if let url = selectedFile {
                     onInstall(url)
@@ -412,7 +412,7 @@ struct ServiceInstallSheet: View {
         }
         .frame(width: 400, height: 250)
     }
-    
+
     private func chooseFile() {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.item]

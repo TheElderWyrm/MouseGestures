@@ -10,27 +10,27 @@ struct GenericActivation: Codable, Equatable {
     /// Key: plugin ID (e.g., "keyboard_detector", "mouse_button_detector")
     /// Value: plugin-specific configuration as generic dictionary
     var detectionConfigs: [String: [String: AnyCodable]]
-    
+
     /// Whether activation is enabled
     var isEnabled: Bool
-    
+
     init(detectionConfigs: [String: [String: AnyCodable]] = [:], isEnabled: Bool = true) {
         self.detectionConfigs = detectionConfigs
         self.isEnabled = isEnabled
     }
-    
+
     // MARK: - Plugin Configuration Helpers
-    
+
     /// Get configuration for a specific detection plugin
     func config(for pluginId: String) -> [String: AnyCodable]? {
         return detectionConfigs[pluginId]
     }
-    
+
     /// Check if a detection plugin is configured
     func hasConfig(for pluginId: String) -> Bool {
         return detectionConfigs[pluginId] != nil
     }
-    
+
     /// Set configuration for a detection plugin
     mutating func setConfig(_ config: [String: AnyCodable]?, for pluginId: String) {
         if let config = config {
@@ -39,14 +39,14 @@ struct GenericActivation: Codable, Equatable {
             detectionConfigs.removeValue(forKey: pluginId)
         }
     }
-    
+
     /// Get list of configured detection plugins
     var configuredPlugins: [String] {
         return Array(detectionConfigs.keys)
     }
-    
+
     // MARK: - Keyboard Trigger Helpers
-    
+
     var keyboardTrigger: KeyboardTrigger? {
         guard let config = detectionConfigs["keyboard_detector"],
               let keyCode = config["keyCode"]?.value as? Int,
@@ -58,7 +58,7 @@ struct GenericActivation: Codable, Equatable {
             displayString: displayString
         )
     }
-    
+
     mutating func setKeyboardTrigger(_ trigger: KeyboardTrigger?) {
         guard let trigger = trigger else {
             detectionConfigs.removeValue(forKey: "keyboard_detector")
@@ -70,9 +70,9 @@ struct GenericActivation: Codable, Equatable {
             "displayString": AnyCodable(trigger.displayString)
         ]
     }
-    
+
     // MARK: - Mouse Button Trigger Helpers
-    
+
     var mouseButtonTrigger: MouseButtonTrigger? {
         guard let config = detectionConfigs["mouse_button_detector"],
               let buttonRaw = config["button"]?.value as? String,
@@ -83,7 +83,7 @@ struct GenericActivation: Codable, Equatable {
             modifiers: NSEvent.ModifierFlags(rawValue: modifiersRaw)
         )
     }
-    
+
     mutating func setMouseButtonTrigger(_ trigger: MouseButtonTrigger?) {
         guard let trigger = trigger else {
             detectionConfigs.removeValue(forKey: "mouse_button_detector")
@@ -113,7 +113,7 @@ extension KeyboardTrigger: DetectionPluginConfig {
             "displayString": AnyCodable(displayString)
         ]
     }
-    
+
     static func fromGenericConfig(_ config: [String: AnyCodable]) -> KeyboardTrigger? {
         guard let keyCode = config["keyCode"]?.value as? Int,
               let modifiersRaw = config["modifiers"]?.value as? UInt,
@@ -134,7 +134,7 @@ extension MouseButtonTrigger: DetectionPluginConfig {
             "displayString": AnyCodable(displayString)
         ]
     }
-    
+
     static func fromGenericConfig(_ config: [String: AnyCodable]) -> MouseButtonTrigger? {
         guard let buttonRaw = config["button"]?.value as? String,
               let button = MouseButton(rawValue: buttonRaw),

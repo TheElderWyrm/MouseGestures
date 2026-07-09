@@ -56,13 +56,13 @@ struct CodeTextEditor: NSViewRepresentable {
 struct ActionSelectionView: View {
     @Binding var selectedActionId: String
     @Binding var actionParameters: [String: AnyCodable]
-    
+
     @StateObject private var licenseService = LicenseService.shared
     @State private var searchText: String = ""
     @State private var selectedCategory: String = "All"
     @State private var hasAdvancedConfig = false
     @State private var advancedConfigCount = 0
-    
+
     var body: some View {
         Group {
             actionPickerSection
@@ -74,14 +74,14 @@ struct ActionSelectionView: View {
             refreshAdvancedState()
         }
     }
-    
+
     // MARK: - Action Picker
-    
+
     private var actionPickerSection: some View {
         GroupBox("Action") {
             VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
                 MGSearchField("Search actions...", text: $searchText)
-                
+
                 // Category chips
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: MGStyle.Spacing.md) {
@@ -99,7 +99,7 @@ struct ActionSelectionView: View {
                     }
                     .padding(.horizontal, MGStyle.Spacing.xs)
                 }
-                
+
                 // Action list
                 ScrollViewReader { proxy in
                     List(selection: Binding(
@@ -132,7 +132,7 @@ struct ActionSelectionView: View {
                         if let id = firstId { proxy.scrollTo(id, anchor: .top) }
                     }
                 }
-                
+
                 // Selected action banner
                 if let action = selectedAction {
                     MGSelectionBanner(
@@ -160,9 +160,9 @@ struct ActionSelectionView: View {
             .padding(.vertical, MGStyle.Spacing.md)
         }
     }
-    
+
     // MARK: - Search Results Content
-    
+
     @ViewBuilder
     private var searchResultsContent: some View {
         let results = searchFilteredEntries
@@ -180,9 +180,9 @@ struct ActionSelectionView: View {
             }
         }
     }
-    
+
     // MARK: - Saved Actions Content
-    
+
     @ViewBuilder
     private var savedActionsContent: some View {
         ForEach(savedActionEntries, id: \.id) { entry in
@@ -191,9 +191,9 @@ struct ActionSelectionView: View {
                 .id(entry.id)
         }
     }
-    
+
     // MARK: - Categorized Content
-    
+
     @ViewBuilder
     private var categorizedContent: some View {
         let entries = displayEntries
@@ -226,9 +226,9 @@ struct ActionSelectionView: View {
             }
         }
     }
-    
+
     // MARK: - Action Row
-    
+
     private func actionRow(_ entry: ActionEntry) -> some View {
         HStack(spacing: MGStyle.Spacing.md) {
             if entry.isLocked {
@@ -252,7 +252,7 @@ struct ActionSelectionView: View {
                     Text(entry.name)
                         .font(.system(size: MGStyle.FontSize.body))
                         .lineLimit(1)
-                    
+
                     if entry.isLocked {
                         Text("PRO")
                             .font(.system(size: 8, weight: .bold))
@@ -262,7 +262,7 @@ struct ActionSelectionView: View {
                             .overlay(RoundedRectangle(cornerRadius: 3).stroke(Color.orange.opacity(0.5), lineWidth: 1))
                     }
                 }
-                
+
                 if isSearching {
                     Text(entry.categoryLabel)
                         .font(.system(size: MGStyle.FontSize.badge))
@@ -275,9 +275,9 @@ struct ActionSelectionView: View {
         .opacity(entry.isLocked ? 0.6 : 1.0)
         .disabled(entry.isLocked)
     }
-    
+
     // MARK: - Category Chip
-    
+
     private func categoryChip(_ label: String, icon: String, count: Int) -> some View {
         let isSelected = selectedCategory == label
         return Button(action: { selectedCategory = label }) {
@@ -305,7 +305,7 @@ struct ActionSelectionView: View {
         }
         .buttonStyle(.plain)
     }
-    
+
     private func shortLabel(_ label: String) -> String {
         let maxLen = 20
         if label.count <= maxLen { return label }
@@ -313,9 +313,9 @@ struct ActionSelectionView: View {
         let first = label.split(separator: " ").first.map(String.init) ?? label
         return first.count <= maxLen ? first : String(label.prefix(maxLen))
     }
-    
+
     // MARK: - Parameter Section
-    
+
     private var parameterSection: some View {
         Group {
             if let action = selectedAction {
@@ -339,19 +339,19 @@ struct ActionSelectionView: View {
             }
         }
     }
-    
+
     /// Groups parameters by their `group` property for sectioned display
     private struct ParameterGroup: Identifiable {
         let name: String
         let params: [ParameterDefinition]
         var id: String { name }
     }
-    
+
     private func parameterGroups(_ params: [ParameterDefinition]) -> [ParameterGroup] {
         var groups: [ParameterGroup] = []
         var currentGroupName: String? = nil
         var currentParams: [ParameterDefinition] = []
-        
+
         for p in params {
             let groupName = p.group ?? "Parameters"
             if groupName != currentGroupName {
@@ -369,7 +369,7 @@ struct ActionSelectionView: View {
         }
         return groups
     }
-    
+
     private func advancedConfigBox(for action: PluginAction) -> some View {
         GroupBox(action.advancedConfigLabel ?? "Advanced: \(action.name)") {
             HStack {
@@ -399,9 +399,9 @@ struct ActionSelectionView: View {
             .padding(.vertical, MGStyle.Spacing.md)
         }
     }
-    
+
     // MARK: - Parameter Fields
-    
+
     /// Returns true when the parameter should be displayed given current parameter values
     private func shouldShow(_ p: ParameterDefinition) -> Bool {
         guard let rule = p.visibleWhen else { return true }
@@ -419,7 +419,7 @@ struct ActionSelectionView: View {
     private func paramField(for p: ParameterDefinition) -> some View {
         if shouldShow(p) { paramFieldContent(for: p) }
     }
-    
+
     /// Resolves the display label for a raw selection value
     private func displayLabel(for rawValue: String, param: ParameterDefinition) -> String {
         if let custom = param.displayValues?[rawValue] { return custom }
@@ -673,7 +673,7 @@ struct ActionSelectionView: View {
                         }
                     ))
                     .frame(width: 200, height: 24)
-                    
+
                     Button(action: { actionParameters.removeValue(forKey: p.key) }) {
                         Image(systemName: "xmark.circle.fill")
                             .foregroundColor(.secondary)
@@ -702,7 +702,7 @@ struct ActionSelectionView: View {
             }
         }
     }
-    
+
     /// Consistent row layout for a parameter: label on the left, control on the right
     @ViewBuilder
     private func paramRow<Content: View>(_ p: ParameterDefinition, @ViewBuilder content: () -> Content) -> some View {
@@ -720,9 +720,9 @@ struct ActionSelectionView: View {
             content()
         }
     }
-    
+
     // MARK: - Data Model
-    
+
     private struct ActionEntry: Identifiable {
         let id: String
         let name: String
@@ -733,21 +733,21 @@ struct ActionSelectionView: View {
         let isSaved: Bool
         let isAdvanced: Bool
         let isExternal: Bool
-        
+
         var isLocked: Bool {
             (isAdvanced || isExternal) && !LicenseService.shared.isPro
         }
     }
-    
+
     private struct CategoryGroup: Identifiable {
         let category: String
         let icon: String
         let entries: [ActionEntry]
         var id: String { category }
     }
-    
+
     // MARK: - Data Sources
-    
+
     private var allActionEntries: [ActionEntry] {
         PluginManager.shared.getAllActions()
             .filter { !$0.action.hidden }
@@ -770,7 +770,7 @@ struct ActionSelectionView: View {
                 )
             }
     }
-    
+
     private var savedActionEntries: [ActionEntry] {
         SavedActionsManager.shared.savedActions.map { saved in
             ActionEntry(
@@ -786,14 +786,14 @@ struct ActionSelectionView: View {
             )
         }
     }
-    
+
     private var usedCategories: [ActionCategory] {
         let cats = Set(allActionEntries.map { $0.category })
         return ActionCategory.allCases.filter { cats.contains($0) }
     }
-    
+
     private var isSearching: Bool { !searchText.isEmpty }
-    
+
     private var searchFilteredEntries: [ActionEntry] {
         let q = searchText.lowercased()
         let all = allActionEntries + savedActionEntries
@@ -803,17 +803,17 @@ struct ActionSelectionView: View {
             $0.categoryLabel.lowercased().contains(q)
         }
     }
-    
+
     private var displayEntries: [ActionEntry] {
-        if selectedCategory == "All" { 
-            return allActionEntries 
-        } else if selectedCategory == "Saved" { 
-            return savedActionEntries 
+        if selectedCategory == "All" {
+            return allActionEntries
+        } else if selectedCategory == "Saved" {
+            return savedActionEntries
         } else {
             return allActionEntries.filter { $0.category.rawValue == selectedCategory }
         }
     }
-    
+
     private func groupedByCategory(_ entries: [ActionEntry]) -> [CategoryGroup] {
         var seen = Set<String>()
         var groups: [CategoryGroup] = []
@@ -826,17 +826,17 @@ struct ActionSelectionView: View {
         }
         return groups
     }
-    
+
     private var selectedAction: PluginAction? {
         PluginManager.shared.getAction(identifier: selectedActionId)?.action
     }
-    
+
     private var selectedSavedAction: SavedAction? {
         SavedActionsManager.shared.savedActions.first { $0.id.uuidString == selectedActionId }
     }
-    
+
     // MARK: - File/App Browsers
-    
+
     private func browseForPath(paramKey: String) {
         let panel = NSOpenPanel()
         panel.title = "Select File or Folder"
@@ -850,7 +850,7 @@ struct ActionSelectionView: View {
             }
         }
     }
-    
+
     private func browseForApp(paramKey: String) {
         let panel = NSOpenPanel()
         panel.title = "Select Application"
@@ -870,9 +870,9 @@ struct ActionSelectionView: View {
             }
         }
     }
-    
+
     // MARK: - Parameter Bindings
-    
+
     private func strBinding(_ k: String, def d: String) -> Binding<String> {
         Binding(get: { actionParameters[k]?.value as? String ?? d },
                 set: { actionParameters[k] = AnyCodable($0) })
@@ -901,9 +901,9 @@ struct ActionSelectionView: View {
             set: { actionParameters[k] = AnyCodable($0) }
         )
     }
-    
+
     // MARK: - State Management
-    
+
     private func initDefaults() {
         actionParameters.removeAll()
         guard let action = selectedAction else { return }
@@ -911,7 +911,7 @@ struct ActionSelectionView: View {
             if let d = p.defaultValue { actionParameters[p.key] = d }
         }
     }
-    
+
     private func refreshAdvancedState() {
         guard let (plugin, action) = PluginManager.shared.getAction(identifier: selectedActionId) else {
             hasAdvancedConfig = false; advancedConfigCount = 0; return
@@ -919,17 +919,15 @@ struct ActionSelectionView: View {
         hasAdvancedConfig = plugin.hasAdvancedConfiguration(for: action)
         refreshAdvancedCount()
     }
-    
+
     private func refreshAdvancedCount() {
         if let bd = actionParameters["bundle_actions"] {
-            if let arr = bd.value as? [[String: Any]] { advancedConfigCount = arr.count }
-            else if let s = bd.value as? String,
+            if let arr = bd.value as? [[String: Any]] { advancedConfigCount = arr.count } else if let s = bd.value as? String,
                     let d = s.data(using: .utf8),
-                    let arr = try? JSONSerialization.jsonObject(with: d) as? [Any] { advancedConfigCount = arr.count }
-            else { advancedConfigCount = 0 }
+                    let arr = try? JSONSerialization.jsonObject(with: d) as? [Any] { advancedConfigCount = arr.count } else { advancedConfigCount = 0 }
         } else { advancedConfigCount = 0 }
     }
-    
+
     private func resolveOptionProvider(_ key: String) -> [String] {
         let plugin = PluginManager.shared.getPlugin(identifier: "com.mousegestures.window")
         guard let wmp = plugin as? WindowManagementPlugin else { return [] }
