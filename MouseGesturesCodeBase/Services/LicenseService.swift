@@ -2,13 +2,8 @@ import Foundation
 import Cocoa
 import UserNotifications
 
-/// Represents the current license state of the application
-public enum LicenseStatus: String, Codable {
-    case trial = "Trial"
-    case pro = "Pro"
-    case expired = "Expired"
-    case free = "Free"
-}
+// `LicenseStatus` and the pure trial/gating math live in `LicenseLogic.swift`
+// so they can be unit-tested without StoreKit/UserDefaults/UI dependencies.
 
 /// Service that manages application licensing and feature gating
 public class LicenseService: ObservableObject {
@@ -19,7 +14,7 @@ public class LicenseService: ObservableObject {
     
     // MARK: - Constants
     
-    private let trialDurationDays = 30
+    private let trialDurationDays = LicenseLogic.trialDurationDays
     private let firstLaunchKey = "MGFirstLaunchDate"
     private let licenseKeyKey = "MGLicenseKey"
     
@@ -103,17 +98,10 @@ public class LicenseService: ObservableObject {
         
         // Check trial status
         if let firstLaunch = defaults.object(forKey: firstLaunchKey) as? Date {
-            let calendar = Calendar.current
-            let now = Date()
-            
-            let components = calendar.dateComponents([.day], from: firstLaunch, to: now)
-            let daysElapsed = components.day ?? 0
-            
-            if daysElapsed < trialDurationDays {
-                updateStatus(.trial, remaining: trialDurationDays - daysElapsed)
-            } else {
-                updateStatus(.expired, remaining: 0)
-            }
+            let result = LicenseLogic.trialStatus(firstLaunch: firstLaunch,
+                                                  now: Date(),
+                                                  durationDays: trialDurationDays)
+            updateStatus(result.status, remaining: result.remaining)
         } else {
             // First launch - start trial
             let now = Date()
@@ -211,7 +199,7 @@ public class LicenseService: ObservableObject {
     
     /// Returns true if the current license allows Pro features
     public var isPro: Bool {
-        return status == .pro || status == .trial
+        return LicenseLogic.allowsProFeatures(status)
     }
     
     /// Returns true if the app is currently in trial mode

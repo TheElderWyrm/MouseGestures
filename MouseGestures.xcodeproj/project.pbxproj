@@ -118,6 +118,13 @@
 		CD614DA1BF21B8BE018DFE83 /* UpdateService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06BE4D14ACFDD34E9DF4B651 /* UpdateService.swift */; };
 		D37249979159DF938C105417 /* BuiltInSettingsCategories.swift in Sources */ = {isa = PBXBuildFile; fileRef = F50141A48E3DD816B8942DA8 /* BuiltInSettingsCategories.swift */; };
 		F64847768F1F2D8E06D72CBC /* UIStyles.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E94445AB3BF094E20E605FC /* UIStyles.swift */; };
+		DD0000000000000000000007 /* LicenseLogic.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD0000000000000000000001 /* LicenseLogic.swift */; };
+		DD0000000000000000000008 /* AnyCodable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4842F368ED800D1FE6A /* AnyCodable.swift */; };
+		DD0000000000000000000009 /* ScreenZone.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C43B2F368ED800D1FE6A /* ScreenZone.swift */; };
+		DD000000000000000000000A /* LicenseLogic.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD0000000000000000000001 /* LicenseLogic.swift */; };
+		DD000000000000000000000B /* AnyCodableTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD0000000000000000000003 /* AnyCodableTests.swift */; };
+		DD000000000000000000000C /* ScreenZoneTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD0000000000000000000004 /* ScreenZoneTests.swift */; };
+		DD000000000000000000000D /* LicenseLogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD0000000000000000000005 /* LicenseLogicTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -235,6 +242,11 @@
 		F1D3401DA8E9283C5710D113 /* GenericActivation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GenericActivation.swift; path = MouseGesturesCodeBase/Core/GenericActivation.swift; sourceTree = SOURCE_ROOT; };
 		F40B4B2C90F7A03C4CEE2B6A /* VariableStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = VariableStore.swift; path = MouseGesturesCodeBase/Services/VariableStore.swift; sourceTree = SOURCE_ROOT; };
 		F50141A48E3DD816B8942DA8 /* BuiltInSettingsCategories.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BuiltInSettingsCategories.swift; path = MouseGesturesCodeBase/UI/Settings/BuiltInSettingsCategories.swift; sourceTree = SOURCE_ROOT; };
+		DD0000000000000000000001 /* LicenseLogic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LicenseLogic.swift; path = MouseGesturesCodeBase/Services/LicenseLogic.swift; sourceTree = SOURCE_ROOT; };
+		DD0000000000000000000003 /* AnyCodableTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnyCodableTests.swift; sourceTree = "<group>"; };
+		DD0000000000000000000004 /* ScreenZoneTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenZoneTests.swift; sourceTree = "<group>"; };
+		DD0000000000000000000005 /* LicenseLogicTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LicenseLogicTests.swift; sourceTree = "<group>"; };
+		DD0000000000000000000006 /* MouseGesturesTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MouseGesturesTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -431,6 +443,7 @@
 				7A7844B6B3BB98B841022947 /* ActivationComponentService.swift */,
 				F40B4B2C90F7A03C4CEE2B6A /* VariableStore.swift */,
 				2DF54CB5B4E798FC72FBB425 /* LicenseService.swift */,
+				DD0000000000000000000001 /* LicenseLogic.swift */,
 				06BE4D14ACFDD34E9DF4B651 /* UpdateService.swift */,
 				CE0347CE854263CC12FAA6C3 /* TutorialService.swift */,
 				AF364725A69D58F9475F3894 /* PaymentService.swift */,
@@ -545,6 +558,8 @@
 				77EBF1192F9532360027C904 /* Products.storekit */,
 				77A1C4882F368ED800D1FE6A /* MouseGesturesCodeBase */,
 				773428682E6E20FD003AB7F1 /* MouseGestures.app */,
+				DD0000000000000000000006 /* MouseGesturesTests.xctest */,
+				DD0000000000000000000002 /* MouseGesturesTests */,
 			);
 			sourceTree = "<group>";
 		};
@@ -556,6 +571,16 @@
 				6FCB488CA68065730DE07C36 /* LicenseSettingsView.swift */,
 			);
 			name = Settings;
+			sourceTree = "<group>";
+		};
+		DD0000000000000000000002 /* MouseGesturesTests */ = {
+			isa = PBXGroup;
+			children = (
+				DD0000000000000000000003 /* AnyCodableTests.swift */,
+				DD0000000000000000000004 /* ScreenZoneTests.swift */,
+				DD0000000000000000000005 /* LicenseLogicTests.swift */,
+			);
+			path = MouseGesturesTests;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -576,6 +601,21 @@
 			productName = MouseGestures;
 			productReference = 773428682E6E20FD003AB7F1 /* MouseGestures.app */;
 			productType = "com.apple.product-type.application";
+		};
+		DD000000000000000000000F /* MouseGesturesTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DD0000000000000000000012 /* Build configuration list for PBXNativeTarget "MouseGesturesTests" */;
+			buildPhases = (
+				DD000000000000000000000E /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = MouseGesturesTests;
+			productName = MouseGesturesTests;
+			productReference = DD0000000000000000000006 /* MouseGesturesTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
 
@@ -606,6 +646,7 @@
 			projectRoot = "";
 			targets = (
 				A1234567890123456789015A /* MouseGestures */,
+				DD000000000000000000000F /* MouseGesturesTests */,
 			);
 		};
 /* End PBXProject section */
@@ -728,6 +769,7 @@
 				B6334DA2B441A379EF6CBDF7 /* ConditionalActionEditorView.swift in Sources */,
 				5F4845B58FDFC0978ECFFBB6 /* VariableStore.swift in Sources */,
 				0E5D47AB895A8A178352C385 /* LicenseService.swift in Sources */,
+				DD0000000000000000000007 /* LicenseLogic.swift in Sources */,
 				47664568AFCE2E60CBCAD6AF /* LicenseSettingsView.swift in Sources */,
 				56614B068B7EE21330CA141F /* OnboardingView.swift in Sources */,
 				CD614DA1BF21B8BE018DFE83 /* UpdateService.swift in Sources */,
@@ -736,6 +778,19 @@
 				B88740FC8BBF9FCB115197F6 /* TutorialService.swift in Sources */,
 				1951437097EA43F68269CAF2 /* TutorialModifier.swift in Sources */,
 				B33F49F584127F8CF6410EFD /* PaymentService.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DD000000000000000000000E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DD000000000000000000000D /* LicenseLogicTests.swift in Sources */,
+				DD000000000000000000000B /* AnyCodableTests.swift in Sources */,
+				DD000000000000000000000C /* ScreenZoneTests.swift in Sources */,
+				DD000000000000000000000A /* LicenseLogic.swift in Sources */,
+				DD0000000000000000000008 /* AnyCodable.swift in Sources */,
+				DD0000000000000000000009 /* ScreenZone.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -927,6 +982,56 @@
 			};
 			name = Release;
 		};
+		DD0000000000000000000010 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_TESTING_SEARCH_PATHS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.MouseGesturesTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		DD0000000000000000000011 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_TESTING_SEARCH_PATHS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.MouseGesturesTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -944,6 +1049,15 @@
 			buildConfigurations = (
 				A1234567890123456789016A /* Debug */,
 				A1234567890123456789016B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		DD0000000000000000000012 /* Build configuration list for PBXNativeTarget "MouseGesturesTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DD0000000000000000000010 /* Debug */,
+				DD0000000000000000000011 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
