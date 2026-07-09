@@ -212,7 +212,7 @@ fork that must be decided before a real release:
   `exportOptions.plist`, no entitlements file, and CI that cannot sign or
   notarize.
 
-**Current deployment status, the full blocker list, and this deploy-target
-decision are tracked in [`PROJECT_NOTES.md`](PROJECT_NOTES.md).** A complete
-release runbook (`DEPLOYMENT.md`) will be added once the deploy target is chosen
-and signing credentials are available.
+**The full release runbook — the deploy-target fork, the signing-config fixes,
+the required GitHub Actions secrets, and how to cut a release — is in
+[`DEPLOYMENT.md`](DEPLOYMENT.md).** Current deployment status and history are
+tracked in [`PROJECT_NOTES.md`](PROJECT_NOTES.md).

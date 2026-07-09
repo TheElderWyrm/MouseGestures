@@ -1,45 +1,179 @@
 name: Build and Release
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Two-stage pipeline.
+#
+#   1. verify   — Signing-free build proof. Runs with NO secrets on pull requests,
+#                 manual dispatch, and as a required gate before any tagged
+#                 release. Forks and secret-less runs can therefore still prove
+#                 the app compiles. (The full build + unit tests + lint on every
+#                 push lives in ci.yml; this job is release.yml's own guard so a
+#                 tag can never reach the signing stage on top of a broken build.)
+#
+#   2. release  — Tag-triggered (v*). Signs with a Developer ID certificate,
+#                 notarizes, staples, packages a DMG, and publishes a GitHub
+#                 Release. `needs: verify` and gated to tag refs.
+#
+# ⚠️  The release job is BLOCKED and will fail until three things are resolved
+#     (see DEPLOYMENT.md for the full runbook):
+#       (a) the deploy-target FORK is decided — StoreKit IAP (Mac App Store) vs.
+#           Developer-ID DMG. This file assumes the DMG path.
+#       (b) the signing config is fixed — real bundle id (currently the
+#           placeholder com.example.MouseGestures), ENABLE_HARDENED_RUNTIME=YES,
+#           an entitlements file, a Developer ID Application identity, and a
+#           real teamID in exportOptions.plist (currently YOUR_TEAM_ID).
+#       (c) the repository secrets below are configured.
+#
+# Required repository secrets for the `release` job (never commit real values):
+#     SIGNING_CERTIFICATE_P12_BASE64  base64 of the Developer ID Application .p12
+#     SIGNING_CERTIFICATE_PASSWORD    password protecting that .p12
+#     KEYCHAIN_PASSWORD               throwaway password for the ephemeral keychain
+#   Notarization — provide exactly ONE credential set:
+#     (a) App Store Connect API key (recommended):
+#         NOTARY_API_KEY_ID, NOTARY_API_ISSUER_ID, NOTARY_API_KEY_P8_BASE64
+#     (b) Apple ID + app-specific password:
+#         NOTARY_APPLE_ID, NOTARY_PASSWORD, NOTARY_TEAM_ID
+# ─────────────────────────────────────────────────────────────────────────────
+
 on:
   push:
     tags:
       - 'v*'
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  build:
+  verify:
+    name: Verify build (unsigned, no secrets)
     runs-on: macos-latest
-    
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Xcode
-      uses: maxim-lobanov/setup-xcode@v1
-      with:
-        xcode-version: 'latest'
+      - name: Select latest Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
 
-    - name: Build and Archive
-      run: |
-        xcodebuild archive \
-          -project "MouseGestures.xcodeproj" \
-          -scheme MouseGestures \
-          -configuration Release \
-          -archivePath MouseGestures.xcarchive
+      - name: Build (Release, unsigned)
+        run: |
+          xcodebuild build \
+            -project "MouseGestures.xcodeproj" \
+            -scheme MouseGestures \
+            -configuration Release \
+            -destination 'platform=macOS' \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+            | xcbeautify || (echo "::error::Release build failed" && exit 1)
 
-    - name: Export App
-      run: |
-        xcodebuild -exportArchive \
-          -archivePath MouseGestures.xcarchive \
-          -exportOptionsPlist exportOptions.plist \
-          -exportPath ./build
+  release:
+    name: Sign, notarize & publish DMG
+    needs: verify
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Create DMG
-      run: |
-        hdiutil create -volname "MouseGestures" -srcfolder ./build/MouseGestures.app -ov -format UDZO MouseGestures.dmg
+      - name: Select latest Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
 
-    - name: Release
-      uses: softprops/action-gh-release@v1
-      with:
-        files: MouseGestures.dmg
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # ── Preflight: fail fast with a clear message if signing secrets are absent ──
+      - name: Check release secrets are configured
+        env:
+          CERT_P12_BASE64: ${{ secrets.SIGNING_CERTIFICATE_P12_BASE64 }}
+        run: |
+          if [ -z "$CERT_P12_BASE64" ]; then
+            echo "::error::Release secrets are not configured. This job cannot sign."
+            echo "::error::See DEPLOYMENT.md § 'GitHub Actions secrets' for the full list."
+            exit 1
+          fi
+
+      # ── Import the Developer ID certificate into an ephemeral keychain ──
+      # Standard security(1) recipe; the keychain is thrown away with the runner.
+      - name: Import signing certificate
+        env:
+          CERT_P12_BASE64: ${{ secrets.SIGNING_CERTIFICATE_P12_BASE64 }}
+          CERT_PASSWORD: ${{ secrets.SIGNING_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          KEYCHAIN="$RUNNER_TEMP/signing.keychain-db"
+          echo "$CERT_P12_BASE64" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security import "$RUNNER_TEMP/cert.p12" -k "$KEYCHAIN" -P "$CERT_PASSWORD" \
+            -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: \
+            -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security list-keychains -d user -s "$KEYCHAIN" \
+            $(security list-keychains -d user | tr -d '"')
+          rm -f "$RUNNER_TEMP/cert.p12"
+
+      - name: Build and archive (signed, hardened runtime)
+        run: |
+          # NOTE: requires ENABLE_HARDENED_RUNTIME=YES + a real bundle id/identity
+          # in the project config before this will actually notarize (see DEPLOYMENT.md).
+          xcodebuild archive \
+            -project "MouseGestures.xcodeproj" \
+            -scheme MouseGestures \
+            -configuration Release \
+            -archivePath "$RUNNER_TEMP/MouseGestures.xcarchive" \
+            ENABLE_HARDENED_RUNTIME=YES \
+            | xcbeautify
+
+      - name: Export app (Developer ID)
+        run: |
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/MouseGestures.xcarchive" \
+            -exportOptionsPlist exportOptions.plist \
+            -exportPath "$RUNNER_TEMP/export" \
+            | xcbeautify
+
+      - name: Create DMG
+        run: |
+          hdiutil create -volname "MouseGestures" \
+            -srcfolder "$RUNNER_TEMP/export/MouseGestures.app" \
+            -ov -format UDZO "$RUNNER_TEMP/MouseGestures.dmg"
+
+      # ── TODO(notarization): STUB — not yet implemented. ──────────────────────
+      # A Developer-ID DMG must be notarized by Apple and stapled, or Gatekeeper
+      # will refuse to open it. Wire this up once notarization creds exist. The
+      # DMG can be submitted directly (notarytool accepts .dmg) and stapled.
+      #
+      #   # App Store Connect API key path (recommended):
+      #   echo "$NOTARY_API_KEY_P8_BASE64" | base64 --decode > "$RUNNER_TEMP/AuthKey.p8"
+      #   xcrun notarytool submit "$RUNNER_TEMP/MouseGestures.dmg" \
+      #     --key "$RUNNER_TEMP/AuthKey.p8" \
+      #     --key-id "$NOTARY_API_KEY_ID" \
+      #     --issuer "$NOTARY_API_ISSUER_ID" \
+      #     --wait
+      #
+      #   # OR Apple ID + app-specific password path:
+      #   xcrun notarytool submit "$RUNNER_TEMP/MouseGestures.dmg" \
+      #     --apple-id "$NOTARY_APPLE_ID" \
+      #     --password "$NOTARY_PASSWORD" \
+      #     --team-id "$NOTARY_TEAM_ID" \
+      #     --wait
+      #
+      #   # Then staple the ticket onto the DMG:
+      #   xcrun stapler staple "$RUNNER_TEMP/MouseGestures.dmg"
+      #   xcrun stapler validate "$RUNNER_TEMP/MouseGestures.dmg"
+      - name: Notarize and staple (TODO — stub)
+        run: |
+          echo "::warning::Notarization + stapling not implemented yet (TODO stub)."
+          echo "::warning::The published DMG is NOT notarized; Gatekeeper will block it."
+          echo "See DEPLOYMENT.md § 'Notarization' for the wiring."
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ runner.temp }}/MouseGestures.dmg
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
