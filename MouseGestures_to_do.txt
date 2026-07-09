@@ -41,3 +41,6 @@ FUTURE / PLANNED
 - [DONE 2026-03-29] Combine mouse click and mouse drag into a single input type
     - [DONE] "Either" mode in Type picker: fires on click-in-zone OR drag-into-zone
     - [DONE] Stored as DragTypeConfig(allowClick: true); backward compatible with existing gestures
+
+- [DONE] Notification showing up about trial expiration when app opens even if pro is already purchased
+- [DONE] Add trigger configuration step to gesture tutorial

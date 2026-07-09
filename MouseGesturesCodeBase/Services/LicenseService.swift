@@ -32,21 +32,30 @@ public class LicenseService: ObservableObject {
             refreshLicenseStatus()
         }
     }
-    
+
     private let defaults = UserDefaults.standard
     private let lastNotifiedThresholdKey = "MGLastNotifiedTrialThreshold"
-    
+
     private var checkTimer: Timer?
     private let lastCheckDateKey = "MGLastTrialCheckDate"
+    // Suppresses trial notifications until PaymentService has finished its async StoreKit load.
+    // Prevents a false "trial expired" notification firing before Pro status is confirmed.
+    private var notificationsEnabled = false
 
     // MARK: - Initialization
-    
+
     private init() {
-        refreshLicenseStatus()
-        
-        // Observe the PaymentService directly
+        refreshLicenseStatus() // Silent: notificationsEnabled is false, PaymentService not loaded yet
+
+        // Observe PaymentService — skip the initial @Published emission (pre-async-load empty set)
         Task { @MainActor in
+            var isFirstEmission = true
             for await _ in PaymentService.shared.$purchasedProductIDs.values {
+                if isFirstEmission {
+                    isFirstEmission = false
+                    continue // Skip initial value; PaymentService async load hasn't run yet
+                }
+                self.notificationsEnabled = true
                 self.refreshLicenseStatus()
             }
         }
@@ -68,9 +77,9 @@ public class LicenseService: ObservableObject {
     private func performDailyCheck() {
         let now = Date()
         let lastCheck = defaults.object(forKey: lastCheckDateKey) as? Date ?? .distantPast
-        
-        // Check if it's a new day or at least 24 hours passed
+
         if !Calendar.current.isDate(now, inSameDayAs: lastCheck) {
+            notificationsEnabled = true // PaymentService is long-loaded by this point
             refreshLicenseStatus()
             defaults.set(now, forKey: lastCheckDateKey)
         }
@@ -136,6 +145,7 @@ public class LicenseService: ObservableObject {
     }
 
     private func checkTrialThresholds(status: LicenseStatus, remaining: Int) {
+        guard notificationsEnabled else { return }
         // Only notify for trial or just expired
         guard (status == .trial || status == .expired) && !PaymentService.shared.isProUnlocked else { return }
         

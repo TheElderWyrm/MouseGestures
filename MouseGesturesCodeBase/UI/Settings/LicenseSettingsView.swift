@@ -112,7 +112,7 @@ struct LicenseSettingsView: View {
                     proFeaturesList
                 }
                 
-                
+                /*
                 if UIServices.shared.isDeveloperModeEnabled() {
                     Divider()
                     VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
@@ -144,7 +144,7 @@ struct LicenseSettingsView: View {
                         }
                     }
                 }
-                
+                */
             }
             .padding(MGStyle.Spacing.xl)
         }

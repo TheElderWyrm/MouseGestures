@@ -85,6 +85,7 @@ struct GestureConfigurationSheet: View {
                     }
 
                     activationComponentsSection
+                        .tutorialStep(targetState: .configureTrigger, currentState: $uiServices.tutorialService.state, text: "Now configure when this gesture activates — set a screen zone, modifier keys, or mouse input.", edge: .bottom)
                     actionSection
                     timingSettingsSection
                 }
@@ -106,7 +107,7 @@ struct GestureConfigurationSheet: View {
         .frame(width: 750, height: 700)
         .onChange(of: selectedActionId) { newValue in
             if !newValue.isEmpty {
-                uiServices.tutorialService.advance(from: .selectAction, to: .saveGesture)
+                uiServices.tutorialService.advance(from: .selectAction, to: .configureTrigger)
             }
         }
         .alert("Gesture Conflict", isPresented: $showingConflictAlert) {

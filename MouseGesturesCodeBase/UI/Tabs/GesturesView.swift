@@ -145,6 +145,13 @@ struct GesturesView: View {
                 uiServices.tutorialService.advance(from: .clickAddGesture, to: .selectAction)
             }
         }
+        .onChange(of: uiServices.tutorialService.state) { newState in
+            // "Got it" on the clickAddGesture step advances state without opening the sheet;
+            // open it here so the next tutorial step (inside the sheet) can appear.
+            if newState == .selectAction && activeSheet == nil {
+                activeSheet = .addGesture
+            }
+        }
         .onAppear { uiServices.loadData() }
     }
     

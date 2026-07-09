@@ -6,6 +6,7 @@ public enum TutorialState: String, Codable {
     case start
     case clickAddGesture
     case selectAction
+    case configureTrigger
     case saveGesture
     case complete
 }

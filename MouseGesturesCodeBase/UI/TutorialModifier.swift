@@ -55,10 +55,10 @@ struct TutorialPopoverModifier: ViewModifier {
     private func advanceState() {
         switch targetState {
         case .clickAddGesture:
-            // This normally happens when they click the button, 
-            // but we can advance it if they just click 'Got it'
             currentState = .selectAction
         case .selectAction:
+            currentState = .configureTrigger
+        case .configureTrigger:
             currentState = .saveGesture
         case .saveGesture:
             TutorialService.shared.finish()
