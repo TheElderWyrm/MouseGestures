@@ -67,7 +67,7 @@ trap 'rm -rf "$STAGE"' EXIT
 cp -R "$APP" "$STAGE/"
 ln -s /Applications "$STAGE/Applications"   # drag-to-install target
 
-echo "==> Creating $DMG…"
+echo "==> Creating ${DMG}…"
 mkdir -p "$DIST_DIR"
 rm -f "$DMG"
 hdiutil create \
