@@ -198,21 +198,30 @@ python3 add_remove_files_xcode.py remove 'MouseGesturesCodeBase/.../OldFile.swif
 
 ## Deployment
 
-The project is **not yet release-ready**, and the current build config is **not
-notarizable / not shippable as-is**. There is also an unresolved architectural
-fork that must be decided before a real release:
+**Distribution model:** direct distribution — a Developer-ID-signed, notarized
+**DMG** (decided 2026-07-13). The StoreKit 2 in-app-purchase Pro path is being
+replaced with an offline license mechanism (StoreKit IAP only works for
+Mac-App-Store apps); that refactor is the last fork-driven code task.
 
-- **StoreKit 2 in-app purchases only work for Mac-App-Store-distributed apps**,
-  but `exportOptions.plist` and `.github/workflows/release.yml` are set up for a
-  Developer-ID-signed, notarized **DMG on GitHub Releases**. These two
-  distribution models are mutually exclusive; one must be chosen.
-- Additional config blockers include a placeholder bundle ID
-  (`com.example.MouseGestures`), a dev-only signing identity (`Apple Development`),
-  hardened runtime disabled, a `YOUR_TEAM_ID` placeholder in
-  `exportOptions.plist`, no entitlements file, and CI that cannot sign or
-  notarize.
+**Config status:** bundle id (`com.mousegestures.MouseGestures`), team
+(`2RZ7SBH74J`), hardened runtime (Release), and the entitlements file are all in
+place. The only remaining signing gap is the `Developer ID Application`
+certificate, pending Apple Developer enrollment.
 
-**The full release runbook — the deploy-target fork, the signing-config fixes,
-the required GitHub Actions secrets, and how to cut a release — is in
-[`DEPLOYMENT.md`](DEPLOYMENT.md).** Current deployment status and history are
-tracked in [`PROJECT_NOTES.md`](PROJECT_NOTES.md).
+### Package an (unsigned) DMG locally
+
+```sh
+./scripts/package_dmg.sh
+# -> dist/MouseGestures-<version>-unsigned.dmg
+```
+
+This produces a real, installable disk image today. It is **unsigned and
+un-notarized**, so Gatekeeper blocks it on other machines (right-click → Open, or
+strip the quarantine attribute, to run it elsewhere) — it's for local
+verification, not end-user distribution. The signed + notarized release DMG is cut
+by CI on a version tag.
+
+**The full release runbook — signing config, the required GitHub Actions secrets,
+notarization, and how to cut a release — is in [`DEPLOYMENT.md`](DEPLOYMENT.md).**
+Current deployment status and history are tracked in
+[`PROJECT_NOTES.md`](PROJECT_NOTES.md).

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  Direct-distribution (Developer ID + notarized) entitlements.
+
+	  App Sandbox is intentionally NOT enabled: MouseGestures needs system-wide
+	  input monitoring and control that the sandbox forbids, and direct
+	  distribution does not require it.
+
+	  Hardened Runtime is enabled (ENABLE_HARDENED_RUNTIME=YES) for notarization.
+	  The only Hardened-Runtime resource-access exception this app needs is the
+	  ability to send Apple events (AppleScript-based actions: volume, brightness,
+	  controlling other apps). Accessibility / input monitoring are granted at
+	  runtime via TCC (System Settings > Privacy & Security), not via entitlements.
+	-->
+	<key>com.apple.security.automation.apple-events</key>
+	<true/>
+</dict>
+</plist>

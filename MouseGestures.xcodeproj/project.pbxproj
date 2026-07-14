@@ -110,7 +110,6 @@
 		77A1C4E72F368ED800D1FE6A /* ServicePluginProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4492F368ED800D1FE6A /* ServicePluginProtocol.swift */; };
 		77BC7E332FA5899100E631AF /* TrialExpiredProfileSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77BC7E322FA5899100E631AF /* TrialExpiredProfileSelectionView.swift */; };
 		9960454DBE0FEE05BE520654 /* BrowserActionsPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24834D81A3CF701D5ADE9D92 /* BrowserActionsPlugin.swift */; };
-		B33F49F584127F8CF6410EFD /* PaymentService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF364725A69D58F9475F3894 /* PaymentService.swift */; };
 		B6334DA2B441A379EF6CBDF7 /* ConditionalActionEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AFE406092050617E48F85A5 /* ConditionalActionEditorView.swift */; };
 		B88740FC8BBF9FCB115197F6 /* TutorialService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE0347CE854263CC12FAA6C3 /* TutorialService.swift */; };
 		BA98418F85ECA410558094B0 /* ActivationComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 046848D79A549E69C644FFD7 /* ActivationComponents.swift */; };
@@ -119,6 +118,9 @@
 		D37249979159DF938C105417 /* BuiltInSettingsCategories.swift in Sources */ = {isa = PBXBuildFile; fileRef = F50141A48E3DD816B8942DA8 /* BuiltInSettingsCategories.swift */; };
 		F64847768F1F2D8E06D72CBC /* UIStyles.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E94445AB3BF094E20E605FC /* UIStyles.swift */; };
 		DD0000000000000000000007 /* LicenseLogic.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD0000000000000000000001 /* LicenseLogic.swift */; };
+		DD0000000000000000000021 /* LicenseKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD0000000000000000000020 /* LicenseKey.swift */; };
+		DD0000000000000000000022 /* LicenseKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD0000000000000000000020 /* LicenseKey.swift */; };
+		DD0000000000000000000024 /* LicenseKeyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD0000000000000000000023 /* LicenseKeyTests.swift */; };
 		DD0000000000000000000008 /* AnyCodable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4842F368ED800D1FE6A /* AnyCodable.swift */; };
 		DD0000000000000000000009 /* ScreenZone.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C43B2F368ED800D1FE6A /* ScreenZone.swift */; };
 		DD000000000000000000000A /* LicenseLogic.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD0000000000000000000001 /* LicenseLogic.swift */; };
@@ -231,18 +233,18 @@
 		77A1C4852F368ED800D1FE6A /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
 		77A1C4872F368ED800D1FE6A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		77BC7E322FA5899100E631AF /* TrialExpiredProfileSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrialExpiredProfileSelectionView.swift; sourceTree = "<group>"; };
-		77EBF1192F9532360027C904 /* Products.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; name = Products.storekit; path = MouseGesturesCodeBase/Products.storekit; sourceTree = "<group>"; };
 		7A7844B6B3BB98B841022947 /* ActivationComponentService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActivationComponentService.swift; path = MouseGesturesCodeBase/Services/ActivationComponentService.swift; sourceTree = SOURCE_ROOT; };
 		89214489A146B36C7BA39BCC /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = OnboardingView.swift; path = MouseGesturesCodeBase/UI/OnboardingView.swift; sourceTree = SOURCE_ROOT; };
 		8AFE406092050617E48F85A5 /* ConditionalActionEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ConditionalActionEditorView.swift; path = MouseGesturesCodeBase/UI/ConditionalActionEditorView.swift; sourceTree = SOURCE_ROOT; };
 		8E94445AB3BF094E20E605FC /* UIStyles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UIStyles.swift; path = MouseGesturesCodeBase/UI/UIStyles.swift; sourceTree = SOURCE_ROOT; };
 		984443C1AFEF57DDC1EE4E15 /* UpdateNotificationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UpdateNotificationView.swift; path = MouseGesturesCodeBase/UI/UpdateNotificationView.swift; sourceTree = SOURCE_ROOT; };
-		AF364725A69D58F9475F3894 /* PaymentService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PaymentService.swift; path = MouseGesturesCodeBase/Services/PaymentService.swift; sourceTree = SOURCE_ROOT; };
 		CE0347CE854263CC12FAA6C3 /* TutorialService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TutorialService.swift; path = MouseGesturesCodeBase/Services/TutorialService.swift; sourceTree = SOURCE_ROOT; };
 		F1D3401DA8E9283C5710D113 /* GenericActivation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GenericActivation.swift; path = MouseGesturesCodeBase/Core/GenericActivation.swift; sourceTree = SOURCE_ROOT; };
 		F40B4B2C90F7A03C4CEE2B6A /* VariableStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = VariableStore.swift; path = MouseGesturesCodeBase/Services/VariableStore.swift; sourceTree = SOURCE_ROOT; };
 		F50141A48E3DD816B8942DA8 /* BuiltInSettingsCategories.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BuiltInSettingsCategories.swift; path = MouseGesturesCodeBase/UI/Settings/BuiltInSettingsCategories.swift; sourceTree = SOURCE_ROOT; };
 		DD0000000000000000000001 /* LicenseLogic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LicenseLogic.swift; path = MouseGesturesCodeBase/Services/LicenseLogic.swift; sourceTree = SOURCE_ROOT; };
+		DD0000000000000000000020 /* LicenseKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LicenseKey.swift; path = MouseGesturesCodeBase/Services/LicenseKey.swift; sourceTree = SOURCE_ROOT; };
+		DD0000000000000000000023 /* LicenseKeyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LicenseKeyTests.swift; sourceTree = "<group>"; };
 		DD0000000000000000000003 /* AnyCodableTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnyCodableTests.swift; sourceTree = "<group>"; };
 		DD0000000000000000000004 /* ScreenZoneTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenZoneTests.swift; sourceTree = "<group>"; };
 		DD0000000000000000000005 /* LicenseLogicTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LicenseLogicTests.swift; sourceTree = "<group>"; };
@@ -444,9 +446,9 @@
 				F40B4B2C90F7A03C4CEE2B6A /* VariableStore.swift */,
 				2DF54CB5B4E798FC72FBB425 /* LicenseService.swift */,
 				DD0000000000000000000001 /* LicenseLogic.swift */,
+				DD0000000000000000000020 /* LicenseKey.swift */,
 				06BE4D14ACFDD34E9DF4B651 /* UpdateService.swift */,
 				CE0347CE854263CC12FAA6C3 /* TutorialService.swift */,
-				AF364725A69D58F9475F3894 /* PaymentService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -555,7 +557,6 @@
 		A1234567890123456789014D = {
 			isa = PBXGroup;
 			children = (
-				77EBF1192F9532360027C904 /* Products.storekit */,
 				77A1C4882F368ED800D1FE6A /* MouseGesturesCodeBase */,
 				773428682E6E20FD003AB7F1 /* MouseGestures.app */,
 				DD0000000000000000000006 /* MouseGesturesTests.xctest */,
@@ -579,6 +580,7 @@
 				DD0000000000000000000003 /* AnyCodableTests.swift */,
 				DD0000000000000000000004 /* ScreenZoneTests.swift */,
 				DD0000000000000000000005 /* LicenseLogicTests.swift */,
+				DD0000000000000000000023 /* LicenseKeyTests.swift */,
 			);
 			path = MouseGesturesTests;
 			sourceTree = "<group>";
@@ -770,6 +772,7 @@
 				5F4845B58FDFC0978ECFFBB6 /* VariableStore.swift in Sources */,
 				0E5D47AB895A8A178352C385 /* LicenseService.swift in Sources */,
 				DD0000000000000000000007 /* LicenseLogic.swift in Sources */,
+				DD0000000000000000000021 /* LicenseKey.swift in Sources */,
 				47664568AFCE2E60CBCAD6AF /* LicenseSettingsView.swift in Sources */,
 				56614B068B7EE21330CA141F /* OnboardingView.swift in Sources */,
 				CD614DA1BF21B8BE018DFE83 /* UpdateService.swift in Sources */,
@@ -777,7 +780,6 @@
 				9960454DBE0FEE05BE520654 /* BrowserActionsPlugin.swift in Sources */,
 				B88740FC8BBF9FCB115197F6 /* TutorialService.swift in Sources */,
 				1951437097EA43F68269CAF2 /* TutorialModifier.swift in Sources */,
-				B33F49F584127F8CF6410EFD /* PaymentService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -789,6 +791,8 @@
 				DD000000000000000000000B /* AnyCodableTests.swift in Sources */,
 				DD000000000000000000000C /* ScreenZoneTests.swift in Sources */,
 				DD000000000000000000000A /* LicenseLogic.swift in Sources */,
+				DD0000000000000000000022 /* LicenseKey.swift in Sources */,
+				DD0000000000000000000024 /* LicenseKeyTests.swift in Sources */,
 				DD0000000000000000000008 /* AnyCodable.swift in Sources */,
 				DD0000000000000000000009 /* ScreenZone.swift in Sources */,
 			);
@@ -923,7 +927,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = "";
+				CODE_SIGN_ENTITLEMENTS = MouseGesturesCodeBase/MouseGestures.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
@@ -955,7 +959,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = "";
+				CODE_SIGN_ENTITLEMENTS = MouseGesturesCodeBase/MouseGestures.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
@@ -963,7 +967,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = 2RZ7SBH74J;
-				ENABLE_HARDENED_RUNTIME = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = MouseGesturesCodeBase/Info.plist;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";

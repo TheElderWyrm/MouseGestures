@@ -2,8 +2,11 @@ import Foundation
 import Cocoa
 import UserNotifications
 
-// `LicenseStatus` and the pure trial/gating math live in `LicenseLogic.swift`
-// so they can be unit-tested without StoreKit/UserDefaults/UI dependencies.
+// `LicenseStatus` and the pure trial/gating math live in `LicenseLogic.swift`,
+// and offline license-key validation lives in `LicenseKey.swift`, so both can be
+// unit-tested without UserDefaults/UI dependencies. Pro is unlocked by a locally
+// verified license key (see `LicenseKey`) — the StoreKit IAP path was removed for
+// direct (non–App-Store) distribution.
 
 /// Service that manages application licensing and feature gating
 public class LicenseService: ObservableObject {
@@ -33,27 +36,15 @@ public class LicenseService: ObservableObject {
 
     private var checkTimer: Timer?
     private let lastCheckDateKey = "MGLastTrialCheckDate"
-    // Suppresses trial notifications until PaymentService has finished its async StoreKit load.
-    // Prevents a false "trial expired" notification firing before Pro status is confirmed.
+    // Suppresses the initial refresh at launch from firing a "trial expired"
+    // notification before the UI is up; re-enabled immediately after.
     private var notificationsEnabled = false
 
     // MARK: - Initialization
 
     private init() {
-        refreshLicenseStatus() // Silent: notificationsEnabled is false, PaymentService not loaded yet
-
-        // Observe PaymentService — skip the initial @Published emission (pre-async-load empty set)
-        Task { @MainActor in
-            var isFirstEmission = true
-            for await _ in PaymentService.shared.$purchasedProductIDs.values {
-                if isFirstEmission {
-                    isFirstEmission = false
-                    continue // Skip initial value; PaymentService async load hasn't run yet
-                }
-                self.notificationsEnabled = true
-                self.refreshLicenseStatus()
-            }
-        }
+        refreshLicenseStatus() // Silent: notificationsEnabled is false during first launch refresh
+        notificationsEnabled = true
 
         // Start periodic check timer (every hour to be safe, but checks date)
         startCheckTimer()
@@ -74,7 +65,7 @@ public class LicenseService: ObservableObject {
         let lastCheck = defaults.object(forKey: lastCheckDateKey) as? Date ?? .distantPast
 
         if !Calendar.current.isDate(now, inSameDayAs: lastCheck) {
-            notificationsEnabled = true // PaymentService is long-loaded by this point
+            notificationsEnabled = true // Safe to notify after first-launch refresh
             refreshLicenseStatus()
             defaults.set(now, forKey: lastCheckDateKey)
         }
@@ -90,8 +81,8 @@ public class LicenseService: ObservableObject {
             return
         }
 
-        // Check for actual purchase via StoreKit
-        if PaymentService.shared.isProUnlocked {
+        // Check for a locally stored, offline-verified Pro license key
+        if hasValidLicense {
             updateStatus(.pro, remaining: 0)
             return
         }
@@ -135,7 +126,7 @@ public class LicenseService: ObservableObject {
     private func checkTrialThresholds(status: LicenseStatus, remaining: Int) {
         guard notificationsEnabled else { return }
         // Only notify for trial or just expired
-        guard (status == .trial || status == .expired) && !PaymentService.shared.isProUnlocked else { return }
+        guard (status == .trial || status == .expired) && !hasValidLicense else { return }
 
         let thresholds = [3, 1, 0]
         let currentThreshold = status == .expired ? 0 : remaining
@@ -168,7 +159,7 @@ public class LicenseService: ObservableObject {
 
     private func sendExpirationNotification(daysRemaining: Int) {
         // If Pro is already unlocked, don't send anything
-        if PaymentService.shared.isProUnlocked { return }
+        if hasValidLicense { return }
 
         let content = UNMutableNotificationContent()
         content.categoryIdentifier = "TRIAL_EXPIRATION"
@@ -207,9 +198,35 @@ public class LicenseService: ObservableObject {
         return status == .trial
     }
 
-    /// Purchase the Pro version (no longer simulated)
-    public func purchasePro() {
-        // This is now handled via PaymentService in the UI
+    // MARK: - Offline License Activation
+
+    /// True if a valid Pro license key is currently stored.
+    public var hasValidLicense: Bool {
+        guard let key = defaults.string(forKey: licenseKeyKey), !key.isEmpty else { return false }
+        return LicenseKey.isValid(key)
+    }
+
+    /// The stored license key formatted for display, or `nil` if none is stored.
+    public var storedLicenseKeyDisplay: String? {
+        guard let key = defaults.string(forKey: licenseKeyKey), !key.isEmpty else { return nil }
+        return LicenseKey.format(key)
+    }
+
+    /// Validates and, if valid, stores a license key to unlock Pro offline.
+    /// - Returns: `true` if the key was accepted and Pro was unlocked; `false` if invalid.
+    @discardableResult
+    public func activateLicense(_ rawKey: String) -> Bool {
+        let normalized = LicenseKey.normalize(rawKey)
+        guard LicenseKey.isValid(normalized) else { return false }
+        // Storing forceFreeMode wins over a key only while explicitly set for testing.
+        defaults.set(normalized, forKey: licenseKeyKey)
+        refreshLicenseStatus()
+        return true
+    }
+
+    /// Removes any stored license key and reverts to trial/free status.
+    public func deactivateLicense() {
+        defaults.removeObject(forKey: licenseKeyKey)
         refreshLicenseStatus()
     }
 
@@ -243,8 +260,9 @@ public class LicenseService: ObservableObject {
 
     /// Removes any Pro license (for testing purposes)
     public func removeProLicense() {
-        // Clear trial and pro indicators
+        // Clear trial, stored license key, and pro indicators
         defaults.removeObject(forKey: firstLaunchKey)
+        defaults.removeObject(forKey: licenseKeyKey)
         defaults.set(true, forKey: "MGFootprintForcedFree") // Optional indicator
         forceFreeMode = true // This will trigger a refresh via didSet
 

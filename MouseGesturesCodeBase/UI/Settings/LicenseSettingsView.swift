@@ -1,203 +1,160 @@
 import SwiftUI
-import StoreKit
 
 struct LicenseSettingsView: View {
     @ObservedObject var licenseService = LicenseService.shared
-    @StateObject var paymentService = PaymentService.shared
-    @State private var showingPurchaseAlert = false
-    @State private var isPurchasing = false
-    @State private var purchaseError: String?
+    @State private var licenseKeyInput = ""
+    @State private var showingActivatedAlert = false
+    @State private var activationError: String?
+
+    private let purchaseURL = URL(string: "https://mousegestures.app/purchase")
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: MGStyle.Spacing.xl) {
-                HStack(spacing: MGStyle.Spacing.xl) {
-                    ZStack {
-                        Circle()
-                            .fill(statusColor.opacity(0.1))
-                            .frame(width: 48, height: 48)
-                        Image(systemName: statusIcon)
-                            .font(.system(size: 24, weight: .semibold))
-                            .foregroundColor(statusColor)
-                    }
+                statusCard
 
-                    VStack(alignment: .leading, spacing: 2) {
-                        if paymentService.isProUnlocked {
-                            if paymentService.purchasedProductIDs.contains("com.mousegestures.pro.onetime") {
-                                Text("Pro (One-Time)")
-                                    .font(.system(size: MGStyle.FontSize.heading, weight: .bold))
-                                Text("Thank you for your one-time purchase!")
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary)
-                            } else if paymentService.purchasedProductIDs.contains("com.mousegestures.pro.subscription") {
-                                Text("Pro (Monthly)")
-                                    .font(.system(size: MGStyle.FontSize.heading, weight: .bold))
-
-                                if let expirationDate = paymentService.activeSubscriptionExpirationDate {
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text("Renews on \(expirationDate.formatted(date: .long, time: .omitted))")
-                                            .font(.subheadline)
-                                            .foregroundColor(.secondary)
-
-                                        Button("Manage Subscription...") {
-                                            if let url = URL(string: "https://apps.apple.com/account/subscriptions") {
-                                                NSWorkspace.shared.open(url)
-                                            }
-                                        }
-                                        .buttonStyle(.link)
-                                        .font(.caption)
-                                    }
-                                } else {
-                                    Text("Active subscription")
-                                        .font(.subheadline)
-                                        .foregroundColor(.secondary)
-                                }
-                            } else {
-                                Text("Pro Activated")
-                                    .font(.system(size: MGStyle.FontSize.heading, weight: .bold))
-                            }
-                        } else {
-                            Text(licenseService.status == .expired ? "Free" : licenseService.status.rawValue)
-                                .font(.system(size: MGStyle.FontSize.heading, weight: .bold))
-
-                            if licenseService.isTrial {
-                                Text("\(licenseService.trialDaysRemaining) days remaining in your trial")
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary)
-                            } else {
-                                Text("Basic features only")
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                    }
-
-                    Spacer()
-                }
-                .padding(MGStyle.Spacing.lg)
-                .background(RoundedRectangle(cornerRadius: MGStyle.Corner.md).fill(MGStyle.Colors.contentBackground))
-                .overlay(RoundedRectangle(cornerRadius: MGStyle.Corner.md).stroke(MGStyle.Colors.separator, lineWidth: 0.5))
-
-                if licenseService.status != .pro {
-                    VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
-                        Text(licenseService.isTrial ? "Purchase Pro License" : "Upgrade to Pro")
-                            .font(.headline)
-
-                        if paymentService.products.isEmpty {
-                            HStack {
-                                ProgressView().controlSize(.small)
-                                Text("Loading products...")
-                                    .foregroundColor(.secondary)
-                                    .font(.caption)
-                            }
-                        } else {
-                            VStack(spacing: MGStyle.Spacing.md) {
-                                ForEach(paymentService.products, id: \.id) { product in
-                                    purchaseRow(for: product)
-                                }
-                            }
-                        }
-
-                        Button("Restore Previous Purchases") {
-                            Task {
-                                await paymentService.restorePurchases()
-                            }
-                        }
-                        .buttonStyle(.link)
-                        .font(.caption)
-                    }
-                    .padding(MGStyle.Spacing.lg)
-                    .background(RoundedRectangle(cornerRadius: MGStyle.Corner.md).fill(MGStyle.Colors.subtleOverlay))
-
+                if licenseService.status == .pro {
+                    activeLicenseSection
+                } else {
+                    activationSection
                     proFeaturesList
                 }
-
-                /*
-                if UIServices.shared.isDeveloperModeEnabled() {
-                    Divider()
-                    VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
-                        Text("Developer Actions (Test):")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        
-                        HStack(spacing: MGStyle.Spacing.xl) {
-                            Button("Reset Trial") { licenseService.resetTrial() }
-                                .buttonStyle(.link)
-                                .font(.caption)
-                            
-                            Button("Start Trial") { licenseService.startTrial() }
-                                .buttonStyle(.link)
-                                .font(.caption)
-                            
-                            Button("Expire Trial") { licenseService.expireTrial() }
-                                .buttonStyle(.link)
-                                .font(.caption)
-                            
-                            Button("Remove Pro License") { licenseService.removeProLicense() }
-                                .buttonStyle(.link)
-                                .font(.caption)
-                                .foregroundColor(.red)
-                            
-                            Toggle("Force Free Mode", isOn: $licenseService.forceFreeMode)
-                                .font(.caption)
-                                .toggleStyle(.checkbox)
-                        }
-                    }
-                }
-                */
             }
             .padding(MGStyle.Spacing.xl)
         }
-        .alert("Pro Activated", isPresented: $showingPurchaseAlert) {
+        .alert("Pro Activated", isPresented: $showingActivatedAlert) {
             Button("Awesome", role: .cancel) { }
         } message: {
-            Text("You now have access to all Pro features. Enjoy!")
+            Text("Your license key was verified. You now have access to all Pro features. Enjoy!")
         }
-        .alert("Purchase Error", isPresented: Binding(
-            get: { purchaseError != nil },
-            set: { _ in purchaseError = nil }
+        .alert("Activation Error", isPresented: Binding(
+            get: { activationError != nil },
+            set: { _ in activationError = nil }
         )) {
             Button("OK", role: .cancel) { }
         } message: {
-            if let error = purchaseError {
+            if let error = activationError {
                 Text(error)
             }
         }
     }
 
-    private func purchaseRow(for product: Product) -> some View {
-        HStack {
+    // MARK: - Status Card
+
+    private var statusCard: some View {
+        HStack(spacing: MGStyle.Spacing.xl) {
+            ZStack {
+                Circle()
+                    .fill(statusColor.opacity(0.1))
+                    .frame(width: 48, height: 48)
+                Image(systemName: statusIcon)
+                    .font(.system(size: 24, weight: .semibold))
+                    .foregroundColor(statusColor)
+            }
+
             VStack(alignment: .leading, spacing: 2) {
-                Text(product.displayName)
-                    .font(.subheadline).fontWeight(.medium)
-                Text(product.description)
-                    .font(.caption).foregroundColor(.secondary)
+                if licenseService.status == .pro {
+                    Text("Pro Activated")
+                        .font(.system(size: MGStyle.FontSize.heading, weight: .bold))
+                    Text("Thank you for supporting MouseGestures!")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                } else {
+                    Text(licenseService.status == .expired ? "Free" : licenseService.status.rawValue)
+                        .font(.system(size: MGStyle.FontSize.heading, weight: .bold))
+
+                    if licenseService.isTrial {
+                        Text("\(licenseService.trialDaysRemaining) days remaining in your trial")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    } else {
+                        Text("Basic features only")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                }
             }
 
             Spacer()
-
-            Button(action: {
-                Task {
-                    isPurchasing = true
-                    do {
-                        if try await paymentService.purchase(product) {
-                            showingPurchaseAlert = true
-                        }
-                    } catch {
-                        purchaseError = error.localizedDescription
-                    }
-                    isPurchasing = false
-                }
-            }) {
-                Text(product.displayPrice)
-                    .fontWeight(.bold)
-                    .frame(width: 80)
-            }
-            .buttonStyle(.borderedProminent)
-            .disabled(isPurchasing)
         }
-        .padding(MGStyle.Spacing.md)
-        .background(RoundedRectangle(cornerRadius: MGStyle.Corner.sm).fill(Color.primary.opacity(0.05)))
+        .padding(MGStyle.Spacing.lg)
+        .background(RoundedRectangle(cornerRadius: MGStyle.Corner.md).fill(MGStyle.Colors.contentBackground))
+        .overlay(RoundedRectangle(cornerRadius: MGStyle.Corner.md).stroke(MGStyle.Colors.separator, lineWidth: 0.5))
+    }
+
+    // MARK: - Activation (not Pro)
+
+    private var activationSection: some View {
+        VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
+            Text(licenseService.isTrial ? "Activate Pro License" : "Upgrade to Pro")
+                .font(.headline)
+
+            Text("Enter the license key from your purchase confirmation to unlock all "
+                + "Pro features. Activation works offline — no account required.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+
+            HStack(spacing: MGStyle.Spacing.md) {
+                TextField("MGPRO-XXXXX-XXXXX-XXXXX", text: $licenseKeyInput)
+                    .textFieldStyle(.roundedBorder)
+                    .font(.system(.body, design: .monospaced))
+                    .onSubmit(activate)
+
+                Button("Activate", action: activate)
+                    .buttonStyle(.borderedProminent)
+                    .disabled(licenseKeyInput.trimmingCharacters(in: .whitespaces).isEmpty)
+            }
+
+            if let url = purchaseURL {
+                Button("Purchase a License...") {
+                    NSWorkspace.shared.open(url)
+                }
+                .buttonStyle(.link)
+                .font(.caption)
+            }
+        }
+        .padding(MGStyle.Spacing.lg)
+        .background(RoundedRectangle(cornerRadius: MGStyle.Corner.md).fill(MGStyle.Colors.subtleOverlay))
+    }
+
+    // MARK: - Active License (Pro)
+
+    private var activeLicenseSection: some View {
+        VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
+            Text("License")
+                .font(.headline)
+
+            if let key = licenseService.storedLicenseKeyDisplay {
+                HStack {
+                    Text(key)
+                        .font(.system(.body, design: .monospaced))
+                        .foregroundColor(.secondary)
+                        .textSelection(.enabled)
+                    Spacer()
+                }
+            }
+
+            Button("Deactivate on this Mac") {
+                licenseService.deactivateLicense()
+                licenseKeyInput = ""
+            }
+            .buttonStyle(.link)
+            .font(.caption)
+            .foregroundColor(.red)
+        }
+        .padding(MGStyle.Spacing.lg)
+        .background(RoundedRectangle(cornerRadius: MGStyle.Corner.md).fill(MGStyle.Colors.subtleOverlay))
+    }
+
+    private func activate() {
+        let trimmed = licenseKeyInput.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        if licenseService.activateLicense(trimmed) {
+            licenseKeyInput = ""
+            showingActivatedAlert = true
+        } else {
+            activationError = "That license key isn't valid. Double-check it against your purchase confirmation and try again."
+        }
     }
 
     private var proFeaturesList: some View {
