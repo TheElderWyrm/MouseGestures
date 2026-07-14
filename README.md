@@ -6,13 +6,15 @@ background agent (`LSUIElement`) with no Dock icon; all configuration happens in
 its Settings window.
 
 The app has a Free/Pro model: a Pro trial gates advanced actions and
-multi-profile use, backed by `LicenseService` (trial/license state) and
-`PaymentService` (StoreKit 2 in-app purchases).
+multi-profile use, backed by `LicenseService` (trial/license state). Pro is
+unlocked with an offline, HMAC-validated license key (`LicenseKey` /
+`LicenseLogic`) — no in-app-purchase / StoreKit dependency.
 
-> **Status:** the source tree compiles clean, but the project is **not yet
-> configured for distribution** (placeholder bundle ID, dev-only signing, an
-> unresolved App-Store-vs-direct-download decision). See
-> [Deployment](#deployment) before attempting a release build.
+> **Status:** the source tree compiles clean, builds/tests/lints green, and is
+> configured for direct distribution (real bundle ID, hardened runtime,
+> entitlements, `developer-id` export). A **verified unsigned DMG** can be
+> produced today; the only thing blocking a shippable release is the Apple
+> Developer ID cert + notarization credentials. See [Deployment](#deployment).
 
 ## Requirements
 
@@ -20,7 +22,7 @@ multi-profile use, backed by `LicenseService` (trial/license state) and
 - **Xcode 16 or newer.** Verified building on **Xcode 26.6 / Swift 6.3.3**.
 - No third-party package dependencies — the app builds from the checked-in
   sources only (system frameworks: SwiftUI, AppKit/Cocoa, Carbon, Accessibility,
-  StoreKit, UserNotifications).
+  UserNotifications).
 
 ## Build & run (development)
 
@@ -63,9 +65,10 @@ xcodebuild test \
   CODE_SIGNING_ALLOWED=NO
 ```
 
-Expected result: `** TEST SUCCEEDED **` (19 tests, 0 failures). The suite covers
-the dependency-free licensing/trial rules (`LicenseLogic`), screen-zone math, and
-`AnyCodable` round-tripping — logic that needs no running app.
+Expected result: `** TEST SUCCEEDED **` (30 tests, 0 failures). The suite covers
+the dependency-free licensing/trial rules (`LicenseLogic`), the offline
+license-key validation (`LicenseKey`), screen-zone math, and `AnyCodable`
+round-tripping — logic that needs no running app.
 
 ## Linting
 
@@ -162,7 +165,8 @@ control).
 **State & configuration:** `Configuration` (a shared singleton) holds settings
 and per-plugin configuration; `ProfileManager` and the `Profiles/` services
 manage gesture profiles and import/export. Free/Pro gating is centralized in
-`LicenseService`, with purchases via `PaymentService` (StoreKit 2).
+`LicenseService`; Pro is unlocked by an offline, HMAC-validated license key
+(`LicenseKey` / `LicenseLogic`) — no StoreKit / in-app purchases.
 
 **Updates:** `UpdateService` implements a custom JSON update check (not Sparkle),
 polling a `version.json` hosted on GitHub.
@@ -178,7 +182,7 @@ MouseGesturesCodeBase/          App source (110 Swift files)
   ServicePlugins/               Service plugin protocol, manager, built-ins
   UIPlugins/                    UI (tab) plugin protocol, manager, built-ins
   UI/                           SwiftUI views, tabs, settings, styles
-  Services/                     LicenseService, PaymentService, UpdateService, etc.
+  Services/                     LicenseService, LicenseKey/LicenseLogic, UpdateService, etc.
   Profiles/, Configuration/, Core/, Detection/, Utilities/
 Website/                        Static marketing site
 exportOptions.plist             Archive export config (developer-id; see Deployment)

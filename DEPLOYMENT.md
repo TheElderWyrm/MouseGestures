@@ -37,9 +37,10 @@ mechanism**, since IAP only functions for Mac-App-Store-distributed apps.
 `exportOptions.plist` (`method = developer-id`) and `release.yml` are already
 built for this path.
 
-Remaining fork-driven code work (tracked as a follow-on task): remove the
-StoreKit `PaymentService` and swap the Pro unlock over to offline license-key
-validation. Everything below assumes **(B) Direct DMG**.
+The fork-driven code work is **done** (commit `4e5a952`): the StoreKit
+`PaymentService` was removed and the Pro unlock swapped over to offline,
+HMAC-validated license-key validation (`LicenseKey` / `LicenseLogic`). Everything
+below assumes **(B) Direct DMG**.
 
 ### 2. Signing configuration (project settings)
 
@@ -101,10 +102,11 @@ commit real values.
   | `NOTARY_PASSWORD` | An **app-specific password** (appleid.apple.com → Sign-In and Security) — *not* the account password |
   | `NOTARY_TEAM_ID` | The 10-char team id |
 
-> **Decisions to surface to the operator:** which distribution path (A/B), the
-> real bundle identifier, whether team `2RZ7SBH74J` is correct, and who holds the
-> Developer ID cert + App Store Connect access. None of these can be resolved
-> autonomously.
+> **Decisions to surface to the operator (remaining):** who holds the Developer
+> ID cert + App Store Connect / notarization access, and confirmation that team
+> `2RZ7SBH74J` is the account that will publish. The distribution path (B, Direct
+> DMG) and the bundle id (`com.mousegestures.MouseGestures`) are settled. These
+> credential items cannot be resolved autonomously.
 
 ---
 
