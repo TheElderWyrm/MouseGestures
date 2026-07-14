@@ -25,26 +25,21 @@ stage. `verify` requires no secrets; only the tag-triggered `release` job does.
 
 ## Blockers
 
-The `release` job is wired up but **will fail today**. Three things must be
-resolved first.
+The `release` job is wired up but **will fail today**. The remaining work is
+signing configuration + credentials.
 
-### 1. Deploy-target fork (product decision — gates everything)
+### 1. Deploy-target fork — ✅ RESOLVED: (B) Direct DMG
 
-The app ships StoreKit 2 in-app purchases (`com.mousegestures.pro.*`), which
-**only function for Mac-App-Store-distributed apps**. But `exportOptions.plist`
-and `release.yml` target a Developer-ID-signed, notarized **DMG on GitHub
-Releases**. These two models are mutually exclusive. Pick one:
+**Decision (user, 2026-07-13):** ship via **direct distribution** — a
+Developer-ID-signed, notarized **DMG** (Option B). The StoreKit 2 IAP Pro path
+(`com.mousegestures.pro.*`) is being **replaced with an external licensing
+mechanism**, since IAP only functions for Mac-App-Store-distributed apps.
+`exportOptions.plist` (`method = developer-id`) and `release.yml` are already
+built for this path.
 
-- **(A) Mac App Store** — keep StoreKit; add the App Sandbox entitlement and
-  configure products in App Store Connect. Distribution is via Xcode / App Store
-  Connect, *not* the DMG pipeline in `release.yml` (that workflow becomes moot,
-  replaced by `xcodebuild -exportArchive` with `method = app-store` + `altool`/
-  Transporter upload).
-- **(B) Direct DMG** — notarize + staple a Developer-ID DMG (this is what
-  `release.yml` is built for). StoreKit IAP must be **replaced** with an external
-  licensing/purchase path, since IAP will not work outside the App Store.
-
-Everything below assumes **(B) Direct DMG**.
+Remaining fork-driven code work (tracked as a follow-on task): remove the
+StoreKit `PaymentService` and swap the Pro unlock over to offline license-key
+validation. Everything below assumes **(B) Direct DMG**.
 
 ### 2. Signing configuration (project settings)
 
@@ -53,12 +48,12 @@ notarizable:
 
 | Setting | Current | Needs to be |
 |---------|---------|-------------|
-| `PRODUCT_BUNDLE_IDENTIFIER` | `com.example.MouseGestures` (placeholder) | a real, owned reverse-DNS id |
-| `CODE_SIGN_IDENTITY` | `Apple Development` (dev-only) | `Developer ID Application` |
+| `PRODUCT_BUNDLE_IDENTIFIER` | ✅ `com.mousegestures.MouseGestures` | done (was `com.example.` placeholder) |
+| `exportOptions.plist` `teamID` | ✅ `2RZ7SBH74J` | done — now aligned with pbxproj `DEVELOPMENT_TEAM` |
+| `exportOptions.plist` `method` | ✅ `developer-id` | correct for path B |
+| `CODE_SIGN_IDENTITY` | `Apple Development` (dev-only) | `Developer ID Application` — **needs cert (pending enrollment)** |
 | `ENABLE_HARDENED_RUNTIME` | `NO` | `YES` (notarization requires it) |
-| Entitlements file | none | added (at minimum hardened-runtime exceptions if any; App Sandbox for path A) |
-| `exportOptions.plist` `teamID` | `YOUR_TEAM_ID` (placeholder) | real team id — the pbxproj `DEVELOPMENT_TEAM` is `2RZ7SBH74J`; confirm this is the correct team and align both |
-| `exportOptions.plist` `method` | `developer-id` | keep for path B; `app-store` for path A |
+| Entitlements file | none | added (hardened-runtime exceptions if any) |
 
 ### 3. Credentials
 
