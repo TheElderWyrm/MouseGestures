@@ -20,7 +20,7 @@
                 <li><a href="#features">Features</a></li>
                 <li><a href="#how-it-works">How it Works</a></li>
                 <li><a href="#pricing">Pricing</a></li>
-                <li><a href="#" class="btn btn-primary">Download</a></li>
+                <li><a href="#download" class="btn btn-primary">Download</a></li>
             </ul>
         </div>
     </nav>
@@ -31,10 +31,10 @@
                 <h1>Control macOS at the <span class="text-gradient">Speed of Thought.</span></h1>
                 <p class="subtitle">Trigger system-wide actions instantly by moving your mouse into screen zones while holding modifiers. Zero clicks required.</p>
                 <div class="hero-btns">
-                    <a href="#" class="btn btn-lg btn-primary">Download for macOS</a>
+                    <a href="#download" class="btn btn-lg btn-primary">Download for macOS</a>
                     <a href="#how-it-works" class="btn btn-lg btn-secondary">See how it works</a>
                 </div>
-                <p class="version-info">Requires macOS 13.0 or later</p>
+                <p class="version-info">Requires macOS 13.0 or later &middot; Apple silicon</p>
             </div>
             <div class="hero-visual">
                 <div class="monitor">
@@ -128,13 +128,13 @@
                         <li>Standard Window Management</li>
                         <li>30-Day Full Pro Trial</li>
                     </ul>
-                    <a href="#" class="btn btn-secondary">Download Now</a>
+                    <a href="#download" class="btn btn-secondary">Download</a>
                 </div>
                 <div class="pricing-card featured">
                     <div class="badge">Recommended</div>
                     <h3>Pro</h3>
                     <div class="price">$9.99<span>One-Time</span></div>
-                    <p class="or">or $1.99 / month</p>
+                    <p class="or">Unlocked with a license key &mdash; no subscription</p>
                     <ul class="pricing-features">
                         <li>Unlimited Profiles</li>
                         <li>App-Specific Targeting</li>
@@ -142,8 +142,30 @@
                         <li>Scripting (Python, Shell, etc.)</li>
                         <li>Priority Support</li>
                     </ul>
-                    <a href="#" class="btn btn-primary">Go Pro</a>
+                    <span class="btn btn-primary btn-disabled" aria-disabled="true">Licensing at launch</span>
                 </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="download" class="download">
+        <div class="container">
+            <div class="section-header">
+                <h2>Download <span class="text-gradient">MouseGestures.</span></h2>
+                <p>Distributed as a Developer&nbsp;ID&ndash;signed, notarized disk image (<code>.dmg</code>) &mdash; no App Store required.</p>
+            </div>
+            <div class="download-card">
+                <span class="btn btn-lg btn-primary btn-disabled" aria-disabled="true">Download DMG &middot; Coming soon</span>
+                <p class="download-status">
+                    Not yet available. The signed &amp; notarized release is still being prepared;
+                    the download will go live here the moment the first release is published to
+                    <strong>GitHub Releases</strong>.
+                </p>
+                <ul class="download-facts">
+                    <li><strong>Requirements:</strong> macOS 13.0 or later, Apple silicon (arm64).</li>
+                    <li><strong>Signing:</strong> Developer&nbsp;ID&ndash;signed and Apple-notarized, so it opens without Gatekeeper warnings.</li>
+                    <li><strong>Delivery:</strong> published at <code>github.com/eldritchbookwyrm/MouseGestures/releases</code> once notarization is complete.</li>
+                </ul>
             </div>
         </div>
     </section>
@@ -170,10 +192,12 @@
     <script>
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {
             anchor.addEventListener('click', function (e) {
+                const href = this.getAttribute('href');
+                if (href === '#' || href.length < 2) return;
+                const target = document.querySelector(href);
+                if (!target) return;
                 e.preventDefault();
-                document.querySelector(this.getAttribute('href')).scrollIntoView({
-                    behavior: 'smooth'
-                });
+                target.scrollIntoView({ behavior: 'smooth' });
             });
         });
     </script>

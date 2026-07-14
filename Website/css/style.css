@@ -428,6 +428,67 @@ body {
     text-align: center;
 }
 
+/* Disabled / placeholder buttons (no live download yet) */
+.btn-disabled {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-secondary);
+    border: 1px dashed rgba(255, 255, 255, 0.2);
+    cursor: not-allowed;
+    box-shadow: none;
+    pointer-events: none;
+}
+
+.btn-disabled:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+/* Download */
+.download {
+    padding: 6rem 0;
+    text-align: center;
+}
+
+.download-card {
+    max-width: 640px;
+    margin: 0 auto;
+    background: var(--card-bg);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+    padding: 2.5rem 2rem;
+}
+
+.download-status {
+    margin-top: 1.25rem;
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+}
+
+.download-facts {
+    list-style: none;
+    margin-top: 1.5rem;
+    text-align: left;
+    display: inline-block;
+}
+
+.download-facts li {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    padding: 0.35rem 0;
+}
+
+.download-facts strong {
+    color: var(--text-primary);
+}
+
+code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.85em;
+    background: rgba(255, 255, 255, 0.06);
+    padding: 0.1rem 0.35rem;
+    border-radius: 4px;
+}
+
 /* Footer */
 .footer {
     padding: 4rem 0;
