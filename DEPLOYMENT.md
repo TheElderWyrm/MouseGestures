@@ -50,7 +50,7 @@ notarizable:
 | Setting | Current | Needs to be |
 |---------|---------|-------------|
 | `PRODUCT_BUNDLE_IDENTIFIER` | ✅ `com.mousegestures.MouseGestures` | done (was `com.example.` placeholder) |
-| `exportOptions.plist` `teamID` | ✅ `2RZ7SBH74J` | done — now aligned with pbxproj `DEVELOPMENT_TEAM` |
+| `exportOptions.plist` `teamID` | ✅ `5SCU3Z72Z9` | done — now aligned with pbxproj `DEVELOPMENT_TEAM` |
 | `exportOptions.plist` `method` | ✅ `developer-id` | correct for path B |
 | `CODE_SIGN_IDENTITY` | `Apple Development` (dev-only) | `Developer ID Application` — **needs cert (pending enrollment)** |
 | `ENABLE_HARDENED_RUNTIME` | ✅ `YES` (Release) | done — notarization requires it |
@@ -104,7 +104,7 @@ commit real values.
 
 > **Decisions to surface to the operator (remaining):** who holds the Developer
 > ID cert + App Store Connect / notarization access, and confirmation that team
-> `2RZ7SBH74J` is the account that will publish. The distribution path (B, Direct
+> `5SCU3Z72Z9` is the account that will publish. The distribution path (B, Direct
 > DMG) and the bundle id (`com.mousegestures.MouseGestures`) are settled. These
 > credential items cannot be resolved autonomously.
 
@@ -144,7 +144,7 @@ users' machines (right-click → Open, or `xattr -dr com.apple.quarantine`, is
 needed to run it elsewhere). It is *not* a shippable artifact — it exists to prove
 the packaging path end-to-end. Once the Developer ID cert is in your keychain you
 can sign the build locally with `./scripts/package_dmg.sh --identity "Developer ID
-Application: … (2RZ7SBH74J)"`, but the canonical **signed + notarized** release is
+Application: … (5SCU3Z72Z9)"`, but the canonical **signed + notarized** release is
 cut by CI on a tag (below).
 
 ## Cutting a release (once unblocked)

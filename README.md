@@ -208,7 +208,7 @@ replaced with an offline license mechanism (StoreKit IAP only works for
 Mac-App-Store apps); that refactor is the last fork-driven code task.
 
 **Config status:** bundle id (`com.mousegestures.MouseGestures`), team
-(`2RZ7SBH74J`), hardened runtime (Release), and the entitlements file are all in
+(`5SCU3Z72Z9`), hardened runtime (Release), and the entitlements file are all in
 place. The only remaining signing gap is the `Developer ID Application`
 certificate, pending Apple Developer enrollment.
 

@@ -18,7 +18,7 @@ SHA-256 63d843f9…). All config/fork blockers cleared:
 - Signing config now notarizable: bundle id = `com.mousegestures.MouseGestures`;
   ENABLE_HARDENED_RUNTIME = YES (Release); entitlements file present
   (apple-events only, sandbox off by design); exportOptions teamID = pbxproj
-  DEVELOPMENT_TEAM = 2RZ7SBH74J (aligned); exportOptions method = developer-id.
+  DEVELOPMENT_TEAM = 5SCU3Z72Z9 (aligned); exportOptions method = developer-id.
 - Website aligned to Option-B direct-DMG (3144c8f); #download is a gated placeholder.
 REMAINING BLOCKERS = 2, both credential-gated (Apple enrollment pending, user):
   (1) `Developer ID Application` cert (→ CODE_SIGN_IDENTITY, still "Apple Development");

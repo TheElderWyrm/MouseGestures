@@ -10,7 +10,7 @@
 # is produced by .github/workflows/release.yml on a version tag; see DEPLOYMENT.md.
 #
 # Once a "Developer ID Application" cert is in your keychain you can sign locally:
-#   ./scripts/package_dmg.sh --identity "Developer ID Application: NAME (2RZ7SBH74J)"
+#   ./scripts/package_dmg.sh --identity "Developer ID Application: NAME (5SCU3Z72Z9)"
 # (notarization is still a separate `xcrun notarytool` step — see DEPLOYMENT.md).
 #
 # Usage:
