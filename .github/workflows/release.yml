@@ -14,15 +14,14 @@ name: Build and Release
 #                 notarizes, staples, packages a DMG, and publishes a GitHub
 #                 Release. `needs: verify` and gated to tag refs.
 #
-# ⚠️  The release job is BLOCKED and will fail until three things are resolved
-#     (see DEPLOYMENT.md for the full runbook):
-#       (a) the deploy-target FORK is decided — StoreKit IAP (Mac App Store) vs.
-#           Developer-ID DMG. This file assumes the DMG path.
-#       (b) the signing config is fixed — real bundle id (currently the
-#           placeholder com.example.MouseGestures), ENABLE_HARDENED_RUNTIME=YES,
-#           an entitlements file, a Developer ID Application identity, and a
-#           real teamID in exportOptions.plist (currently YOUR_TEAM_ID).
-#       (c) the repository secrets below are configured.
+# Status of the three historical release blockers:
+#       (a) deploy-target FORK — RESOLVED: Developer-ID DMG (Option B). This file
+#           implements that path.
+#       (b) signing config — RESOLVED: real bundle id (com.mousegestures.MouseGestures),
+#           ENABLE_HARDENED_RUNTIME=YES (Release), an entitlements file, and a real
+#           teamID (2RZ7SBH74J) in exportOptions.plist, all committed.
+#       (c) repository secrets below — the ONLY remaining requirement. Once set,
+#           pushing a v* tag produces a signed + notarized + stapled DMG.
 #
 # Required repository secrets for the `release` job (never commit real values):
 #     SIGNING_CERTIFICATE_P12_BASE64  base64 of the Developer ID Application .p12
@@ -118,14 +117,23 @@ jobs:
 
       - name: Build and archive (signed, hardened runtime)
         run: |
-          # NOTE: requires ENABLE_HARDENED_RUNTIME=YES + a real bundle id/identity
-          # in the project config before this will actually notarize (see DEPLOYMENT.md).
+          # Manual Developer ID signing with a secure timestamp. The runner has
+          # only the imported Developer ID Application cert and no Xcode account,
+          # so automatic signing cannot provision — sign explicitly. --timestamp
+          # and the archive/export flow (next step) together strip get-task-allow
+          # and add the secure timestamp that notarization requires.
           xcodebuild archive \
             -project "MouseGestures.xcodeproj" \
             -scheme MouseGestures \
             -configuration Release \
             -archivePath "$RUNNER_TEMP/MouseGestures.xcarchive" \
+            -destination 'generic/platform=macOS' \
             ENABLE_HARDENED_RUNTIME=YES \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Developer ID Application" \
+            DEVELOPMENT_TEAM=2RZ7SBH74J \
+            PROVISIONING_PROFILE_SPECIFIER="" \
+            OTHER_CODE_SIGN_FLAGS="--timestamp" \
             | xcbeautify
 
       - name: Export app (Developer ID)
@@ -142,34 +150,51 @@ jobs:
             -srcfolder "$RUNNER_TEMP/export/MouseGestures.app" \
             -ov -format UDZO "$RUNNER_TEMP/MouseGestures.dmg"
 
-      # ── TODO(notarization): STUB — not yet implemented. ──────────────────────
-      # A Developer-ID DMG must be notarized by Apple and stapled, or Gatekeeper
-      # will refuse to open it. Wire this up once notarization creds exist. The
-      # DMG can be submitted directly (notarytool accepts .dmg) and stapled.
-      #
-      #   # App Store Connect API key path (recommended):
-      #   echo "$NOTARY_API_KEY_P8_BASE64" | base64 --decode > "$RUNNER_TEMP/AuthKey.p8"
-      #   xcrun notarytool submit "$RUNNER_TEMP/MouseGestures.dmg" \
-      #     --key "$RUNNER_TEMP/AuthKey.p8" \
-      #     --key-id "$NOTARY_API_KEY_ID" \
-      #     --issuer "$NOTARY_API_ISSUER_ID" \
-      #     --wait
-      #
-      #   # OR Apple ID + app-specific password path:
-      #   xcrun notarytool submit "$RUNNER_TEMP/MouseGestures.dmg" \
-      #     --apple-id "$NOTARY_APPLE_ID" \
-      #     --password "$NOTARY_PASSWORD" \
-      #     --team-id "$NOTARY_TEAM_ID" \
-      #     --wait
-      #
-      #   # Then staple the ticket onto the DMG:
-      #   xcrun stapler staple "$RUNNER_TEMP/MouseGestures.dmg"
-      #   xcrun stapler validate "$RUNNER_TEMP/MouseGestures.dmg"
-      - name: Notarize and staple (TODO — stub)
+      # ── Notarize the DMG with Apple and staple the ticket. ───────────────────
+      # A Developer-ID DMG must be notarized + stapled or Gatekeeper refuses to
+      # open it. notarytool accepts the .dmg directly. Provide exactly ONE
+      # credential set (App Store Connect API key preferred; Apple ID fallback);
+      # the step auto-selects whichever secrets are present and fails clearly if
+      # neither is configured.
+      - name: Notarize and staple
+        env:
+          NOTARY_API_KEY_ID: ${{ secrets.NOTARY_API_KEY_ID }}
+          NOTARY_API_ISSUER_ID: ${{ secrets.NOTARY_API_ISSUER_ID }}
+          NOTARY_API_KEY_P8_BASE64: ${{ secrets.NOTARY_API_KEY_P8_BASE64 }}
+          NOTARY_APPLE_ID: ${{ secrets.NOTARY_APPLE_ID }}
+          NOTARY_PASSWORD: ${{ secrets.NOTARY_PASSWORD }}
+          NOTARY_TEAM_ID: ${{ secrets.NOTARY_TEAM_ID }}
         run: |
-          echo "::warning::Notarization + stapling not implemented yet (TODO stub)."
-          echo "::warning::The published DMG is NOT notarized; Gatekeeper will block it."
-          echo "See DEPLOYMENT.md § 'Notarization' for the wiring."
+          set -euo pipefail
+          DMG="$RUNNER_TEMP/MouseGestures.dmg"
+          if [ -n "${NOTARY_API_KEY_P8_BASE64:-}" ]; then
+            echo "==> Notarizing via App Store Connect API key…"
+            echo "$NOTARY_API_KEY_P8_BASE64" | base64 --decode > "$RUNNER_TEMP/AuthKey.p8"
+            xcrun notarytool submit "$DMG" \
+              --key "$RUNNER_TEMP/AuthKey.p8" \
+              --key-id "$NOTARY_API_KEY_ID" \
+              --issuer "$NOTARY_API_ISSUER_ID" \
+              --wait
+            rm -f "$RUNNER_TEMP/AuthKey.p8"
+          elif [ -n "${NOTARY_APPLE_ID:-}" ]; then
+            echo "==> Notarizing via Apple ID + app-specific password…"
+            xcrun notarytool submit "$DMG" \
+              --apple-id "$NOTARY_APPLE_ID" \
+              --password "$NOTARY_PASSWORD" \
+              --team-id "$NOTARY_TEAM_ID" \
+              --wait
+          else
+            echo "::error::No notarization credentials configured. Set either the"
+            echo "::error::App Store Connect API key (NOTARY_API_KEY_ID,"
+            echo "::error::NOTARY_API_ISSUER_ID, NOTARY_API_KEY_P8_BASE64) or the"
+            echo "::error::Apple ID set (NOTARY_APPLE_ID, NOTARY_PASSWORD, NOTARY_TEAM_ID)."
+            exit 1
+          fi
+          echo "==> Stapling notarization ticket onto the DMG…"
+          xcrun stapler staple "$DMG"
+          xcrun stapler validate "$DMG"
+          echo "==> Gatekeeper assessment (must accept):"
+          spctl --assess --type open --context context:primary-signature -v "$DMG"
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2

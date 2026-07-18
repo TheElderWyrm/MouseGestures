@@ -15,13 +15,24 @@ SHA-256 63d843f9…). All config/fork blockers cleared:
 - DEPLOY-TARGET FORK **RESOLVED (user, 2026-07-13):** (B) Direct DMG. StoreKit-2 IAP
   (`PaymentService`, `com.mousegestures.pro.*`) REMOVED (4e5a952) → Pro unlocks via
   offline HMAC license key (LicenseKey/LicenseLogic/LicenseService). 0 StoreKit refs.
-- Signing config now notarizable: bundle id = `com.mousegestures.MouseGestures`;
-  ENABLE_HARDENED_RUNTIME = YES (Release); entitlements file present
-  (apple-events only, sandbox off by design); exportOptions teamID = pbxproj
-  DEVELOPMENT_TEAM = 5SCU3Z72Z9 (aligned); exportOptions method = developer-id.
+- Signing config notarizable & VERIFIED (2026-07-18): bundle id =
+  `com.mousegestures.MouseGestures`; ENABLE_HARDENED_RUNTIME = YES (Release);
+  entitlements file present (apple-events only, sandbox off by design);
+  exportOptions teamID = pbxproj DEVELOPMENT_TEAM = `2RZ7SBH74J` (the PAID
+  individual team; `5SCU3Z72Z9` is the same Apple ID's FREE personal team and is
+  NOT the publisher — the earlier "correction" to it was a regression, now
+  reverted); exportOptions method = developer-id.
+- Apple Developer Program enrollment CONFIRMED (user, 2026-07-18). Developer ID
+  Application cert for `2RZ7SBH74J` is in the keychain (valid Jul 18 2026 →
+  Feb 1 2027, private key present). A signed, HARDENED, secure-TIMESTAMPED,
+  `get-task-allow`-free `.app` is produced by `archive → exportArchive`
+  (proven locally) → dist DMG. `spctl` = "Unnotarized Developer ID" (expected).
 - Website aligned to Option-B direct-DMG (3144c8f); #download is a gated placeholder.
-REMAINING BLOCKERS = 2, both credential-gated (Apple enrollment pending, user):
-  (1) `Developer ID Application` cert (→ CODE_SIGN_IDENTITY, still "Apple Development");
-  (2) notarization key/creds (→ replace the notarize TODO stub in release.yml) +
-  the CI signing secrets. release.yml `release` job runs on tag once these land.
+REMAINING BLOCKER = 1, credential-gated: a NOTARIZATION credential (App Store
+  Connect API key .p8 + key-id + issuer, OR Apple ID + app-specific password +
+  team-id). No such cred is on the machine (`notarytool history` → "Must provide
+  credentials"). notarize+staple is now fully WIRED (not a stub) in both
+  release.yml (CI, via secrets) and package_dmg.sh (`--notarize`); it runs the
+  moment a cred is supplied. release.yml `release` job cuts the signed+notarized
+  DMG on a `v*` tag once the CI secrets land.
 - Updater polls github.com/eldritchbookwyrm/MouseGestures/main/version.json (repo must exist+be public).

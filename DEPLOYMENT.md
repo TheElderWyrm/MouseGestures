@@ -44,17 +44,22 @@ below assumes **(B) Direct DMG**.
 
 ### 2. Signing configuration (project settings)
 
-Current state (from the pbxproj / exportOptions.plist) is dev-only and not
-notarizable:
+Current state (from the pbxproj / exportOptions.plist) is notarization-ready:
 
 | Setting | Current | Needs to be |
 |---------|---------|-------------|
 | `PRODUCT_BUNDLE_IDENTIFIER` | ✅ `com.mousegestures.MouseGestures` | done (was `com.example.` placeholder) |
-| `exportOptions.plist` `teamID` | ✅ `5SCU3Z72Z9` | done — now aligned with pbxproj `DEVELOPMENT_TEAM` |
+| `exportOptions.plist` `teamID` | ✅ `2RZ7SBH74J` | done — the PAID Developer Program team, aligned with pbxproj `DEVELOPMENT_TEAM` |
 | `exportOptions.plist` `method` | ✅ `developer-id` | correct for path B |
-| `CODE_SIGN_IDENTITY` | `Apple Development` (dev-only) | `Developer ID Application` — **needs cert (pending enrollment)** |
+| `CODE_SIGN_IDENTITY` | `Apple Development` (project default; the release **archive** overrides to `Developer ID Application` via CLI) | Developer ID cert is present in the keychain — signed builds work today |
 | `ENABLE_HARDENED_RUNTIME` | ✅ `YES` (Release) | done — notarization requires it |
 | Entitlements file | ✅ `MouseGesturesCodeBase/MouseGestures.entitlements` | done — see below |
+
+> **Team note.** The Apple ID `millercwalker@gmail.com` owns TWO teams: the free
+> personal team `5SCU3Z72Z9` (issues only `Apple Development` certs — cannot
+> notarize) and the **paid** individual team **`2RZ7SBH74J`** (WALKER CARPENTER
+> MILLER), which holds the `Developer ID Application` / `Apple Distribution` certs.
+> `2RZ7SBH74J` is the publisher; all config points at it.
 
 **Entitlements (`MouseGesturesCodeBase/MouseGestures.entitlements`):** App Sandbox
 is intentionally **off** (the app needs system-wide input monitoring/control that
@@ -63,13 +68,17 @@ Hardened-Runtime exception declared is `com.apple.security.automation.apple-even
 (the AppleScript-based actions send Apple events). Accessibility / input
 monitoring are granted at runtime via TCC, not entitlements.
 
-The only remaining project-settings gap is `CODE_SIGN_IDENTITY`, which stays
-`Apple Development` until the Developer ID cert is available (see Credentials).
+The project-settings gaps are all closed: the Developer ID Application cert for
+`2RZ7SBH74J` is in the keychain, and the release archive signs with it explicitly
+(the `CODE_SIGN_IDENTITY` project default of `Apple Development` is overridden on
+the archive command line — see the release workflow and `package_dmg.sh`).
 
 ### 3. Credentials
 
-The GitHub Actions secrets listed below must be configured, and the
-notarization step (currently a TODO stub) must be implemented.
+The notarize + staple steps are now **implemented** (release.yml and
+`package_dmg.sh`). The one remaining requirement is a notarization credential,
+supplied to CI as the GitHub Actions secrets listed below (or to the local script
+via env vars).
 
 ---
 
@@ -102,27 +111,30 @@ commit real values.
   | `NOTARY_PASSWORD` | An **app-specific password** (appleid.apple.com → Sign-In and Security) — *not* the account password |
   | `NOTARY_TEAM_ID` | The 10-char team id |
 
-> **Decisions to surface to the operator (remaining):** who holds the Developer
-> ID cert + App Store Connect / notarization access, and confirmation that team
-> `5SCU3Z72Z9` is the account that will publish. The distribution path (B, Direct
-> DMG) and the bundle id (`com.mousegestures.MouseGestures`) are settled. These
-> credential items cannot be resolved autonomously.
+> **Decisions to surface to the operator (remaining):** provide a NOTARIZATION
+> credential for team `2RZ7SBH74J` — either an App Store Connect API key
+> (`.p8` + key-id + issuer-id) or an Apple-ID app-specific password + team-id.
+> Everything else is settled: distribution path (B, Direct DMG), bundle id
+> (`com.mousegestures.MouseGestures`), publishing team (`2RZ7SBH74J`), and the
+> Developer ID signing cert (already in the keychain). This one credential cannot
+> be resolved autonomously.
 
 ---
 
-## Notarization (the TODO stub)
+## Notarization (implemented)
 
-`release.yml` currently has a **stub** for notarize + staple — it prints a
-warning and publishes an **un-notarized** DMG (which Gatekeeper will block on
-end-user machines). To finish it, replace the stub step with the commented recipe
-already in `release.yml`:
+`release.yml`'s `Notarize and staple` step is now fully implemented (no longer a
+stub). It auto-selects whichever credential set is present and runs:
 
 1. `xcrun notarytool submit MouseGestures.dmg … --wait` (API key or Apple ID auth).
 2. `xcrun stapler staple MouseGestures.dmg`
 3. `xcrun stapler validate MouseGestures.dmg`
 
 `notarytool` accepts a `.dmg` directly, so the DMG is submitted and stapled as a
-single artifact.
+single artifact. The same flow is available locally:
+`./scripts/package_dmg.sh --identity "Developer ID Application: … (2RZ7SBH74J)" --notarize`
+with the `NOTARY_*` env vars set. If no credential is configured the step fails
+fast with a clear error rather than shipping an un-notarized DMG.
 
 ---
 
@@ -139,13 +151,19 @@ image for local verification and internal testing:
 The script does a clean unsigned Release build, stages the `.app` alongside an
 `Applications` symlink, and writes a compressed (`UDZO`) DMG to `dist/`.
 
-**This DMG is unsigned and un-notarized**, so Gatekeeper will block it on other
-users' machines (right-click → Open, or `xattr -dr com.apple.quarantine`, is
-needed to run it elsewhere). It is *not* a shippable artifact — it exists to prove
-the packaging path end-to-end. Once the Developer ID cert is in your keychain you
-can sign the build locally with `./scripts/package_dmg.sh --identity "Developer ID
-Application: … (5SCU3Z72Z9)"`, but the canonical **signed + notarized** release is
-cut by CI on a tag (below).
+**This unsigned DMG is not a shippable artifact** — it exists to prove the
+packaging path end-to-end. The Developer ID cert is now in the keychain, so a
+signed, hardened, notarization-ready DMG builds locally with:
+
+```bash
+./scripts/package_dmg.sh --identity "Developer ID Application: WALKER CARPENTER MILLER (2RZ7SBH74J)"
+# -> dist/MouseGestures-<version>.dmg  (signed; secure-timestamped; get-task-allow stripped)
+```
+
+That DMG passes `codesign --verify --deep --strict` but `spctl` still reports
+"Unnotarized Developer ID" — add `--notarize` (with a `NOTARY_*` credential) to
+notarize + staple it, or let CI cut the canonical signed + notarized release on a
+tag (below).
 
 ## Cutting a release (once unblocked)
 

@@ -207,10 +207,14 @@ python3 add_remove_files_xcode.py remove 'MouseGesturesCodeBase/.../OldFile.swif
 replaced with an offline license mechanism (StoreKit IAP only works for
 Mac-App-Store apps); that refactor is the last fork-driven code task.
 
-**Config status:** bundle id (`com.mousegestures.MouseGestures`), team
-(`5SCU3Z72Z9`), hardened runtime (Release), and the entitlements file are all in
-place. The only remaining signing gap is the `Developer ID Application`
-certificate, pending Apple Developer enrollment.
+**Config status:** bundle id (`com.mousegestures.MouseGestures`), publishing team
+(`2RZ7SBH74J` — the paid Developer Program team), hardened runtime (Release), the
+entitlements file, and the `Developer ID Application` certificate are all in
+place. A signed, hardened, notarization-ready DMG builds today
+(`./scripts/package_dmg.sh --identity "Developer ID Application: … (2RZ7SBH74J)"`).
+The only remaining gap to a shippable release is a **notarization credential**
+(App Store Connect API key or Apple-ID app-specific password); notarize + staple
+is already wired in CI and in the packaging script.
 
 ### Package an (unsigned) DMG locally
 
