@@ -232,4 +232,6 @@ by CI on a version tag.
 **The full release runbook — signing config, the required GitHub Actions secrets,
 notarization, and how to cut a release — is in [`DEPLOYMENT.md`](DEPLOYMENT.md).**
 Current deployment status and history are tracked in
-[`PROJECT_NOTES.md`](PROJECT_NOTES.md).
+[`PROJECT_NOTES.md`](PROJECT_NOTES.md). User-facing release notes live in
+[`docs/CHANGELOG.md`](docs/CHANGELOG.md), and the 1.0 launch write-up is in
+[`docs/ANNOUNCEMENT.md`](docs/ANNOUNCEMENT.md).
