@@ -8,7 +8,7 @@ public class UpdateService: ObservableObject {
     public static let shared = UpdateService()
 
     // MARK: - Constants
-    private let updateURL = URL(string: "https://raw.githubusercontent.com/eldritchbookwyrm/MouseGestures/main/version.json")
+    private let updateURL = URL(string: "https://raw.githubusercontent.com/TheElderWyrm/MouseGestures/main/version.json")
     private let lastCheckKey = "MGLastUpdateCheck"
     private let autoUpdateKey = "MGAutoUpdateEnabled"
 

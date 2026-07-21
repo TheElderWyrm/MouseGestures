@@ -38,7 +38,7 @@ deploy, produce a verified deployable artifact, surface credential decisions.*
 | 10 | **Developer ID cert** | 🟢 GREEN | `Developer ID Application: WALKER CARPENTER MILLER (2RZ7SBH74J)` present in keychain (paid enrollment confirmed 2026-07-18) — local signed build now possible |
 | 11 | **Notarization creds + CI signing secrets** | 🔴 GATED | See Blocker 2 — narrowed to the notary credential + (for CI) exporting the cert as `.p12` secrets |
 | 12 | Website download link live | ⏸️ PARKED | `#download` is a gated placeholder (Option-B aligned `3144c8f`); flips live when the signed DMG ships |
-| 13 | Updater `version.json` repo | ⏸️ PARKED | Requires public `github.com/eldritchbookwyrm/MouseGestures` repo + `version.json` at first release |
+| 13 | Updater `version.json` repo | ⏸️ PARKED | Requires public `github.com/TheElderWyrm/MouseGestures` repo + `version.json` at first release |
 
 ---
 

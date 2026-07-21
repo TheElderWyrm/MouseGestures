@@ -35,4 +35,4 @@ REMAINING BLOCKER = 1, credential-gated: a NOTARIZATION credential (App Store
   release.yml (CI, via secrets) and package_dmg.sh (`--notarize`); it runs the
   moment a cred is supplied. release.yml `release` job cuts the signed+notarized
   DMG on a `v*` tag once the CI secrets land.
-- Updater polls github.com/eldritchbookwyrm/MouseGestures/main/version.json (repo must exist+be public).
+- Updater polls github.com/TheElderWyrm/MouseGestures/main/version.json (repo must exist+be public).
