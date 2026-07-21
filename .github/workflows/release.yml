@@ -14,14 +14,18 @@ name: Build and Release
 #                 notarizes, staples, packages a DMG, and publishes a GitHub
 #                 Release. `needs: verify` and gated to tag refs.
 #
-# Status of the three historical release blockers:
+# Status of the historical release blockers:
 #       (a) deploy-target FORK — RESOLVED: Developer-ID DMG (Option B). This file
 #           implements that path.
 #       (b) signing config — RESOLVED: real bundle id (com.mousegestures.MouseGestures),
 #           ENABLE_HARDENED_RUNTIME=YES (Release), an entitlements file, and a real
 #           teamID (2RZ7SBH74J) in exportOptions.plist, all committed.
-#       (c) repository secrets below — the ONLY remaining requirement. Once set,
-#           pushing a v* tag produces a signed + notarized + stapled DMG.
+#       (c) repository secrets below — RESOLVED: all 6 set under the exact names
+#           this workflow reads. Signing + notarization + stapling verified
+#           end-to-end on a real tagged run.
+#       (d) `release` job needs `permissions: contents: write` to publish via
+#           softprops/action-gh-release — the default GITHUB_TOKEN is read-only
+#           when no `permissions` block is declared. Added below.
 #
 # Required repository secrets for the `release` job (never commit real values):
 #     SIGNING_CERTIFICATE_P12_BASE64  base64 of the Developer ID Application .p12
@@ -74,6 +78,8 @@ jobs:
     needs: verify
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: macos-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
