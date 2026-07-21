@@ -3,85 +3,298 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MouseGestures | Control macOS at the Speed of Thought</title>
+    <title>MouseGestures — Control macOS at the Speed of Thought</title>
+    <meta name="description" content="MouseGestures is a macOS menu-bar app that turns screen edges and corners into instant triggers. Glide the cursor into a zone, hold a modifier, and windows snap, scripts run, settings flip — 47 built-in actions, no clicks, no menus.">
+    <link rel="canonical" href="https://mousegestures.pages.dev/">
+
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="MouseGestures">
+    <meta property="og:title" content="MouseGestures — Control macOS at the Speed of Thought">
+    <meta property="og:description" content="Turn your Mac's screen edges and corners into instant triggers. 47 built-in actions, per-app profiles, offline license, no subscription.">
+    <meta property="og:url" content="https://mousegestures.pages.dev/">
+    <meta property="og:image" content="https://mousegestures.pages.dev/og.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="MouseGestures — Control macOS at the Speed of Thought">
+    <meta name="twitter:description" content="Turn your Mac's screen edges and corners into instant triggers. 47 built-in actions, per-app profiles, offline license, no subscription.">
+    <meta name="twitter:image" content="https://mousegestures.pages.dev/og.png">
+
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0a0e1a">
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f7f9fc">
+    <meta name="color-scheme" content="dark light">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%234C8DFF'/%3E%3Cstop offset='1' stop-color='%239B6BFF'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23g)'/%3E%3Ccircle cx='32' cy='32' r='11' fill='none' stroke='white' stroke-width='5'/%3E%3C/svg%3E">
+
+    <script src="js/theme-init.js"></script>
     <link rel="stylesheet" href="css/style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "MouseGestures",
+      "operatingSystem": "macOS 13.0 or later",
+      "applicationCategory": "UtilitiesApplication",
+      "description": "A macOS menu-bar utility that maps screen-zone gestures, mouse buttons, and keyboard triggers to window-management, media, system, and automation actions.",
+      "url": "https://mousegestures.pages.dev/",
+      "downloadUrl": "https://github.com/TheElderWyrm/MouseGestures/releases/latest",
+      "offers": [
+        { "@type": "Offer", "price": "0", "priceCurrency": "USD", "name": "Free" },
+        { "@type": "Offer", "price": "9.99", "priceCurrency": "USD", "name": "Pro (one-time license)" }
+      ]
+    }
+    </script>
 </head>
 <body>
-    <nav class="navbar">
-        <div class="container">
-            <div class="logo">
-                <div class="logo-icon"></div>
-                <span>MouseGestures</span>
-            </div>
-            <ul class="nav-links">
-                <li><a href="#features">Features</a></li>
-                <li><a href="#how-it-works">How it Works</a></li>
-                <li><a href="#pricing">Pricing</a></li>
-                <li><a href="#download" class="btn btn-primary">Download</a></li>
-            </ul>
-        </div>
-    </nav>
+    <a class="skip-link" href="#main">Skip to content</a>
 
-    <header class="hero">
+    <header class="navbar">
         <div class="container">
+            <a class="logo" href="#top" aria-label="MouseGestures — home">
+                <span class="logo-icon" aria-hidden="true"></span>
+                <span>MouseGestures</span>
+            </a>
+            <nav aria-label="Main">
+                <button class="menu-btn" aria-expanded="false" aria-controls="nav-menu" aria-label="Menu">
+                    <span aria-hidden="true"></span>
+                </button>
+                <ul class="nav-links" id="nav-menu">
+                    <li><a href="#features">Features</a></li>
+                    <li><a href="#how-it-works">How it works</a></li>
+                    <li><a href="#pricing">Pricing</a></li>
+                    <li><a href="#faq">FAQ</a></li>
+                    <li>
+                        <a class="nav-icon" href="https://github.com/TheElderWyrm/MouseGestures" rel="noopener" aria-label="MouseGestures on GitHub">
+                            <svg viewBox="0 0 16 16" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+                        </a>
+                    </li>
+                    <li>
+                        <button class="nav-icon theme-toggle" type="button" aria-label="Toggle light or dark theme">
+                            <svg class="ic-moon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"/></svg>
+                            <svg class="ic-sun" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+                        </button>
+                    </li>
+                    <li><a href="#download" class="btn btn-primary btn-nav">Download</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main id="main">
+    <header class="hero" id="top">
+        <div class="container hero-grid">
             <div class="hero-content">
-                <h1>Control macOS at the <span class="text-gradient">Speed of Thought.</span></h1>
-                <p class="subtitle">Trigger system-wide actions instantly by moving your mouse into screen zones while holding modifiers. Zero clicks required.</p>
+                <p class="eyebrow"><span class="eyebrow-dot" aria-hidden="true"></span>Version 1.0 now shipping · macOS 13+ · Apple silicon</p>
+                <h1>Control macOS at the <span class="text-gradient">speed of thought.</span></h1>
+                <p class="subtitle">MouseGestures turns your screen&rsquo;s edges and corners into triggers. Glide the cursor into a zone, hold a modifier, and the action fires &mdash; windows snap, scripts run, settings flip. No clicks, no menus, nothing to memorize.</p>
                 <div class="hero-btns">
                     <a href="#download" class="btn btn-lg btn-primary">Download for macOS</a>
-                    <a href="#how-it-works" class="btn btn-lg btn-secondary">See how it works</a>
+                    <a href="#how-it-works" class="btn btn-lg btn-secondary">How it works</a>
                 </div>
-                <p class="version-info">Requires macOS 13.0 or later &middot; Apple silicon</p>
+                <p class="version-info">Free tier &middot; 30-day full-feature Pro trial &middot; no account required</p>
             </div>
+
             <div class="hero-visual">
-                <div class="monitor">
-                    <div class="screen">
-                        <div class="zone top-left"></div>
-                        <div class="zone top-center"></div>
-                        <div class="zone top-right"></div>
-                        <div class="zone mid-left"></div>
-                        <div class="zone mid-right"></div>
-                        <div class="zone bottom-left"></div>
-                        <div class="zone bottom-center"></div>
-                        <div class="zone bottom-right"></div>
-                        <div class="cursor"></div>
+                <div class="demo" id="demo" role="group" aria-label="Animated demo of MouseGestures: the cursor glides into screen zones with modifier keys held, and actions fire — windows snap and tile, the volume changes, dark mode toggles.">
+                    <div class="stage" data-scene="snap">
+                        <div class="mini-desktop" aria-hidden="true">
+                            <div class="mini-menubar">
+                                <span class="mm-apple"></span>
+                                <span class="mm-name">MouseGestures</span>
+                                <span class="mm-spacer"></span>
+                                <span class="mm-icon"></span>
+                                <span class="mm-time">9:41</span>
+                            </div>
+                            <div class="win win-b">
+                                <div class="win-bar"><i></i><i></i><i></i><span class="win-url"></span></div>
+                                <div class="win-body">
+                                    <span class="ln w80"></span><span class="ln w60"></span>
+                                    <span class="blk"></span>
+                                    <span class="ln w70"></span><span class="ln w40"></span>
+                                </div>
+                            </div>
+                            <div class="win win-a">
+                                <div class="win-bar"><i></i><i></i><i></i></div>
+                                <div class="win-body code">
+                                    <span class="ln c1 w60"></span><span class="ln c2 w80"></span>
+                                    <span class="ln c3 w40"></span><span class="ln c2 w70"></span>
+                                    <span class="ln c1 w50"></span><span class="ln c3 w75"></span>
+                                </div>
+                            </div>
+                            <div class="volume-hud">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4z"/></svg>
+                                <span class="meter"><span class="meter-fill"></span></span>
+                            </div>
+                        </div>
+                        <div class="zones" aria-hidden="false">
+                            <button class="zone z-tl" data-zone="top-left" tabindex="-1" aria-label="Screen zone: top-left corner"></button>
+                            <button class="zone z-t" data-zone="top" aria-label="Play demo: tile all windows (control + top edge)"></button>
+                            <button class="zone z-tr" data-zone="top-right" aria-label="Play demo: toggle dark mode (option + top-right corner)"></button>
+                            <button class="zone z-l" data-zone="left" tabindex="-1" aria-label="Screen zone: left edge"></button>
+                            <span class="zone-center" aria-hidden="true"></span>
+                            <button class="zone z-r" data-zone="right" aria-label="Play demo: snap window right (command + right edge)"></button>
+                            <button class="zone z-bl" data-zone="bottom-left" aria-label="Play demo: raise volume (shift + bottom-left corner)"></button>
+                            <button class="zone z-b" data-zone="bottom" tabindex="-1" aria-label="Screen zone: bottom edge"></button>
+                            <button class="zone z-br" data-zone="bottom-right" tabindex="-1" aria-label="Screen zone: bottom-right corner"></button>
+                        </div>
+                        <div class="pointer" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M5 2l14 12.5-6.8.6 3.9 6.9-2.7 1.4-3.8-7L5 21z" fill="#fff" stroke="#1e293b" stroke-width="1.4"/></svg>
+                        </div>
                     </div>
-                    <div class="stand"></div>
-                    <div class="base"></div>
+                    <div class="demo-readout" aria-hidden="true">
+                        <div class="mod-row">
+                            <kbd data-mod="ctrl">⌃</kbd><kbd data-mod="opt">⌥</kbd><kbd data-mod="shift">⇧</kbd><kbd data-mod="cmd">⌘</kbd>
+                        </div>
+                        <p class="demo-caption"><span class="cap-trigger">⌘ + Right Edge</span><span class="cap-arrow">→</span><span class="cap-action">Snap Window Right</span></p>
+                    </div>
                 </div>
+                <p class="demo-hint">Hover or tap a glowing zone to drive the demo yourself.</p>
             </div>
         </div>
     </header>
 
+    <section class="stats" aria-label="MouseGestures by the numbers">
+        <div class="container">
+            <div class="stats-grid">
+                <div class="stat">
+                    <span class="stat-value">47</span>
+                    <span class="stat-label">Built-in actions</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-value">120</span>
+                    <span class="stat-label">Gesture slots per profile</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-value">0</span>
+                    <span class="stat-label">Third-party dependencies</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-value">$9.99</span>
+                    <span class="stat-label">Pro, once — no subscription</span>
+                </div>
+            </div>
+            <p class="stats-note">8 zones &times; 15 modifier combinations = 120 zone gestures per profile &mdash; before you add mouse-button triggers, keyboard triggers, or a second profile.</p>
+        </div>
+    </section>
+
     <section id="features" class="features">
         <div class="container">
             <div class="section-header">
-                <h2>Powerful Actions, <span class="text-gradient">Perfectly Configured.</span></h2>
-                <p>Choose from dozens of built-in actions or create your own with the plugin system.</p>
+                <h2>Everything within <span class="text-gradient">a flick&rsquo;s reach.</span></h2>
+                <p>Six plugin families cover windows, media, system, and full automation &mdash; and every one of them is remappable to any gesture.</p>
             </div>
             <div class="features-grid">
-                <div class="feature-card">
-                    <div class="feature-icon icon-window"></div>
-                    <h3>Window Management</h3>
-                    <p>Snap to regions, resize, tile, or cascade windows instantly. Save and restore custom layouts with a single move.</p>
+                <article class="feature-card">
+                    <div class="feature-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8.5" height="18" rx="2"/><rect x="14.5" y="3" width="6.5" height="8" rx="2"/><rect x="14.5" y="14" width="6.5" height="7" rx="2"/></svg>
+                    </div>
+                    <h3>Window management</h3>
+                    <p>Snap to any of 11 screen regions, tile, cascade, and resize by percent or pixel. Save whole named layouts &mdash; and restore them with a flick.</p>
+                </article>
+                <article class="feature-card">
+                    <div class="feature-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17l6-5-6-5"/><path d="M12 19h8"/></svg>
+                    </div>
+                    <h3>Automation &amp; scripting</h3>
+                    <p>Run Shortcuts, AppleScript, shell, Python, or JavaScript. Fire keyboard shortcuts, open apps, files, and URLs, or transform the clipboard.</p>
+                </article>
+                <article class="feature-card">
+                    <div class="feature-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3"/><path d="M1.5 14h5M9.5 8h5M17.5 16h5"/></svg>
+                    </div>
+                    <h3>Media &amp; system control</h3>
+                    <p>Volume, brightness, playback, dark mode, Do Not Disturb, screenshots, lock, sleep &mdash; the whole control center, moved to your cursor.</p>
+                </article>
+                <article class="feature-card">
+                    <div class="feature-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="12" height="12" rx="2.5"/><rect x="9" y="9" width="12" height="12" rx="2.5"/></svg>
+                    </div>
+                    <h3>Per-app profiles</h3>
+                    <p>Your gesture set switches automatically with the frontmost app. The same corner can mean one thing in Safari and another in Xcode.</p>
+                </article>
+                <article class="feature-card">
+                    <div class="feature-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="6" r="2.2"/><circle cx="5" cy="18" r="2.2"/><path d="M7.2 6H15a4 4 0 0 1 0 8H9a4 4 0 0 0 0 8h1"/><path d="M14 19l3 3 3-3M17 22v-6"/></svg>
+                    </div>
+                    <h3>Action bundles</h3>
+                    <p>Chain actions into sequences or run them in parallel, branch on conditions, repeat, add delays &mdash; one gesture can run a whole routine.</p>
+                </article>
+                <article class="feature-card">
+                    <div class="feature-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3h4a1 1 0 0 1 1 1v2.2a1 1 0 0 0 1 1h2.8a1 1 0 0 1 1 1V12h-2a2.5 2.5 0 0 0 0 5h2v3a1 1 0 0 1-1 1h-3v-2a2.5 2.5 0 0 0-5 0v2H6a1 1 0 0 1-1-1v-3.8H4a1 1 0 0 1-1-1V8.2a1 1 0 0 1 1-1h5a1 1 0 0 0 1-1V4a1 1 0 0 1 0-1z" transform="translate(0 .5) scale(.98)"/></svg>
+                    </div>
+                    <h3>Plugins, all the way down</h3>
+                    <p>Detection, actions, UI, and services are all plugins behind one protocol &mdash; external <code>.plugin</code> bundles install exactly like the built-ins.</p>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    <section class="catalog" aria-label="Full action catalog">
+        <div class="container">
+            <p class="catalog-title">All <strong>47 actions</strong>, six plugin families &mdash; every one mappable to any trigger.</p>
+        </div>
+        <div class="marquee" data-marquee>
+            <div class="marquee-track">
+                <div class="chips">
+                    <span class="chip fam" data-fam="core"><i class="dot"></i>Core</span>
+                    <span class="chip" data-fam="core">Close Window</span>
+                    <span class="chip" data-fam="core">Minimize</span>
+                    <span class="chip" data-fam="core">Toggle Fullscreen</span>
+                    <span class="chip" data-fam="core">Hide App</span>
+                    <span class="chip" data-fam="core">Quit App</span>
+                    <span class="chip" data-fam="core">Mission Control</span>
+                    <span class="chip" data-fam="core">Show Desktop</span>
+                    <span class="chip" data-fam="core">App Exposé</span>
+                    <span class="chip" data-fam="core">Cycle Windows</span>
+                    <span class="chip" data-fam="core">Cycle Spaces</span>
+                    <span class="chip" data-fam="core">Lock Screen</span>
+                    <span class="chip" data-fam="core">Sleep Display</span>
+                    <span class="chip" data-fam="core">Empty Trash</span>
+                    <span class="chip" data-fam="core">Switch Profile</span>
+                    <span class="chip fam" data-fam="media"><i class="dot"></i>Media</span>
+                    <span class="chip" data-fam="media">Play / Pause</span>
+                    <span class="chip" data-fam="media">Next / Previous Track</span>
+                    <span class="chip" data-fam="media">Volume</span>
+                    <span class="chip" data-fam="media">Seek</span>
+                    <span class="chip fam" data-fam="bundle"><i class="dot"></i>Bundles</span>
+                    <span class="chip" data-fam="bundle">Action Sequence</span>
+                    <span class="chip" data-fam="bundle">Conditional (If / Else)</span>
+                    <span class="chip" data-fam="bundle">Repeat Action</span>
+                    <span class="chip" data-fam="bundle">Timed Delay</span>
                 </div>
-                <div class="feature-card">
-                    <div class="feature-icon icon-automation"></div>
-                    <h3>Advanced Automation</h3>
-                    <p>Execute shell scripts, Python, or AppleScript. Trigger your favorite Apple Shortcuts app workflows system-wide.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon icon-media"></div>
-                    <h3>Media & System</h3>
-                    <p>Control volume, brightness, playback, and dark mode. Lock your screen or sleep displays without reaching for the keyboard.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon icon-profiles"></div>
-                    <h3>App-Specific Profiles</h3>
-                    <p>MouseGestures automatically switches your gesture set based on the active application. Command Photoshop and Safari differently.</p>
+            </div>
+            <div class="marquee-track reverse">
+                <div class="chips">
+                    <span class="chip fam" data-fam="window"><i class="dot"></i>Window</span>
+                    <span class="chip" data-fam="window">Snap to Region</span>
+                    <span class="chip" data-fam="window">Resize to Percent</span>
+                    <span class="chip" data-fam="window">Grow / Shrink</span>
+                    <span class="chip" data-fam="window">Switch to Window</span>
+                    <span class="chip" data-fam="window">Position Memory</span>
+                    <span class="chip" data-fam="window">Named Layouts</span>
+                    <span class="chip" data-fam="window">Tile All</span>
+                    <span class="chip" data-fam="window">Cascade</span>
+                    <span class="chip" data-fam="window">Set Size</span>
+                    <span class="chip" data-fam="window">Set Position</span>
+                    <span class="chip fam" data-fam="system"><i class="dot"></i>System</span>
+                    <span class="chip" data-fam="system">Display Brightness</span>
+                    <span class="chip" data-fam="system">Keyboard Brightness</span>
+                    <span class="chip" data-fam="system">Toggle Dark Mode</span>
+                    <span class="chip" data-fam="system">Do Not Disturb</span>
+                    <span class="chip" data-fam="system">Screenshot</span>
+                    <span class="chip" data-fam="system">Restart</span>
+                    <span class="chip" data-fam="system">Shut Down</span>
+                    <span class="chip" data-fam="system">Log Out</span>
+                    <span class="chip fam" data-fam="automation"><i class="dot"></i>Automation</span>
+                    <span class="chip" data-fam="automation">Keyboard Shortcut</span>
+                    <span class="chip" data-fam="automation">Run Shortcut</span>
+                    <span class="chip" data-fam="automation">Run Script</span>
+                    <span class="chip" data-fam="automation">Open App</span>
+                    <span class="chip" data-fam="automation">Open File</span>
+                    <span class="chip" data-fam="automation">Open URL</span>
+                    <span class="chip" data-fam="automation">Clipboard Actions</span>
                 </div>
             </div>
         </div>
@@ -90,23 +303,74 @@
     <section id="how-it-works" class="how-it-works">
         <div class="container">
             <div class="section-header">
-                <h2>Three Steps to <span class="text-gradient">Total Efficiency.</span></h2>
+                <h2>Three steps to <span class="text-gradient">zero friction.</span></h2>
             </div>
             <div class="steps-grid">
                 <div class="step">
-                    <div class="step-number">1</div>
-                    <h4>Enter a Zone</h4>
-                    <p>Move your cursor to one of the 8 screen corners or edges.</p>
+                    <div class="step-visual" aria-hidden="true">
+                        <span class="sv-cell on"></span><span class="sv-cell"></span><span class="sv-cell"></span>
+                        <span class="sv-cell"></span><span class="sv-cell mid"></span><span class="sv-cell"></span>
+                        <span class="sv-cell"></span><span class="sv-cell"></span><span class="sv-cell on2"></span>
+                    </div>
+                    <h4><span class="step-n">1</span>Glide into a zone</h4>
+                    <p>Move the cursor to any of the 8 screen edges and corners &mdash; space it already travels through.</p>
                 </div>
                 <div class="step">
-                    <div class="step-number">2</div>
-                    <h4>Hold a Modifier</h4>
-                    <p>Press ⌘, ⌥, ⌃, or ⇧ (or any combination) to prepare an action.</p>
+                    <div class="step-visual keys" aria-hidden="true">
+                        <kbd>⌘</kbd><kbd>⌥</kbd><kbd>⌃</kbd><kbd>⇧</kbd>
+                    </div>
+                    <h4><span class="step-n">2</span>Hold a modifier</h4>
+                    <p>⌘, ⌥, ⌃, ⇧ &mdash; alone or in any combination. Fifteen distinct layers per zone.</p>
                 </div>
                 <div class="step">
-                    <div class="step-number">3</div>
-                    <h4>Execute</h4>
-                    <p>The action triggers instantly. No clicking, no menus, no friction.</p>
+                    <div class="step-visual" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" class="sv-bolt"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg>
+                    </div>
+                    <h4><span class="step-n">3</span>It fires. Instantly.</h4>
+                    <p>The mapped action executes the moment you arrive. No click, no menu, no waiting.</p>
+                </div>
+            </div>
+            <div class="triggers">
+                <p class="triggers-title">And zones are just the start &mdash; three more ways to trigger anything:</p>
+                <div class="triggers-grid">
+                    <div class="trigger-card">
+                        <h5>Mouse buttons</h5>
+                        <p>Map back, forward, middle, and other extra buttons to any action.</p>
+                    </div>
+                    <div class="trigger-card">
+                        <h5>Keyboard shortcuts</h5>
+                        <p>Every action can also live on a global hotkey.</p>
+                    </div>
+                    <div class="trigger-card">
+                        <h5>Automatic profile switching</h5>
+                        <p>A detector watches the frontmost app and swaps gesture profiles for you.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="privacy" class="trust">
+        <div class="container">
+            <div class="section-header">
+                <h2>Native. Private. <span class="text-gradient">Yours.</span></h2>
+            </div>
+            <div class="trust-grid">
+                <div class="trust-card">
+                    <h3>100% native Swift</h3>
+                    <p>Built on SwiftUI and AppKit with zero third-party dependencies. A lightweight menu-bar agent &mdash; no Dock icon, no bloat.</p>
+                </div>
+                <div class="trust-card">
+                    <h3>Offline by design</h3>
+                    <p>No account, ever. Pro unlocks with a license key validated entirely on your Mac. The app&rsquo;s only network call is an optional update check against GitHub.</p>
+                </div>
+                <div class="trust-card">
+                    <h3>Signed &amp; notarized</h3>
+                    <p>Distributed as a Developer&nbsp;ID&ndash;signed, Apple-notarized DMG with hardened runtime &mdash; it opens clean, no Gatekeeper hoops.</p>
+                </div>
+                <div class="trust-card">
+                    <h3>Honest permissions</h3>
+                    <p>macOS asks for <strong>Accessibility</strong> (to see your gestures and move windows) and <strong>Automation</strong> (for system actions). Granted once in System Settings; nothing leaves your machine.</p>
                 </div>
             </div>
         </div>
@@ -115,35 +379,70 @@
     <section id="pricing" class="pricing">
         <div class="container">
             <div class="section-header">
-                <h2>Upgrade Your <span class="text-gradient">Workflow.</span></h2>
-                <p>Try every feature free for 30 days. No credit card required.</p>
+                <h2>One price. <span class="text-gradient">Forever.</span></h2>
+                <p>Every install starts with a 30-day full-feature Pro trial &mdash; no credit card, no account.</p>
             </div>
             <div class="pricing-grid">
                 <div class="pricing-card">
                     <h3>Free</h3>
-                    <div class="price">Free</div>
+                    <div class="price">$0</div>
+                    <p class="price-sub">Yours after the trial, no strings</p>
                     <ul class="pricing-features">
-                        <li>Core System Actions</li>
-                        <li>Single Gesture Profile</li>
-                        <li>Standard Window Management</li>
-                        <li>30-Day Full Pro Trial</li>
+                        <li>Core system &amp; window actions</li>
+                        <li>All trigger types &mdash; zones, buttons, hotkeys</li>
+                        <li>One gesture profile</li>
+                        <li>30-day full Pro trial included</li>
                     </ul>
-                    <a href="#download" class="btn btn-secondary">Download</a>
+                    <a href="#download" class="btn btn-secondary">Download free</a>
                 </div>
                 <div class="pricing-card featured">
                     <div class="badge">Recommended</div>
                     <h3>Pro</h3>
-                    <div class="price">$9.99<span>One-Time</span></div>
-                    <p class="or">Unlocked with a license key &mdash; no subscription</p>
+                    <div class="price">$9.99<span>one-time</span></div>
+                    <p class="price-sub">An offline license key &mdash; no subscription, no account</p>
                     <ul class="pricing-features">
-                        <li>Unlimited Profiles</li>
-                        <li>App-Specific Targeting</li>
-                        <li>Advanced Automation Plugins</li>
-                        <li>Scripting (Python, Shell, etc.)</li>
-                        <li>Priority Support</li>
+                        <li>Everything in Free</li>
+                        <li>Unlimited profiles + automatic per-app switching</li>
+                        <li>Advanced automation &amp; scripting actions</li>
+                        <li>Action bundles &mdash; sequences, conditions, repeats</li>
+                        <li>Priority support</li>
                     </ul>
-                    <span class="btn btn-primary btn-disabled" aria-disabled="true">Licensing at launch</span>
+                    <span class="btn btn-primary btn-disabled" aria-disabled="true">License sales opening soon</span>
                 </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="faq" class="faq">
+        <div class="container">
+            <div class="section-header">
+                <h2>Questions, <span class="text-gradient">answered.</span></h2>
+            </div>
+            <div class="faq-list">
+                <details>
+                    <summary>Why does it need Accessibility and Automation permissions?</summary>
+                    <p>Accessibility lets MouseGestures watch cursor position and modifier keys system-wide (that&rsquo;s how gestures are detected) and move or resize other apps&rsquo; windows. Automation lets it drive system actions like volume and brightness. Both are granted once under System&nbsp;Settings&nbsp;&rarr;&nbsp;Privacy&nbsp;&amp;&nbsp;Security, and everything is processed locally &mdash; nothing is recorded or sent anywhere.</p>
+                </details>
+                <details>
+                    <summary>Is it on the Mac App Store?</summary>
+                    <p>No &mdash; and it can&rsquo;t be. System-wide gesture detection and window control require Accessibility APIs that the App Store sandbox forbids. MouseGestures ships as a Developer&nbsp;ID&ndash;signed, Apple-notarized DMG instead, so it installs cleanly without Gatekeeper warnings.</p>
+                </details>
+                <details>
+                    <summary>What happens when the 30-day trial ends?</summary>
+                    <p>The app keeps working &mdash; it simply drops to the Free tier: core actions and a single profile. Your gesture configuration is preserved, and entering a Pro license key at any point unlocks everything again.</p>
+                </details>
+                <details>
+                    <summary>Do I need an account or a subscription?</summary>
+                    <p>Neither. Pro is a one-time $9.99 license key that&rsquo;s validated entirely offline on your Mac. No account, no server check-ins, no recurring charges.</p>
+                </details>
+                <details>
+                    <summary>Does it run on Intel Macs?</summary>
+                    <p>MouseGestures targets Apple silicon (arm64) on macOS&nbsp;13&nbsp;Ventura or later. Intel Macs aren&rsquo;t supported.</p>
+                </details>
+                <details>
+                    <summary>Will it conflict with Rectangle, Raycast, or BetterTouchTool?</summary>
+                    <p>They coexist fine. MouseGestures only acts when one of <em>its</em> configured triggers fires &mdash; a zone-plus-modifier combination, a mapped mouse button, or a hotkey &mdash; so as long as your triggers don&rsquo;t overlap with another tool&rsquo;s, they stay out of each other&rsquo;s way.</p>
+                </details>
             </div>
         </div>
     </section>
@@ -151,55 +450,53 @@
     <section id="download" class="download">
         <div class="container">
             <div class="section-header">
-                <h2>Download <span class="text-gradient">MouseGestures.</span></h2>
-                <p>Distributed as a Developer&nbsp;ID&ndash;signed, notarized disk image (<code>.dmg</code>) &mdash; no App Store required.</p>
+                <h2>Get <span class="text-gradient">MouseGestures.</span></h2>
+                <p>A signed, notarized disk image &mdash; download, drag to Applications, done.</p>
             </div>
             <div class="download-card">
-                <a class="btn btn-lg btn-primary" href="https://github.com/TheElderWyrm/MouseGestures/releases/latest/download/MouseGestures.dmg">Download DMG</a>
-                <p class="download-status">
-                    Version 1.0.0 &middot; signed &amp; notarized by Apple &mdash; opens without
-                    Gatekeeper warnings. Available now on
-                    <strong>GitHub Releases</strong>.
-                </p>
+                <div id="dl-live">
+                    <a class="btn btn-lg btn-primary" id="dl-btn" href="https://github.com/TheElderWyrm/MouseGestures/releases/latest/download/MouseGestures.dmg">Download MouseGestures (.dmg)</a>
+                    <p class="download-status" id="dl-meta">Version 1.0.0 &middot; signed &amp; notarized &middot; free to try</p>
+                </div>
                 <ul class="download-facts">
-                    <li><strong>Requirements:</strong> macOS 13.0 or later, Apple silicon (arm64).</li>
-                    <li><strong>Signing:</strong> Developer&nbsp;ID&ndash;signed and Apple-notarized, so it opens without Gatekeeper warnings.</li>
-                    <li><strong>Delivery:</strong> published at <code>github.com/TheElderWyrm/MouseGestures/releases</code>.</li>
+                    <li><strong>Requirements:</strong> macOS 13.0 or later, Apple silicon (arm64)</li>
+                    <li><strong>Signing:</strong> Developer&nbsp;ID&ndash;signed and Apple-notarized &mdash; opens without Gatekeeper warnings</li>
+                    <li><strong>Delivery:</strong> published on <a href="https://github.com/TheElderWyrm/MouseGestures/releases" rel="noopener">GitHub&nbsp;Releases</a> &mdash; watch the repo to get notified</li>
                 </ul>
             </div>
         </div>
     </section>
+    </main>
 
     <footer class="footer">
         <div class="container">
             <div class="footer-top">
                 <div class="logo">
-                    <div class="logo-icon"></div>
-                    <span>MouseGestures</span>
+                    <span class="logo-icon" aria-hidden="true"></span>
+                    <div>
+                        <span>MouseGestures</span>
+                        <p class="footer-tag">Control macOS at the speed of thought.</p>
+                    </div>
                 </div>
                 <div class="footer-links">
-                    <a href="#">Privacy Policy</a>
-                    <a href="#">Terms of Service</a>
+                    <a href="https://github.com/TheElderWyrm/MouseGestures" rel="noopener">GitHub</a>
+                    <a href="https://github.com/TheElderWyrm/MouseGestures/blob/main/docs/CHANGELOG.md" rel="noopener">Changelog</a>
                     <a href="mailto:support@mousegestures.app">Support</a>
+                    <a href="#privacy">Privacy</a>
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>&copy; 2026 MouseGestures. All rights reserved. macOS is a trademark of Apple Inc.</p>
+                <p>&copy; 2026 MouseGestures. macOS is a trademark of Apple Inc.</p>
             </div>
         </div>
     </footer>
 
-    <script>
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                const href = this.getAttribute('href');
-                if (href === '#' || href.length < 2) return;
-                const target = document.querySelector(href);
-                if (!target) return;
-                e.preventDefault();
-                target.scrollIntoView({ behavior: 'smooth' });
-            });
-        });
-    </script>
+    <div class="egg-hint" id="egg-hint" hidden>
+        <p>Psst &mdash; hold <kbd>⌥</kbd> and glide to the <strong>top-right corner</strong> of this page.</p>
+        <button type="button" id="egg-dismiss" aria-label="Dismiss hint">&times;</button>
+    </div>
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+    <script src="js/main.js" defer></script>
 </body>
 </html>
