@@ -15,3 +15,6 @@ dist/
 # SwiftLint (portable binary downloaded by CI / local lint runs)
 .swiftlint-bin/
 portable_swiftlint.zip
+
+# Cloudflare Wrangler (local cache/state from Website deploys)
+Website/.wrangler/

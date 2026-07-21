@@ -150,6 +150,17 @@ jobs:
             -srcfolder "$RUNNER_TEMP/export/MouseGestures.app" \
             -ov -format UDZO "$RUNNER_TEMP/MouseGestures.dmg"
 
+      # ── Sign the DMG container itself. ───────────────────────────────────────
+      # notarytool only requires the *contents* to be signed, but the Gatekeeper
+      # "primary signature" assessment (below, and what end users' Gatekeeper
+      # checks on first open) evaluates the disk image's own signature. An
+      # unsigned UDIF container notarizes fine but is rejected at that check
+      # ("no usable signature") — sign it with the same Developer ID identity.
+      - name: Sign the DMG
+        run: |
+          codesign --sign "Developer ID Application" --timestamp "$RUNNER_TEMP/MouseGestures.dmg"
+          codesign --verify --verbose "$RUNNER_TEMP/MouseGestures.dmg"
+
       # ── Notarize the DMG with Apple and staple the ticket. ───────────────────
       # A Developer-ID DMG must be notarized + stapled or Gatekeeper refuses to
       # open it. notarytool accepts the .dmg directly. Provide exactly ONE

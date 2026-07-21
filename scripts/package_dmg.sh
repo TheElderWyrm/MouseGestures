@@ -116,6 +116,17 @@ hdiutil create \
   -ov \
   "$DMG" >/dev/null
 
+# notarytool only requires the *contents* to be signed, but the Gatekeeper
+# "primary signature" assessment (and what end users' Gatekeeper checks on
+# first open) evaluates the disk image's own signature. Sign the container
+# itself with the same Developer ID identity used for the app, or an
+# unsigned UDIF notarizes fine but is rejected at that check.
+if [ -n "$IDENTITY" ]; then
+  echo "==> Signing the DMG container…"
+  codesign --sign "$IDENTITY" --timestamp "$DMG"
+  codesign --verify --verbose "$DMG"
+fi
+
 # ── Optional: notarize the DMG and staple the ticket ─────────────────────────
 if [ "$NOTARIZE" = "1" ]; then
   echo "==> Notarizing ${DMG}…"
