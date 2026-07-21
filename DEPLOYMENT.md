@@ -75,10 +75,13 @@ the archive command line — see the release workflow and `package_dmg.sh`).
 
 ### 3. Credentials
 
-The notarize + staple steps are now **implemented** (release.yml and
-`package_dmg.sh`). The one remaining requirement is a notarization credential,
-supplied to CI as the GitHub Actions secrets listed below (or to the local script
-via env vars).
+The notarize + staple steps are **implemented** (release.yml and
+`package_dmg.sh`) and the required GitHub Actions secrets are **confirmed set**
+under the exact names below (verified via the Actions API and by a real tagged
+run that signed, notarized, and stapled successfully). Note these are GitHub
+repo secrets, not HELM's own secret store — release.yml has no access to the
+latter, so a value stored only there (e.g. an earlier `APP_SPECIFIC_PASSWORD`
+entry) is invisible to this workflow.
 
 ---
 
@@ -111,13 +114,14 @@ commit real values.
   | `NOTARY_PASSWORD` | An **app-specific password** (appleid.apple.com → Sign-In and Security) — *not* the account password |
   | `NOTARY_TEAM_ID` | The 10-char team id |
 
-> **Decisions to surface to the operator (remaining):** provide a NOTARIZATION
-> credential for team `2RZ7SBH74J` — either an App Store Connect API key
-> (`.p8` + key-id + issuer-id) or an Apple-ID app-specific password + team-id.
-> Everything else is settled: distribution path (B, Direct DMG), bundle id
+> **Resolved:** all 6 repo secrets above (signing trio + `NOTARY_APPLE_ID` /
+> `NOTARY_PASSWORD` / `NOTARY_TEAM_ID` for team `2RZ7SBH74J`) are set in
+> **repo → Settings → Secrets and variables → Actions** under these exact
+> names. Confirmed via `GET /repos/.../actions/secrets` and by a real `v1.0.0`
+> tag run whose `Notarize and staple` step succeeded end-to-end. Everything
+> else was already settled: distribution path (B, Direct DMG), bundle id
 > (`com.mousegestures.MouseGestures`), publishing team (`2RZ7SBH74J`), and the
-> Developer ID signing cert (already in the keychain). This one credential cannot
-> be resolved autonomously.
+> Developer ID signing cert.
 
 ---
 
