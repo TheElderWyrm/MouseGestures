@@ -17,4 +17,4 @@ dist/
 portable_swiftlint.zip
 
 # Cloudflare Wrangler (local cache/state from Website deploys)
-Website/.wrangler/
+.wrangler/
