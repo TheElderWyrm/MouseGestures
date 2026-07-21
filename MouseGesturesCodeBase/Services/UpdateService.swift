@@ -30,31 +30,33 @@ public class UpdateService: ObservableObject {
     /// Check for updates manually
     public func checkForUpdates(quietly: Bool = false) {
         guard !isChecking else { return }
+        guard let url = updateURL else { return }
 
         isChecking = true
 
-        // In a real app, we'd fetch from a remote URL. 
-        // For this prototype, we'll simulate a check.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            self.isChecking = false
-            self.lastCheckDate = Date()
-            UserDefaults.standard.set(self.lastCheckDate, forKey: self.lastCheckKey)
+        URLSession.shared.dataTask(with: url) { [weak self] data, _, error in
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                self.isChecking = false
+                self.lastCheckDate = Date()
+                UserDefaults.standard.set(self.lastCheckDate, forKey: self.lastCheckKey)
 
-            // Simulation: 1.0.0 is current, 1.1.0 is latest
-            self.latestVersion = "1.1.0"
-            self.isUpdateAvailable = self.compareVersions(self.currentVersion, self.latestVersion) == .orderedAscending
-            self.updateReleaseNotes = """
-                - Added Onboarding UI for new users
-                - Added Update Checker and automatic notifications
-                - Improved license management for Pro features
-                - Fixed Finder 'Quit Application' behavior
-                - Optimized Modifier Key and Keyboard Shortcut detection
-                """
+                // On any network or parse failure, silently leave
+                // isUpdateAvailable as-is (default false) -- no false positives.
+                guard error == nil, let data = data,
+                      let feed = try? UpdateLogic.parseFeed(data) else {
+                    return
+                }
 
-            if self.isUpdateAvailable && !quietly {
-                self.showUpdateNotification()
+                self.latestVersion = feed.version
+                self.updateReleaseNotes = feed.releaseNotes
+                self.isUpdateAvailable = UpdateLogic.isUpdateAvailable(current: self.currentVersion, remote: feed.version)
+
+                if self.isUpdateAvailable && !quietly {
+                    self.showUpdateNotification()
+                }
             }
-        }
+        }.resume()
     }
 
     /// Returns true if auto-update is enabled
@@ -64,10 +66,6 @@ public class UpdateService: ObservableObject {
     }
 
     // MARK: - Helper Methods
-
-    private func compareVersions(_ v1: String, _ v2: String) -> ComparisonResult {
-        return v1.compare(v2, options: .numeric)
-    }
 
     private func showUpdateNotification() {
         NotificationCenter.default.post(
