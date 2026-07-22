@@ -14,6 +14,7 @@
     --text-2: #9aa3b5;
     --accent: #5e9bff;
     --accent-b: #ff9f5e;
+    --good: #63d296;
     font-size: 16px;
   }
   * { box-sizing: border-box; }
@@ -25,6 +26,7 @@
     border-bottom: 1px solid var(--line);
     padding: 14px 24px;
   }
+  .topbar-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
   .topbar h1 { margin: 0 0 2px; font-size: 17px; }
   .topbar p { margin: 0; color: var(--text-2); font-size: 13px; }
   .toc { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
@@ -34,11 +36,20 @@
   }
   .toc a:hover { color: var(--text); border-color: var(--accent); }
 
-  main { max-width: 1180px; margin: 0 auto; padding: 24px; }
+  .mode-toggle { display: flex; gap: 4px; background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 3px; flex: 0 0 auto; }
+  .mode-btn {
+    border: none; background: transparent; color: var(--text-2); font-size: 12px; font-weight: 600;
+    padding: 7px 14px; border-radius: 999px; cursor: pointer; white-space: nowrap;
+  }
+  .mode-btn.active { background: var(--accent-b); color: #241300; }
+  .mode-btn:not(.active):hover { color: var(--text); }
+
+  main { max-width: 1400px; margin: 0 auto; padding: 24px; transition: max-width .15s, padding .15s; }
 
   .test-row {
     border: 1px solid var(--line); border-radius: 14px; background: var(--panel);
-    margin-bottom: 28px; overflow: hidden; scroll-margin-top: 130px;
+    margin-bottom: 28px; overflow: hidden; scroll-margin-top: 90px;
+    transition: border-color .15s, border-radius .15s, margin .15s;
   }
   .test-row-head {
     display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
@@ -49,7 +60,6 @@
     color: var(--bg); background: var(--accent); border-radius: 6px; padding: 3px 8px; min-width: 28px; text-align: center;
   }
   .test-row-head h2 { margin: 0; font-size: 16px; flex: 1 1 auto; }
-  .test-note { font-size: 12px; color: var(--text-2); }
 
   .test-switch { display: flex; gap: 4px; background: var(--bg); border: 1px solid var(--line); border-radius: 999px; padding: 3px; }
   .sw-btn {
@@ -59,24 +69,59 @@
   .sw-btn.active { background: var(--accent); color: #0b0f16; }
   .sw-btn:not(.active):hover { color: var(--text); }
 
-  .test-frame-wrap { position: relative; background: #0c0d10; }
+  .test-body { display: flex; align-items: stretch; }
+  .test-frame-wrap { position: relative; background: #0c0d10; flex: 1 1 auto; min-width: 0; }
   .test-frame { display: none; width: 100%; border: 0; background: #fff; }
   .test-frame.active { display: block; }
+
+  .notes-panel {
+    flex: 0 0 280px; display: flex; flex-direction: column; gap: 6px;
+    padding: 12px; border-left: 1px solid var(--line); background: var(--panel-2);
+  }
+  .notes-panel label { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--text-2); font-weight: 700; }
+  .notes-panel textarea {
+    flex: 1 1 auto; min-height: 120px; resize: vertical; width: 100%;
+    background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 8px;
+    padding: 8px 10px; font: inherit; font-size: 13px; line-height: 1.45;
+  }
+  .notes-panel textarea:focus { outline: none; border-color: var(--accent); }
+  .notes-status { font-size: 11px; color: var(--text-2); min-height: 14px; }
+  .notes-status.saved { color: var(--good); }
+  .notes-status.pending { color: var(--accent-b); }
+  .notes-status.error { color: #ff6b6b; }
 
   .single-badge {
     font-size: 11px; text-transform: uppercase; letter-spacing: .04em; font-weight: 700;
     color: var(--accent-b); border: 1px solid var(--line); border-radius: 999px; padding: 5px 10px;
   }
 
-  footer.meta { max-width: 1180px; margin: 0 auto 60px; padding: 0 24px; color: var(--text-2); font-size: 12px; line-height: 1.6; }
+  footer.meta { max-width: 1400px; margin: 0 auto 60px; padding: 0 24px; color: var(--text-2); font-size: 12px; line-height: 1.6; }
   footer.meta code { background: var(--panel-2); padding: 2px 6px; border-radius: 4px; }
+
+  /* ---------- Preview mode: strip test-site chrome, stack the chosen sections as a plain page ---------- */
+  body.mode-preview .topbar p,
+  body.mode-preview .toc,
+  body.mode-preview .test-row-head,
+  body.mode-preview .notes-panel,
+  body.mode-preview footer.meta { display: none; }
+  body.mode-preview main { max-width: none; padding: 0; }
+  body.mode-preview .test-row { border: 0; border-radius: 0; margin-bottom: 0; background: transparent; }
+  body.mode-preview .test-frame-wrap { background: transparent; }
 </style>
 </head>
 <body>
 
 <div class="topbar">
-  <h1>MouseGestures — Section A/B Test Site</h1>
-  <p>Every section from the two reference builds, numbered and isolated. Where a section differs between builds, switch A ⇄ B to compare in place.</p>
+  <div class="topbar-row">
+    <div>
+      <h1>MouseGestures — Section A/B Test Site</h1>
+      <p>Every section from the two reference builds, numbered and isolated. Where a section differs between builds, switch A ⇄ B to compare in place. Notes save to <code>notes.json</code> on disk.</p>
+    </div>
+    <div class="mode-toggle" id="modeToggle">
+      <button type="button" class="mode-btn active" data-mode="test">Test Mode</button>
+      <button type="button" class="mode-btn" data-mode="preview">Preview Mode</button>
+    </div>
+  </div>
   <nav class="toc" id="toc"></nav>
 </div>
 
@@ -85,7 +130,9 @@
 <footer class="meta">
   <p>A = <code>Website-references/v1-original</code> ("Speed of Thought" build — navbar, stats bar, features grid, catalog marquee, 6-item FAQ).<br>
   B = <code>Website-references/v2-redesign</code> ("Every Corner" build — swoosh-cursor demo, action tabs, power grid, 8-item FAQ).<br>
-  Each iframe loads the real, unmodified page for that build with everything but the target section hidden via a small injected script — so behavior (theme toggle, marquee, tabs, hero demo) is exactly as in the source. Serve this folder over HTTP (e.g. <code>python3 -m http.server</code> from <code>Website-test/</code>) rather than opening via <code>file://</code>, so iframe auto-sizing works reliably.</p>
+  Each iframe loads the real, unmodified page for that build with everything but the target section hidden via a small injected script — so behavior (theme toggle, marquee, tabs, hero demo) is exactly as in the source.
+  Run <code>python3 serve.py</code> from <code>Website-test/</code> (instead of plain <code>http.server</code>) so iframe auto-sizing works and section notes save to <code>notes.json</code> on disk; without it, notes fall back to browser storage only.
+  <strong>Preview Mode</strong> strips the test-site chrome and stacks whichever variant (A/B) is currently selected for each section into one continuous page — useful for judging how the picked sections read together.</p>
 </footer>
 
 <script>
@@ -141,6 +188,52 @@
     return f;
   }
 
+  /* ---------------- notes: load once, save (debounced) to /api/notes with localStorage fallback ---------------- */
+  var LOCAL_KEY = 'mg-section-notes';
+  var notesCache = {};
+  var saveTimers = {};
+
+  function readLocalNotes() {
+    try { return JSON.parse(localStorage.getItem(LOCAL_KEY) || '{}'); } catch (e) { return {}; }
+  }
+  function writeLocalNotes(all) {
+    try { localStorage.setItem(LOCAL_KEY, JSON.stringify(all)); } catch (e) { /* ignore */ }
+  }
+
+  function loadAllNotes() {
+    return fetch('/api/notes', { cache: 'no-store' })
+      .then(function (res) { if (!res.ok) throw new Error('bad status'); return res.json(); })
+      .catch(function () { return readLocalNotes(); });
+  }
+
+  function saveNote(key, text, statusEl) {
+    notesCache[key] = text;
+    if (statusEl) { statusEl.textContent = 'Saving…'; statusEl.className = 'notes-status pending'; }
+    fetch('/api/notes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key: key, text: text })
+    }).then(function (res) {
+      if (!res.ok) throw new Error('bad status');
+      if (statusEl) { statusEl.textContent = 'Saved to disk ' + new Date().toLocaleTimeString(); statusEl.className = 'notes-status saved'; }
+    }).catch(function () {
+      var all = readLocalNotes();
+      all[key] = text;
+      writeLocalNotes(all);
+      if (statusEl) { statusEl.textContent = 'No disk API — saved in browser only (run serve.py)'; statusEl.className = 'notes-status error'; }
+    });
+  }
+
+  function wireNotesTextarea(key, textarea, statusEl) {
+    textarea.addEventListener('input', function () {
+      clearTimeout(saveTimers[key]);
+      if (statusEl) { statusEl.textContent = 'Editing…'; statusEl.className = 'notes-status pending'; }
+      saveTimers[key] = setTimeout(function () {
+        saveNote(key, textarea.value, statusEl);
+      }, 600);
+    });
+  }
+
   SECTIONS.forEach(function (s) {
     var row = document.createElement('section');
     row.className = 'test-row';
@@ -157,6 +250,9 @@
     var h2 = document.createElement('h2');
     h2.textContent = s.title;
     head.appendChild(h2);
+
+    var body = document.createElement('div');
+    body.className = 'test-body';
 
     var wrap = document.createElement('div');
     wrap.className = 'test-frame-wrap';
@@ -194,14 +290,41 @@
       });
     }
 
+    var notesPanel = document.createElement('div');
+    notesPanel.className = 'notes-panel';
+    var notesLabel = document.createElement('label');
+    notesLabel.textContent = 'Notes — ' + s.num;
+    var textarea = document.createElement('textarea');
+    textarea.placeholder = 'Notes for improving this section…';
+    var statusEl = document.createElement('div');
+    statusEl.className = 'notes-status';
+    notesPanel.appendChild(notesLabel);
+    notesPanel.appendChild(textarea);
+    notesPanel.appendChild(statusEl);
+    wireNotesTextarea(s.num, textarea, statusEl);
+
+    body.appendChild(wrap);
+    body.appendChild(notesPanel);
+
     row.appendChild(head);
-    row.appendChild(wrap);
+    row.appendChild(body);
     rowsEl.appendChild(row);
 
     var tocLink = document.createElement('a');
     tocLink.href = '#sec-' + s.num;
     tocLink.textContent = s.num + ' ' + s.title;
     tocEl.appendChild(tocLink);
+
+    row._textarea = textarea;
+    row._statusEl = statusEl;
+  });
+
+  loadAllNotes().then(function (all) {
+    notesCache = all || {};
+    Array.prototype.forEach.call(rowsEl.children, function (row) {
+      var key = row.id.replace('sec-', '');
+      if (notesCache[key]) row._textarea.value = notesCache[key];
+    });
   });
 
   window.addEventListener('message', function (e) {
@@ -209,6 +332,16 @@
     if (!data || data.type !== 'mg-section-size') return;
     var f = frameByKey[data.key];
     if (f && data.height) f.style.height = Math.max(80, data.height) + 'px';
+  });
+
+  /* ---------------- mode toggle ---------------- */
+  var modeToggle = document.getElementById('modeToggle');
+  modeToggle.addEventListener('click', function (e) {
+    var btn = e.target.closest('.mode-btn');
+    if (!btn) return;
+    var mode = btn.dataset.mode;
+    modeToggle.querySelectorAll('.mode-btn').forEach(function (b) { b.classList.toggle('active', b === btn); });
+    document.body.classList.toggle('mode-preview', mode === 'preview');
   });
 })();
 </script>
