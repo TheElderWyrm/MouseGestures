@@ -88,6 +88,39 @@
     });
   }
 
+  /* ---------- Action-catalog category tabs ----------
+     Jumping to a category swaps the scrolling marquee for a static,
+     readable list of just that category so it's easy to scan and scroll —
+     "All" brings back the normal scrolling marquee. */
+  (function () {
+    var tabsEl = document.getElementById("catalogTabs");
+    var marquee = document.querySelector("[data-marquee]");
+    var focus = document.getElementById("catalogFocus");
+    if (!tabsEl || !marquee || !focus) return;
+
+    var groups = focus.querySelectorAll(".catalog-focus-group");
+
+    tabsEl.addEventListener("click", function (e) {
+      var btn = e.target.closest(".pill-tab");
+      if (!btn) return;
+      var fam = btn.dataset.fam;
+
+      Array.prototype.forEach.call(tabsEl.querySelectorAll(".pill-tab"), function (b) {
+        b.classList.toggle("active", b === btn);
+        b.setAttribute("aria-selected", String(b === btn));
+      });
+
+      if (fam === "all") {
+        focus.hidden = true;
+        marquee.hidden = false;
+        return;
+      }
+      marquee.hidden = true;
+      focus.hidden = false;
+      Array.prototype.forEach.call(groups, function (g) { g.hidden = g.dataset.fam !== fam; });
+    });
+  })();
+
   /* ---------- Scroll reveals ---------- */
 
   (function () {
@@ -142,7 +175,6 @@
       if (rel.tag_name) bits.push("Version " + rel.tag_name.replace(/^v/, ""));
       if (dmg && dmg.size) bits.push((dmg.size / 1048576).toFixed(1) + " MB");
       bits.push("macOS 13+ · Apple silicon");
-      bits.push("signed & notarized");
       if (rel.published_at) {
         bits.push("released " + new Date(rel.published_at).toLocaleDateString(undefined,
           { year: "numeric", month: "short", day: "numeric" }));
@@ -216,15 +248,17 @@
     var shotThumb = document.getElementById("shotThumb");
     var lockscreen = document.getElementById("lockscreen");
     var caption = document.getElementById("demoCaption");
+    var profileBar = document.getElementById("demoProfiles");
 
+    var coarsePointer = matchMedia("(hover: none)").matches;
     var shiftHeld = false;
-    var volume = 50;
-    var hudTimer, volTimer, mediaTimer, transientTimer;
+    var level = 50; // shared 0-100 level for volume / display brightness / keyboard brightness
+    var hudTimer, levelTimer, mediaTimer, transientTimer;
     var lastFire = {}; // per-zone cooldown
 
-    if (matchMedia("(hover: none)").matches && caption) {
-      caption.innerHTML = "<strong>Try it:</strong> tap a corner or an edge of the little desktop. " +
-        "In the real app, your whole screen is the canvas.";
+    if (coarsePointer && caption) {
+      caption.innerHTML = "<strong>Try it:</strong> tap a corner or an edge of the little desktop, or switch " +
+        "profiles above. In the real app, your whole screen is the canvas.";
     }
 
     document.addEventListener("keydown", function (e) { if (e.key === "Shift") shiftHeld = true; });
@@ -238,10 +272,14 @@
       hudTimer = setTimeout(function () { hud.classList.remove("show"); }, 1400);
     };
 
-    /* Transient desktop states (mission control / exposé / show desktop)
+    /* Transient desktop states (mission control, tile, cascade, sleep, …)
        are mutually exclusive and self-clearing. */
+    var TRANSIENT_CLASSES = [
+      "is-mission", "is-expose", "is-showdesk", "is-tile", "is-cascade",
+      "is-grow", "is-shrink", "is-hide", "is-cyclewin", "is-cyclespaces", "is-sleep"
+    ];
     var transientState = function (cls, holdMs) {
-      desktop.classList.remove("is-mission", "is-expose", "is-showdesk");
+      desktop.classList.remove.apply(desktop.classList, TRANSIENT_CLASSES);
       // force reflow so re-triggering the same state animates again
       void desktop.offsetWidth;
       desktop.classList.add(cls);
@@ -249,17 +287,20 @@
       transientTimer = setTimeout(function () { desktop.classList.remove(cls); }, holdMs);
     };
 
-    var showVolume = function (delta) {
-      volume = Math.max(0, Math.min(100, volume + delta));
-      volBar.style.setProperty("--vol", volume + "%");
+    /* Shared level HUD (reused for volume, display brightness, keyboard brightness) */
+    var showLevel = function (kind, delta) {
+      level = Math.max(0, Math.min(100, level + delta));
+      volBar.style.setProperty("--vol", level + "%");
+      volHud.dataset.kind = kind;
       volHud.classList.add("show");
       mediaHud.classList.remove("show");
-      clearTimeout(volTimer);
-      volTimer = setTimeout(function () { volHud.classList.remove("show"); }, 1000);
+      clearTimeout(levelTimer);
+      levelTimer = setTimeout(function () { volHud.classList.remove("show"); }, 1000);
     };
 
-    var showMedia = function () {
-      mediaHud.classList.toggle("playing");
+    var showMediaAction = function (action) {
+      mediaHud.dataset.action = action;
+      if (action === "toggle") mediaHud.classList.toggle("playing");
       mediaHud.classList.add("show");
       volHud.classList.remove("show");
       clearTimeout(mediaTimer);
@@ -278,24 +319,105 @@
       desktop.dataset.snap = desktop.dataset.snap === side ? "none" : side;
     };
 
-    /* zone id -> { glyph, base action, shift action } */
-    var zones = {
-      tl:     { g: "↖", base: ["Mission Control", function () { transientState("is-mission", 1500); }],
-                              shift: ["App Exposé", function () { transientState("is-expose", 1500); }] },
-      tr:     { g: "↗", base: ["Toggle Dark Mode", function () { toggleTheme(true); }],
-                              shift: ["Screenshot", screenshot] },
-      bl:     { g: "↙", base: ["Show Desktop", function () { transientState("is-showdesk", 1500); }] },
-      br:     { g: "↘", base: ["Lock Screen", function () { desktop.classList.add("is-locked"); }] },
-      top:    { g: "↑", base: ["Volume Up", function () { showVolume(12.5); }],
-                              shift: ["Volume Down", function () { showVolume(-12.5); }] },
-      bottom: { g: "↓", base: ["Play / Pause", showMedia] },
-      left:   { g: "←", base: ["Snap Window Left", function () { snap("left"); }] },
-      right:  { g: "→", base: ["Snap Window Right", function () { snap("right"); }] }
+    var noop = function () {};
+
+    /* Three themed gesture profiles — every action here is a real, shipping
+       MouseGestures action (see the catalog below), grouped so each corner
+       or edge means something coherent within its profile, matching how the
+       app's own per-app profile switching works. */
+    var PROFILES = {
+      window: {
+        label: "Window Management",
+        zones: {
+          tl:     { g: "↖", base: ["Mission Control", function () { transientState("is-mission", 1500); }],
+                                  shift: ["App Exposé", function () { transientState("is-expose", 1500); }] },
+          tr:     { g: "↗", base: ["Tile All Windows", function () { transientState("is-tile", 1400); }],
+                                  shift: ["Cascade Windows", function () { transientState("is-cascade", 1400); }] },
+          bl:     { g: "↙", base: ["Show Desktop", function () { transientState("is-showdesk", 1500); }],
+                                  shift: ["Cycle Spaces", function () { transientState("is-cyclespaces", 1200); }] },
+          br:     { g: "↘", base: ["Close Window", function () { transientState("is-hide", 1100); }],
+                                  shift: ["Quit App", function () { transientState("is-hide", 1100); }] },
+          top:    { g: "↑", base: ["Grow Window", function () { transientState("is-grow", 900); }],
+                                  shift: ["Shrink Window", function () { transientState("is-shrink", 900); }] },
+          bottom: { g: "↓", base: ["Cycle Windows", function () { transientState("is-cyclewin", 900); }] },
+          left:   { g: "←", base: ["Snap Window Left", function () { snap("left"); }] },
+          right:  { g: "→", base: ["Snap Window Right", function () { snap("right"); }] }
+        }
+      },
+      media: {
+        label: "Media",
+        zones: {
+          tl:     { g: "↖", base: ["Hide App", function () { transientState("is-hide", 1100); }],
+                                  shift: ["Quit App", function () { transientState("is-hide", 1100); }] },
+          tr:     { g: "↗", base: ["Toggle Dark Mode", function () { toggleTheme(true); }] },
+          bl:     { g: "↙", base: ["Seek Backward", noop] },
+          br:     { g: "↘", base: ["Seek Forward", noop] },
+          top:    { g: "↑", base: ["Volume Up", function () { showLevel("volume", 12.5); }],
+                                  shift: ["Volume Down", function () { showLevel("volume", -12.5); }] },
+          bottom: { g: "↓", base: ["Play / Pause", function () { showMediaAction("toggle"); }] },
+          left:   { g: "←", base: ["Previous Track", function () { showMediaAction("prev"); }] },
+          right:  { g: "→", base: ["Next Track", function () { showMediaAction("next"); }] }
+        }
+      },
+      system: {
+        label: "System",
+        zones: {
+          tl:     { g: "↖", base: ["Screenshot", screenshot] },
+          tr:     { g: "↗", base: ["Toggle Dark Mode", function () { toggleTheme(true); }],
+                                  shift: ["Do Not Disturb", function () { transientState("is-dnd", 1600); }] },
+          bl:     { g: "↙", base: ["Empty Trash", noop] },
+          br:     { g: "↘", base: ["Lock Screen", function () { desktop.classList.add("is-locked"); }],
+                                  shift: ["Sleep Display", function () { transientState("is-sleep", 1300); }] },
+          top:    { g: "↑", base: ["Display Brightness Up", function () { showLevel("brightness", 12.5); }],
+                                  shift: ["Display Brightness Down", function () { showLevel("brightness", -12.5); }] },
+          bottom: { g: "↓", base: ["Log Out", noop] },
+          left:   { g: "←", base: ["Keyboard Brightness Up", function () { showLevel("keyboard", 12.5); }],
+                                  shift: ["Keyboard Brightness Down", function () { showLevel("keyboard", -12.5); }] },
+          right:  { g: "→", base: ["Restart", noop] }
+        }
+      }
     };
+
+    var currentProfile = "window";
+
+    var zoneLabelPrefix = {
+      tl: "Top-left corner", tr: "Top-right corner", bl: "Bottom-left corner", br: "Bottom-right corner",
+      top: "Top edge", bottom: "Bottom edge", left: "Left edge", right: "Right edge"
+    };
+
+    var applyProfile = function (name) {
+      if (!PROFILES[name]) return;
+      currentProfile = name;
+      var zones = PROFILES[name].zones;
+      Array.prototype.forEach.call(demo.querySelectorAll(".zone"), function (zoneEl) {
+        var id = zoneEl.dataset.zone;
+        var entry = zones[id];
+        if (!entry) return;
+        var label = entry.base[0] + (entry.shift ? ", or " + entry.shift[0] + " with Shift" : "");
+        zoneEl.setAttribute("aria-label", zoneLabelPrefix[id] + ": " + label.toLowerCase());
+      });
+      lastFire = {};
+    };
+
+    if (profileBar) {
+      profileBar.addEventListener("click", function (e) {
+        var btn = e.target.closest(".demo-profile-btn");
+        if (!btn) return;
+        var name = btn.dataset.profile;
+        if (!PROFILES[name] || name === currentProfile) return;
+        Array.prototype.forEach.call(profileBar.querySelectorAll(".demo-profile-btn"), function (b) {
+          b.classList.toggle("active", b === btn);
+          b.setAttribute("aria-selected", String(b === btn));
+        });
+        applyProfile(name);
+        showHud("", PROFILES[name].label + " profile", false);
+      });
+    }
+    applyProfile(currentProfile);
 
     var fire = function (zoneEl) {
       var id = zoneEl.dataset.zone;
-      var zone = zones[id];
+      var zone = PROFILES[currentProfile].zones[id];
       if (!zone) return;
 
       var now = performance.now();
@@ -314,11 +436,16 @@
       zoneEl.classList.add("zap");
     };
 
+    /* Real gestures are hover-triggered — a click handler would double-fire
+       whenever a mouse user hovered a zone and then clicked it out of habit.
+       Only wire clicks for coarse (touch) pointers, which have no hover. */
     Array.prototype.forEach.call(demo.querySelectorAll(".zone"), function (zoneEl) {
       zoneEl.addEventListener("pointerenter", function (e) {
         if (e.pointerType === "mouse") fire(zoneEl);
       });
-      zoneEl.addEventListener("click", function () { fire(zoneEl); });
+      if (coarsePointer) {
+        zoneEl.addEventListener("click", function () { fire(zoneEl); });
+      }
     });
 
     lockscreen.addEventListener("click", function () {

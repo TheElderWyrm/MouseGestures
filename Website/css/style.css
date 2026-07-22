@@ -616,9 +616,7 @@ kbd {
 }
 
 .media-hud.show { opacity: 1; transform: translateX(-50%) scale(1); }
-.media-hud svg { width: 30px; height: 30px; fill: var(--hud-text); display: none; }
-.media-hud.playing .mh-pause { display: block; }
-.media-hud:not(.playing) .mh-play { display: block; }
+.media-hud svg { width: 30px; height: 30px; fill: var(--hud-text); }
 
 /* screenshot */
 .shot-flash {
@@ -701,6 +699,87 @@ kbd {
   color: var(--text-2);
   text-align: center;
 }
+
+/* ---------- Demo profile tabs ---------- */
+
+.demo-profiles { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+
+.demo-profile-btn {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text-2);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color 0.16s ease, border-color 0.16s ease, background-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.demo-profile-btn:hover { color: var(--text); border-color: var(--text-2); }
+
+.demo-profile-btn.active {
+  background: var(--grad);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: var(--btn-glow);
+}
+
+/* ---------- Demo: extra transient window states (Window Management profile) ---------- */
+
+.demo-desktop.is-tile .dwin-back  { left: 3%;  top: 12%; width: 46%; height: 76%; transform: none; }
+.demo-desktop.is-tile .dwin-front { left: 51%; top: 12%; width: 46%; height: 76%; transform: none; }
+
+.demo-desktop.is-cascade .dwin-back  { left: 6%;  top: 8%;  width: 42%; height: 54%; transform: none; }
+.demo-desktop.is-cascade .dwin-front { left: 34%; top: 30%; width: 50%; height: 60%; transform: none; }
+
+.demo-desktop.is-grow .dwin-front { transform: scale(1.08); }
+.demo-desktop.is-shrink .dwin-front { transform: scale(0.85); }
+
+.demo-desktop.is-hide .dwin-front { opacity: 0; }
+
+.demo-desktop.is-cyclewin .dwin-front { left: 9%;  top: 13%; width: 44%; height: 56%; z-index: 1; }
+.demo-desktop.is-cyclewin .dwin-back  { left: 30%; top: 22%; width: 48%; height: 62%; z-index: 2; }
+
+.demo-desktop.is-cyclespaces .dwin-front,
+.demo-desktop.is-cyclespaces .dwin-back { transform: translateX(120%); opacity: 0; }
+.demo-desktop.is-cyclespaces .dock { opacity: 0; }
+
+/* Do Not Disturb: dim the menu bar's app/menu text, leave the clock legible */
+.demo-desktop.is-dnd .mbar > *:not(.mbar-right) { opacity: 0.35; }
+
+/* Sleep Display: quick dim-to-black and back, shorter and non-interactive vs. Lock Screen */
+.demo-desktop.is-sleep::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  background: #000;
+  opacity: 0;
+  animation: sleep-fade 1.3s ease;
+  pointer-events: none;
+}
+
+@keyframes sleep-fade {
+  0%, 100% { opacity: 0; }
+  40%, 60% { opacity: 0.92; }
+}
+
+/* ---------- Demo: shared level HUD (volume / display brightness / keyboard brightness) ---------- */
+
+.vol-hud .lvl-icon { display: none; }
+.vol-hud[data-kind="volume"] .lvl-volume { display: block; }
+.vol-hud[data-kind="brightness"] .lvl-bright { display: block; }
+.vol-hud[data-kind="keyboard"] .lvl-kbd { display: block; }
+
+/* ---------- Demo: media HUD action icons (toggle / next / previous) ---------- */
+
+.media-hud svg { display: none; }
+.media-hud[data-action="toggle"].playing .mh-pause { display: block; }
+.media-hud[data-action="toggle"]:not(.playing) .mh-play { display: block; }
+.media-hud[data-action="next"] .mh-next { display: block; }
+.media-hud[data-action="prev"] .mh-prev { display: block; }
 
 /* ---------- Sections ---------- */
 
@@ -789,6 +868,29 @@ kbd {
 .art-win, .art-note, .art-term, .art-gear { stroke: var(--text-2); stroke-width: 2; fill: none; }
 .art-moonS, .art-gearc { fill: var(--text-2); }
 
+.step-art-bolt { display: grid; place-items: center; }
+.step-art-bolt svg { width: 30%; height: auto; }
+
+/* ---------- Triggers (below the three steps) ---------- */
+
+.triggers { margin-top: clamp(28px, 4vh, 44px); text-align: center; }
+
+.triggers-title { color: var(--text-2); font-size: 1rem; margin-bottom: 20px; }
+
+.triggers-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  text-align: left;
+}
+
+.trigger-card h4 { font-size: 1rem; margin-bottom: 6px; }
+.trigger-card p { color: var(--text-2); font-size: 0.92rem; }
+
+@media (max-width: 960px) {
+  .triggers-grid { grid-template-columns: 1fr; }
+}
+
 /* ---------- Actions tabs ---------- */
 
 .tabs {
@@ -858,12 +960,23 @@ kbd {
 
 .powergrid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 20px;
 }
 
-.power h3 { font-size: 1.15rem; margin-bottom: 8px; }
-.power p { color: var(--text-2); font-size: 0.98rem; }
+.power-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 14px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  color: var(--accent);
+}
+
+.power h3 { font-size: 1.1rem; margin-bottom: 8px; }
+.power p { color: var(--text-2); font-size: 0.95rem; }
 
 /* ---------- Trust ---------- */
 
@@ -904,8 +1017,10 @@ kbd {
   font-size: 2rem;
   font-weight: 700;
   letter-spacing: -0.03em;
-  margin: 6px 0 16px;
+  margin: 6px 0 4px;
 }
+
+.plan-sub { color: var(--text-2); font-size: 0.9rem; margin-bottom: 16px; }
 
 .plan-price-soon {
   font-size: 1.35rem;
@@ -1111,6 +1226,8 @@ kbd {
 .steps .reveal.in:nth-child(3), .powergrid .reveal.in:nth-child(3),
 .trustgrid .reveal.in:nth-child(3) { transition-delay: 0.2s; }
 .powergrid .reveal.in:nth-child(4), .trustgrid .reveal.in:nth-child(4) { transition-delay: 0.3s; }
+.powergrid .reveal.in:nth-child(5) { transition-delay: 0.4s; }
+.powergrid .reveal.in:nth-child(6) { transition-delay: 0.5s; }
 
 /* ---------- Responsive ---------- */
 
@@ -1120,7 +1237,7 @@ kbd {
   .lede { margin-inline: auto; }
   .cta-row { justify-content: center; }
   .steps { grid-template-columns: 1fr; }
-  .powergrid { grid-template-columns: 1fr; }
+  .powergrid { grid-template-columns: repeat(2, 1fr); }
   .trustgrid { grid-template-columns: repeat(2, 1fr); }
   .plans { grid-template-columns: minmax(0, 460px); }
   .nav-links { display: none; }
@@ -1128,6 +1245,7 @@ kbd {
 
 @media (max-width: 540px) {
   .trustgrid { grid-template-columns: 1fr; }
+  .powergrid { grid-template-columns: 1fr; }
   .btn { font-size: 0.95rem; }
   .hero h1 { font-size: 2.15rem; }
 }
@@ -1324,6 +1442,8 @@ kbd {
   mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
 }
 
+.marquee[hidden] { display: none; }
+
 .marquee-track { display: flex; width: max-content; }
 .marquee.js .marquee-track { animation: mq 52s linear infinite; }
 .marquee.js .marquee-track.reverse { animation-direction: reverse; }
@@ -1376,6 +1496,55 @@ kbd {
 
 .chip.fam::before { display: none; }
 .chip .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--fam); }
+
+/* ---------- Reusable pill tabs (catalog categories, demo profiles) ---------- */
+
+.pill-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+
+.pill-tab {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text-2);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  padding: 7px 15px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color 0.16s ease, border-color 0.16s ease, background-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.pill-tab:hover { color: var(--text); border-color: var(--text-2); }
+
+.pill-tab.active {
+  background: var(--grad);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: var(--btn-glow);
+}
+
+/* ---------- Catalog focus (static, non-scrolling view for a selected category) ---------- */
+
+.catalog-focus { margin-top: 22px; }
+
+.catalog-focus-group {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.55rem;
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 4px 2px;
+}
+
+.catalog-focus-group[hidden] { display: none; }
+
+.catalog-focus-group[data-fam="core"] { --fam: var(--fam-core); }
+.catalog-focus-group[data-fam="window"] { --fam: var(--fam-window); }
+.catalog-focus-group[data-fam="media"] { --fam: var(--fam-media); }
+.catalog-focus-group[data-fam="system"] { --fam: var(--fam-system); }
+.catalog-focus-group[data-fam="automation"] { --fam: var(--fam-automation); }
+.catalog-focus-group[data-fam="bundle"] { --fam: var(--fam-bundle); }
 
 /* ---------- Plan price detail ---------- */
 

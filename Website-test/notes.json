@@ -1,0 +1,13 @@
+{
+  "01": "Use the symbol. Make sure you have all important links. Pricing is better than 'free and Pro'",
+  "02": "v2 is generally better. The try it is a bit buggy (improve gesture detection, and prevent duplicate activations). Improve the gesture set also. It should be a logical set of gestures. Also, consider adding a few multiple 'profiles' tabs to switch between. (Window management, media management, etc...)",
+  "03": "Good- Keep.\nMost people probably don't care about gesture slots per profile (Not really meant to be a limitation). Same for third-party dependencies. Brainstorm useful metrics that would fit here.",
+  "04": "V1 is much cleaner. ",
+  "05": "A is nicer, however loses some of the utility. Keep A as the base, but add 'tabs' to the top that when selected will zoom to the selected category (freeze while hovering over this area, and scrollable by the user.\n\nAlso, myabe don't call them plugin families. Is there a better name (Such as category?)",
+  "06": "A is much better.",
+  "07": "I'm not sure how much I like this section at all. How much does the user care about the laungage, that it is signed, etc... V2 is somewhat better at this (Though they still don't care about the 'signed'). Focus more about privacy (No account, subscription. No third party code. We don't seell you'r data. That sort of thing). Cut out unrelated stuff that the user doesn't care about.",
+  "08": "V1 is better generally. Split unlimited profiles and autamated per-app switching into two points. Also, call them App Profiles. ",
+  "09": "Consider which questions are important from both versions. Also consider which questions are important. What does the user care about? What might they ask? Are there any questions that are missing or questions that aren't needed (A few important questions is probably better than a dozen minorly useful questions. A user will only read so many)? Consider the order or questions as well.",
+  "10": "V2 is generally better. Once again the user doesn't care that it is a 'Signed & notarized DMG.' They just expect it to work.",
+  "11": "V2 is better overall. Make sure all important tabs exist form both versions"
+}
