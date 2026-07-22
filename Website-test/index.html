@@ -132,7 +132,8 @@
   B = <code>Website-references/v2-redesign</code> ("Every Corner" build — swoosh-cursor demo, action tabs, power grid, 8-item FAQ).<br>
   Each iframe loads the real, unmodified page for that build with everything but the target section hidden via a small injected script — so behavior (theme toggle, marquee, tabs, hero demo) is exactly as in the source.
   Run <code>python3 serve.py</code> from <code>Website-test/</code> (instead of plain <code>http.server</code>) so iframe auto-sizing works and section notes save to <code>notes.json</code> on disk; without it, notes fall back to browser storage only.
-  <strong>Preview Mode</strong> strips the test-site chrome and stacks whichever variant (A/B) is currently selected for each section into one continuous page — useful for judging how the picked sections read together.</p>
+  <strong>Preview Mode</strong> strips the test-site chrome and stacks whichever variant (A/B) is currently selected for each section into one continuous page — useful for judging how the picked sections read together.
+  Build A's font (previously Inter) and color tokens have been remapped to match build B / production exactly, so the two only differ in layout and copy, not typography or palette — see the override <code>&lt;style&gt;</code> block in <code>variants/v1/index.html</code>.</p>
 </footer>
 
 <script>
