@@ -160,6 +160,14 @@ class ZoneHighlightManager {
     private var modifierCheckTimer: Timer?
     private var appEventObservers: [Any] = []
     private var isHiding = false
+    /// Monotonic generation token for hide animations. Each hideZones() call
+    /// captures the current value and increments it; the animation completion
+    /// only closes windows if its captured generation still matches the
+    /// current one. This stops a stale completion (from an earlier, superseded
+    /// hide) from closing windows out from under a newer show/hide in progress
+    /// — which otherwise caused abrupt (non-animated) disappearance on rapid
+    /// modifier press/release/press.
+    private var hideGeneration = 0
 
     private init() {
         configChangeObserver = NotificationCenter.default.addObserver(
@@ -472,6 +480,8 @@ class ZoneHighlightManager {
     private func hideZones() {
         guard !isHiding else { return }
         isHiding = true
+        let generation = hideGeneration
+        hideGeneration &+= 1
         NSAnimationContext.runAnimationGroup { context in
             context.duration = 0.15
             for (_, window) in zoneWindows {
@@ -479,11 +489,14 @@ class ZoneHighlightManager {
             }
         } completionHandler: { [weak self] in
             guard let self = self else { return }
-            // Only destroy if we weren't interrupted by a new show
-            if self.isHiding {
-                self.closeAllWindows()
-                self.isHiding = false
-            }
+            // Only close if this hide wasn't superseded (by a new show that set
+            // isHiding=false, or by a newer hide with a different generation).
+            // The generation check supersedes the old isHiding-only check: a
+            // second hide sets isHiding=true again, which would have let the
+            // FIRST completion close windows mid-second-fade.
+            guard self.isHiding, self.hideGeneration == generation else { return }
+            self.closeAllWindows()
+            self.isHiding = false
         }
     }
 

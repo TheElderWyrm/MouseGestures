@@ -312,10 +312,17 @@ class WindowTargeting {
     private static func getWindowUnderMouse() -> (AXUIElement, pid_t)? {
         let mouseLocation = NSEvent.mouseLocation
 
-        // Convert to screen coordinates (flip Y coordinate)
-        guard let screen = NSScreen.main else { return nil }
-        let screenFrame = screen.frame
-        let flippedY = screenFrame.height - mouseLocation.y
+        // NSEvent.mouseLocation is in the global Cocoa screen coordinate
+        // space (origin at the bottom-left of the PRIMARY display, y up).
+        // AXUIElementCopyElementAtPosition wants the global HI coordinate
+        // space (origin at the top-left of the primary display, y down).
+        // The flip must be against the top edge of the WHOLE virtual desktop
+        // (the union of all screens), not NSScreen.main's height: on a
+        // multi-display setup the mouse may be on a secondary display whose
+        // y exceeds NSScreen.main.frame.height (yielding a negative flippedY
+        // with the old code), and NSScreen.main may not even be the primary.
+        let globalMaxY = NSScreen.screens.map { $0.frame.maxY }.max() ?? 0
+        let flippedY = globalMaxY - mouseLocation.y
         let point = CGPoint(x: mouseLocation.x, y: flippedY)
 
         // Use accessibility API to find element at point
