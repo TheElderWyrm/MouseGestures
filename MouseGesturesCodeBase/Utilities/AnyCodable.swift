@@ -50,17 +50,45 @@ public struct AnyCodable: Codable, Equatable {
     }
 
     public static func == (lhs: AnyCodable, rhs: AnyCodable) -> Bool {
-        switch (lhs.value, rhs.value) {
-        case (let lhsInt as Int, let rhsInt as Int):
-            return lhsInt == rhsInt
-        case (let lhsDouble as Double, let rhsDouble as Double):
-            return lhsDouble == rhsDouble
-        case (let lhsString as String, let rhsString as String):
-            return lhsString == rhsString
-        case (let lhsBool as Bool, let rhsBool as Bool):
-            return lhsBool == rhsBool
-        default:
-            return false
+        return AnyCodable.equals(lhs.value, rhs.value)
+    }
+
+    /// Deep structural equality used by `==`. The previous implementation only
+    /// handled scalar Int/Double/String/Bool and returned `false` for any
+    /// dictionary or array — so two gestures with dict/array-valued parameters
+    /// always compared unequal, triggering spurious config diffs and re-saves.
+    /// This walks containers element-wise. NSNumber is coerced so that an Int 1
+    /// and a Double 1.0 compare equal (JSON `1` vs `1.0` round-trip), while Bool
+    /// is kept distinct from numeric 1 via the CFBoolean type check.
+    private static func equals(_ lhs: Any, _ rhs: Any) -> Bool {
+        // Bool first (before NSNumber), so true != 1.
+        if let l = lhs as? Bool, let r = rhs as? Bool { return l == r }
+        // Numbers: bridge both to Double for comparison.
+        if let l = lhs as? NSNumber, let r = rhs as? NSNumber {
+            // Distinguish Bool from numeric — NSNumber bridged from Bool reports
+            // objCType "c"; treat as Bool, not number, and only equal to another Bool.
+            let lIsBool = CFGetTypeID(l) == CFBooleanGetTypeID()
+            let rIsBool = CFGetTypeID(r) == CFBooleanGetTypeID()
+            if lIsBool || rIsBool {
+                return lIsBool && rIsBool && l.boolValue == r.boolValue
+            }
+            return l.doubleValue == r.doubleValue
         }
+        if let l = lhs as? String, let r = rhs as? String { return l == r }
+        if let l = lhs as? [String: Any], let r = rhs as? [String: Any] {
+            guard l.count == r.count else { return false }
+            for (k, lv) in l {
+                guard let rv = r[k], equals(lv, rv) else { return false }
+            }
+            return true
+        }
+        if let l = lhs as? [Any], let r = rhs as? [Any] {
+            guard l.count == r.count else { return false }
+            for (lv, rv) in zip(l, r) where !equals(lv, rv) { return false }
+            return true
+        }
+        // NSNull vs NSNull
+        if lhs is NSNull && rhs is NSNull { return true }
+        return false
     }
 }

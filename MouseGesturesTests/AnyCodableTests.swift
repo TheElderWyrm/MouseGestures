@@ -56,4 +56,31 @@ final class AnyCodableTests: XCTestCase {
         // Different underlying types are never equal.
         XCTAssertNotEqual(AnyCodable(1), AnyCodable("1"))
     }
+
+    // Deep equality for containers. The old `==` returned `false` for any dict
+    // or array, so two gestures with dict-valued parameters always compared
+    // unequal — spurious config diffs and re-saves.
+    func testDictionaryEqualityIsDeep() {
+        let a: [String: Any] = ["name": "g", "count": 3, "nested": ["x": 1]]
+        let b: [String: Any] = ["count": 3, "name": "g", "nested": ["x": 1]]
+        XCTAssertEqual(AnyCodable(a), AnyCodable(b), "Equal dicts (any key order) must be equal")
+        XCTAssertNotEqual(AnyCodable(a), AnyCodable(["name": "g", "count": 4] as [String: Any]))
+    }
+
+    func testArrayEqualityIsDeep() {
+        XCTAssertEqual(AnyCodable([1, 2, 3] as [Any]), AnyCodable([1, 2, 3] as [Any]))
+        XCTAssertNotEqual(AnyCodable([1, 2, 3] as [Any]), AnyCodable([1, 2, 4] as [Any]))
+    }
+
+    // JSON `1` and `1.0` decode to Int and Double respectively; they should
+    // compare equal numerically (avoids false diffs on round-trip).
+    func testNumericEqualityAcrossIntAndDouble() {
+        XCTAssertEqual(AnyCodable(1), AnyCodable(1.0))
+    }
+
+    // Bool must stay distinct from numeric 1 (don't let NSNumber bridging
+    // collapse true == 1).
+    func testBoolNotEqualToNumericOne() {
+        XCTAssertNotEqual(AnyCodable(true), AnyCodable(1))
+    }
 }

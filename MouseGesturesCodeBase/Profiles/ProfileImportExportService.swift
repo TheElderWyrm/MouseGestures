@@ -25,7 +25,9 @@ class ProfileImportExportService {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         let data = try encoder.encode(exportData)
-        try data.write(to: url)
+        // Atomic write (temp file + rename) so a crash/interrupt mid-write
+        // can't leave a truncated export file the user might then import.
+        try data.write(to: url, options: .atomic)
 
         log.log("Exported profile '\(profile.name)' to: \(url.path)")
     }
@@ -36,7 +38,7 @@ class ProfileImportExportService {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         let data = try encoder.encode(exportData)
-        try data.write(to: url)
+        try data.write(to: url, options: .atomic)
 
         log.log("Exported \(profiles.count) profiles to: \(url.path)")
     }
