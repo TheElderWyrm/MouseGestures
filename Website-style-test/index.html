@@ -109,11 +109,22 @@
       <button class="chip" data-layout="split" aria-pressed="true" type="button">Split (current)</button>
       <button class="chip" data-layout="centered" aria-pressed="false" type="button">Centered (rejected)</button>
     </div>
+    <div class="ctl-group" id="headingsChips">
+      <span class="ctl-label">Headings</span>
+      <button class="chip" data-headings="centered" aria-pressed="true" type="button">Centered (current)</button>
+      <button class="chip" data-headings="left" aria-pressed="false" type="button">Left (old)</button>
+    </div>
+    <div class="ctl-group" id="colorChips">
+      <span class="ctl-label">Heading color</span>
+      <button class="chip" data-color="off" aria-pressed="true" type="button">Off (current)</button>
+      <button class="chip" data-color="on" aria-pressed="false" type="button">On (preview)</button>
+    </div>
   </div>
 
   <div class="stage"><iframe id="preview" src="/Website/index.html" title="Production site preview"></iframe></div>
   <p class="stage-note">Scroll inside the frame — every section repaints, including the demo, marquee and pricing.
-    The chosen palette also recolors the logo. Leave the pointer outside the little desktop to watch the phantom-cursor autoplay.</p>
+    The chosen palette also recolors the logo. Leave the pointer outside the little desktop to watch the phantom-cursor autoplay.
+    "Heading color" previews a hero-style gradient keyword (like <code>shortcut.</code> up top) on every section's heading, in case that treatment should spread beyond the hero.</p>
 
   <h2>Palettes</h2>
   <p class="sub">Each row of swatches is <em>background · raised · surface · text · accent · accent&nbsp;2</em>.</p>
@@ -227,22 +238,52 @@
     { id: "f", file: "icons/icon-f-flick-stroke.svg", name: "Flick Stroke", blurb: "One continuous gesture, signed like a signature, ending in the arrow." }
   ];
 
-  var state = { theme: "slate", mode: "light", layout: "split" };
+  var state = { theme: "slate", mode: "light", layout: "split", headings: "centered", headingColor: "off" };
 
   /* stacked-and-centered hero, kept here only as a look-back — the live
      site reverted to the split layout below, so "split" now needs no
-     override and "centered" is the one being forced */
+     override and "centered" is the one being forced. (.hero hosts the
+     corner glow and no longer carries the grid itself — that's
+     .hero-grid, split out so the glow could bleed to the page edge.) */
   var CENTERED_CSS =
-    ".hero{display:block;overflow:visible;}" +
     ".hero::before,.hero::after{display:none;}" +
+    ".hero-grid{display:block;}" +
     ".hero-copy{max-width:800px;margin-inline:auto;text-align:center;}" +
     ".hero-demo{max-width:720px;margin:clamp(34px,5vh,52px) auto 0;}" +
     ".lede{margin-inline:auto;}.cta-row{justify-content:center;}.fineprint{margin-inline:auto;}";
+
+  /* every other section's heading centered like Actions' — the live
+     default since round 4. "Left" replays how it looked before that. */
+  var LEFT_HEADS_CSS = ".section-head{margin-inline:0;text-align:left;}";
+
+  /* one keyword per heading, colored the same way the hero already colors
+     "shortcut." — a preview of extending that treatment site-wide */
+  var HEADING_COLOR = [
+    { sel: "#how h2", plain: "Three steps to zero friction.",
+      lit: 'Three steps to <span class="grad">zero friction.</span>' },
+    { sel: "#actions h2", plain: "47 actions, six categories, every one configurable.",
+      lit: '47 actions, six categories, <span class="grad">every one configurable.</span>' },
+    { sel: "#features h2", plain: "Everything within a flick's reach.",
+      lit: 'Everything within a <span class="grad">flick’s reach.</span>' },
+    { sel: "#trust h2", plain: "Quiet by design.",
+      lit: 'Quiet by <span class="grad">design.</span>' },
+    { sel: "#pricing h2", plain: "One price. Forever.",
+      lit: 'One price. <span class="grad">Forever.</span>' },
+    { sel: "#faq h2", plain: "Questions, answered.",
+      lit: 'Questions, <span class="grad">answered.</span>' }
+  ];
 
   function tokensToCSS(sel, tokens) {
     var out = sel + "{";
     Object.keys(tokens).forEach(function (k) { out += "--" + k + ":" + tokens[k] + ";"; });
     return out + "}";
+  }
+
+  function applyHeadingColor(doc) {
+    HEADING_COLOR.forEach(function (h) {
+      var el = doc.querySelector(h.sel);
+      if (el) el.innerHTML = state.headingColor === "on" ? h.lit : h.plain;
+    });
   }
 
   function applyToFrame() {
@@ -252,6 +293,8 @@
     var t = THEMES[state.theme];
     var css = tokensToCSS(":root", t.light) + tokensToCSS(':root[data-theme="dark"]', t.dark);
     if (state.layout === "centered") css += CENTERED_CSS;
+    if (state.headings === "left") css += LEFT_HEADS_CSS;
+    applyHeadingColor(doc);
     var style = doc.getElementById("style-override");
     if (!style) {
       style = doc.createElement("style");
@@ -299,6 +342,18 @@
     var chip = e.target.closest(".chip"); if (!chip) return;
     state.layout = chip.dataset.layout;
     pressGroup(this, "layout", state.layout);
+    applyToFrame();
+  });
+  document.getElementById("headingsChips").addEventListener("click", function (e) {
+    var chip = e.target.closest(".chip"); if (!chip) return;
+    state.headings = chip.dataset.headings;
+    pressGroup(this, "headings", state.headings);
+    applyToFrame();
+  });
+  document.getElementById("colorChips").addEventListener("click", function (e) {
+    var chip = e.target.closest(".chip"); if (!chip) return;
+    state.headingColor = chip.dataset.color;
+    pressGroup(this, "color", state.headingColor);
     applyToFrame();
   });
 
