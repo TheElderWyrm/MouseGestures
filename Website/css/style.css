@@ -1387,6 +1387,10 @@ svg linearGradient stop:last-child { stop-color: var(--accent-2); }
   .trustgrid { grid-template-columns: repeat(2, 1fr); }
   .plans { grid-template-columns: minmax(0, 460px); }
   .nav-links { display: none; }
+  /* nav-links normally pushes nav-cta flush right via its own margin-inline:
+     auto; once it's hidden here, nothing fills that space, so nav-cta has
+     to align itself */
+  .nav-cta { margin-left: auto; }
 }
 
 @media (max-width: 720px) {
