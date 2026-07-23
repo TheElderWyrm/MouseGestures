@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- E · Edge Glow: every edge of the screen is live -->
+  <defs>
+    <linearGradient id="eBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#131b30"/><stop offset="1" stop-color="#0a0e1a"/>
+    </linearGradient>
+    <linearGradient id="eG" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4c8dff"/><stop offset="1" stop-color="#9b6bff"/>
+    </linearGradient>
+    <filter id="eBlur" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="5"/>
+    </filter>
+  </defs>
+  <rect x="4" y="4" width="120" height="120" rx="28" fill="url(#eBg)"/>
+  <rect x="4.75" y="4.75" width="118.5" height="118.5" rx="27.4" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+  <rect x="24" y="24" width="80" height="80" rx="16" fill="none" stroke="url(#eG)" stroke-width="8" filter="url(#eBlur)" opacity="0.85"/>
+  <rect x="24" y="24" width="80" height="80" rx="16" fill="rgba(10,14,26,0.35)" stroke="url(#eG)" stroke-width="5"/>
+  <path d="M52 42 L52 84 L62.5 74.5 L68.5 88.5 L75.5 85.5 L69.5 71.5 L83.5 70 Z" fill="#edf1f7" stroke="#0a0e1a" stroke-width="2.4" stroke-linejoin="round"/>
+</svg>

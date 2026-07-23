@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- F · Flick Stroke: one continuous gesture, signed like a signature -->
+  <defs>
+    <linearGradient id="fBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#131b30"/><stop offset="1" stop-color="#0a0e1a"/>
+    </linearGradient>
+    <linearGradient id="fG" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#4c8dff"/><stop offset="1" stop-color="#9b6bff"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="120" height="120" rx="28" fill="url(#fBg)"/>
+  <rect x="4.75" y="4.75" width="118.5" height="118.5" rx="27.4" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+  <path d="M22 88 C26 54 44 42 52 60 C58 74 46 86 40 76 C34 64 52 44 74 46 L88 48"
+        fill="none" stroke="url(#fG)" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M84 32 L110 45 L93.5 51 L99.5 68 L90.5 71 L84.5 54 L71 61 Z" fill="#edf1f7" stroke="#0a0e1a" stroke-width="2.2" stroke-linejoin="round"/>
+</svg>

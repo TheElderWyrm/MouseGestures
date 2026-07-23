@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MouseGestures — style &amp; color test</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161c26; --panel-2: #1c2432; --line: rgba(148,163,184,0.16);
+    --text: #e8edf4; --text-2: #93a0b4; --accent: #4c8dff; --accent-b: #9b6bff; --good: #34c98e;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 28px 24px 80px; }
+  h1 { font-size: 1.5rem; letter-spacing: -0.02em; }
+  h1 span { background: linear-gradient(120deg, var(--accent), var(--accent-b)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+  h2 { font-size: 1.15rem; margin: 44px 0 6px; }
+  .sub { color: var(--text-2); font-size: 0.92rem; max-width: 70em; }
+  code { background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px; padding: 0.05em 0.35em; font-size: 0.85em; }
+
+  /* control bar + live preview */
+  .controls {
+    position: sticky; top: 0; z-index: 50;
+    display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+    padding: 12px 0; background: var(--bg); border-bottom: 1px solid var(--line); margin-top: 18px;
+  }
+  .ctl-group { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .ctl-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-2); font-weight: 700; margin-right: 2px; }
+  .chip {
+    border: 1px solid var(--line); background: var(--panel); color: var(--text-2);
+    font: inherit; font-size: 0.86rem; font-weight: 600; padding: 5px 12px; border-radius: 999px; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 7px;
+  }
+  .chip:hover { color: var(--text); }
+  .chip[aria-pressed="true"] { color: var(--text); border-color: var(--accent); background: rgba(76,141,255,0.12); }
+  .chip .sw { display: inline-flex; border-radius: 4px; overflow: hidden; width: 26px; height: 13px; }
+  .chip .sw i { flex: 1; }
+  .spacer { flex: 1; }
+
+  .stage { margin-top: 14px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: #000; }
+  .stage iframe { display: block; width: 100%; height: 78vh; border: 0; background: #fff; }
+  .stage-note { color: var(--text-2); font-size: 0.85rem; margin-top: 8px; }
+
+  /* cards */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 14px; margin-top: 14px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+  .card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .card-head h3 { font-size: 1rem; }
+  .card-head .tag { font-size: 10.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-2); border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; }
+  .card p.blurb { color: var(--text-2); font-size: 0.88rem; margin-bottom: 10px; }
+  .swatches { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+  .swrow { display: flex; align-items: center; gap: 8px; }
+  .swrow .mode { width: 34px; font-size: 10px; letter-spacing: 0.04em; color: var(--text-2); font-weight: 700; }
+  .swrow .cells { display: flex; flex: 1; height: 26px; border-radius: 7px; overflow: hidden; border: 1px solid var(--line); }
+  .swrow .cells i { flex: 1; }
+  .card-actions { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+  .mini { font-size: 0.82rem; padding: 4px 11px; }
+  .pick { display: inline-flex; align-items: center; gap: 6px; font-size: 0.84rem; color: var(--text-2); cursor: pointer; }
+  .pick input { accent-color: var(--accent); }
+  .pick input:checked + span { color: var(--good); font-weight: 700; }
+
+  /* icons */
+  .icon-card .previews { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; flex-wrap: wrap; }
+  .tilebox { display: grid; place-items: center; }
+  .tile-l { width: 96px; height: 96px; }
+  .navmock { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 9px; padding: 7px 12px; font-weight: 700; font-size: 0.92rem; }
+  .navmock.light { background: #f7f9fc; color: #0f172a; }
+  .navmock.dark { background: #0a0e1a; color: #edf1f7; }
+  .navmock img { width: 24px; height: 24px; }
+  .favrow { display: inline-flex; align-items: center; gap: 6px; color: var(--text-2); font-size: 0.8rem; }
+  .favrow img { width: 16px; height: 16px; }
+
+  /* notes */
+  .notes label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-2); font-weight: 700; margin-bottom: 5px; }
+  .notes textarea {
+    width: 100%; min-height: 64px; resize: vertical; font: inherit; font-size: 0.9rem; color: var(--text);
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px;
+  }
+  .notes textarea:focus { outline: none; border-color: var(--accent); }
+  .notes-status { font-size: 11px; color: var(--text-2); min-height: 15px; display: block; margin-top: 3px; }
+  .notes-status.saved { color: var(--good); }
+  .notes-status.pending { color: var(--accent-b); }
+  .notes-status.error { color: #ff6b6b; }
+  .banner { border: 1px solid var(--line); background: var(--panel); border-radius: 10px; padding: 10px 14px; color: var(--text-2); font-size: 0.88rem; margin-top: 14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>MouseGestures — <span>style &amp; color</span> test</h1>
+  <p class="sub" style="margin-top:6px">
+    The frame below is the <strong>live production site</strong> (<code>Website/</code>), restyled in place.
+    Click a palette to repaint it instantly, flip light/dark, and compare the centered hero against the old
+    split hero. Notes save to <code>notes.json</code> in this folder.
+  </p>
+  <div class="banner">Run <code>python3 serve.py</code> from <code>Website-style-test/</code>, then open
+    <code>http://127.0.0.1:8001/Website-style-test/</code>. Opening this file directly (file://) can't load the
+    site into the frame or save notes to disk.</div>
+
+  <div class="controls">
+    <div class="ctl-group" id="themeChips"><span class="ctl-label">Palette</span></div>
+    <div class="spacer"></div>
+    <div class="ctl-group" id="modeChips">
+      <span class="ctl-label">Mode</span>
+      <button class="chip" data-mode="light" aria-pressed="true" type="button">Light</button>
+      <button class="chip" data-mode="dark" aria-pressed="false" type="button">Dark</button>
+    </div>
+    <div class="ctl-group" id="layoutChips">
+      <span class="ctl-label">Hero</span>
+      <button class="chip" data-layout="centered" aria-pressed="true" type="button">Centered (new)</button>
+      <button class="chip" data-layout="split" aria-pressed="false" type="button">Split (old)</button>
+    </div>
+  </div>
+
+  <div class="stage"><iframe id="preview" src="/Website/index.html" title="Production site preview"></iframe></div>
+  <p class="stage-note">Scroll inside the frame — every section repaints, including the demo, marquee and pricing.
+    The chosen palette also recolors the logo. Leave the pointer outside the little desktop to watch the phantom-cursor autoplay.</p>
+
+  <h2>Palettes</h2>
+  <p class="sub">Each row of swatches is <em>background · raised · surface · text · accent · accent&nbsp;2</em>.</p>
+  <div class="grid" id="themeCards"></div>
+
+  <h2>Icon drafts</h2>
+  <p class="sub">Six candidates for the app + site mark (from <code>MouseGestures Improvements.txt</code> → “Draft icons, choose the best”).
+    Shown as an app tile, in a nav on both themes, and at favicon size. Files live in <code>Website-style-test/icons/</code>.</p>
+  <div class="grid" id="iconCards"></div>
+
+  <h2>Anything else</h2>
+  <div class="card notes" style="margin-top:14px">
+    <label for="note-general">General notes</label>
+    <textarea id="note-general" data-key="general" placeholder="Overall direction, combinations to try, rejects…"></textarea>
+    <span class="notes-status"></span>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---------------- palettes: full token sets injected into the live site ---------------- */
+  var THEMES = {
+    slate: {
+      name: "Slate & Blue", tag: "v1 · now live",
+      blurb: "The v1-original coloring the production site now ships: blue-slate lights, navy darks, blue→violet accent.",
+      light: { bg:"#f7f9fc", "bg-raise":"#ffffff", surface:"#ffffff", "surface-2":"#f2f5fa", text:"#0f172a", "text-2":"#55637a",
+               line:"rgba(15,23,42,0.10)", accent:"#2f6fe4", "accent-2":"#7c4ddb",
+               grad:"linear-gradient(135deg,#2f6fe4 10%,#7c4ddb 90%)", "nav-bg":"rgba(247,249,252,0.72)",
+               "btn-glow":"0 8px 24px -8px rgba(47,111,228,0.55)" },
+      dark:  { bg:"#0a0e1a", "bg-raise":"#0f1524", surface:"#151c2e", "surface-2":"#1a2338", text:"#edf1f7", "text-2":"#9aa6b8",
+               line:"rgba(148,163,184,0.14)", accent:"#4c8dff", "accent-2":"#9b6bff",
+               grad:"linear-gradient(135deg,#4c8dff 10%,#9b6bff 90%)", "nav-bg":"rgba(10,14,26,0.66)",
+               "btn-glow":"0 10px 30px -8px rgba(76,141,255,0.6)" }
+    },
+    indigo: {
+      name: "Indigo Air", tag: "previous round",
+      blurb: "What the site wore before this change: Apple-gray lights, near-black darks, indigo→cyan accent.",
+      light: { bg:"#f5f5f7", "bg-raise":"#ffffff", surface:"#ffffff", "surface-2":"#f0f0f4", text:"#1d1d1f", "text-2":"#55555e",
+               line:"rgba(29,29,31,0.10)", accent:"#5e5ce6", "accent-2":"#00a8e8",
+               grad:"linear-gradient(100deg,#5e5ce6 10%,#00a8e8 90%)", "nav-bg":"rgba(245,245,247,0.72)",
+               "btn-glow":"0 8px 24px -8px rgba(94,92,230,0.55)" },
+      dark:  { bg:"#0b0b14", "bg-raise":"#12121d", surface:"rgba(255,255,255,0.055)", "surface-2":"rgba(255,255,255,0.085)",
+               text:"#f5f5f7", "text-2":"#a2a2b0", line:"rgba(255,255,255,0.11)", accent:"#7d7aff", "accent-2":"#38c8ff",
+               grad:"linear-gradient(100deg,#8583ff 10%,#38c8ff 90%)", "nav-bg":"rgba(11,11,20,0.66)",
+               "btn-glow":"0 10px 30px -8px rgba(125,122,255,0.6)" }
+    },
+    graphite: {
+      name: "Graphite", tag: "neutral",
+      blurb: "No tinted grays at all — plain graphite chrome that lets the one blue accent (and the demo) carry the color.",
+      light: { bg:"#f6f6f7", "bg-raise":"#ffffff", surface:"#ffffff", "surface-2":"#ececef", text:"#17171a", "text-2":"#5c5c66",
+               line:"rgba(23,23,26,0.11)", accent:"#3478f6", "accent-2":"#30b0c7",
+               grad:"linear-gradient(135deg,#3478f6 10%,#30b0c7 90%)", "nav-bg":"rgba(246,246,247,0.72)",
+               "btn-glow":"0 8px 24px -8px rgba(52,120,246,0.5)" },
+      dark:  { bg:"#101013", "bg-raise":"#17171b", surface:"#1d1d22", "surface-2":"#24242b", text:"#f2f2f4", "text-2":"#9c9ca6",
+               line:"rgba(255,255,255,0.12)", accent:"#4a8bff", "accent-2":"#46c8e0",
+               grad:"linear-gradient(135deg,#4a8bff 10%,#46c8e0 90%)", "nav-bg":"rgba(16,16,19,0.66)",
+               "btn-glow":"0 10px 30px -8px rgba(74,139,255,0.55)" }
+    },
+    paper: {
+      name: "Warm Paper", tag: "warm",
+      blurb: "Cream paper lights and coffee darks with an amber→ember accent — cozy, un-techy, very un-default.",
+      light: { bg:"#faf6ef", "bg-raise":"#fffdf8", surface:"#fffdf8", "surface-2":"#f3ecdf", text:"#2b2015", "text-2":"#6f6252",
+               line:"rgba(60,45,20,0.12)", accent:"#d97706", "accent-2":"#dc5f43",
+               grad:"linear-gradient(135deg,#d97706 10%,#dc5f43 90%)", "nav-bg":"rgba(250,246,239,0.72)",
+               "btn-glow":"0 8px 24px -8px rgba(217,119,6,0.5)",
+               wallpaper:"radial-gradient(120% 90% at 12% 0%, #f6dcb8 0%, transparent 55%), radial-gradient(110% 90% at 92% 8%, #fbd1c4 0%, transparent 55%), radial-gradient(120% 120% at 55% 110%, #efe1c2 0%, transparent 60%), linear-gradient(180deg, #f6efe2, #efe6d4)" },
+      dark:  { bg:"#171310", "bg-raise":"#1e1915", surface:"#251f19", "surface-2":"#2c251e", text:"#f3ece2", "text-2":"#a89a89",
+               line:"rgba(220,200,170,0.13)", accent:"#f0a03c", "accent-2":"#ef7d55",
+               grad:"linear-gradient(135deg,#f0a03c 10%,#ef7d55 90%)", "nav-bg":"rgba(23,19,16,0.66)",
+               "btn-glow":"0 10px 30px -8px rgba(240,160,60,0.5)",
+               wallpaper:"radial-gradient(120% 90% at 12% 0%, #4a3620 0%, transparent 55%), radial-gradient(110% 90% at 92% 8%, #54301f 0%, transparent 55%), radial-gradient(120% 120% at 55% 110%, #3c2c16 0%, transparent 60%), linear-gradient(180deg, #1a140d, #140f0a)" }
+    },
+    ocean: {
+      name: "Ocean", tag: "cool",
+      blurb: "Sea-glass lights, deep-water darks, teal→blue accent. Calm and cool from edge to edge.",
+      light: { bg:"#f2f8fa", "bg-raise":"#ffffff", surface:"#ffffff", "surface-2":"#e8f2f6", text:"#0c2430", "text-2":"#4d6b78",
+               line:"rgba(12,60,80,0.12)", accent:"#0891b2", "accent-2":"#2563eb",
+               grad:"linear-gradient(135deg,#0891b2 10%,#2563eb 90%)", "nav-bg":"rgba(242,248,250,0.72)",
+               "btn-glow":"0 8px 24px -8px rgba(8,145,178,0.5)",
+               wallpaper:"radial-gradient(120% 90% at 12% 0%, #bfe6f2 0%, transparent 55%), radial-gradient(110% 90% at 92% 8%, #c3d9ff 0%, transparent 55%), radial-gradient(120% 120% at 55% 110%, #d7f3ec 0%, transparent 60%), linear-gradient(180deg, #e8f4f8, #dcebf3)" },
+      dark:  { bg:"#06141c", "bg-raise":"#0b1d28", surface:"#102532", "surface-2":"#142d3c", text:"#e8f2f6", "text-2":"#8fa9b5",
+               line:"rgba(140,180,200,0.14)", accent:"#22b8dd", "accent-2":"#5b8cff",
+               grad:"linear-gradient(135deg,#22b8dd 10%,#5b8cff 90%)", "nav-bg":"rgba(6,20,28,0.66)",
+               "btn-glow":"0 10px 30px -8px rgba(34,184,221,0.5)",
+               wallpaper:"radial-gradient(120% 90% at 12% 0%, #143c52 0%, transparent 55%), radial-gradient(110% 90% at 92% 8%, #16325e 0%, transparent 55%), radial-gradient(120% 120% at 55% 110%, #0e3d38 0%, transparent 60%), linear-gradient(180deg, #0a1a24, #07141d)" }
+    },
+    dusk: {
+      name: "Grape Dusk", tag: "vivid",
+      blurb: "Violet-forward with a pink kick — the loudest option here, for seeing how far the brand can lean.",
+      light: { bg:"#faf8fc", "bg-raise":"#ffffff", surface:"#ffffff", "surface-2":"#f3eef9", text:"#1d1526", "text-2":"#64596f",
+               line:"rgba(40,25,60,0.11)", accent:"#7c3aed", "accent-2":"#db2777",
+               grad:"linear-gradient(135deg,#7c3aed 10%,#db2777 90%)", "nav-bg":"rgba(250,248,252,0.72)",
+               "btn-glow":"0 8px 24px -8px rgba(124,58,237,0.5)",
+               wallpaper:"radial-gradient(120% 90% at 12% 0%, #e4d5ff 0%, transparent 55%), radial-gradient(110% 90% at 92% 8%, #ffd3ea 0%, transparent 55%), radial-gradient(120% 120% at 55% 110%, #dcd0f5 0%, transparent 60%), linear-gradient(180deg, #f1eafb, #e9e0f6)" },
+      dark:  { bg:"#120d1c", "bg-raise":"#191227", surface:"#201933", "surface-2":"#281f3f", text:"#f1ecf7", "text-2":"#a99fb8",
+               line:"rgba(180,160,220,0.14)", accent:"#a06bff", "accent-2":"#f0619e",
+               grad:"linear-gradient(135deg,#a06bff 10%,#f0619e 90%)", "nav-bg":"rgba(18,13,28,0.66)",
+               "btn-glow":"0 10px 30px -8px rgba(160,107,255,0.55)",
+               wallpaper:"radial-gradient(120% 90% at 12% 0%, #3a2a63 0%, transparent 55%), radial-gradient(110% 90% at 92% 8%, #55204a 0%, transparent 55%), radial-gradient(120% 120% at 55% 110%, #2c1f4d 0%, transparent 60%), linear-gradient(180deg, #171028, #110c1e)" }
+    }
+  };
+
+  var ICONS = [
+    { id: "a", file: "icons/icon-a-swoosh.svg", name: "Swoosh", blurb: "The current mark, repainted: an arc of motion ending in the cursor." },
+    { id: "b", file: "icons/icon-b-corner-spark.svg", name: "Corner Spark", blurb: "A screen whose corner lights up as the cursor dives in — the product, literally." },
+    { id: "c", file: "icons/icon-c-comet.svg", name: "Comet Flick", blurb: "The site's comet trail as a mark: a tapering streak into the arrow." },
+    { id: "d", file: "icons/icon-d-zone-grid.svg", name: "Zone Grid", blurb: "The 3×3 zone map with hot corners, pointer in the middle." },
+    { id: "e", file: "icons/icon-e-edge-glow.svg", name: "Edge Glow", blurb: "Every edge of the screen live and glowing, cursor at the center." },
+    { id: "f", file: "icons/icon-f-flick-stroke.svg", name: "Flick Stroke", blurb: "One continuous gesture, signed like a signature, ending in the arrow." }
+  ];
+
+  var state = { theme: "slate", mode: "light", layout: "centered" };
+
+  /* old two-column hero, for comparison */
+  var SPLIT_CSS =
+    ".hero{display:grid;grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr);align-items:center;gap:clamp(32px,5vw,64px);}" +
+    ".hero-copy{text-align:left;max-width:none;margin-inline:0;}" +
+    ".lede{margin-inline:0;}.cta-row{justify-content:flex-start;}.fineprint{margin-inline:0;}" +
+    ".hero-demo{max-width:none;margin:0;}" +
+    "@media (max-width:960px){.hero{grid-template-columns:1fr;}.hero-copy{text-align:center;}.lede{margin-inline:auto;}.cta-row{justify-content:center;}.hero-demo{margin-top:24px;}}";
+
+  function tokensToCSS(sel, tokens) {
+    var out = sel + "{";
+    Object.keys(tokens).forEach(function (k) { out += "--" + k + ":" + tokens[k] + ";"; });
+    return out + "}";
+  }
+
+  function applyToFrame() {
+    var frame = document.getElementById("preview");
+    var doc = frame.contentDocument;
+    if (!doc || !doc.documentElement) return;
+    var t = THEMES[state.theme];
+    var css = tokensToCSS(":root", t.light) + tokensToCSS(':root[data-theme="dark"]', t.dark);
+    if (state.layout === "split") css += SPLIT_CSS;
+    var style = doc.getElementById("style-override");
+    if (!style) {
+      style = doc.createElement("style");
+      style.id = "style-override";
+      doc.head.appendChild(style);
+    }
+    style.textContent = css;
+    doc.documentElement.setAttribute("data-theme", state.mode);
+  }
+
+  document.getElementById("preview").addEventListener("load", applyToFrame);
+
+  /* ---------------- controls ---------------- */
+  function pressGroup(container, attr, value) {
+    Array.prototype.forEach.call(container.querySelectorAll(".chip"), function (c) {
+      c.setAttribute("aria-pressed", String(c.dataset[attr] === value));
+    });
+  }
+
+  var themeChips = document.getElementById("themeChips");
+  Object.keys(THEMES).forEach(function (id) {
+    var t = THEMES[id];
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "chip";
+    b.dataset.theme = id;
+    b.setAttribute("aria-pressed", String(id === state.theme));
+    b.innerHTML = '<span class="sw"><i style="background:' + t.light.bg + '"></i><i style="background:' +
+      t.light.accent + '"></i><i style="background:' + t.light["accent-2"] + '"></i></span>' + t.name;
+    b.addEventListener("click", function () {
+      state.theme = id;
+      pressGroup(themeChips, "theme", id);
+      applyToFrame();
+    });
+    themeChips.appendChild(b);
+  });
+
+  document.getElementById("modeChips").addEventListener("click", function (e) {
+    var chip = e.target.closest(".chip"); if (!chip) return;
+    state.mode = chip.dataset.mode;
+    pressGroup(this, "mode", state.mode);
+    applyToFrame();
+  });
+  document.getElementById("layoutChips").addEventListener("click", function (e) {
+    var chip = e.target.closest(".chip"); if (!chip) return;
+    state.layout = chip.dataset.layout;
+    pressGroup(this, "layout", state.layout);
+    applyToFrame();
+  });
+
+  /* ---------------- notes: /api/notes with localStorage fallback ---------------- */
+  var LOCAL_KEY = "mg-style-notes";
+  var notesCache = {};
+  var saveTimers = {};
+
+  function localAll() {
+    try { return JSON.parse(localStorage.getItem(LOCAL_KEY) || "{}"); } catch (e) { return {}; }
+  }
+  function localSave(all) {
+    try { localStorage.setItem(LOCAL_KEY, JSON.stringify(all)); } catch (e) { /* ignore */ }
+  }
+  function saveNote(key, text, statusEl) {
+    notesCache[key] = text;
+    if (statusEl) { statusEl.textContent = "Saving…"; statusEl.className = "notes-status pending"; }
+    fetch("/api/notes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key: key, text: text })
+    }).then(function (r) {
+      if (!r.ok) throw new Error(r.status);
+      if (statusEl) { statusEl.textContent = "Saved to disk " + new Date().toLocaleTimeString(); statusEl.className = "notes-status saved"; }
+    }).catch(function () {
+      localSave(notesCache);
+      if (statusEl) { statusEl.textContent = "No disk API — saved in browser only (run serve.py)"; statusEl.className = "notes-status error"; }
+    });
+  }
+  function wireTextarea(textarea) {
+    var key = textarea.dataset.key;
+    var statusEl = textarea.parentElement.querySelector(".notes-status");
+    textarea.addEventListener("input", function () {
+      clearTimeout(saveTimers[key]);
+      if (statusEl) { statusEl.textContent = "Editing…"; statusEl.className = "notes-status pending"; }
+      saveTimers[key] = setTimeout(function () { saveNote(key, textarea.value, statusEl); }, 700);
+    });
+  }
+
+  /* ---------------- palette + icon cards ---------------- */
+  function noteBlock(key, placeholder) {
+    return '<div class="notes"><label>Notes</label>' +
+      '<textarea data-key="' + key + '" placeholder="' + placeholder + '"></textarea>' +
+      '<span class="notes-status"></span></div>';
+  }
+  function swRow(mode, t) {
+    return '<div class="swrow"><span class="mode">' + mode + '</span><span class="cells">' +
+      ["bg", "bg-raise", "surface", "text", "accent", "accent-2"].map(function (k) {
+        return '<i style="background:' + t[k] + '"></i>';
+      }).join("") + "</span></div>";
+  }
+
+  var themeCards = document.getElementById("themeCards");
+  Object.keys(THEMES).forEach(function (id) {
+    var t = THEMES[id];
+    var card = document.createElement("div");
+    card.className = "card";
+    card.innerHTML =
+      '<div class="card-head"><h3>' + t.name + '</h3><span class="tag">' + t.tag + "</span></div>" +
+      '<p class="blurb">' + t.blurb + "</p>" +
+      '<div class="swatches">' + swRow("LIGHT", t.light) + swRow("DARK", t.dark) + "</div>" +
+      '<div class="card-actions">' +
+        '<button type="button" class="chip mini" data-preview="' + id + '">Preview above ↑</button>' +
+        '<label class="pick"><input type="radio" name="pick-theme" value="' + id + '"><span>my pick</span></label>' +
+      "</div>" +
+      noteBlock("theme-" + id, "What works, what doesn’t…");
+    themeCards.appendChild(card);
+  });
+
+  var iconCards = document.getElementById("iconCards");
+  ICONS.forEach(function (ic) {
+    var card = document.createElement("div");
+    card.className = "card icon-card";
+    card.innerHTML =
+      '<div class="card-head"><h3>' + ic.id.toUpperCase() + " · " + ic.name + "</h3></div>" +
+      '<p class="blurb">' + ic.blurb + "</p>" +
+      '<div class="previews">' +
+        '<span class="tilebox tile-l"><img src="' + ic.file + '" alt="" width="96" height="96"></span>' +
+        '<span><span class="navmock light"><img src="' + ic.file + '" alt=""> MouseGestures</span><br><br>' +
+        '<span class="navmock dark"><img src="' + ic.file + '" alt=""> MouseGestures</span></span>' +
+        '<span class="favrow"><img src="' + ic.file + '" alt=""> 16 px</span>' +
+      "</div>" +
+      '<div class="card-actions">' +
+        '<label class="pick"><input type="radio" name="pick-icon" value="' + ic.id + '"><span>my pick</span></label>' +
+      "</div>" +
+      noteBlock("icon-" + ic.id, "Too busy? Wrong shape? Almost?");
+    iconCards.appendChild(card);
+  });
+
+  /* preview buttons inside palette cards drive the sticky stage */
+  themeCards.addEventListener("click", function (e) {
+    var b = e.target.closest("[data-preview]"); if (!b) return;
+    state.theme = b.dataset.preview;
+    pressGroup(themeChips, "theme", state.theme);
+    applyToFrame();
+    document.querySelector(".controls").scrollIntoView({ behavior: "smooth" });
+  });
+
+  /* picks persist as notes too */
+  document.addEventListener("change", function (e) {
+    if (e.target.name === "pick-theme") saveNote("pick-theme", e.target.value, null);
+    if (e.target.name === "pick-icon") saveNote("pick-icon", e.target.value, null);
+  });
+
+  /* ---------------- boot: load saved notes ---------------- */
+  fetch("/api/notes", { cache: "no-store" })
+    .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .catch(function () { return localAll(); })
+    .then(function (saved) {
+      notesCache = saved || {};
+      Array.prototype.forEach.call(document.querySelectorAll("textarea[data-key]"), function (ta) {
+        if (notesCache[ta.dataset.key]) ta.value = notesCache[ta.dataset.key];
+        wireTextarea(ta);
+      });
+      ["pick-theme", "pick-icon"].forEach(function (k) {
+        if (!notesCache[k]) return;
+        var r = document.querySelector('input[name="' + k + '"][value="' + notesCache[k] + '"]');
+        if (r) r.checked = true;
+      });
+    });
+})();
+</script>
+</body>
+</html>

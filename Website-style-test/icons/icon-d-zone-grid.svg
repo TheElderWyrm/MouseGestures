@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- D · Zone Grid: the 8 zones around your pointer, corners lit -->
+  <defs>
+    <linearGradient id="dBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#131b30"/><stop offset="1" stop-color="#0a0e1a"/>
+    </linearGradient>
+    <linearGradient id="dA" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4c8dff"/><stop offset="1" stop-color="#3a6fe0"/>
+    </linearGradient>
+    <linearGradient id="dB" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#9b6bff"/><stop offset="1" stop-color="#7d4fe0"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="120" height="120" rx="28" fill="url(#dBg)"/>
+  <rect x="4.75" y="4.75" width="118.5" height="118.5" rx="27.4" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+  <g>
+    <rect x="20" y="20" width="26" height="26" rx="7" fill="url(#dA)"/>
+    <rect x="51" y="20" width="26" height="26" rx="7" fill="rgba(255,255,255,0.10)"/>
+    <rect x="82" y="20" width="26" height="26" rx="7" fill="rgba(255,255,255,0.10)"/>
+    <rect x="20" y="51" width="26" height="26" rx="7" fill="rgba(255,255,255,0.10)"/>
+    <rect x="51" y="51" width="26" height="26" rx="7" fill="rgba(255,255,255,0.04)"/>
+    <rect x="82" y="51" width="26" height="26" rx="7" fill="rgba(255,255,255,0.10)"/>
+    <rect x="20" y="82" width="26" height="26" rx="7" fill="rgba(255,255,255,0.10)"/>
+    <rect x="51" y="82" width="26" height="26" rx="7" fill="rgba(255,255,255,0.10)"/>
+    <rect x="82" y="82" width="26" height="26" rx="7" fill="url(#dB)"/>
+  </g>
+  <path d="M58 56 L58 82 L64.5 76 L68.2 84.8 L72.6 82.9 L68.9 74.2 L77.5 73.2 Z" fill="#edf1f7" stroke="#0a0e1a" stroke-width="1.8" stroke-linejoin="round" transform="translate(-15.9 -19.1) scale(1.18)"/>
+</svg>
