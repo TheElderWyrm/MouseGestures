@@ -411,14 +411,13 @@
     var mediaHud = document.getElementById("mediaHud");
     var shotFlash = document.getElementById("shotFlash");
     var shotThumb = document.getElementById("shotThumb");
-    var sleepVeil = document.getElementById("sleepVeil");
     var lockscreen = document.getElementById("lockscreen");
     var winFront = document.getElementById("winFront");
     var caption = document.getElementById("demoCaption");
 
     var shiftHeld = false;
     var volume = 50, preMute = 50, playing = false;
-    var hudTimer, volTimer, mediaTimer, transientTimer, minTimer, sleepTimer;
+    var hudTimer, volTimer, mediaTimer, transientTimer, minTimer;
 
     if (matchMedia("(hover: none)").matches && caption) {
       caption.innerHTML = "<strong>Try it:</strong> tap a corner or an edge of the little desktop, " +
@@ -497,59 +496,63 @@
       minTimer = setTimeout(function () { winFront.classList.remove("is-min"); }, 1500);
     };
 
-    var sleepDisplay = function () {
-      sleepVeil.classList.add("on");
-      clearTimeout(sleepTimer);
-      sleepTimer = setTimeout(function () { sleepVeil.classList.remove("on"); }, 1150);
-    };
-
     /* Three profiles, each a coherent gesture set — the same trick the real
        app's profiles (and App Profiles) pull off at desk scale.
-       zone id -> { glyph, base action, shift action } */
+       zone id -> { glyph, short on-zone label, base action, shift action } */
     var PROFILES = {
       everyday: {
         label: "Everyday",
         zones: {
-          tl:     { g: "↖", base: ["Mission Control", function () { transientState("is-mission", 1500); }],
+          tl:     { g: "↖", s: "Mission Control",
+                            base: ["Mission Control", function () { transientState("is-mission", 1500); }],
                             shift: ["App Exposé", function () { transientState("is-expose", 1500); }] },
-          tr:     { g: "↗", base: ["Toggle Dark Mode", function () { toggleTheme(true); }],
+          tr:     { g: "↗", s: "Dark Mode",
+                            base: ["Toggle Dark Mode", function () { toggleTheme(true); }],
                             shift: ["Screenshot", screenshot] },
-          bl:     { g: "↙", base: ["Show Desktop", function () { transientState("is-showdesk", 1500); }] },
-          br:     { g: "↘", base: ["Lock Screen", function () { desktop.classList.add("is-locked"); }] },
-          top:    { g: "↑", base: ["Volume Up", function () { setVolume(volume + 12.5); }],
+          bl:     { g: "↙", s: "Show Desktop", base: ["Show Desktop", function () { transientState("is-showdesk", 1500); }] },
+          br:     { g: "↘", s: "Lock Screen", base: ["Lock Screen", function () { desktop.classList.add("is-locked"); }] },
+          top:    { g: "↑", s: "Volume Up",
+                            base: ["Volume Up", function () { setVolume(volume + 12.5); }],
                             shift: ["Volume Down", function () { setVolume(volume - 12.5); }] },
-          bottom: { g: "↓", base: ["Play / Pause", playPause] },
-          left:   { g: "←", base: ["Snap Window Left", snapFn("left")] },
-          right:  { g: "→", base: ["Snap Window Right", snapFn("right")] }
+          bottom: { g: "↓", s: "Play / Pause", base: ["Play / Pause", playPause] },
+          left:   { g: "←", s: "Snap Left", base: ["Snap Window Left", snapFn("left")] },
+          right:  { g: "→", s: "Snap Right", base: ["Snap Window Right", snapFn("right")] }
         }
       },
       windows: {
         label: "Windows",
         zones: {
-          tl:     { g: "↖", base: ["Snap Top-Left Quarter", snapFn("tl")] },
-          tr:     { g: "↗", base: ["Snap Top-Right Quarter", snapFn("tr")] },
-          bl:     { g: "↙", base: ["Snap Bottom-Left Quarter", snapFn("bl")] },
-          br:     { g: "↘", base: ["Snap Bottom-Right Quarter", snapFn("br")] },
-          left:   { g: "←", base: ["Snap Left Half", snapFn("left")] },
-          right:  { g: "→", base: ["Snap Right Half", snapFn("right")] },
-          top:    { g: "↑", base: ["Maximize Window", snapFn("max")],
+          tl:     { g: "↖", s: "Top-Left ¼", base: ["Snap Top-Left Quarter", snapFn("tl")] },
+          tr:     { g: "↗", s: "Top-Right ¼", base: ["Snap Top-Right Quarter", snapFn("tr")] },
+          bl:     { g: "↙", s: "Bottom-Left ¼", base: ["Snap Bottom-Left Quarter", snapFn("bl")] },
+          br:     { g: "↘", s: "Bottom-Right ¼", base: ["Snap Bottom-Right Quarter", snapFn("br")] },
+          left:   { g: "←", s: "Left Half", base: ["Snap Left Half", snapFn("left")] },
+          right:  { g: "→", s: "Right Half", base: ["Snap Right Half", snapFn("right")] },
+          top:    { g: "↑", s: "Maximize",
+                            base: ["Maximize Window", snapFn("max")],
                             shift: ["Center Window", snapFn("center")] },
-          bottom: { g: "↓", base: ["Tile Both Windows", snapFn("tile")],
+          bottom: { g: "↓", s: "Tile Both",
+                            base: ["Tile Both Windows", snapFn("tile")],
                             shift: ["Minimize Window", minimizeFront] }
         }
       },
+      /* laid out like the app's drafted Media Control profile:
+         prev | play/pause | next on top, seek on the sides, volume across the bottom */
       media: {
         label: "Media",
         zones: {
-          tl:     { g: "↖", base: ["Previous Track", function () { showMedia("prev"); }] },
-          tr:     { g: "↗", base: ["Next Track", function () { showMedia("next"); }] },
-          top:    { g: "↑", base: ["Volume Up", function () { setVolume(volume + 12.5); }],
-                            shift: ["Mute", muteToggle] },
-          bottom: { g: "↓", base: ["Play / Pause", playPause] },
-          left:   { g: "←", base: ["Seek Back 10 s", function () { showMedia("rw"); }] },
-          right:  { g: "→", base: ["Seek Forward 10 s", function () { showMedia("ff"); }] },
-          bl:     { g: "↙", base: ["Volume Down", function () { setVolume(volume - 12.5); }] },
-          br:     { g: "↘", base: ["Sleep Display", sleepDisplay] }
+          tl:     { g: "↖", s: "Prev Track", base: ["Previous Track", function () { showMedia("prev"); }] },
+          top:    { g: "↑", s: "Play / Pause", base: ["Play / Pause", playPause] },
+          tr:     { g: "↗", s: "Next Track", base: ["Next Track", function () { showMedia("next"); }] },
+          left:   { g: "←", s: "Back 10 s",
+                            base: ["Seek Back 10 s", function () { showMedia("rw"); }],
+                            shift: ["Seek Back 30 s", function () { showMedia("rw"); }] },
+          right:  { g: "→", s: "Fwd 10 s",
+                            base: ["Seek Forward 10 s", function () { showMedia("ff"); }],
+                            shift: ["Seek Forward 30 s", function () { showMedia("ff"); }] },
+          bl:     { g: "↙", s: "Vol Down", base: ["Volume Down", function () { setVolume(volume - 12.5); }] },
+          bottom: { g: "↓", s: "Mute", base: ["Mute", muteToggle] },
+          br:     { g: "↘", s: "Vol Up", base: ["Volume Up", function () { setVolume(volume + 12.5); }] }
         }
       }
     };
@@ -565,7 +568,7 @@
     var zoneEls = {};
     var lastGlobalFire = 0;
 
-    var fire = function (id) {
+    var fire = function (id, opts) {
       var zone = PROFILES[currentProfile].zones[id];
       if (!zone) return;
 
@@ -577,8 +580,10 @@
       desktop.classList.add("touched");
       if (desktop.classList.contains("is-locked")) desktop.classList.remove("is-locked");
 
-      var entry = (shiftHeld && zone.shift) ? zone.shift : zone.base;
-      showHud(zone.g, entry[0], shiftHeld && !!zone.shift);
+      // the phantom cursor passes its own shift state; real gestures use the keyboard's
+      var wantShift = (opts && "shift" in opts) ? opts.shift : shiftHeld;
+      var entry = (wantShift && zone.shift) ? zone.shift : zone.base;
+      showHud(zone.g, entry[0], wantShift && !!zone.shift);
       entry[1]();
 
       var zoneEl = zoneEls[id];
@@ -635,6 +640,8 @@
         var label = ZONE_NAMES[zid] + ": " + z.base[0] +
           (z.shift ? " (hold Shift: " + z.shift[0] + ")" : "");
         zoneEls[zid].setAttribute("aria-label", label);
+        var zl = zoneEls[zid].querySelector(".zl");
+        if (zl) zl.textContent = z.s || z.base[0];
       });
       if (announce) {
         desktop.classList.add("touched");
@@ -651,6 +658,8 @@
     setProfile("everyday", false);
 
     /* ---------- Cursor comet trail ---------- */
+
+    var trailPush = null; // set by the trail; the phantom cursor feeds it too
 
     (function () {
       if (reducedMotion) return;
@@ -675,18 +684,22 @@
       }
       resize();
 
+      trailPush = function (x, y) {
+        points.push({ x: x, y: y, t: performance.now() });
+        if (points.length > 90) points.shift();
+        if (!running) { running = true; requestAnimationFrame(draw); }
+      };
+
       desktop.addEventListener("pointermove", function (e) {
         if (e.pointerType !== "mouse") return;
         var rect = desktop.getBoundingClientRect();
-        points.push({ x: e.clientX - rect.left, y: e.clientY - rect.top, t: performance.now() });
-        if (points.length > 90) points.shift();
-        if (!running) { running = true; requestAnimationFrame(draw); }
+        trailPush(e.clientX - rect.left, e.clientY - rect.top);
       });
 
       function trailColors() {
         return docEl.getAttribute("data-theme") === "dark"
-          ? ["133, 131, 255", "56, 200, 255"]
-          : ["94, 92, 230", "0, 168, 232"];
+          ? ["76, 141, 255", "155, 107, 255"]
+          : ["47, 111, 228", "124, 77, 219"];
       }
 
       function draw() {
@@ -729,6 +742,143 @@
           ctx.clearRect(0, 0, canvas.width, canvas.height);
         }
       }
+    })();
+
+    /* ---------- Phantom cursor: plays the current profile while you're away ----------
+       A ghost pointer tours the zones and fires their real actions (HUD, trail
+       and all), so the demo explains itself. The moment your own pointer comes
+       near the demo it bows out; it returns a beat after you leave. */
+
+    (function () {
+      if (reducedMotion) return;
+
+      var heroDemo = document.querySelector(".hero-demo") || demo;
+      var ghostEl = document.createElement("div");
+      ghostEl.className = "ghost";
+      ghostEl.setAttribute("aria-hidden", "true");
+      ghostEl.innerHTML = '<svg viewBox="0 0 24 24"><path d="M5.4 2.8 5.4 20.6 9.7 16.6 12.3 22.4 15.2 21.1 12.6 15.3 18.6 14.8 Z" ' +
+        'fill="#16161d" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg>';
+      desktop.appendChild(ghostEl);
+
+      /* Scripted tours. The everyday tour skips Dark Mode (it would flip the
+         whole page under the reader) and Lock Screen (it waits for a click). */
+      var TOURS = {
+        everyday: [
+          { z: "top" }, { z: "right" }, { z: "bottom" }, { z: "tl" },
+          { z: "top", shift: true }, { z: "left" }, { z: "bl" }
+        ],
+        windows: [
+          { z: "left" }, { z: "tl" }, { z: "br" }, { z: "top" },
+          { z: "bottom" }, { z: "right" }, { z: "top", shift: true }, { z: "bottom", shift: true }
+        ],
+        media: [
+          { z: "top" }, { z: "right" }, { z: "tr" }, { z: "br" },
+          { z: "bottom" }, { z: "left" }, { z: "tl" }, { z: "bl" }
+        ]
+      };
+
+      var gx = 0, gy = 0;
+      var raf = null, timer = null, resumeTimer = null;
+      var idx = -1, running = false, inView = false, userNear = false;
+
+      function place() {
+        // the path's arrow tip sits at (5.4, 2.8) of the 24-box; land the tip on target
+        ghostEl.style.transform = "translate(" + (gx - 4.3) + "px," + (gy - 2.2) + "px)";
+      }
+
+      function zoneTarget(id) {
+        var zr = zoneEls[id].getBoundingClientRect();
+        var dr = desktop.getBoundingClientRect();
+        return { x: zr.left - dr.left + zr.width / 2, y: zr.top - dr.top + zr.height / 2 };
+      }
+
+      function legTo(tx, ty, done) {
+        var sx = gx, sy = gy;
+        var dist = Math.hypot(tx - sx, ty - sy);
+        var dur = Math.max(420, Math.min(1100, dist * 2.2));
+        var t0 = performance.now();
+        function frame(t) {
+          if (!running) return;
+          var p = Math.min(1, (t - t0) / dur);
+          var e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+          gx = sx + (tx - sx) * e;
+          gy = sy + (ty - sy) * e;
+          place();
+          if (trailPush) trailPush(gx, gy);
+          if (p < 1) raf = requestAnimationFrame(frame);
+          else done();
+        }
+        raf = requestAnimationFrame(frame);
+      }
+
+      function nextStop() {
+        if (!running) return;
+        var tour = TOURS[currentProfile] || TOURS.everyday;
+        idx = (idx + 1) % tour.length;
+        var stop = tour[idx];
+        var t = zoneTarget(stop.z);
+        legTo(t.x, t.y, function () {
+          timer = setTimeout(function () {          // a real gesture dwells briefly
+            if (!running) return;
+            fire(stop.z, { shift: !!stop.shift });
+            timer = setTimeout(nextStop, 1200);      // linger so the HUD can be read
+          }, 240);
+        });
+      }
+
+      function start() {
+        if (running || !inView || userNear || document.hidden) return;
+        running = true;
+        idx = -1;
+        desktop.classList.remove("is-locked");
+        var dr = desktop.getBoundingClientRect();
+        gx = dr.width / 2;
+        gy = dr.height / 2;
+        place();
+        ghostEl.classList.add("on");
+        timer = setTimeout(nextStop, 700);
+      }
+
+      function halt() {
+        running = false;
+        ghostEl.classList.remove("on");
+        clearTimeout(timer);
+        cancelAnimationFrame(raf);
+      }
+
+      /* your pointer owns the desk; the ghost only works when you're away */
+      heroDemo.addEventListener("pointerenter", function (e) {
+        if (e.pointerType !== "mouse") return;
+        userNear = true;
+        clearTimeout(resumeTimer);
+        halt();
+      });
+      heroDemo.addEventListener("pointerleave", function (e) {
+        if (e.pointerType !== "mouse") return;
+        userNear = false;
+        clearTimeout(resumeTimer);
+        resumeTimer = setTimeout(start, 2600);
+      });
+      heroDemo.addEventListener("pointerdown", function (e) {
+        if (e.pointerType === "mouse") return;      // touch: no enter/leave to rely on
+        halt();
+        clearTimeout(resumeTimer);
+        resumeTimer = setTimeout(start, 8000);
+      });
+
+      if ("IntersectionObserver" in window) {
+        new IntersectionObserver(function (entries) {
+          inView = entries[0].isIntersecting;
+          if (inView) start(); else halt();
+        }, { threshold: 0.45 }).observe(desktop);
+      } else {
+        inView = true;
+        start();
+      }
+
+      document.addEventListener("visibilitychange", function () {
+        if (document.hidden) halt(); else start();
+      });
     })();
   }
 })();

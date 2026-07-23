@@ -18,10 +18,10 @@
 <meta name="twitter:description" content="Flick to an edge — snap windows, run scripts, control media. 47 actions, per-app profiles, offline license, no subscription.">
 <meta name="twitter:image" content="https://mousegestures.app/og.png">
 
-<meta name="theme-color" media="(prefers-color-scheme: light)" content="#f5f5f7">
-<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0b0b14">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#f7f9fc">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0a0e1a">
 <meta name="color-scheme" content="light dark">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='1' x2='1' y2='0'%3E%3Cstop offset='0' stop-color='%235e5ce6'/%3E%3Cstop offset='1' stop-color='%2300c7fc'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='%230b0b14'/%3E%3Cpath d='M12 46 Q20 18 26 30 T40 26' fill='none' stroke='url(%23g)' stroke-width='5' stroke-linecap='round'/%3E%3Cpath d='M40 18 L52 24 L44 27 L47 35 L43 36 L40 28 L34 32 Z' fill='%23f5f5f7'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='1' x2='1' y2='0'%3E%3Cstop offset='0' stop-color='%234c8dff'/%3E%3Cstop offset='1' stop-color='%239b6bff'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='%230a0e1a'/%3E%3Cpath d='M12 46 Q20 18 26 30 T40 26' fill='none' stroke='url(%23g)' stroke-width='5' stroke-linecap='round'/%3E%3Cpath d='M40 18 L52 24 L44 27 L47 35 L43 36 L40 28 L34 32 Z' fill='%23edf1f7'/%3E%3C/svg%3E">
 
 <script src="js/theme-init.js"></script>
 <link rel="stylesheet" href="css/style.css">
@@ -55,7 +55,7 @@
         <path d="M44 16 L58 23 L49 26.5 L52.5 36 L47.5 37.5 L44 28 L37 32 Z" class="brand-cursor"/>
         <defs>
           <linearGradient id="navGrad" x1="0" y1="1" x2="1" y2="0">
-            <stop offset="0" stop-color="#5e5ce6"/><stop offset="1" stop-color="#00c7fc"/>
+            <stop offset="0" stop-color="#2f6fe4"/><stop offset="1" stop-color="#7c4ddb"/>
           </linearGradient>
         </defs>
       </svg>
@@ -138,15 +138,16 @@
 
           <div class="dock" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
 
-          <!-- 8 trigger zones: 4 corners + 4 edges, exactly like the app -->
-          <button class="zone z-corner z-tl" data-zone="tl" type="button" aria-label="Top-left corner: Mission Control"></button>
-          <button class="zone z-edge z-top" data-zone="top" type="button" aria-label="Top edge: volume up"></button>
-          <button class="zone z-corner z-tr" data-zone="tr" type="button" aria-label="Top-right corner: toggle dark mode"></button>
-          <button class="zone z-edge z-left" data-zone="left" type="button" aria-label="Left edge: snap window left"></button>
-          <button class="zone z-edge z-right" data-zone="right" type="button" aria-label="Right edge: snap window right"></button>
-          <button class="zone z-corner z-bl" data-zone="bl" type="button" aria-label="Bottom-left corner: show desktop"></button>
-          <button class="zone z-edge z-bottom" data-zone="bottom" type="button" aria-label="Bottom edge: play or pause"></button>
-          <button class="zone z-corner z-br" data-zone="br" type="button" aria-label="Bottom-right corner: lock screen"></button>
+          <!-- 8 trigger zones: 4 corners + 4 edges, exactly like the app.
+               Each shows its current action, so nobody has to guess. -->
+          <button class="zone z-corner z-tl" data-zone="tl" type="button" aria-label="Top-left corner: Mission Control"><span class="zl" aria-hidden="true"></span></button>
+          <button class="zone z-edge z-top" data-zone="top" type="button" aria-label="Top edge: volume up"><span class="zl" aria-hidden="true"></span></button>
+          <button class="zone z-corner z-tr" data-zone="tr" type="button" aria-label="Top-right corner: toggle dark mode"><span class="zl" aria-hidden="true"></span></button>
+          <button class="zone z-edge z-left" data-zone="left" type="button" aria-label="Left edge: snap window left"><span class="zl" aria-hidden="true"></span></button>
+          <button class="zone z-edge z-right" data-zone="right" type="button" aria-label="Right edge: snap window right"><span class="zl" aria-hidden="true"></span></button>
+          <button class="zone z-corner z-bl" data-zone="bl" type="button" aria-label="Bottom-left corner: show desktop"><span class="zl" aria-hidden="true"></span></button>
+          <button class="zone z-edge z-bottom" data-zone="bottom" type="button" aria-label="Bottom edge: play or pause"><span class="zl" aria-hidden="true"></span></button>
+          <button class="zone z-corner z-br" data-zone="br" type="button" aria-label="Bottom-right corner: lock screen"><span class="zl" aria-hidden="true"></span></button>
 
           <div class="hud" id="hud" role="status" aria-live="polite"></div>
 
@@ -166,7 +167,6 @@
 
           <div class="shot-flash" id="shotFlash" aria-hidden="true"></div>
           <div class="shot-thumb" id="shotThumb" aria-hidden="true"></div>
-          <div class="sleep-veil" id="sleepVeil" aria-hidden="true"></div>
 
           <div class="lockscreen" id="lockscreen" aria-hidden="true">
             <svg viewBox="0 0 24 24"><rect x="5.5" y="10.5" width="13" height="9" rx="2.2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" fill="none" stroke-width="2" stroke-linecap="round"/></svg>
@@ -176,9 +176,9 @@
         </div>
       </div>
       <p class="demo-caption" id="demoCaption">
-        <strong>Try it:</strong> flick your cursor into a corner or edge of the little
-        desktop, and switch profiles above. Hold <kbd>&#8679;</kbd> for a zone's second
-        layer. In the real app, your whole screen is the canvas.
+        <strong>Try it:</strong> flick your cursor into any labeled corner or edge, and
+        switch profiles above. Hold <kbd>&#8679;</kbd> for a zone's second layer. In the
+        real app, your whole screen is the canvas.
       </p>
     </div>
   </section>
@@ -217,11 +217,9 @@
     <div class="steps">
       <article class="step reveal">
         <div class="step-visual" aria-hidden="true">
-          <div class="sv-zones">
-            <span class="sv-cell on"></span><span class="sv-cell"></span><span class="sv-cell"></span>
-            <span class="sv-cell"></span><span class="sv-cell mid"></span><span class="sv-cell"></span>
-            <span class="sv-cell"></span><span class="sv-cell"></span><span class="sv-cell on2"></span>
-          </div>
+          <span class="sv-cell on"></span><span class="sv-cell"></span><span class="sv-cell"></span>
+          <span class="sv-cell"></span><span class="sv-cell mid"></span><span class="sv-cell"></span>
+          <span class="sv-cell"></span><span class="sv-cell"></span><span class="sv-cell on2"></span>
         </div>
         <h3><span class="step-n">1</span> Glide into a zone</h3>
         <p>Any of the 8 screen edges and corners — space your cursor crosses all day anyway.</p>
@@ -234,7 +232,7 @@
         <p>&#8984; &#8997; &#8963; &#8679; — alone or in any combination. Fifteen distinct layers per zone.</p>
       </article>
       <article class="step reveal">
-        <div class="step-visual" aria-hidden="true">
+        <div class="step-visual bolt" aria-hidden="true">
           <svg class="sv-bolt" viewBox="0 0 24 24"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg>
         </div>
         <h3><span class="step-n">3</span> It fires. Instantly.</h3>
@@ -499,7 +497,7 @@
       <svg class="finale-swoosh" viewBox="0 0 640 120" aria-hidden="true">
         <path class="finale-path" d="M20 95 Q140 20 260 70 T500 45" fill="none" stroke="url(#finGrad)" stroke-width="6" stroke-linecap="round"/>
         <path d="M492 24 L560 44 L516 56 L530 96 L508 102 L494 62 L462 80 Z" class="finale-cursor"/>
-        <defs><linearGradient id="finGrad" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#5e5ce6"/><stop offset="1" stop-color="#00c7fc"/></linearGradient></defs>
+        <defs><linearGradient id="finGrad" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#2f6fe4"/><stop offset="1" stop-color="#7c4ddb"/></linearGradient></defs>
       </svg>
       <h2>Your cursor is already halfway there.</h2>
       <p>One small DMG. Thirty days of everything. No account, no card, no noise.</p>
@@ -520,7 +518,7 @@
       <svg class="brand-mark" viewBox="0 0 64 64" aria-hidden="true">
         <path d="M10 48 Q20 14 28 32 T46 26" fill="none" stroke="url(#footGrad)" stroke-width="5" stroke-linecap="round"/>
         <path d="M44 16 L58 23 L49 26.5 L52.5 36 L47.5 37.5 L44 28 L37 32 Z" class="brand-cursor"/>
-        <defs><linearGradient id="footGrad" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#5e5ce6"/><stop offset="1" stop-color="#00c7fc"/></linearGradient></defs>
+        <defs><linearGradient id="footGrad" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#2f6fe4"/><stop offset="1" stop-color="#7c4ddb"/></linearGradient></defs>
       </svg>
       <div>
         <span>MouseGestures</span>
