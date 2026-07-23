@@ -136,6 +136,18 @@
             <div class="dwin-body"><span class="l w70"></span><span class="l w90"></span><span class="l w50"></span><span class="l w80"></span><span class="l w30"></span></div>
           </div>
 
+          <!-- stands in for whatever's frontmost when the Media profile is active -->
+          <div class="mediaplayer" id="mediaPlayer" aria-hidden="true">
+            <div class="mp-art" id="mpArt">
+              <svg viewBox="0 0 24 24"><path d="M9 18V5l11-2v13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/></svg>
+            </div>
+            <div class="mp-info">
+              <b class="mp-title">Night Drive</b>
+              <span class="mp-artist">Aurora Parkway</span>
+              <div class="mp-bar"><i id="mpFill"></i></div>
+            </div>
+          </div>
+
           <div class="dock" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
 
           <!-- 8 trigger zones: 4 corners + 4 edges, exactly like the app.

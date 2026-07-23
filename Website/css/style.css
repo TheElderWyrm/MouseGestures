@@ -252,21 +252,36 @@ svg linearGradient stop:last-child { stop-color: var(--accent-2); }
 
 /* ---------- Hero ---------- */
 
-/* stacked + centered: headline speaks first, the live demo sits beneath it */
 .hero {
-  padding-block: clamp(44px, 7vh, 80px) clamp(40px, 6vh, 72px);
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+  align-items: center;
+  gap: clamp(32px, 5vw, 64px);
+  padding-block: clamp(48px, 8vh, 96px) clamp(40px, 6vh, 72px);
+  position: relative;
+  overflow: hidden;
 }
 
-.hero-copy {
-  max-width: 800px;
-  margin-inline: auto;
-  text-align: center;
+/* soft corner glows behind the copy — v1's touch that keeps a flat
+   background from reading as plain */
+.hero::before,
+.hero::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  opacity: 0.14;
+  pointer-events: none;
 }
+.hero::before { width: 480px; height: 480px; background: var(--accent); top: -180px; left: -140px; }
+.hero::after { width: 380px; height: 380px; background: var(--accent-2); bottom: -200px; right: -120px; }
+:root[data-theme="dark"] .hero::before,
+:root[data-theme="dark"] .hero::after { opacity: 0.22; }
 
-.hero-demo {
-  max-width: 720px;
-  margin: clamp(34px, 5vh, 52px) auto 0;
-}
+/* z-index:1 lifts the real content into its own stacking layer, above the
+   glows (position:absolute descendants otherwise paint on top of static
+   in-flow content, not behind it) */
+.hero-copy, .hero-demo { position: relative; z-index: 1; }
 
 .eyebrow {
   font-size: 0.85rem;
@@ -286,19 +301,17 @@ svg linearGradient stop:last-child { stop-color: var(--accent-2); }
   font-size: 1.13rem;
   color: var(--text-2);
   max-width: 34em;
-  margin-inline: auto;
   margin-bottom: 28px;
 }
 
 .lede strong { color: var(--text); }
 
-.cta-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; margin-bottom: 18px; }
+.cta-row { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 18px; }
 
 .fineprint {
   font-size: 0.84rem;
   color: var(--text-2);
   max-width: 40em;
-  margin-inline: auto;
 }
 
 /* ---------- Hero demo: the miniature desktop ---------- */
@@ -489,6 +502,70 @@ svg linearGradient stop:last-child { stop-color: var(--accent-2); }
   transform: translate(12%, 66%) scale(0.05);
   opacity: 0;
 }
+
+/* Media profile fronts a little player instead of document windows —
+   the seek/volume/track HUDs need something to be controlling. */
+.demo-desktop[data-profile="media"] .dwin { opacity: 0; }
+
+.mediaplayer {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 72%;
+  max-width: 280px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--win-bg);
+  border: 1px solid var(--win-line);
+  box-shadow: 0 18px 40px -18px rgba(10, 10, 20, 0.45);
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+
+.demo-desktop[data-profile="media"] .mediaplayer { opacity: 1; }
+
+.mp-art {
+  width: 52px;
+  height: 52px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--fam-media), color-mix(in srgb, var(--fam-media) 55%, var(--accent-2)));
+  color: #fff;
+  animation: mp-spin 7s linear infinite;
+  animation-play-state: paused;
+}
+
+.demo-desktop.mp-playing .mp-art { animation-play-state: running; }
+.mp-art svg { width: 22px; height: 22px; }
+
+.mp-info { min-width: 0; flex: 1; }
+.mp-title { display: block; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mp-artist { display: block; color: var(--text-2); font-size: 0.76rem; margin: 2px 0 9px; }
+
+.mp-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--text) 14%, transparent);
+  overflow: hidden;
+}
+
+.mp-bar i {
+  display: block;
+  height: 100%;
+  width: var(--mp, 28%);
+  background: var(--fam-media);
+  border-radius: inherit;
+  transition: width 0.4s ease;
+}
+
+@keyframes mp-spin { to { transform: rotate(360deg); } }
 
 /* trigger zones */
 .zone {
@@ -837,6 +914,9 @@ svg linearGradient stop:last-child { stop-color: var(--accent-2); }
 
 .section-head p { color: var(--text-2); font-size: 1.05rem; }
 
+/* the actions header sits above a centered category picker, so it's centered too */
+#actions .section-head { margin-inline: auto; text-align: center; }
+
 /* cards */
 .card {
   background: var(--surface);
@@ -967,21 +1047,31 @@ svg linearGradient stop:last-child { stop-color: var(--accent-2); }
 .trigger-card h4 { font-size: 0.98rem; margin-bottom: 4px; }
 .trigger-card p { color: var(--text-2); font-size: 0.9rem; }
 
-/* ---------- Action category tabs ---------- */
+/* ---------- Action category tabs ----------
+   One joined segmented control (same construction as .demo-profiles above
+   the hero demo), not six separate floating pills. */
 
 .cat-tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 26px;
+  justify-content: center;
+  gap: 3px;
+  width: max-content;
+  max-width: 100%;
+  margin: 0 auto 26px;
+  padding: 4px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  box-shadow: var(--shadow);
 }
 
 .cat-tab {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  border: 1px solid var(--line);
-  background: var(--surface);
+  border: 1px solid transparent;
+  background: transparent;
   color: var(--text-2);
   font: inherit;
   font-size: 0.92rem;
@@ -994,12 +1084,12 @@ svg linearGradient stop:last-child { stop-color: var(--accent-2); }
 
 .cat-tab .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--fam); flex: none; }
 
-.cat-tab:hover { color: var(--text); border-color: color-mix(in srgb, var(--fam) 55%, var(--line)); }
+.cat-tab:hover { color: var(--text); background: var(--surface-2); }
 
 .cat-tab[aria-pressed="true"] {
   color: var(--text);
-  border-color: color-mix(in srgb, var(--fam) 60%, var(--line));
-  background: color-mix(in srgb, var(--fam) 12%, var(--surface));
+  border-color: color-mix(in srgb, var(--fam) 45%, transparent);
+  background: color-mix(in srgb, var(--fam) 14%, var(--surface-2));
 }
 
 .cat-tab[data-fam="core"] { --fam: var(--fam-core); }
@@ -1282,7 +1372,10 @@ svg linearGradient stop:last-child { stop-color: var(--accent-2); }
 /* ---------- Responsive ---------- */
 
 @media (max-width: 960px) {
-  .hero { padding-top: 40px; }
+  .hero { grid-template-columns: 1fr; padding-top: 40px; }
+  .hero-copy { text-align: center; }
+  .lede { margin-inline: auto; }
+  .cta-row { justify-content: center; }
   .steps { grid-template-columns: 1fr; }
   .features-grid { grid-template-columns: repeat(2, 1fr); }
   .trustgrid { grid-template-columns: repeat(2, 1fr); }

@@ -414,6 +414,8 @@
     var lockscreen = document.getElementById("lockscreen");
     var winFront = document.getElementById("winFront");
     var caption = document.getElementById("demoCaption");
+    var mbarApp = document.querySelector(".mbar-app");
+    var mpFill = document.getElementById("mpFill");
 
     var shiftHeld = false;
     var volume = 50, preMute = 50, playing = false;
@@ -460,16 +462,28 @@
       else setVolume(preMute || 50);
     };
 
+    /* the mini player's progress fill — nudged by seek/track actions so it
+       feels connected to what you just fired, nothing more */
+    var mpPos = 28;
+    var setMpPos = function (p) {
+      mpPos = Math.max(4, Math.min(96, p));
+      if (mpFill) mpFill.style.setProperty("--mp", mpPos + "%");
+    };
+
     var showMedia = function (icon) {
       mediaHud.setAttribute("data-ic", icon);
       mediaHud.classList.add("show");
       volHud.classList.remove("show");
       clearTimeout(mediaTimer);
       mediaTimer = setTimeout(function () { mediaHud.classList.remove("show"); }, 1000);
+      if (icon === "ff") setMpPos(mpPos + 9);
+      else if (icon === "rw") setMpPos(mpPos - 9);
+      else if (icon === "next" || icon === "prev") setMpPos(6);
     };
 
     var playPause = function () {
       playing = !playing;
+      desktop.classList.toggle("mp-playing", playing);
       showMedia(playing ? "play" : "pause");
     };
 
@@ -632,6 +646,9 @@
 
     var setProfile = function (id, announce) {
       currentProfile = id;
+      desktop.dataset.profile = id;
+      if (mbarApp) mbarApp.textContent = id === "media" ? "Music" : "Finder";
+      if (id !== "media") desktop.classList.remove("mp-playing");
       dpTabs.forEach(function (b) {
         b.setAttribute("aria-pressed", String(b.dataset.profile === id));
       });
@@ -792,21 +809,55 @@
         return { x: zr.left - dr.left + zr.width / 2, y: zr.top - dr.top + zr.height / 2 };
       }
 
+      // a plain lerp between two points, used for the small settle wiggle below
+      function tweenLinear(x0, y0, x1, y1, dur, onDone) {
+        var t0 = performance.now();
+        function frame(t) {
+          if (!running) return;
+          var p = Math.min(1, (t - t0) / dur);
+          var e = 1 - Math.pow(1 - p, 2);
+          gx = x0 + (x1 - x0) * e;
+          gy = y0 + (y1 - y0) * e;
+          place();
+          if (p < 1) { raf = requestAnimationFrame(frame); return; }
+          onDone();
+        }
+        raf = requestAnimationFrame(frame);
+      }
+
+      // a hand slightly overshoots the target and corrects — reads as a
+      // landing, not a stop-on-a-dime
+      function settle(tx, ty, done) {
+        var ang = Math.random() * Math.PI * 2;
+        var ox = tx + Math.cos(ang) * 4.5, oy = ty + Math.sin(ang) * 4.5;
+        tweenLinear(tx, ty, ox, oy, 75, function () {
+          tweenLinear(ox, oy, tx, ty, 130, done);
+        });
+      }
+
+      // curved (quadratic-bezier) travel, at an unhurried and slightly
+      // randomized pace — a straight-line lerp reads as robotic
       function legTo(tx, ty, done) {
         var sx = gx, sy = gy;
         var dist = Math.hypot(tx - sx, ty - sy);
-        var dur = Math.max(420, Math.min(1100, dist * 2.2));
+        var dur = Math.max(650, Math.min(1500, dist * 2.6)) * (0.85 + Math.random() * 0.3);
+        var mx = (sx + tx) / 2, my = (sy + ty) / 2;
+        var nx = -(ty - sy), ny = (tx - sx);
+        var nlen = Math.hypot(nx, ny) || 1;
+        var bow = Math.min(46, dist * 0.18) * (Math.random() < 0.5 ? -1 : 1);
+        var cx = mx + (nx / nlen) * bow, cy = my + (ny / nlen) * bow;
         var t0 = performance.now();
         function frame(t) {
           if (!running) return;
           var p = Math.min(1, (t - t0) / dur);
           var e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
-          gx = sx + (tx - sx) * e;
-          gy = sy + (ty - sy) * e;
+          var mt = 1 - e;
+          gx = mt * mt * sx + 2 * mt * e * cx + e * e * tx;
+          gy = mt * mt * sy + 2 * mt * e * cy + e * e * ty;
           place();
           if (trailPush) trailPush(gx, gy);
-          if (p < 1) raf = requestAnimationFrame(frame);
-          else done();
+          if (p < 1) { raf = requestAnimationFrame(frame); return; }
+          settle(tx, ty, done);
         }
         raf = requestAnimationFrame(frame);
       }
@@ -821,8 +872,8 @@
           timer = setTimeout(function () {          // a real gesture dwells briefly
             if (!running) return;
             fire(stop.z, { shift: !!stop.shift });
-            timer = setTimeout(nextStop, 1200);      // linger so the HUD can be read
-          }, 240);
+            timer = setTimeout(nextStop, 1750 + Math.random() * 500); // linger so the HUD can be read
+          }, 380);
         });
       }
 
@@ -836,7 +887,7 @@
         gy = dr.height / 2;
         place();
         ghostEl.classList.add("on");
-        timer = setTimeout(nextStop, 700);
+        timer = setTimeout(nextStop, 1000);
       }
 
       function halt() {
