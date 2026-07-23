@@ -1,0 +1,39 @@
+MouseGesutres
+- Update directly (Download and install from the app, not just pointing to GitHub to download the new version)
+- Improve standard profile actions (organize *logically*)
+- Switch boxes for showing the zone borders to a glow effect (Possibky turn on by default? Might be helpful for new users who haven't learned their actions yet).
+- If default profiles fit in an action, why not assign profiles to specific moodifier keys (Consider further. Good idea in theory, how would this be implemented in practice?)
+- Create Browser Navigation Plugin (Even if this is done using shortcuts in the backend, they should be able to select it as an action)
+- Move 'Core' into relevant plugins
+- Draft Icons, choose the best. (App + Website)
+- Setting for what to display it as in the menu bar?
+- Automatically set repeat on hold when helpful for default profiles (For example, volume control, brightness controls).
+- Repeat on click option for standard gestures
+
+--- Organization Drafts ---
+
+
+--Profiles--
+
+Default (Combination of others on different modifiers?)
+Minimal
+Window Management
+Application Management
+Media Control
+Browser Navigation
+System
+
+
+--Profile Drafts--
+
+Application Management -  <-- Still could be improved. Currently seems to combine window controls and application controls
+Close Window | Full Screen | Quit App
+Previous Space | Next Space
+App Expose | Minimize | Mission Control
+
+Media Control - Good
+Previous Track | Play/pause | next Track
+10 Seconds Back | 10 Seconds Forward <-- Adding shift could increase to 30 seconds
+Volume Down | Mute | Volume Up
+
+System
