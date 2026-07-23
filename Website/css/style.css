@@ -808,6 +808,10 @@ svg linearGradient stop:last-child { stop-color: var(--accent-2); }
 .z-bottom .zl { top: 36%; }
 .zone:hover .zl, .zone:focus-visible .zl { opacity: 1; }
 
+/* the labels are for a human reading the zones — hide them while the
+   phantom cursor is the one touring, so they don't sit there unread */
+.demo-desktop.ghost-active .zl { opacity: 0; }
+
 /* the phantom cursor that demos gestures while your own pointer is away */
 .ghost {
   position: absolute;
@@ -940,6 +944,7 @@ svg linearGradient stop:last-child { stop-color: var(--accent-2); }
 }
 
 .step {
+  position: relative;
   text-align: center;
   background: var(--surface);
   border: 1px solid var(--line);
@@ -949,25 +954,23 @@ svg linearGradient stop:last-child { stop-color: var(--accent-2); }
 }
 
 .step h3 {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
   font-size: 1.1rem;
   margin-bottom: 9px;
 }
 
 .step-n {
+  position: absolute;
+  top: 16px;
+  left: 18px;
   display: grid;
   place-items: center;
-  width: 24px;
-  height: 24px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   background: var(--grad);
   color: #fff;
-  font-size: 0.8rem;
+  font-size: 0.95rem;
   font-weight: 700;
-  flex: none;
 }
 
 .step p { color: var(--text-2); font-size: 0.94rem; }
@@ -1033,6 +1036,7 @@ svg linearGradient stop:last-child { stop-color: var(--accent-2); }
   font-size: 0.95rem;
   font-weight: 600;
   margin-bottom: 14px;
+  text-align: center;
 }
 
 .triggers-grid {
@@ -1042,6 +1046,11 @@ svg linearGradient stop:last-child { stop-color: var(--accent-2); }
 }
 
 .trigger-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 14px;

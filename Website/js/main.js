@@ -456,9 +456,9 @@
         "and switch profiles above. In the real app, your whole screen is the canvas.";
     }
 
-    document.addEventListener("keydown", function (e) { if (e.key === "Shift") shiftHeld = true; });
-    document.addEventListener("keyup", function (e) { if (e.key === "Shift") shiftHeld = false; });
-    window.addEventListener("blur", function () { shiftHeld = false; });
+    document.addEventListener("keydown", function (e) { if (e.key === "Shift") { shiftHeld = true; updateZoneLabels(); } });
+    document.addEventListener("keyup", function (e) { if (e.key === "Shift") { shiftHeld = false; updateZoneLabels(); } });
+    window.addEventListener("blur", function () { shiftHeld = false; updateZoneLabels(); });
 
     var showHud = function (zoneGlyph, actionName, withShift) {
       hud.innerHTML = "<b>" + (withShift ? "⇧ " : "") + zoneGlyph + "</b> " + actionName;
@@ -674,6 +674,16 @@
 
     var dpTabs = Array.prototype.slice.call(document.querySelectorAll(".dp-tab"));
 
+    // the on-zone label reflects whichever layer is live right now — the
+    // shift layer while Shift is held (if this zone has one), else the base
+    function updateZoneLabels() {
+      Object.keys(zoneEls).forEach(function (zid) {
+        var z = PROFILES[currentProfile].zones[zid];
+        var zl = zoneEls[zid].querySelector(".zl");
+        if (zl) zl.textContent = (shiftHeld && z.shift) ? "⇧ " + z.shift[0] : (z.s || z.base[0]);
+      });
+    }
+
     var setProfile = function (id, announce) {
       currentProfile = id;
       desktop.dataset.profile = id;
@@ -687,9 +697,8 @@
         var label = ZONE_NAMES[zid] + ": " + z.base[0] +
           (z.shift ? " (hold Shift: " + z.shift[0] + ")" : "");
         zoneEls[zid].setAttribute("aria-label", label);
-        var zl = zoneEls[zid].querySelector(".zl");
-        if (zl) zl.textContent = z.s || z.base[0];
       });
+      updateZoneLabels();
       if (announce) {
         desktop.classList.add("touched");
         showHud("⟳", "Switch Profile → " + PROFILES[id].label, false);
@@ -841,32 +850,6 @@
         return { x: zr.left - dr.left + zr.width / 2, y: zr.top - dr.top + zr.height / 2 };
       }
 
-      // a plain lerp between two points, used for the small settle wiggle below
-      function tweenLinear(x0, y0, x1, y1, dur, onDone) {
-        var t0 = performance.now();
-        function frame(t) {
-          if (!running) return;
-          var p = Math.min(1, (t - t0) / dur);
-          var e = 1 - Math.pow(1 - p, 2);
-          gx = x0 + (x1 - x0) * e;
-          gy = y0 + (y1 - y0) * e;
-          place();
-          if (p < 1) { raf = requestAnimationFrame(frame); return; }
-          onDone();
-        }
-        raf = requestAnimationFrame(frame);
-      }
-
-      // a hand slightly overshoots the target and corrects — reads as a
-      // landing, not a stop-on-a-dime
-      function settle(tx, ty, done) {
-        var ang = Math.random() * Math.PI * 2;
-        var ox = tx + Math.cos(ang) * 4.5, oy = ty + Math.sin(ang) * 4.5;
-        tweenLinear(tx, ty, ox, oy, 75, function () {
-          tweenLinear(ox, oy, tx, ty, 130, done);
-        });
-      }
-
       // straight travel (like v1's own left/top CSS transition — a plain
       // interpolation, not a spatial arc) at an unhurried, slightly
       // randomized pace; the easing curve shapes speed, not the path
@@ -884,7 +867,7 @@
           place();
           if (trailPush) trailPush(gx, gy);
           if (p < 1) { raf = requestAnimationFrame(frame); return; }
-          settle(tx, ty, done);
+          done();
         }
         raf = requestAnimationFrame(frame);
       }
@@ -914,12 +897,14 @@
         gy = dr.height / 2;
         place();
         ghostEl.classList.add("on");
+        desktop.classList.add("ghost-active");
         timer = setTimeout(nextStop, 1000);
       }
 
       function halt() {
         running = false;
         ghostEl.classList.remove("on");
+        desktop.classList.remove("ghost-active");
         clearTimeout(timer);
         cancelAnimationFrame(raf);
       }
