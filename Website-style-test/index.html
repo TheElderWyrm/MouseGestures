@@ -116,15 +116,15 @@
     </div>
     <div class="ctl-group" id="colorChips">
       <span class="ctl-label">Heading color</span>
-      <button class="chip" data-color="off" aria-pressed="true" type="button">Off (current)</button>
-      <button class="chip" data-color="on" aria-pressed="false" type="button">On (preview)</button>
+      <button class="chip" data-color="on" aria-pressed="true" type="button">On (current)</button>
+      <button class="chip" data-color="off" aria-pressed="false" type="button">Off (old)</button>
     </div>
   </div>
 
   <div class="stage"><iframe id="preview" src="/Website/index.html" title="Production site preview"></iframe></div>
   <p class="stage-note">Scroll inside the frame — every section repaints, including the demo, marquee and pricing.
     The chosen palette also recolors the logo. Leave the pointer outside the little desktop to watch the phantom-cursor autoplay.
-    "Heading color" previews a hero-style gradient keyword (like <code>shortcut.</code> up top) on every section's heading, in case that treatment should spread beyond the hero.</p>
+    Every section heading now carries a gradient keyword like the hero's <code>shortcut.</code> — "Heading color: Off (old)" turns it back to plain text for comparison.</p>
 
   <h2>Palettes</h2>
   <p class="sub">Each row of swatches is <em>background · raised · surface · text · accent · accent&nbsp;2</em>.</p>
@@ -238,7 +238,7 @@
     { id: "f", file: "icons/icon-f-flick-stroke.svg", name: "Flick Stroke", blurb: "One continuous gesture, signed like a signature, ending in the arrow." }
   ];
 
-  var state = { theme: "slate", mode: "light", layout: "split", headings: "centered", headingColor: "off" };
+  var state = { theme: "slate", mode: "light", layout: "split", headings: "centered", headingColor: "on" };
 
   /* stacked-and-centered hero, kept here only as a look-back — the live
      site reverted to the split layout below, so "split" now needs no
@@ -256,8 +256,9 @@
      default since round 4. "Left" replays how it looked before that. */
   var LEFT_HEADS_CSS = ".section-head{margin-inline:0;text-align:left;}";
 
-  /* one keyword per heading, colored the same way the hero already colors
-     "shortcut." — a preview of extending that treatment site-wide */
+  /* one keyword per heading, colored the same way the hero colors "shortcut." —
+     live on the site itself now; "Off" here forces the old plain text back
+     in for comparison (the .grad spans already ship in Website/index.html) */
   var HEADING_COLOR = [
     { sel: "#how h2", plain: "Three steps to zero friction.",
       lit: 'Three steps to <span class="grad">zero friction.</span>' },
