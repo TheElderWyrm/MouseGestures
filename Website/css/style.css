@@ -1157,7 +1157,10 @@ svg linearGradient stop:last-child { stop-color: var(--accent-2); }
   gap: 24px;
 }
 
-.plan { display: flex; flex-direction: column; padding: 30px; position: relative; }
+/* padding-bottom is deliberately generous and identical on every plan card —
+   it reserves room for .plan-note (absolutely positioned, see below) so the
+   buttons land on the same line whether or not a card has a trailing note */
+.plan { display: flex; flex-direction: column; padding: 38px 34px 82px; position: relative; }
 
 .plan h3 { font-size: 1.3rem; }
 
@@ -1165,16 +1168,16 @@ svg linearGradient stop:last-child { stop-color: var(--accent-2); }
   font-size: 2rem;
   font-weight: 700;
   letter-spacing: -0.03em;
-  margin: 6px 0 4px;
+  margin: 8px 0 4px;
 }
 
-.plan-sub { color: var(--text-2); font-size: 0.9rem; margin-bottom: 16px; }
+.plan-sub { color: var(--text-2); font-size: 0.9rem; margin-bottom: 20px; }
 
 .plan ul {
   list-style: none;
   display: grid;
-  gap: 10px;
-  margin-bottom: 26px;
+  gap: 13px;
+  margin-bottom: 30px;
   color: var(--text-2);
   font-size: 0.97rem;
 }
@@ -1236,7 +1239,10 @@ svg linearGradient stop:last-child { stop-color: var(--accent-2); }
 }
 
 .plan-note {
-  margin-top: 12px;
+  position: absolute;
+  left: 34px;
+  right: 34px;
+  bottom: 30px;
   font-size: 0.82rem;
   color: var(--text-2);
   text-align: center;
@@ -1616,6 +1622,10 @@ svg linearGradient stop:last-child { stop-color: var(--accent-2); }
 .marquee[data-filter="bundle"] .chip[data-fam="bundle"] { opacity: 1; }
 
 .chips { display: flex; gap: 0.55rem; padding-right: 0.55rem; flex: none; }
+
+/* the bottom row reads right-to-left: each category's dot/name trails its
+   own actions instead of leading them, for a bit of visual variety */
+.marquee-track.reverse .chips { flex-direction: row-reverse; }
 
 /* no-JS / reduced-motion fallback: wrap statically */
 .marquee:not(.js) { mask-image: none; -webkit-mask-image: none; }

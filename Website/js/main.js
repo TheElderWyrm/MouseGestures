@@ -118,15 +118,16 @@
         chips: chips,
         offset: 0,
         unit: 0,
-        dir: track.classList.contains("reverse") ? 1 : -1
+        dir: track.classList.contains("reverse") ? 1 : -1,
+        gliding: false,
+        glideToken: 0
       });
     });
     if (!tracks.length) return;
     marquee.classList.add("js");
 
     var hovering = false, dragging = false, selected = null, inView = true;
-    var running = false, lastT = 0, resumeTimer = null;
-    var coarse = matchMedia("(hover: none)").matches;
+    var running = false, lastT = 0;
 
     function wrap(x, unit) {
       return unit ? -((((-x) % unit) + unit) % unit) : x;
@@ -144,8 +145,10 @@
       });
     }
 
+    /* a selected category dims the rest of the ribbon, but doesn't stop it —
+       only actually touching the ribbon (hover, drag) does that */
     function paused() {
-      return hovering || dragging || selected !== null || !inView || document.hidden;
+      return hovering || dragging || !inView || document.hidden;
     }
 
     function tick(t) {
@@ -155,7 +158,7 @@
       var dt = Math.min(64, Math.max(0, t - lastT));
       lastT = t;
       tracks.forEach(function (s) {
-        if (!s.unit) return;
+        if (!s.unit || s.gliding) return; // a glide in progress owns this track's offset
         s.offset = wrap(s.offset + s.dir * SPEED * dt / 1000, s.unit);
         apply(s);
       });
@@ -173,7 +176,6 @@
     function clearSelection() {
       selected = null;
       setFilter(null);
-      ensure();
     }
 
     /* freeze while the pointer is over the tabs or the ribbon */
@@ -181,16 +183,11 @@
       if (!area) return;
       area.addEventListener("pointerenter", function (e) {
         if (e.pointerType !== "mouse") return;
-        clearTimeout(resumeTimer);
         hovering = true;
       });
       area.addEventListener("pointerleave", function (e) {
         if (e.pointerType !== "mouse") return;
         hovering = false;
-        clearTimeout(resumeTimer);
-        // a selected category lingers briefly after you move away, then
-        // the ribbon un-dims and resumes
-        if (selected !== null) resumeTimer = setTimeout(clearSelection, 2400);
         ensure();
       });
     });
@@ -220,6 +217,16 @@
         window.addEventListener("pointercancel", up);
         e.preventDefault();
       });
+
+      /* trackpad swipe / shift+wheel: only claim genuinely horizontal
+         gestures, so a plain vertical scroll still passes through to
+         scroll the page normally */
+      s.el.addEventListener("wheel", function (e) {
+        if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
+        e.preventDefault();
+        s.offset = wrap(s.offset - e.deltaX, s.unit);
+        apply(s);
+      }, { passive: false });
     });
 
     /* category tabs: glide the owning track so the category lands in view */
@@ -230,18 +237,43 @@
       return null;
     }
 
+    /* the chip to anchor the glide on: whichever of this family's chips
+       currently renders leftmost in ITS OWN track. For the normal (top) row
+       that's always the header/dot chip (it's DOM-first); for the reversed
+       (bottom) row, row-reverse CSS puts the header last, so this picks up
+       the family's final action chip instead — landing the header at the
+       trailing (right) edge of its own actions instead of leading them. */
+    function leadingChip(s, fam) {
+      var chips = s.chips.querySelectorAll('.chip[data-fam="' + fam + '"]');
+      var chipsLeft = s.chips.getBoundingClientRect().left;
+      var best = null, bestPos = Infinity;
+      Array.prototype.forEach.call(chips, function (c) {
+        var pos = c.getBoundingClientRect().left - chipsLeft;
+        if (pos < bestPos) { bestPos = pos; best = c; }
+      });
+      return best;
+    }
+
+    /* glideTo owns the track's offset for its duration (tick() skips any
+       track with .gliding set) — a token guards against two glides racing
+       on the same track if a second tab is clicked before the first lands */
     function glideTo(s, target) {
       var from = s.offset;
       var delta = target - from;
       if (delta > s.unit / 2) delta -= s.unit;
       if (delta < -s.unit / 2) delta += s.unit;
       var t0 = performance.now(), DUR = 620;
+      var token = ++s.glideToken;
+      s.gliding = true;
       function step(t) {
+        if (s.glideToken !== token || dragging) { s.gliding = false; ensure(); return; }
         var k = Math.min(1, (t - t0) / DUR);
         k = 1 - Math.pow(1 - k, 3);
         s.offset = wrap(from + delta * k, s.unit);
         apply(s);
-        if (k < 1 && selected !== null && !dragging) requestAnimationFrame(step);
+        if (k < 1) { requestAnimationFrame(step); return; }
+        s.gliding = false;
+        ensure();
       }
       requestAnimationFrame(step);
     }
@@ -249,19 +281,17 @@
     tabs.forEach(function (tab) {
       tab.addEventListener("click", function () {
         var fam = tab.dataset.fam;
-        clearTimeout(resumeTimer);
         if (selected === fam) { clearSelection(); return; }
         selected = fam;
         setFilter(fam);
         var s = trackForFam(fam);
-        var chip = s && s.chips.querySelector('.chip.fam[data-fam="' + fam + '"]');
+        var chip = s && leadingChip(s, fam);
         if (s && chip) {
+          var chipWidth = chip.getBoundingClientRect().width;
           var pos = chip.getBoundingClientRect().left - s.chips.getBoundingClientRect().left;
-          var inset = Math.min(48, marquee.clientWidth * 0.05);
-          glideTo(s, wrap(inset - pos, s.unit));
+          var center = marquee.clientWidth / 2 - chipWidth / 2;
+          glideTo(s, wrap(center - pos, s.unit));
         }
-        // no hover to release the freeze on touch devices — time out instead
-        if (coarse) resumeTimer = setTimeout(clearSelection, 8000);
       });
     });
 
@@ -773,8 +803,10 @@
       var ghostEl = document.createElement("div");
       ghostEl.className = "ghost";
       ghostEl.setAttribute("aria-hidden", "true");
-      ghostEl.innerHTML = '<svg viewBox="0 0 24 24"><path d="M5.4 2.8 5.4 20.6 9.7 16.6 12.3 22.4 15.2 21.1 12.6 15.3 18.6 14.8 Z" ' +
-        'fill="#16161d" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg>';
+      // v1's own cursor glyph: white fill / slate stroke, not the OS pointer's
+      // black-on-white — reads as a demo indicator instead of your real cursor
+      ghostEl.innerHTML = '<svg viewBox="0 0 24 24"><path d="M5 2l14 12.5-6.8.6 3.9 6.9-2.7 1.4-3.8-7L5 21z" ' +
+        'fill="#fff" stroke="#1e293b" stroke-width="1.4"/></svg>';
       desktop.appendChild(ghostEl);
 
       /* Scripted tours. The everyday tour skips Dark Mode (it would flip the
@@ -799,8 +831,8 @@
       var idx = -1, running = false, inView = false, userNear = false;
 
       function place() {
-        // the path's arrow tip sits at (5.4, 2.8) of the 24-box; land the tip on target
-        ghostEl.style.transform = "translate(" + (gx - 4.3) + "px," + (gy - 2.2) + "px)";
+        // the path's arrow tip sits at (5, 2) of the 24-box; land the tip on target
+        ghostEl.style.transform = "translate(" + (gx - 3.96) + "px," + (gy - 1.58) + "px)";
       }
 
       function zoneTarget(id) {
@@ -835,25 +867,20 @@
         });
       }
 
-      // curved (quadratic-bezier) travel, at an unhurried and slightly
-      // randomized pace — a straight-line lerp reads as robotic
+      // straight travel (like v1's own left/top CSS transition — a plain
+      // interpolation, not a spatial arc) at an unhurried, slightly
+      // randomized pace; the easing curve shapes speed, not the path
       function legTo(tx, ty, done) {
         var sx = gx, sy = gy;
         var dist = Math.hypot(tx - sx, ty - sy);
         var dur = Math.max(650, Math.min(1500, dist * 2.6)) * (0.85 + Math.random() * 0.3);
-        var mx = (sx + tx) / 2, my = (sy + ty) / 2;
-        var nx = -(ty - sy), ny = (tx - sx);
-        var nlen = Math.hypot(nx, ny) || 1;
-        var bow = Math.min(46, dist * 0.18) * (Math.random() < 0.5 ? -1 : 1);
-        var cx = mx + (nx / nlen) * bow, cy = my + (ny / nlen) * bow;
         var t0 = performance.now();
         function frame(t) {
           if (!running) return;
           var p = Math.min(1, (t - t0) / dur);
           var e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
-          var mt = 1 - e;
-          gx = mt * mt * sx + 2 * mt * e * cx + e * e * tx;
-          gy = mt * mt * sy + 2 * mt * e * cy + e * e * ty;
+          gx = sx + (tx - sx) * e;
+          gy = sy + (ty - sy) * e;
           place();
           if (trailPush) trailPush(gx, gy);
           if (p < 1) { raf = requestAnimationFrame(frame); return; }
