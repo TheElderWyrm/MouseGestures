@@ -127,7 +127,8 @@
     marquee.classList.add("js");
 
     var hovering = false, dragging = false, selected = null, inView = true;
-    var running = false, lastT = 0;
+    var running = false, lastT = 0, expireTimer = null;
+    var coarse = matchMedia("(hover: none)").matches;
 
     function wrap(x, unit) {
       return unit ? -((((-x) % unit) + unit) % unit) : x;
@@ -176,18 +177,23 @@
     function clearSelection() {
       selected = null;
       setFilter(null);
+      clearTimeout(expireTimer);
     }
 
-    /* freeze while the pointer is over the tabs or the ribbon */
+    /* freeze while the pointer is over the tabs or the ribbon; a selection
+       left unattended for a while quietly clears itself so the ribbon
+       doesn't stay dimmed forever */
     [tabsWrap, marquee].forEach(function (area) {
       if (!area) return;
       area.addEventListener("pointerenter", function (e) {
         if (e.pointerType !== "mouse") return;
         hovering = true;
+        clearTimeout(expireTimer);
       });
       area.addEventListener("pointerleave", function (e) {
         if (e.pointerType !== "mouse") return;
         hovering = false;
+        if (selected !== null) expireTimer = setTimeout(clearSelection, 6000);
         ensure();
       });
     });
@@ -237,23 +243,6 @@
       return null;
     }
 
-    /* the chip to anchor the glide on: whichever of this family's chips
-       currently renders leftmost in ITS OWN track. For the normal (top) row
-       that's always the header/dot chip (it's DOM-first); for the reversed
-       (bottom) row, row-reverse CSS puts the header last, so this picks up
-       the family's final action chip instead — landing the header at the
-       trailing (right) edge of its own actions instead of leading them. */
-    function leadingChip(s, fam) {
-      var chips = s.chips.querySelectorAll('.chip[data-fam="' + fam + '"]');
-      var chipsLeft = s.chips.getBoundingClientRect().left;
-      var best = null, bestPos = Infinity;
-      Array.prototype.forEach.call(chips, function (c) {
-        var pos = c.getBoundingClientRect().left - chipsLeft;
-        if (pos < bestPos) { bestPos = pos; best = c; }
-      });
-      return best;
-    }
-
     /* glideTo owns the track's offset for its duration (tick() skips any
        track with .gliding set) — a token guards against two glides racing
        on the same track if a second tab is clicked before the first lands */
@@ -281,17 +270,25 @@
     tabs.forEach(function (tab) {
       tab.addEventListener("click", function () {
         var fam = tab.dataset.fam;
+        clearTimeout(expireTimer);
         if (selected === fam) { clearSelection(); return; }
         selected = fam;
         setFilter(fam);
         var s = trackForFam(fam);
-        var chip = s && leadingChip(s, fam);
+        var chip = s && s.chips.querySelector('.chip.fam[data-fam="' + fam + '"]');
         if (s && chip) {
           var chipWidth = chip.getBoundingClientRect().width;
           var pos = chip.getBoundingClientRect().left - s.chips.getBoundingClientRect().left;
-          var center = marquee.clientWidth / 2 - chipWidth / 2;
-          glideTo(s, wrap(center - pos, s.unit));
+          // the label anchors to the left (top row) or right (bottom row),
+          // clear of the fade mask — its own actions fill the rest of the
+          // ribbon from there (top row: label leads, actions run right;
+          // bottom row: row-reverse makes the label trail, actions run left)
+          var buffer = Math.max(64, marquee.clientWidth * 0.12);
+          var reversed = s.el.classList.contains("reverse");
+          var inset = reversed ? (marquee.clientWidth - buffer - chipWidth) : buffer;
+          glideTo(s, wrap(inset - pos, s.unit));
         }
+        if (coarse) expireTimer = setTimeout(clearSelection, 8000);
       });
     });
 
@@ -517,6 +514,12 @@
       showMedia(playing ? "play" : "pause");
     };
 
+    // the demo's own dark-mode toggle fakes it locally on the mini desktop —
+    // it must never flip the real site-wide theme out from under the reader
+    var toggleDemoTheme = function () {
+      desktop.classList.toggle("demo-dark");
+    };
+
     var screenshot = function () {
       shotFlash.classList.remove("go");
       shotThumb.classList.remove("go");
@@ -551,7 +554,7 @@
                             base: ["Mission Control", function () { transientState("is-mission", 1500); }],
                             shift: ["App Exposé", function () { transientState("is-expose", 1500); }] },
           tr:     { g: "↗", s: "Dark Mode",
-                            base: ["Toggle Dark Mode", function () { toggleTheme(true); }],
+                            base: ["Toggle Dark Mode", toggleDemoTheme],
                             shift: ["Screenshot", screenshot] },
           bl:     { g: "↙", s: "Show Desktop", base: ["Show Desktop", function () { transientState("is-showdesk", 1500); }] },
           br:     { g: "↘", s: "Lock Screen", base: ["Lock Screen", function () { desktop.classList.add("is-locked"); }] },

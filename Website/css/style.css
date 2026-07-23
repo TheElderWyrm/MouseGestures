@@ -334,9 +334,30 @@ svg linearGradient stop:last-child { stop-color: var(--accent-2); }
   position: relative;
   aspect-ratio: 16 / 10.4;
   background: var(--wallpaper);
+  color: var(--text); /* re-anchors color inheritance so .demo-dark below can
+                          re-theme text locally, independent of the real page */
   overflow: hidden;
   touch-action: manipulation;
-  transition: background 0.35s ease;
+  transition: background 0.35s ease, color 0.35s ease;
+}
+
+/* the demo's own "Toggle Dark Mode" action fakes a dark look scoped to just
+   this mini desktop — copied from :root[data-theme="dark"] verbatim so it's
+   pixel-identical, but entirely independent of the site's real theme */
+.demo-desktop.demo-dark {
+  --wallpaper:
+    radial-gradient(120% 90% at 12% 0%, #263263 0%, transparent 55%),
+    radial-gradient(110% 90% at 92% 8%, #123a55 0%, transparent 55%),
+    radial-gradient(120% 120% at 55% 110%, #38204d 0%, transparent 60%),
+    linear-gradient(180deg, #10162a, #0b101e);
+  --win-bg: rgba(30, 38, 58, 0.94);
+  --win-line: rgba(148, 163, 184, 0.12);
+  --bg: #0a0e1a;
+  --bg-raise: #0f1524;
+  --text: #edf1f7;
+  --text-2: #9aa6b8;
+  --hud-bg: rgba(13, 18, 32, 0.88);
+  --hud-text: #f5f5f7;
 }
 
 .trail {
