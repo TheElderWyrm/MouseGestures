@@ -89,8 +89,8 @@
   <h1>MouseGestures — <span>style &amp; color</span> test</h1>
   <p class="sub" style="margin-top:6px">
     The frame below is the <strong>live production site</strong> (<code>Website/</code>), restyled in place.
-    Click a palette to repaint it instantly, flip light/dark, and compare the centered hero against the old
-    split hero. Notes save to <code>notes.json</code> in this folder.
+    Click a palette to repaint it instantly, flip light/dark, and revisit the centered hero that was tried
+    and reverted (the split layout below is what's actually live). Notes save to <code>notes.json</code> in this folder.
   </p>
   <div class="banner">Run <code>python3 serve.py</code> from <code>Website-style-test/</code>, then open
     <code>http://127.0.0.1:8001/Website-style-test/</code>. Opening this file directly (file://) can't load the
@@ -106,8 +106,8 @@
     </div>
     <div class="ctl-group" id="layoutChips">
       <span class="ctl-label">Hero</span>
-      <button class="chip" data-layout="centered" aria-pressed="true" type="button">Centered (new)</button>
-      <button class="chip" data-layout="split" aria-pressed="false" type="button">Split (old)</button>
+      <button class="chip" data-layout="split" aria-pressed="true" type="button">Split (current)</button>
+      <button class="chip" data-layout="centered" aria-pressed="false" type="button">Centered (rejected)</button>
     </div>
   </div>
 
@@ -227,15 +227,17 @@
     { id: "f", file: "icons/icon-f-flick-stroke.svg", name: "Flick Stroke", blurb: "One continuous gesture, signed like a signature, ending in the arrow." }
   ];
 
-  var state = { theme: "slate", mode: "light", layout: "centered" };
+  var state = { theme: "slate", mode: "light", layout: "split" };
 
-  /* old two-column hero, for comparison */
-  var SPLIT_CSS =
-    ".hero{display:grid;grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr);align-items:center;gap:clamp(32px,5vw,64px);}" +
-    ".hero-copy{text-align:left;max-width:none;margin-inline:0;}" +
-    ".lede{margin-inline:0;}.cta-row{justify-content:flex-start;}.fineprint{margin-inline:0;}" +
-    ".hero-demo{max-width:none;margin:0;}" +
-    "@media (max-width:960px){.hero{grid-template-columns:1fr;}.hero-copy{text-align:center;}.lede{margin-inline:auto;}.cta-row{justify-content:center;}.hero-demo{margin-top:24px;}}";
+  /* stacked-and-centered hero, kept here only as a look-back — the live
+     site reverted to the split layout below, so "split" now needs no
+     override and "centered" is the one being forced */
+  var CENTERED_CSS =
+    ".hero{display:block;overflow:visible;}" +
+    ".hero::before,.hero::after{display:none;}" +
+    ".hero-copy{max-width:800px;margin-inline:auto;text-align:center;}" +
+    ".hero-demo{max-width:720px;margin:clamp(34px,5vh,52px) auto 0;}" +
+    ".lede{margin-inline:auto;}.cta-row{justify-content:center;}.fineprint{margin-inline:auto;}";
 
   function tokensToCSS(sel, tokens) {
     var out = sel + "{";
@@ -249,7 +251,7 @@
     if (!doc || !doc.documentElement) return;
     var t = THEMES[state.theme];
     var css = tokensToCSS(":root", t.light) + tokensToCSS(':root[data-theme="dark"]', t.dark);
-    if (state.layout === "split") css += SPLIT_CSS;
+    if (state.layout === "centered") css += CENTERED_CSS;
     var style = doc.getElementById("style-override");
     if (!style) {
       style = doc.createElement("style");
