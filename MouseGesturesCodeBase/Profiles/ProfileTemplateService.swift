@@ -20,22 +20,7 @@ class ProfileTemplateService {
 
     /// Creates and returns a template profile of the specified type
     func createTemplateProfile(type: DefaultProfileType) -> ConfigurationProfile {
-        switch type {
-        case .windowManagement:
-            return DefaultProfiles.createWindowManagementProfile()
-        case .mediaControl:
-            return DefaultProfiles.createMediaControlProfile()
-        case .systemNavigation:
-            return DefaultProfiles.createSystemNavigationProfile()
-        case .productivity:
-            return DefaultProfiles.createProductivityProfile()
-        case .minimal:
-            return DefaultProfiles.createMinimalProfile()
-        case .developer:
-            return DefaultProfiles.createDeveloperProfile()
-        case .tabNavigation:
-            return DefaultProfiles.createTabNavigationProfile()
-        }
+        return DefaultProfiles.getProfile(for: type) ?? DefaultProfiles.createMinimalProfile()
     }
 
     /// Imports a template profile into the configuration

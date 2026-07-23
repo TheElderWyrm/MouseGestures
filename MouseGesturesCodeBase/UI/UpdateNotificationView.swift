@@ -2,7 +2,23 @@ import SwiftUI
 
 struct UpdateNotificationView: View {
     @ObservedObject var updateService = UpdateService.shared
+    @ObservedObject var selfUpdateService = SelfUpdateService.shared
     @Environment(\.dismiss) private var dismiss
+
+    @State private var showFailureAlert = false
+    @State private var failureMessage = ""
+
+    private var canAutoUpdate: Bool {
+        selfUpdateService.canSelfUpdateInPlace()
+    }
+
+    private var isUpdating: Bool {
+        selfUpdateService.isUpdating
+    }
+
+    private var updateButtonTitle: String {
+        canAutoUpdate ? "Update Now" : "Open Download Page"
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -44,27 +60,98 @@ struct UpdateNotificationView: View {
             Divider()
 
             // Footer
-            HStack {
-                Button("Later") {
-                    dismiss()
+            VStack(alignment: .leading, spacing: 12) {
+                if !canAutoUpdate {
+                    Text("Move MouseGestures to Applications to enable automatic updates.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                 }
-                .buttonStyle(.link)
 
-                Spacer()
+                statusView
 
-                Button("Update Now") {
-                    // In a real app, this would trigger Sparkle or download the DMG
-                    if let url = URL(string: "https://mousegestures.app/download") {
-                        NSWorkspace.shared.open(url)
+                HStack {
+                    Button("Later") {
+                        dismiss()
                     }
-                    dismiss()
+                    .buttonStyle(.link)
+                    .disabled(isUpdating)
+
+                    Spacer()
+
+                    Button(updateButtonTitle) {
+                        handleUpdateNow()
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    .disabled(isUpdating)
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
             }
             .padding(24)
             .background(Color(NSColor.windowBackgroundColor))
         }
         .frame(width: 500, height: 450)
+        .onChange(of: selfUpdateService.stage) { newStage in
+            if case .failed(let message) = newStage {
+                failureMessage = message
+                showFailureAlert = true
+            }
+        }
+        .alert("Update Failed", isPresented: $showFailureAlert) {
+            Button("Open Download Page") {
+                openDownloadPage()
+                dismiss()
+            }
+            Button("Cancel", role: .cancel) {
+                selfUpdateService.reset()
+            }
+        } message: {
+            Text(failureMessage)
+        }
+    }
+
+    @ViewBuilder
+    private var statusView: some View {
+        switch selfUpdateService.stage {
+        case .idle, .failed:
+            EmptyView()
+        case .downloading(let progress):
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Downloading update… \(Int(progress * 100))%")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                ProgressView(value: progress)
+            }
+        case .mounting:
+            statusRow("Preparing installer…")
+        case .installing:
+            statusRow("Installing update…")
+        case .relaunching:
+            statusRow("Relaunching MouseGestures…")
+        }
+    }
+
+    private func statusRow(_ text: String) -> some View {
+        HStack(spacing: 8) {
+            ProgressView()
+                .controlSize(.small)
+            Text(text)
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+    }
+
+    private func handleUpdateNow() {
+        guard canAutoUpdate else {
+            openDownloadPage()
+            dismiss()
+            return
+        }
+        selfUpdateService.startSelfUpdate(downloadURLString: updateService.updateDownloadURLString)
+    }
+
+    private func openDownloadPage() {
+        if let url = URL(string: "https://mousegestures.app/download") {
+            NSWorkspace.shared.open(url)
+        }
     }
 }

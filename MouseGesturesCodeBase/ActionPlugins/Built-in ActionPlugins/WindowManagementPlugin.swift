@@ -125,6 +125,12 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
 
     private var savedWindowPositions: [String: WindowPosition] = [:]
     private var savedLayouts: [String: WindowLayout] = [:]
+    /// Frame a window had immediately before its most recent snap, keyed by
+    /// owning app bundle ID. Snapping to the SAME position again while this
+    /// entry is still current restores the frame instead of re-snapping —
+    /// a lightweight "press again to undo" toggle. In-memory only (not
+    /// persisted): it's a transient UX nicety, not durable state.
+    private var lastSnapByApp: [String: (position: String, originalFrame: CGRect)] = [:]
 
     struct WindowPosition: Codable {
         let x: CGFloat
@@ -962,36 +968,76 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
     // MARK: - Snap Window
 
     private func snapWindow(to position: String, target: WindowTargeting.WindowTarget?, context: PluginContext) {
+        let windows = getTargetWindows(target, context: context)
+        guard !windows.isEmpty else { return }
+
+        for (window, pid) in windows {
+            guard let screen = getScreenForWindow(window, context: context),
+                  let currentFrame = getWindowFrame(window, context: context) else { continue }
+
+            let bundleId = NSRunningApplication(processIdentifier: pid)?.bundleIdentifier ?? "unknown"
+            let key = "app:\(bundleId)"
+
+            // Snapping to the same position twice in a row undoes the first
+            // snap instead of re-applying a no-op move.
+            if let previous = lastSnapByApp[key], previous.position == position {
+                setWindowFrame(window, frame: previous.originalFrame, context: context)
+                lastSnapByApp.removeValue(forKey: key)
+                context.logger.log("Reverted snap-to-\(position); restored previous window position", file: #file, function: #function, line: #line)
+                continue
+            }
+
+            guard applySnapPosition(position, window: window, currentFrame: currentFrame, screen: screen, context: context) else {
+                context.logger.log("Unknown snap position: \(position)", file: #file, function: #function, line: #line)
+                continue
+            }
+
+            lastSnapByApp[key] = (position: position, originalFrame: currentFrame)
+        }
+    }
+
+    /// Applies a single named snap position to one window. Returns false for
+    /// an unrecognized position (nothing was moved).
+    @discardableResult
+    private func applySnapPosition(_ position: String, window: AXUIElement, currentFrame: CGRect, screen: NSScreen, context: PluginContext) -> Bool {
         switch position {
         case "maximize":
-            positionWindowWithTarget(target: target, x: 0, y: 0, width: 1, height: 1, logMessage: "Snapped window to fill screen", context: context)
+            positionWindow(window, relativeTo: screen, x: 0, y: 0, width: 1, height: 1, context: context)
         case "center":
-            centerWindow(target: target, context: context)
+            let sf = screen.visibleFrame
+            let newFrame = CGRect(
+                x: sf.midX - currentFrame.width / 2,
+                y: sf.midY - currentFrame.height / 2,
+                width: currentFrame.width,
+                height: currentFrame.height
+            )
+            setWindowFrame(window, frame: newFrame, context: context)
         case "left_half":
-            positionWindowWithTarget(target: target, x: 0, y: 0, width: 0.5, height: 1, logMessage: "Snapped window to left half", context: context)
+            positionWindow(window, relativeTo: screen, x: 0, y: 0, width: 0.5, height: 1, context: context)
         case "right_half":
-            positionWindowWithTarget(target: target, x: 0.5, y: 0, width: 0.5, height: 1, logMessage: "Snapped window to right half", context: context)
+            positionWindow(window, relativeTo: screen, x: 0.5, y: 0, width: 0.5, height: 1, context: context)
         case "top_half":
-            positionWindowWithTarget(target: target, x: 0, y: 0, width: 1, height: 0.5, logMessage: "Snapped window to top half", context: context)
+            positionWindow(window, relativeTo: screen, x: 0, y: 0, width: 1, height: 0.5, context: context)
         case "bottom_half":
-            positionWindowWithTarget(target: target, x: 0, y: 0.5, width: 1, height: 0.5, logMessage: "Snapped window to bottom half", context: context)
+            positionWindow(window, relativeTo: screen, x: 0, y: 0.5, width: 1, height: 0.5, context: context)
         case "top_left":
-            positionWindowWithTarget(target: target, x: 0, y: 0, width: 0.5, height: 0.5, logMessage: "Snapped window to top left", context: context)
+            positionWindow(window, relativeTo: screen, x: 0, y: 0, width: 0.5, height: 0.5, context: context)
         case "top_right":
-            positionWindowWithTarget(target: target, x: 0.5, y: 0, width: 0.5, height: 0.5, logMessage: "Snapped window to top right", context: context)
+            positionWindow(window, relativeTo: screen, x: 0.5, y: 0, width: 0.5, height: 0.5, context: context)
         case "bottom_left":
-            positionWindowWithTarget(target: target, x: 0, y: 0.5, width: 0.5, height: 0.5, logMessage: "Snapped window to bottom left", context: context)
+            positionWindow(window, relativeTo: screen, x: 0, y: 0.5, width: 0.5, height: 0.5, context: context)
         case "bottom_right":
-            positionWindowWithTarget(target: target, x: 0.5, y: 0.5, width: 0.5, height: 0.5, logMessage: "Snapped window to bottom right", context: context)
+            positionWindow(window, relativeTo: screen, x: 0.5, y: 0.5, width: 0.5, height: 0.5, context: context)
         case "left_third":
-            positionWindowWithTarget(target: target, x: 0, y: 0, width: 1.0 / 3.0, height: 1, logMessage: "Snapped window to left third", context: context)
+            positionWindow(window, relativeTo: screen, x: 0, y: 0, width: 1.0 / 3.0, height: 1, context: context)
         case "center_third":
-            positionWindowWithTarget(target: target, x: 1.0 / 3.0, y: 0, width: 1.0 / 3.0, height: 1, logMessage: "Snapped window to center third", context: context)
+            positionWindow(window, relativeTo: screen, x: 1.0 / 3.0, y: 0, width: 1.0 / 3.0, height: 1, context: context)
         case "right_third":
-            positionWindowWithTarget(target: target, x: 2.0 / 3.0, y: 0, width: 1.0 / 3.0, height: 1, logMessage: "Snapped window to right third", context: context)
+            positionWindow(window, relativeTo: screen, x: 2.0 / 3.0, y: 0, width: 1.0 / 3.0, height: 1, context: context)
         default:
-            context.logger.log("Unknown snap position: \(position)", file: #file, function: #function, line: #line)
+            return false
         }
+        return true
     }
 
     // MARK: - Core Window Management Functions
@@ -1075,34 +1121,7 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
         setWindowFrame(window, frame: newFrame, context: context)
     }
 
-    private func positionWindowWithTarget(target: WindowTargeting.WindowTarget?, x: CGFloat, y: CGFloat, width: CGFloat, height: CGFloat, logMessage: String, context: PluginContext) {
-        let windows = getTargetWindows(target, context: context)
-        guard !windows.isEmpty else { return }
-        for (window, _) in windows {
-            guard let screen = getScreenForWindow(window, context: context) else { continue }
-            positionWindow(window, relativeTo: screen, x: x, y: y, width: width, height: height, context: context)
-        }
-        context.logger.log("\(logMessage) (\(windows.count) window\(windows.count == 1 ? "" : "s"))", file: #file, function: #function, line: #line)
-    }
-
-    // MARK: - Sizing and Centering
-
-    private func centerWindow(target: WindowTargeting.WindowTarget? = nil, context: PluginContext) {
-        let windows = getTargetWindows(target, context: context)
-        for (window, _) in windows {
-            guard let currentFrame = getWindowFrame(window, context: context),
-                  let screen = getScreenForWindow(window, context: context) else { continue }
-            let sf = screen.visibleFrame
-            let newFrame = CGRect(
-                x: sf.midX - currentFrame.width / 2,
-                y: sf.midY - currentFrame.height / 2,
-                width: currentFrame.width,
-                height: currentFrame.height
-            )
-            setWindowFrame(window, frame: newFrame, context: context)
-        }
-        context.logger.log("Centered \(windows.count) window(s)", file: #file, function: #function, line: #line)
-    }
+    // MARK: - Sizing
 
     private func resizeToPercent(_ percent: CGFloat, target: WindowTargeting.WindowTarget? = nil, context: PluginContext) {
         let windows = getTargetWindows(target, context: context)

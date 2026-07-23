@@ -17,6 +17,7 @@ public class UpdateService: ObservableObject {
     @Published public var latestVersion: String = ""
     @Published public var isUpdateAvailable: Bool = false
     @Published public var updateReleaseNotes: String = ""
+    @Published public var updateDownloadURLString: String = ""
     @Published public var isChecking: Bool = false
     @Published public var lastCheckDate: Date?
 
@@ -50,6 +51,7 @@ public class UpdateService: ObservableObject {
 
                 self.latestVersion = feed.version
                 self.updateReleaseNotes = feed.releaseNotes
+                self.updateDownloadURLString = feed.downloadURL
                 self.isUpdateAvailable = UpdateLogic.isUpdateAvailable(current: self.currentVersion, remote: feed.version)
 
                 if self.isUpdateAvailable && !quietly {

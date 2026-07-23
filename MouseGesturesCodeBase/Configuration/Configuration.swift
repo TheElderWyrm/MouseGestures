@@ -1,6 +1,12 @@
 import Cocoa
 import Carbon
 
+/// What the menu bar status item shows when it's visible.
+enum MenuBarDisplayStyle: String, Codable {
+    case icon
+    case text
+}
+
 public class Configuration: Codable {
     // The static shared instance is the single source of truth for the app's configuration.
     public static let shared = Configuration()
@@ -15,11 +21,12 @@ public class Configuration: Codable {
     var edgeThreshold: CGFloat = 30
     var cornerSize: CGFloat = 100
     var cornerBuffer: CGFloat = 50
-    var showZoneHighlights: Bool = false
+    var showZoneHighlights: Bool = true
     var showZoneLabels: Bool = false
     // Transient: not persisted, synced from plugin settings at runtime
     var zoneHighlightColor: NSColor = NSColor.systemBlue.withAlphaComponent(0.3)
     var hideFromMenuBar: Bool = false  // When true, app hides menu bar icon
+    var menuBarDisplayStyle: MenuBarDisplayStyle = .icon  // What to show in the menu bar when visible
     var debugModeEnabled: Bool = false  // When true, enables logging
     var developerModeEnabled: Bool = false  // When true, shows developer tab
     var notificationOnActivation: Bool = false  // When true, shows a banner notification when any gesture fires
@@ -55,6 +62,7 @@ public class Configuration: Codable {
         var showZoneHighlights: Bool?
         var showZoneLabels: Bool?
         var hideFromMenuBar: Bool?
+        var menuBarDisplayStyle: MenuBarDisplayStyle?
         var debugModeEnabled: Bool?
         var developerModeEnabled: Bool?
         var notificationOnActivation: Bool?
@@ -64,7 +72,7 @@ public class Configuration: Codable {
 
     // Defines which properties are saved to disk.
     enum CodingKeys: String, CodingKey {
-        case isEnabled, profiles, activeProfileId, appProfileMappings, disabledApps, hapticFeedbackEnabled, edgeThreshold, cornerSize, cornerBuffer, showZoneHighlights, showZoneLabels, hideFromMenuBar, debugModeEnabled, developerModeEnabled, notificationOnActivation, freeModeProfileId, pluginConfigurations
+        case isEnabled, profiles, activeProfileId, appProfileMappings, disabledApps, hapticFeedbackEnabled, edgeThreshold, cornerSize, cornerBuffer, showZoneHighlights, showZoneLabels, hideFromMenuBar, menuBarDisplayStyle, debugModeEnabled, developerModeEnabled, notificationOnActivation, freeModeProfileId, pluginConfigurations
     }
 
     // --- Computed Properties ---
@@ -130,7 +138,7 @@ public class Configuration: Codable {
             self.activeProfileId = decoded.activeProfileId
             self.appProfileMappings = decoded.appProfileMappings
             self.disabledApps = decoded.disabledApps ?? []
-            self.showZoneHighlights = decoded.showZoneHighlights ?? false
+            self.showZoneHighlights = decoded.showZoneHighlights ?? true
             self.showZoneLabels = decoded.showZoneLabels ?? false
 
             // Global zone/haptic settings
@@ -139,6 +147,7 @@ public class Configuration: Codable {
             self.cornerSize = decoded.cornerSize ?? 100
             self.cornerBuffer = decoded.cornerBuffer ?? 50
             self.hideFromMenuBar = decoded.hideFromMenuBar ?? false
+            self.menuBarDisplayStyle = decoded.menuBarDisplayStyle ?? .icon
             self.debugModeEnabled = decoded.debugModeEnabled ?? false
             self.developerModeEnabled = decoded.developerModeEnabled ?? false
             self.notificationOnActivation = decoded.notificationOnActivation ?? false
@@ -223,9 +232,15 @@ public class Configuration: Codable {
     }
 
     private func performSave() {
-        saveQueue.async { [weak self] in
-            guard let self = self else { return }
-            self.writeConfigurationToDisk(requirePending: true)
+        // Must NOT dispatch onto `saveQueue` here: writeConfigurationToDisk
+        // synchronizes internally via `saveQueue.sync`, and calling that from
+        // a block already executing on saveQueue is a guaranteed deadlock
+        // that libdispatch traps as a fatal client bug ("dispatch_sync called
+        // on queue already owned by current thread"). Hop onto a separate
+        // queue instead so the write still happens off the caller's thread
+        // (the 1s debounce Timer fires on main).
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            self?.writeConfigurationToDisk(requirePending: true)
         }
     }
 
@@ -540,9 +555,10 @@ public class Configuration: Codable {
         self.appProfileMappings = []
         self.disabledApps = []
         self.isEnabled = true
-        self.showZoneHighlights = false
+        self.showZoneHighlights = true
         self.showZoneLabels = false
         self.hideFromMenuBar = false
+        self.menuBarDisplayStyle = .icon
         self.debugModeEnabled = false
         self.developerModeEnabled = false
         self.notificationOnActivation = false
@@ -576,6 +592,7 @@ public class Configuration: Codable {
         let showZoneHighlights: Bool
         let showZoneLabels: Bool
         let hideFromMenuBar: Bool
+        let menuBarDisplayStyle: MenuBarDisplayStyle
         let debugModeEnabled: Bool
         let pluginConfigurations: [String: AnyCodable]
         let exportDate: Date
@@ -594,6 +611,7 @@ public class Configuration: Codable {
             self.showZoneHighlights = config.showZoneHighlights
             self.showZoneLabels = config.showZoneLabels
             self.hideFromMenuBar = config.hideFromMenuBar
+            self.menuBarDisplayStyle = config.menuBarDisplayStyle
             self.debugModeEnabled = config.debugModeEnabled
             self.pluginConfigurations = config.pluginConfigurations
             self.exportDate = Date()
@@ -633,6 +651,7 @@ public class Configuration: Codable {
             self.showZoneHighlights = importData.showZoneHighlights
             self.showZoneLabels = importData.showZoneLabels
             self.hideFromMenuBar = importData.hideFromMenuBar
+            self.menuBarDisplayStyle = importData.menuBarDisplayStyle
             self.debugModeEnabled = importData.debugModeEnabled
             self.pluginConfigurations = importData.pluginConfigurations
 

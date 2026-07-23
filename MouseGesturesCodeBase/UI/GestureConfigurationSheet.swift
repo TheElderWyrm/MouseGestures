@@ -664,7 +664,13 @@ struct GestureConfigurationSheet: View {
         GroupBox("Timing Options") {
             VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
                 Toggle("Repeat on Hold", isOn: $timing.repeatOnHold)
-                if timing.repeatOnHold {
+                Toggle("Repeat on Click", isOn: $timing.repeatOnClick)
+                Text("Repeat on Hold fires continuously while you keep the mouse+modifier in the zone. Repeat on Click fires once and starts repeating hands-free — click the same gesture again to stop.")
+                    .font(.system(size: MGStyle.FontSize.caption))
+                    .foregroundColor(.secondary)
+                    .padding(.leading, MGStyle.Spacing.xxl)
+
+                if timing.repeatOnHold || timing.repeatOnClick {
                     VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
                         HStack {
                             Text("Initial Delay:")

@@ -38,6 +38,16 @@ struct BuiltInSettingsProvider: SettingsProvider {
                 viewBuilder: { _ in AnyView(NotificationOnActivationSettingView()) }
             ),
 
+            // Menu Bar visibility + display style
+            SettingsEntry(
+                category: SettingsCategories.general,
+                order: 6,
+                searchableItems: [
+                    SearchableSettingItem(title: "Menu Bar", description: "Show or hide the menu bar icon, and choose whether it displays as an icon or text", keywords: ["menu", "bar", "icon", "text", "hide", "show", "status", "item"])
+                ],
+                viewBuilder: { _ in AnyView(MenuBarSettingView()) }
+            ),
+
             // Developer Mode toggle (advanced, but always shown when enabled)
             SettingsEntry(
                 category: SettingsCategories.general,
@@ -209,6 +219,34 @@ private struct NotificationOnActivationSettingView: View {
             description: "Show a banner notification when a gesture fires"
         ) { UIServices.shared.setNotificationOnActivation($0) }
         .onAppear { notificationEnabled = UIServices.shared.isNotificationOnActivation() }
+    }
+}
+
+private struct MenuBarSettingView: View {
+    @State private var iconHidden = false
+    @State private var displayStyle: MenuBarDisplayStyle = .icon
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
+            settingsToggle(
+                isOn: Binding(get: { !iconHidden }, set: { iconHidden = !$0 }),
+                title: "Show Menu Bar Icon",
+                description: "Show a MouseGestures icon in the menu bar"
+            ) { UIServices.shared.setMenuBarIconHidden(!$0) }
+
+            if !iconHidden {
+                Picker("Display As", selection: $displayStyle) {
+                    Text("Icon").tag(MenuBarDisplayStyle.icon)
+                    Text("Text").tag(MenuBarDisplayStyle.text)
+                }
+                .pickerStyle(.segmented)
+                .onChange(of: displayStyle) { UIServices.shared.setMenuBarDisplayStyle($0) }
+            }
+        }
+        .onAppear {
+            iconHidden = UIServices.shared.isMenuBarIconHidden()
+            displayStyle = UIServices.shared.menuBarDisplayStyle()
+        }
     }
 }
 

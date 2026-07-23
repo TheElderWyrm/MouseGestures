@@ -410,6 +410,16 @@ public class UIServices: ObservableObject {
         menuBarVisibilityService.setHidden(hidden)
     }
 
+    func menuBarDisplayStyle() -> MenuBarDisplayStyle {
+        return Configuration.shared.menuBarDisplayStyle
+    }
+
+    func setMenuBarDisplayStyle(_ style: MenuBarDisplayStyle) {
+        Configuration.shared.menuBarDisplayStyle = style
+        Configuration.shared.save()
+        NotificationCenter.default.post(name: NSNotification.Name("GestureConfigurationChanged"), object: nil)
+    }
+
     func isShowZoneHighlights() -> Bool {
         return zoneVisualizationService.isShowZoneHighlights()
     }
@@ -689,19 +699,27 @@ struct PluginInfo {
 
 enum DefaultProfileType: String, CaseIterable {
     case windowManagement = "Window Management"
+    case applicationManagement = "Application Management"
     case mediaControl = "Media Control"
+    case browserNavigation = "Browser Navigation"
+    case system = "System"
     case systemNavigation = "System Navigation"
     case productivity = "Productivity"
     case minimal = "Minimal"
     case developer = "Developer"
-    case tabNavigation = "Tab Navigation"
 
     var description: String {
         switch self {
         case .windowManagement:
             return "Focused on window sizing, positioning, and spaces navigation"
+        case .applicationManagement:
+            return "App lifecycle, spaces, and Exposé — close, quit, hide, and switch"
         case .mediaControl:
-            return "Control media playback, volume, and brightness"
+            return "Control media playback, seeking, and volume"
+        case .browserNavigation:
+            return "Browser page and tab navigation: back/forward, reload, tabs"
+        case .system:
+            return "Brightness, Do Not Disturb, Dark Mode, lock screen, and screenshots"
         case .systemNavigation:
             return "Navigate macOS with Mission Control, Exposé, and Spaces"
         case .productivity:
@@ -710,8 +728,6 @@ enum DefaultProfileType: String, CaseIterable {
             return "Basic essential gestures only"
         case .developer:
             return "Optimized for development workflows"
-        case .tabNavigation:
-            return "Browser and app tab management: switch, open, close, and navigate tabs"
         }
     }
 
@@ -719,8 +735,14 @@ enum DefaultProfileType: String, CaseIterable {
         switch self {
         case .windowManagement:
             return "rectangle.3.group"
+        case .applicationManagement:
+            return "square.grid.2x2"
         case .mediaControl:
             return "play.circle"
+        case .browserNavigation:
+            return "safari"
+        case .system:
+            return "gearshape"
         case .systemNavigation:
             return "squares.below.rectangle"
         case .productivity:
@@ -729,8 +751,6 @@ enum DefaultProfileType: String, CaseIterable {
             return "minus.circle"
         case .developer:
             return "chevron.left.forwardslash.chevron.right"
-        case .tabNavigation:
-            return "rectangle.on.rectangle"
         }
     }
 }

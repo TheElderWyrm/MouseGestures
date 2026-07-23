@@ -70,10 +70,7 @@ class MenuIcon: NSObject {
         // Create menu bar item
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
 
-        if let button = statusItem?.button {
-            button.image = NSImage(systemSymbolName: "hand.draw", accessibilityDescription: "Mouse Gestures")
-            button.image?.isTemplate = true
-        }
+        applyDisplayStyle()
 
         // Create menu
         let menu = NSMenu()
@@ -143,6 +140,8 @@ class MenuIcon: NSObject {
         let work = { [weak self] in
             guard let self = self, let button = self.statusItem?.button else { return }
 
+            self.applyDisplayStyle()
+
             let hasPermission = self.delegate?.menuIconRequestsAccessibilityStatus() ?? false
             let gesturesEnabled = self.delegate?.menuIconRequestsGestureEnabledState() ?? false
 
@@ -157,10 +156,22 @@ class MenuIcon: NSObject {
                 button.appearsDisabled = true
                 button.toolTip = "MouseGestures - Gestures Disabled"
             }
-            // Keep template mode
-            button.image?.isTemplate = true
         }
         if Thread.isMainThread { work() } else { DispatchQueue.main.async(execute: work) }
+    }
+
+    /// Sets the status item's image/title according to `Configuration.shared.menuBarDisplayStyle`.
+    private func applyDisplayStyle() {
+        guard let button = statusItem?.button else { return }
+        switch Configuration.shared.menuBarDisplayStyle {
+        case .icon:
+            button.image = NSImage(systemSymbolName: "hand.draw", accessibilityDescription: "Mouse Gestures")
+            button.image?.isTemplate = true
+            button.title = ""
+        case .text:
+            button.image = nil
+            button.title = "Gestures"
+        }
     }
 
     /// Updates the state of menu items based on accessibility permissions

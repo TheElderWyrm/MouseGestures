@@ -303,6 +303,7 @@ class MouseButtonDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
             let modifiers = event.modifierFlags.normalized
             if !requireModifiers || !modifiers.isEmpty {
                 fireClickOrCombinedGesture(button: button, modifiers: modifiers)
+                checkRepeatOnClickGesture(modifiers: modifiers)
             }
         }
 
@@ -383,6 +384,38 @@ class MouseButtonDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
                 return
             }
         }
+    }
+
+    /// Check for a "standard" zone gesture (zone + modifiers only — no click-trigger
+    /// or drag component of its own) that has `repeatOnClick` enabled and matches the
+    /// zone the mouse currently sits in plus the held modifiers. A discrete click
+    /// there toggles a hands-free auto-repeat sequence via ScreenZoneDetectorPlugin,
+    /// independent of the single execution that already fires when the mouse enters
+    /// the zone (see ScreenZoneDetectorPlugin.detectGesture).
+    private func checkRepeatOnClickGesture(modifiers: NSEvent.ModifierFlags) {
+        guard let config = context?.configuration else { return }
+        guard let sf = NSScreen.main?.frame else { return }
+        let mouseLocation = NSEvent.mouseLocation
+
+        let candidate = config.gestures.first { g in
+            g.isEnabled &&
+            g.timing.repeatOnClick &&
+            g.hasZoneTrigger &&
+            g.dragModifier == .none &&
+            g.mouseButtonTrigger == nil &&
+            g.modifiers == modifiers &&
+            g.zone.contains(
+                point: mouseLocation, screenFrame: sf,
+                threshold: Configuration.shared.edgeThreshold,
+                cornerSize: Configuration.shared.cornerSize,
+                cornerBuffer: Configuration.shared.cornerBuffer
+            )
+        }
+
+        guard let gesture = candidate else { return }
+
+        (DetectionPluginManager.shared.getPlugin(ScreenZoneDetectorPlugin.pluginIdentifier) as? ScreenZoneDetectorPlugin)?
+            .toggleRepeatOnClick(for: gesture)
     }
 
     private func handleMouseUp(_ event: NSEvent) {

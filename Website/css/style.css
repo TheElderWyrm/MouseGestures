@@ -360,6 +360,27 @@ svg linearGradient stop:last-child { stop-color: var(--accent-2); }
   --hud-text: #f5f5f7;
 }
 
+/* ...and its missing counterpart: without this, the demo could only ever
+   force ITSELF dark — with the real page already in dark mode (root vars
+   dark), removing .demo-dark just fell through to those same dark root
+   values, so the demo's own toggle could never actually show a light
+   preview. Copied from :root's light defaults verbatim, same as above. */
+.demo-desktop.demo-light {
+  --wallpaper:
+    radial-gradient(120% 90% at 12% 0%, #c7c5ff 0%, transparent 55%),
+    radial-gradient(110% 90% at 92% 8%, #a6e4ff 0%, transparent 55%),
+    radial-gradient(120% 120% at 55% 110%, #ffd9ec 0%, transparent 60%),
+    linear-gradient(180deg, #eef0fb, #e3e7f5);
+  --win-bg: rgba(255, 255, 255, 0.92);
+  --win-line: rgba(29, 29, 31, 0.08);
+  --bg: #f7f9fc;
+  --bg-raise: #ffffff;
+  --text: #0f172a;
+  --text-2: #55637a;
+  --hud-bg: rgba(28, 28, 34, 0.82);
+  --hud-text: #f5f5f7;
+}
+
 .trail {
   position: absolute;
   inset: 0;

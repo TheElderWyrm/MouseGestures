@@ -55,7 +55,9 @@ class ZoneView: NSView {
     private var activeColor: NSColor {
         Configuration.shared.zoneHighlightColor.withAlphaComponent(0.3)
     }
-    private let borderColor = NSColor.white.withAlphaComponent(0.5)
+    private var glowColor: NSColor {
+        Configuration.shared.zoneHighlightColor
+    }
 
     init(frame: NSRect, zone: ScreenZone) {
         self.zone = zone
@@ -72,11 +74,7 @@ class ZoneView: NSView {
         fillColor.setFill()
         bounds.fill()
 
-        // Draw border
-        borderColor.setStroke()
-        let borderPath = NSBezierPath(rect: bounds.insetBy(dx: 0.5, dy: 0.5))
-        borderPath.lineWidth = 1.0
-        borderPath.stroke()
+        drawGlow()
 
         // Draw label if present (forceShowLabel bypasses the global setting for preview mode)
         if let label = label, forceShowLabel || Configuration.shared.showZoneLabels {
@@ -139,6 +137,26 @@ class ZoneView: NSView {
                 label.draw(with: drawRect, options: [.usesLineFragmentOrigin, .truncatesLastVisibleLine], attributes: attrs, context: nil)
             }
         }
+    }
+
+    /// Soft inner glow along the zone's edge, replacing the old hard-edged
+    /// box border. Drawn as a blurred stroke inset from the bounds so the
+    /// shadow blur stays within the (unclipped-beyond-bounds) view.
+    private func drawGlow() {
+        guard let ctx = NSGraphicsContext.current?.cgContext else { return }
+        let inset: CGFloat = 4
+        guard bounds.width > inset * 2, bounds.height > inset * 2 else { return }
+
+        let glowPath = NSBezierPath(rect: bounds.insetBy(dx: inset, dy: inset))
+        let intensity: CGFloat = isActive ? 0.9 : 0.45
+        let blurRadius: CGFloat = isActive ? 16 : 9
+
+        ctx.saveGState()
+        ctx.setShadow(offset: .zero, blur: blurRadius, color: glowColor.withAlphaComponent(intensity).cgColor)
+        glowColor.withAlphaComponent(intensity).setStroke()
+        glowPath.lineWidth = 2.0
+        glowPath.stroke()
+        ctx.restoreGState()
     }
 }
 

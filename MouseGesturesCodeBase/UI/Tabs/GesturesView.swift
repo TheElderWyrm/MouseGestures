@@ -427,6 +427,12 @@ struct GestureCardView: View {
                             .foregroundColor(.secondary.opacity(0.6))
                             .help("Repeats on hold")
                     }
+                    if gesture.timing.repeatOnClick {
+                        Image(systemName: "repeat.circle")
+                            .font(.system(size: 9))
+                            .foregroundColor(.secondary.opacity(0.6))
+                            .help("Click to start/stop repeating")
+                    }
                     if gesture.timing.longPressEnabled {
                         Image(systemName: "timer")
                             .font(.system(size: 9))
@@ -533,7 +539,7 @@ struct GestureCardView: View {
             .frame(minWidth: 180, alignment: .leading)
 
             // Timing (if applicable)
-            if gesture.timing.repeatOnHold || gesture.timing.longPressEnabled {
+            if gesture.timing.repeatOnHold || gesture.timing.repeatOnClick || gesture.timing.longPressEnabled {
                 Divider()
                     .frame(height: 80)
 
@@ -543,8 +549,11 @@ struct GestureCardView: View {
                         .foregroundColor(.secondary)
                         .textCase(.uppercase)
 
-                    if gesture.timing.repeatOnHold {
-                        detailLine("Repeat", "On Hold")
+                    if gesture.timing.repeatOnHold || gesture.timing.repeatOnClick {
+                        let repeatMode = gesture.timing.repeatOnHold && gesture.timing.repeatOnClick
+                            ? "On Hold + On Click"
+                            : (gesture.timing.repeatOnHold ? "On Hold" : "On Click")
+                        detailLine("Repeat", repeatMode)
                         detailLine("Delay", String(format: "%.1fs", gesture.timing.repeatInitialDelay))
                         detailLine("Interval", String(format: "%.1fs", gesture.timing.repeatInterval))
                     }

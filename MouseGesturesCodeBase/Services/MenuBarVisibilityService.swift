@@ -24,6 +24,11 @@ class MenuBarVisibilityService {
             object: nil,
             userInfo: ["hidden": hidden]
         )
+        // MenuIcon only observes "GestureConfigurationChanged" for live updates
+        // (see MenuIcon.configurationChanged()); post it too so toggling
+        // visibility takes effect immediately instead of waiting for some
+        // unrelated config change to happen to fire it.
+        NotificationCenter.default.post(name: NSNotification.Name("GestureConfigurationChanged"), object: nil)
 
         log.log("Menu bar icon \(hidden ? "hidden" : "shown")")
     }

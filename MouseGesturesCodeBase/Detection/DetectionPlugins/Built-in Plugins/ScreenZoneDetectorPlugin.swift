@@ -182,6 +182,13 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     private var repeatInitialDelayTimer: Timer?
     private var currentRepeatingGesture: Gesture?
 
+    // Click-toggled repeat state — independent of the hold-based repeat above.
+    // Started/stopped by MouseButtonDetectorPlugin via toggleRepeatOnClick(for:)
+    // when a discrete click lands on a `repeatOnClick` gesture's zone+modifiers.
+    private var clickRepeatTimer: Timer?
+    private var clickRepeatInitialDelayTimer: Timer?
+    private var currentClickRepeatingGesture: Gesture?
+
     // Gesture lookup for efficient matching
     private var gestureLookup: GestureLookup?
 
@@ -276,6 +283,7 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         ActivationCoordinator.shared.pluginStopping(self)
         disableMouseTracking()
         stopRepeatTimer()
+        stopClickRepeatTimer()
         lastTriggeredZone = nil
         lastTriggeredDrag = .none
         lastTriggeredModifiers = []
@@ -605,6 +613,83 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
             // gestures (it only repeated while an unrelated key happened down).
             return true
         }
+        return mods.contains(required)
+    }
+
+    // MARK: - Click-Toggled Repeat
+
+    /// Called by MouseButtonDetectorPlugin when a discrete click lands inside a
+    /// `repeatOnClick` gesture's zone with its required modifiers held. Toggle
+    /// semantics: if this exact gesture is already auto-repeating, the click stops
+    /// it; otherwise the gesture fires once immediately and a hands-free repeat
+    /// sequence starts (mouse need not stay in the zone — unlike repeat-on-hold).
+    func toggleRepeatOnClick(for gesture: Gesture) {
+        guard gesture.repeatOnClick else { return }
+
+        if let current = currentClickRepeatingGesture, current.id == gesture.id {
+            stopClickRepeatTimer()
+            return
+        }
+
+        // Switching to a new gesture (or starting fresh) replaces any prior
+        // click-repeat sequence — only one can run at a time.
+        stopClickRepeatTimer()
+        currentClickRepeatingGesture = gesture
+
+        triggerGesture(gesture, context: GestureContext(
+            source: .screenZone(zone: gesture.zone, dragState: gesture.dragModifier),
+            modifiers: NSEvent.ModifierFlags.currentSystem, timestamp: Date()
+        ))
+
+        guard gesture.repeatInterval > 0 else {
+            currentClickRepeatingGesture = nil
+            return
+        }
+
+        let startRepeating = { [weak self] in
+            guard let self = self, let g = self.currentClickRepeatingGesture,
+                  self.shouldContinueClickRepeating() else { return }
+
+            self.clickRepeatTimer = Timer.scheduledTimer(withTimeInterval: g.repeatInterval, repeats: true) { [weak self] timer in
+                guard let self = self, let g = self.currentClickRepeatingGesture,
+                      self.shouldContinueClickRepeating() else { timer.invalidate(); return }
+                self.repeatGesture(g)
+            }
+        }
+
+        if gesture.repeatInitialDelay > 0 {
+            clickRepeatInitialDelayTimer = Timer.scheduledTimer(withTimeInterval: gesture.repeatInitialDelay, repeats: false) { [weak self] _ in
+                self?.clickRepeatInitialDelayTimer = nil
+                startRepeating()
+            }
+        } else {
+            startRepeating()
+        }
+    }
+
+    private func stopClickRepeatTimer() {
+        clickRepeatTimer?.invalidate()
+        clickRepeatTimer = nil
+        clickRepeatInitialDelayTimer?.invalidate()
+        clickRepeatInitialDelayTimer = nil
+        currentClickRepeatingGesture = nil
+    }
+
+    /// Click-repeat is hands-free (no zone-hold requirement), but still needs a
+    /// safety net so it can't survive the user moving on to an unrelated task.
+    /// Stops if the gesture got disabled, or (for gestures that require modifiers)
+    /// if those modifiers are no longer held — the same real-system-modifier-state
+    /// signal ZoneHighlightWindow's scheduleHide() uses to decide whether to hide
+    /// zone highlights. Gestures with no modifier requirement have nothing to
+    /// release, so the explicit re-click toggle is their only stop mechanism.
+    private func shouldContinueClickRepeating() -> Bool {
+        guard let gesture = currentClickRepeatingGesture else { return false }
+        guard gesture.isEnabled else { return false }
+
+        let required = gesture.modifiers
+        guard !required.isEmpty else { return true }
+
+        let mods = NSEvent.ModifierFlags.currentSystem.normalized
         return mods.contains(required)
     }
 

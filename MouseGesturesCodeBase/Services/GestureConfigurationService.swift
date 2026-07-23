@@ -90,23 +90,9 @@ class GestureConfigurationService {
     // MARK: - Default Profiles
 
     func importDefaultProfile(type: DefaultProfileType) -> ConfigurationProfile? {
-        let profile: ConfigurationProfile
-
-        switch type {
-        case .windowManagement:
-            profile = DefaultProfiles.createWindowManagementProfile()
-        case .mediaControl:
-            profile = DefaultProfiles.createMediaControlProfile()
-        case .systemNavigation:
-            profile = DefaultProfiles.createSystemNavigationProfile()
-        case .productivity:
-            profile = DefaultProfiles.createProductivityProfile()
-        case .minimal:
-            profile = DefaultProfiles.createMinimalProfile()
-        case .developer:
-            profile = DefaultProfiles.createDeveloperProfile()
-        case .tabNavigation:
-            profile = DefaultProfiles.createTabNavigationProfile()
+        guard let profile = DefaultProfiles.getProfile(for: type) else {
+            log.log("Default profile not found for type: \(type)")
+            return nil
         }
 
         // Check for name conflicts and adjust

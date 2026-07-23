@@ -115,6 +115,7 @@
 		BA98418F85ECA410558094B0 /* ActivationComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 046848D79A549E69C644FFD7 /* ActivationComponents.swift */; };
 		BD884DE9B9DBAF4A53E6123D /* SettingsCategoryProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08AA45A28A2516DB23980BC2 /* SettingsCategoryProvider.swift */; };
 		CD614DA1BF21B8BE018DFE83 /* UpdateService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06BE4D14ACFDD34E9DF4B651 /* UpdateService.swift */; };
+		CB335ECAAF4745418CC6F642 /* SelfUpdateService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43752886C53B432383537A9E /* SelfUpdateService.swift */; };
 		D37249979159DF938C105417 /* BuiltInSettingsCategories.swift in Sources */ = {isa = PBXBuildFile; fileRef = F50141A48E3DD816B8942DA8 /* BuiltInSettingsCategories.swift */; };
 		F64847768F1F2D8E06D72CBC /* UIStyles.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E94445AB3BF094E20E605FC /* UIStyles.swift */; };
 		DD0000000000000000000007 /* LicenseLogic.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD0000000000000000000001 /* LicenseLogic.swift */; };
@@ -136,6 +137,7 @@
 /* Begin PBXFileReference section */
 		046848D79A549E69C644FFD7 /* ActivationComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActivationComponents.swift; path = MouseGesturesCodeBase/Detection/ActivationComponents.swift; sourceTree = SOURCE_ROOT; };
 		06BE4D14ACFDD34E9DF4B651 /* UpdateService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UpdateService.swift; path = MouseGesturesCodeBase/Services/UpdateService.swift; sourceTree = SOURCE_ROOT; };
+		43752886C53B432383537A9E /* SelfUpdateService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SelfUpdateService.swift; path = MouseGesturesCodeBase/Services/SelfUpdateService.swift; sourceTree = SOURCE_ROOT; };
 		08AA45A28A2516DB23980BC2 /* SettingsCategoryProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SettingsCategoryProvider.swift; path = MouseGesturesCodeBase/UI/Settings/SettingsCategoryProvider.swift; sourceTree = SOURCE_ROOT; };
 		08B54313B0ED9B193F3749C6 /* ActivationMapper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActivationMapper.swift; path = MouseGesturesCodeBase/Detection/DetectionPlugins/Core/ActivationMapper.swift; sourceTree = SOURCE_ROOT; };
 		0E1B4ABD8BDC387CF9C1CFDE /* TutorialModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TutorialModifier.swift; path = MouseGesturesCodeBase/UI/TutorialModifier.swift; sourceTree = SOURCE_ROOT; };
@@ -455,6 +457,7 @@
 				DD0000000000000000000001 /* LicenseLogic.swift */,
 				DD0000000000000000000020 /* LicenseKey.swift */,
 				06BE4D14ACFDD34E9DF4B651 /* UpdateService.swift */,
+				43752886C53B432383537A9E /* SelfUpdateService.swift */,
 				DD0000000000000000000030 /* UpdateLogic.swift */,
 				CE0347CE854263CC12FAA6C3 /* TutorialService.swift */,
 			);
@@ -786,6 +789,7 @@
 				47664568AFCE2E60CBCAD6AF /* LicenseSettingsView.swift in Sources */,
 				56614B068B7EE21330CA141F /* OnboardingView.swift in Sources */,
 				CD614DA1BF21B8BE018DFE83 /* UpdateService.swift in Sources */,
+				CB335ECAAF4745418CC6F642 /* SelfUpdateService.swift in Sources */,
 				DD0000000000000000000031 /* UpdateLogic.swift in Sources */,
 				5F6349D3B922F5EC3DAD2A72 /* UpdateNotificationView.swift in Sources */,
 				9960454DBE0FEE05BE520654 /* BrowserActionsPlugin.swift in Sources */,

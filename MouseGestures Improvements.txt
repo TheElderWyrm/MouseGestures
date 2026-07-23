@@ -1,39 +1,108 @@
 MouseGesutres
-- Update directly (Download and install from the app, not just pointing to GitHub to download the new version)
-- Improve standard profile actions (organize *logically*)
-- Switch boxes for showing the zone borders to a glow effect (Possibky turn on by default? Might be helpful for new users who haven't learned their actions yet).
-- If default profiles fit in an action, why not assign profiles to specific moodifier keys (Consider further. Good idea in theory, how would this be implemented in practice?)
-- Create Browser Navigation Plugin (Even if this is done using shortcuts in the backend, they should be able to select it as an action)
-- Move 'Core' into relevant plugins
-- Draft Icons, choose the best. (App + Website)
-- Setting for what to display it as in the menu bar?
-- Automatically set repeat on hold when helpful for default profiles (For example, volume control, brightness controls).
-- Repeat on click option for standard gestures
+
+[Also fixed while working through this list: a pre-existing crash (present before
+any of these changes) where Configuration.performSave() dispatched onto saveQueue
+and then writeConfigurationToDisk() called saveQueue.sync from inside that same
+block — a guaranteed libdispatch deadlock/crash ("dispatch_sync called on queue
+already owned by current thread"). This is what was crashing the app once
+accessibility was granted (that's just the first thing that reliably triggered a
+debounced config save). Fixed in Configuration.swift by hopping onto a separate
+queue in performSave() instead of saveQueue itself.]
+
+- [DONE] Update directly (Download and install from the app, not just pointing to GitHub to download the new version)
+  -> In-app download/mount/install/relaunch flow from the "Update Now" button (SelfUpdateService.swift).
+- [DONE] Improve standard profile actions (organize *logically*, see drafts below)
+  -> DefaultProfiles.swift rewritten per the drafts below.
+- [DONE] Switch boxes for showing the zone borders to a glow effect (Possibly turn on by default? Might be helpful for new users who haven't learned their actions yet).
+  -> ZoneView now draws a soft inner glow instead of a hard box border, and showZoneHighlights now defaults to true for new installs.
+- [DONE] Create Browser Navigation Plugin (Even if this is done using shortcuts in the backend, they should be able to select it as an action)
+  -> BrowserActionsPlugin already existed as a selectable action; added a "Browser Navigation" default profile that actually uses it (previously only an ad hoc "Tab Navigation" profile using raw keyboard shortcuts existed - removed/replaced).
+- [PARTIAL] Move 'Core' actions into relevant plugins
+  -> Found that window actions (close/minimize/maximize/fullscreen) were already migrated to WindowManagementPlugin with hidden backward-compat aliases left in CoreActionsPlugin. The remaining Core actions (mission_control, show_desktop, app_expose, cycle_window, cycle_space, hide_app, quit_app, lock_screen, sleep_display, empty_trash, switch_profile) are NOT yet moved - didn't want to rush a wider plugin-boundary refactor in the same pass as everything else. Left for a future dedicated pass.
+- [NOT DONE] Draft Icons, choose the best. (App + Website)
+  -> Design/visual task, not something to do as code changes. Needs actual icon artwork.
+- [DONE] Setting for what to display it as in the menu bar?
+  -> Added Icon/Text picker (Configuration.menuBarDisplayStyle). Also found and fixed the existing "hide menu bar icon" toggle had no UI control anywhere and didn't live-update - both now wired up in Settings -> General -> Menu Bar.
+- [DONE] Automatically set repeat on hold when helpful for default profiles (For example, volume control, brightness controls).
+  -> Volume Up/Down and all four brightness gestures (display + keyboard) in the new Media Control / System profiles now default to repeatOnHold.
+- [DONE] Repeat on click option for standard gestures
+  -> New repeatOnClick timing option, independent of repeatOnHold: click once to start a hands-free repeat, click the same gesture again to stop. Toggle in the gesture editor next to Repeat on Hold.
+- [DONE] For window management save previous position in memory. If an action (such as snap window) is done twice in a row without changing targets reset to original position. (Maybe, test to see how well that works)
+  -> Implemented in WindowManagementPlugin.snapWindow: snapping the same region twice in a row (per-app) restores the pre-snap frame instead of re-snapping. Only tested via unit build/compile + code review, not manually clicked through yet - worth trying in practice to see if the toggle-back is discoverable/expected or surprising.
+- [DONE] Clean up the README.md. It should focus simply on what the app is and how to use it, not on development practices. Assume people already know what they are doing somewhat.
+  -> Rewritten around what the app is / getting started / what it can do / Free vs Pro. Build/test/lint/CI/architecture detail moved out (not relocated anywhere - trimmed on the assumption a contributor can find xcodebuild/SwiftLint/CI config themselves). Also dropped two references to MouseGestures_actions.txt and add_remove_files_xcode.py, which had already been deleted from the repo (uncommitted) before this session started.
+- [DONE] Website demo light mode not working (Also website mode should sync the dark mode selection on the demo, but not the reverse)
+  -> Root cause: the demo's dark-mode override had no .demo-light counterpart, so toggling it off while the site was already dark fell through to the same dark values. Added the missing CSS class and made the toggle explicit (set one class, clear the other) rather than a single-class flip. Site->demo sync confirmed still one-directional (verified live with Playwright).
+- [DONE] Improve website demo profile actions based of profiles below.
+  -> Demo's profiles replaced with Window Management / Media Control / System, matching the finalized drafts below.
 
 --- Organization Drafts ---
+Cmnd + Control = Main (Consider dropping the control. Would this be easier or interfere with normal computer navigation)
+Cmnd + Option = Secondary
+Shift is a modifier (Switch direction or change length)
+
+[Left this exact question open - didn't change the global modifier scheme since
+it's framed as a "consider" rather than a decision, and it'd be a breaking change
+to every existing gesture. All new/reorganized profiles below still use
+Cmnd+Control = Main, Cmnd+Option = Secondary, Shift = direction/magnitude modifier.]
 
 
 --Profiles--
 
-Default (Combination of others on different modifiers?)
+Default (Combination of other profiles on different modifiers?)
+[Left alone - genuinely unresolved how to fit multiple categories worth of
+actions onto one modifier scheme without collisions; the plain "Default" profile
+still exists but wasn't turned into a combination profile.]
 Minimal
-Window Management
-Application Management
-Media Control
-Browser Navigation
-System
+Window Management [rewritten - see draft below]
+Application Management [NEW - added, see draft below]
+Media Control [rewritten - see draft below]
+Browser Navigation [NEW - added, see draft below]
+System [NEW - added, see draft below]
 
 
 --Profile Drafts--
 
-Application Management -  <-- Still could be improved. Currently seems to combine window controls and application controls
+Application Management - [IMPLEMENTED as drafted]
 Close Window | Full Screen | Quit App
 Previous Space | Next Space
-App Expose | Minimize | Mission Control
+App Expose | Hide App | Mission Control
 
-Media Control - Good
+Media Control - [IMPLEMENTED as drafted]
 Previous Track | Play/pause | next Track
 10 Seconds Back | 10 Seconds Forward <-- Adding shift could increase to 30 seconds
 Volume Down | Mute | Volume Up
 
-System
+Window Management - [IMPLEMENTED as drafted]
+Main:
+Close Window | Fullscreen | Quit Application
+Move to Previous Display | Move to Next Display
+App Expose | Minimize | Mission Control
+
+Secondary:
+Top left | Maximize | Top Right
+Left Half | Right Half
+Bottom Left | Center | Bottom Right
+[Rotate Window replaced with Center - snap_window already supports a "center"
+position, and rotate was already flagged above as not a great choice. Every
+Secondary-layer action here now uses snap_window, so the toggle-back-on-repeat
+behavior applies to all of them, including Maximize.]
+
+
+Browser - [IMPLEMENTED as drafted]
+Reload |New Tab (Shift -> Reopen last) | Focus Address Bar
+Back | Forward
+Previous Tab | Close Tab | Next Tab
+[Uses BrowserActionsPlugin's real actions (navigation/tab_management) rather
+than raw keyboard shortcuts, except Focus Address Bar which has no dedicated
+plugin action and stays a Cmd+L keyboard shortcut.]
+
+
+System- [IMPLEMENTED - see below]
+Settings, system control, Display, keyboard brightness, etc...
+
+[Implemented as:
+Do Not Disturb | Brightness Up | Dark Mode
+Keyboard Brightness Down | Keyboard Brightness Up
+Lock Screen | Brightness Down | Screenshot
+Brightness (display + keyboard) gestures repeat on hold.]

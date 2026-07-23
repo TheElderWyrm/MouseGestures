@@ -7,21 +7,45 @@ import Carbon
 /// Timing configuration for repeating and long press actions
 struct TimingSettings: Codable, Equatable {
     var repeatOnHold: Bool
+    /// Click-to-toggle repeat: a discrete click while in the gesture's zone+modifiers
+    /// starts a hands-free auto-repeat sequence; clicking the same gesture again stops
+    /// it. Distinct from `repeatOnHold`, which requires continuously holding the
+    /// mouse+modifier in the zone. Peer option, not mutually exclusive.
+    var repeatOnClick: Bool
     var repeatInitialDelay: TimeInterval
     var repeatInterval: TimeInterval
     var longPressEnabled: Bool
     var longPressThreshold: TimeInterval
 
     init(repeatOnHold: Bool = false,
+         repeatOnClick: Bool = false,
          repeatInitialDelay: TimeInterval = 0.5,
          repeatInterval: TimeInterval = 0.5,
          longPressEnabled: Bool = false,
          longPressThreshold: TimeInterval = 0.8) {
         self.repeatOnHold = repeatOnHold
+        self.repeatOnClick = repeatOnClick
         self.repeatInitialDelay = repeatInitialDelay
         self.repeatInterval = repeatInterval
         self.longPressEnabled = longPressEnabled
         self.longPressThreshold = longPressThreshold
+    }
+
+    // Custom Codable so gestures.json files saved before `repeatOnClick` existed
+    // still decode correctly (mirrors DragTypeConfig's `allowClick` back-compat
+    // pattern in Detection/ActivationComponents.swift).
+    enum CodingKeys: String, CodingKey {
+        case repeatOnHold, repeatOnClick, repeatInitialDelay, repeatInterval, longPressEnabled, longPressThreshold
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        repeatOnHold = try c.decode(Bool.self, forKey: .repeatOnHold)
+        repeatOnClick = try c.decodeIfPresent(Bool.self, forKey: .repeatOnClick) ?? false
+        repeatInitialDelay = try c.decode(TimeInterval.self, forKey: .repeatInitialDelay)
+        repeatInterval = try c.decode(TimeInterval.self, forKey: .repeatInterval)
+        longPressEnabled = try c.decode(Bool.self, forKey: .longPressEnabled)
+        longPressThreshold = try c.decode(TimeInterval.self, forKey: .longPressThreshold)
     }
 }
 
@@ -150,6 +174,7 @@ struct Gesture: Codable, Equatable {
     }
 
     var repeatOnHold: Bool { timing.repeatOnHold }
+    var repeatOnClick: Bool { timing.repeatOnClick }
     var repeatInitialDelay: TimeInterval { timing.repeatInitialDelay }
     var repeatInterval: TimeInterval { timing.repeatInterval }
     var longPressEnabled: Bool { timing.longPressEnabled }
