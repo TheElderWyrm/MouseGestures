@@ -1,7 +1,8 @@
 /* MouseGestures site — vanilla JS, no dependencies.
-   Theme toggle · mobile nav · action marquee · scroll reveals ·
-   GitHub release auto-check · the hero desktop playground ·
-   the ⌥ + top-right-corner easter egg. */
+   Theme toggle · mobile nav · action-catalog ribbon (auto-scroll, category
+   jump, drag) · scroll reveals · GitHub release auto-check · the hero
+   desktop playground with switchable profiles · the ⌥ + top-right-corner
+   easter egg. */
 (function () {
   "use strict";
 
@@ -73,52 +74,216 @@
     if (year) year.textContent = String(now.getFullYear());
   })();
 
-  /* ---------- Action-catalog marquee ---------- */
+  /* ---------- Action-catalog ribbon ----------
+     The two chip tracks auto-scroll like a marquee, but are fully
+     interactive: hovering the catalog (tabs or ribbon) freezes them, any
+     track can be dragged, and the category tabs glide the owning track so
+     that category is in view (dimming everything else). */
 
-  if (!reducedMotion) {
-    Array.prototype.forEach.call(document.querySelectorAll("[data-marquee]"), function (marquee) {
-      Array.prototype.forEach.call(marquee.querySelectorAll(".marquee-track"), function (track) {
-        var chips = track.querySelector(".chips");
-        if (!chips) return;
-        var clone = chips.cloneNode(true);
-        clone.setAttribute("aria-hidden", "true");
-        track.appendChild(clone);
-      });
-      marquee.classList.add("js");
-    });
-  }
-
-  /* ---------- Action-catalog category tabs ----------
-     Jumping to a category swaps the scrolling marquee for a static,
-     readable list of just that category so it's easy to scan and scroll —
-     "All" brings back the normal scrolling marquee. */
-  (function () {
-    var tabsEl = document.getElementById("catalogTabs");
+  (function catalog() {
     var marquee = document.querySelector("[data-marquee]");
-    var focus = document.getElementById("catalogFocus");
-    if (!tabsEl || !marquee || !focus) return;
+    if (!marquee) return;
+    var tabs = Array.prototype.slice.call(document.querySelectorAll(".cat-tab"));
+    var tabsWrap = document.querySelector(".cat-tabs");
 
-    var groups = focus.querySelectorAll(".catalog-focus-group");
-
-    tabsEl.addEventListener("click", function (e) {
-      var btn = e.target.closest(".pill-tab");
-      if (!btn) return;
-      var fam = btn.dataset.fam;
-
-      Array.prototype.forEach.call(tabsEl.querySelectorAll(".pill-tab"), function (b) {
-        b.classList.toggle("active", b === btn);
-        b.setAttribute("aria-selected", String(b === btn));
+    function setFilter(fam) {
+      if (fam) marquee.setAttribute("data-filter", fam);
+      else marquee.removeAttribute("data-filter");
+      tabs.forEach(function (t) {
+        t.setAttribute("aria-pressed", String(t.dataset.fam === fam));
       });
+    }
 
-      if (fam === "all") {
-        focus.hidden = true;
-        marquee.hidden = false;
-        return;
-      }
-      marquee.hidden = true;
-      focus.hidden = false;
-      Array.prototype.forEach.call(groups, function (g) { g.hidden = g.dataset.fam !== fam; });
+    if (reducedMotion) {
+      // static wrapped grid (no clones, no motion): tabs only highlight a category
+      tabs.forEach(function (tab) {
+        tab.addEventListener("click", function () {
+          var fam = tab.dataset.fam;
+          setFilter(marquee.getAttribute("data-filter") === fam ? null : fam);
+        });
+      });
+      return;
+    }
+
+    var SPEED = 36; // px/s auto-scroll
+    var tracks = [];
+    Array.prototype.forEach.call(marquee.querySelectorAll(".marquee-track"), function (track) {
+      var chips = track.querySelector(".chips");
+      if (!chips) return;
+      var clone = chips.cloneNode(true);
+      clone.setAttribute("aria-hidden", "true");
+      track.appendChild(clone);
+      tracks.push({
+        el: track,
+        chips: chips,
+        offset: 0,
+        unit: 0,
+        dir: track.classList.contains("reverse") ? 1 : -1
+      });
     });
+    if (!tracks.length) return;
+    marquee.classList.add("js");
+
+    var hovering = false, dragging = false, selected = null, inView = true;
+    var running = false, lastT = 0, resumeTimer = null;
+    var coarse = matchMedia("(hover: none)").matches;
+
+    function wrap(x, unit) {
+      return unit ? -((((-x) % unit) + unit) % unit) : x;
+    }
+
+    function apply(s) {
+      s.el.style.transform = "translate3d(" + s.offset.toFixed(2) + "px,0,0)";
+    }
+
+    function measure() {
+      tracks.forEach(function (s) {
+        s.unit = s.chips.getBoundingClientRect().width;
+        s.offset = wrap(s.offset, s.unit);
+        apply(s);
+      });
+    }
+
+    function paused() {
+      return hovering || dragging || selected !== null || !inView || document.hidden;
+    }
+
+    function tick(t) {
+      if (paused()) { running = false; return; }
+      // rAF timestamps can land a hair before the performance.now() captured
+      // in ensure() — never step backwards
+      var dt = Math.min(64, Math.max(0, t - lastT));
+      lastT = t;
+      tracks.forEach(function (s) {
+        if (!s.unit) return;
+        s.offset = wrap(s.offset + s.dir * SPEED * dt / 1000, s.unit);
+        apply(s);
+      });
+      requestAnimationFrame(tick);
+    }
+
+    function ensure() {
+      if (!running && !paused()) {
+        running = true;
+        lastT = performance.now();
+        requestAnimationFrame(tick);
+      }
+    }
+
+    function clearSelection() {
+      selected = null;
+      setFilter(null);
+      ensure();
+    }
+
+    /* freeze while the pointer is over the tabs or the ribbon */
+    [tabsWrap, marquee].forEach(function (area) {
+      if (!area) return;
+      area.addEventListener("pointerenter", function (e) {
+        if (e.pointerType !== "mouse") return;
+        clearTimeout(resumeTimer);
+        hovering = true;
+      });
+      area.addEventListener("pointerleave", function (e) {
+        if (e.pointerType !== "mouse") return;
+        hovering = false;
+        clearTimeout(resumeTimer);
+        // a selected category lingers briefly after you move away, then
+        // the ribbon un-dims and resumes
+        if (selected !== null) resumeTimer = setTimeout(clearSelection, 2400);
+        ensure();
+      });
+    });
+
+    /* drag to scroll a track by hand */
+    tracks.forEach(function (s) {
+      s.el.addEventListener("pointerdown", function (e) {
+        if (e.pointerType === "mouse" && e.button !== 0) return;
+        dragging = true;
+        marquee.classList.add("dragging");
+        var lastX = e.clientX;
+        var move = function (ev) {
+          s.offset = wrap(s.offset + (ev.clientX - lastX), s.unit);
+          lastX = ev.clientX;
+          apply(s);
+        };
+        var up = function () {
+          dragging = false;
+          marquee.classList.remove("dragging");
+          window.removeEventListener("pointermove", move);
+          window.removeEventListener("pointerup", up);
+          window.removeEventListener("pointercancel", up);
+          ensure();
+        };
+        window.addEventListener("pointermove", move);
+        window.addEventListener("pointerup", up);
+        window.addEventListener("pointercancel", up);
+        e.preventDefault();
+      });
+    });
+
+    /* category tabs: glide the owning track so the category lands in view */
+    function trackForFam(fam) {
+      for (var i = 0; i < tracks.length; i++) {
+        if (tracks[i].chips.querySelector('.chip.fam[data-fam="' + fam + '"]')) return tracks[i];
+      }
+      return null;
+    }
+
+    function glideTo(s, target) {
+      var from = s.offset;
+      var delta = target - from;
+      if (delta > s.unit / 2) delta -= s.unit;
+      if (delta < -s.unit / 2) delta += s.unit;
+      var t0 = performance.now(), DUR = 620;
+      function step(t) {
+        var k = Math.min(1, (t - t0) / DUR);
+        k = 1 - Math.pow(1 - k, 3);
+        s.offset = wrap(from + delta * k, s.unit);
+        apply(s);
+        if (k < 1 && selected !== null && !dragging) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    }
+
+    tabs.forEach(function (tab) {
+      tab.addEventListener("click", function () {
+        var fam = tab.dataset.fam;
+        clearTimeout(resumeTimer);
+        if (selected === fam) { clearSelection(); return; }
+        selected = fam;
+        setFilter(fam);
+        var s = trackForFam(fam);
+        var chip = s && s.chips.querySelector('.chip.fam[data-fam="' + fam + '"]');
+        if (s && chip) {
+          var pos = chip.getBoundingClientRect().left - s.chips.getBoundingClientRect().left;
+          var inset = Math.min(48, marquee.clientWidth * 0.05);
+          glideTo(s, wrap(inset - pos, s.unit));
+        }
+        // no hover to release the freeze on touch devices — time out instead
+        if (coarse) resumeTimer = setTimeout(clearSelection, 8000);
+      });
+    });
+
+    /* don't burn frames while off-screen */
+    if ("IntersectionObserver" in window) {
+      new IntersectionObserver(function (entries) {
+        inView = entries[0].isIntersecting;
+        ensure();
+      }, { rootMargin: "120px 0px" }).observe(marquee);
+    }
+    document.addEventListener("visibilitychange", ensure);
+
+    if ("ResizeObserver" in window) {
+      var ro = new ResizeObserver(measure);
+      ro.observe(marquee);
+      tracks.forEach(function (s) { ro.observe(s.chips); });
+    } else {
+      window.addEventListener("resize", measure);
+    }
+
+    measure();
+    ensure();
   })();
 
   /* ---------- Scroll reveals ---------- */
@@ -216,25 +381,25 @@
     var dismiss = document.getElementById("egg-dismiss");
     if (dismiss) dismiss.addEventListener("click", dropHint);
 
-    var armed = true;
+    var eggArmed = true;
     var CORNER = 34; // px from the top-right corner
     window.addEventListener("mousemove", function (e) {
       var inCorner = e.clientX >= window.innerWidth - CORNER && e.clientY <= CORNER;
-      if (inCorner && e.altKey && armed) {
-        armed = false;
+      if (inCorner && e.altKey && eggArmed) {
+        eggArmed = false;
         var next = toggleTheme(true);
         toast("⌥ + Top-Right Corner → " + (next === "dark" ? "Dark" : "Light") +
               " Mode — that’s MouseGestures.");
         dropHint();
       } else if (!inCorner) {
-        armed = true;
+        eggArmed = true;
       }
     }, { passive: true });
   }
 
   /* ==========================================================
      The playground: a miniature desktop wired like the real app
-     (8 zones × modifier × action).
+     (8 zones × modifier × action), with switchable profiles.
      ========================================================== */
 
   var demo = document.getElementById("demo");
@@ -246,19 +411,18 @@
     var mediaHud = document.getElementById("mediaHud");
     var shotFlash = document.getElementById("shotFlash");
     var shotThumb = document.getElementById("shotThumb");
+    var sleepVeil = document.getElementById("sleepVeil");
     var lockscreen = document.getElementById("lockscreen");
+    var winFront = document.getElementById("winFront");
     var caption = document.getElementById("demoCaption");
-    var profileBar = document.getElementById("demoProfiles");
 
-    var coarsePointer = matchMedia("(hover: none)").matches;
     var shiftHeld = false;
-    var level = 50; // shared 0-100 level for volume / display brightness / keyboard brightness
-    var hudTimer, levelTimer, mediaTimer, transientTimer;
-    var lastFire = {}; // per-zone cooldown
+    var volume = 50, preMute = 50, playing = false;
+    var hudTimer, volTimer, mediaTimer, transientTimer, minTimer, sleepTimer;
 
-    if (coarsePointer && caption) {
-      caption.innerHTML = "<strong>Try it:</strong> tap a corner or an edge of the little desktop, or switch " +
-        "profiles above. In the real app, your whole screen is the canvas.";
+    if (matchMedia("(hover: none)").matches && caption) {
+      caption.innerHTML = "<strong>Try it:</strong> tap a corner or an edge of the little desktop, " +
+        "and switch profiles above. In the real app, your whole screen is the canvas.";
     }
 
     document.addEventListener("keydown", function (e) { if (e.key === "Shift") shiftHeld = true; });
@@ -272,14 +436,10 @@
       hudTimer = setTimeout(function () { hud.classList.remove("show"); }, 1400);
     };
 
-    /* Transient desktop states (mission control, tile, cascade, sleep, …)
+    /* Transient desktop states (mission control / exposé / show desktop)
        are mutually exclusive and self-clearing. */
-    var TRANSIENT_CLASSES = [
-      "is-mission", "is-expose", "is-showdesk", "is-tile", "is-cascade",
-      "is-grow", "is-shrink", "is-hide", "is-cyclewin", "is-cyclespaces", "is-sleep"
-    ];
     var transientState = function (cls, holdMs) {
-      desktop.classList.remove.apply(desktop.classList, TRANSIENT_CLASSES);
+      desktop.classList.remove("is-mission", "is-expose", "is-showdesk");
       // force reflow so re-triggering the same state animates again
       void desktop.offsetWidth;
       desktop.classList.add(cls);
@@ -287,24 +447,31 @@
       transientTimer = setTimeout(function () { desktop.classList.remove(cls); }, holdMs);
     };
 
-    /* Shared level HUD (reused for volume, display brightness, keyboard brightness) */
-    var showLevel = function (kind, delta) {
-      level = Math.max(0, Math.min(100, level + delta));
-      volBar.style.setProperty("--vol", level + "%");
-      volHud.dataset.kind = kind;
+    var setVolume = function (v) {
+      volume = Math.max(0, Math.min(100, v));
+      volBar.style.setProperty("--vol", volume + "%");
       volHud.classList.add("show");
       mediaHud.classList.remove("show");
-      clearTimeout(levelTimer);
-      levelTimer = setTimeout(function () { volHud.classList.remove("show"); }, 1000);
+      clearTimeout(volTimer);
+      volTimer = setTimeout(function () { volHud.classList.remove("show"); }, 1000);
     };
 
-    var showMediaAction = function (action) {
-      mediaHud.dataset.action = action;
-      if (action === "toggle") mediaHud.classList.toggle("playing");
+    var muteToggle = function () {
+      if (volume > 0) { preMute = volume; setVolume(0); }
+      else setVolume(preMute || 50);
+    };
+
+    var showMedia = function (icon) {
+      mediaHud.setAttribute("data-ic", icon);
       mediaHud.classList.add("show");
       volHud.classList.remove("show");
       clearTimeout(mediaTimer);
       mediaTimer = setTimeout(function () { mediaHud.classList.remove("show"); }, 1000);
+    };
+
+    var playPause = function () {
+      playing = !playing;
+      showMedia(playing ? "play" : "pause");
     };
 
     var screenshot = function () {
@@ -315,114 +482,97 @@
       shotThumb.classList.add("go");
     };
 
-    var snap = function (side) {
+    var setSnap = function (side) {
       desktop.dataset.snap = desktop.dataset.snap === side ? "none" : side;
     };
+    var snapFn = function (side) {
+      return function () { setSnap(side); };
+    };
 
-    var noop = function () {};
+    var minimizeFront = function () {
+      winFront.classList.remove("is-min");
+      void winFront.offsetWidth;
+      winFront.classList.add("is-min");
+      clearTimeout(minTimer);
+      minTimer = setTimeout(function () { winFront.classList.remove("is-min"); }, 1500);
+    };
 
-    /* Three themed gesture profiles — every action here is a real, shipping
-       MouseGestures action (see the catalog below), grouped so each corner
-       or edge means something coherent within its profile, matching how the
-       app's own per-app profile switching works. */
+    var sleepDisplay = function () {
+      sleepVeil.classList.add("on");
+      clearTimeout(sleepTimer);
+      sleepTimer = setTimeout(function () { sleepVeil.classList.remove("on"); }, 1150);
+    };
+
+    /* Three profiles, each a coherent gesture set — the same trick the real
+       app's profiles (and App Profiles) pull off at desk scale.
+       zone id -> { glyph, base action, shift action } */
     var PROFILES = {
-      window: {
-        label: "Window Management",
+      everyday: {
+        label: "Everyday",
         zones: {
           tl:     { g: "↖", base: ["Mission Control", function () { transientState("is-mission", 1500); }],
-                                  shift: ["App Exposé", function () { transientState("is-expose", 1500); }] },
-          tr:     { g: "↗", base: ["Tile All Windows", function () { transientState("is-tile", 1400); }],
-                                  shift: ["Cascade Windows", function () { transientState("is-cascade", 1400); }] },
-          bl:     { g: "↙", base: ["Show Desktop", function () { transientState("is-showdesk", 1500); }],
-                                  shift: ["Cycle Spaces", function () { transientState("is-cyclespaces", 1200); }] },
-          br:     { g: "↘", base: ["Close Window", function () { transientState("is-hide", 1100); }],
-                                  shift: ["Quit App", function () { transientState("is-hide", 1100); }] },
-          top:    { g: "↑", base: ["Grow Window", function () { transientState("is-grow", 900); }],
-                                  shift: ["Shrink Window", function () { transientState("is-shrink", 900); }] },
-          bottom: { g: "↓", base: ["Cycle Windows", function () { transientState("is-cyclewin", 900); }] },
-          left:   { g: "←", base: ["Snap Window Left", function () { snap("left"); }] },
-          right:  { g: "→", base: ["Snap Window Right", function () { snap("right"); }] }
+                            shift: ["App Exposé", function () { transientState("is-expose", 1500); }] },
+          tr:     { g: "↗", base: ["Toggle Dark Mode", function () { toggleTheme(true); }],
+                            shift: ["Screenshot", screenshot] },
+          bl:     { g: "↙", base: ["Show Desktop", function () { transientState("is-showdesk", 1500); }] },
+          br:     { g: "↘", base: ["Lock Screen", function () { desktop.classList.add("is-locked"); }] },
+          top:    { g: "↑", base: ["Volume Up", function () { setVolume(volume + 12.5); }],
+                            shift: ["Volume Down", function () { setVolume(volume - 12.5); }] },
+          bottom: { g: "↓", base: ["Play / Pause", playPause] },
+          left:   { g: "←", base: ["Snap Window Left", snapFn("left")] },
+          right:  { g: "→", base: ["Snap Window Right", snapFn("right")] }
+        }
+      },
+      windows: {
+        label: "Windows",
+        zones: {
+          tl:     { g: "↖", base: ["Snap Top-Left Quarter", snapFn("tl")] },
+          tr:     { g: "↗", base: ["Snap Top-Right Quarter", snapFn("tr")] },
+          bl:     { g: "↙", base: ["Snap Bottom-Left Quarter", snapFn("bl")] },
+          br:     { g: "↘", base: ["Snap Bottom-Right Quarter", snapFn("br")] },
+          left:   { g: "←", base: ["Snap Left Half", snapFn("left")] },
+          right:  { g: "→", base: ["Snap Right Half", snapFn("right")] },
+          top:    { g: "↑", base: ["Maximize Window", snapFn("max")],
+                            shift: ["Center Window", snapFn("center")] },
+          bottom: { g: "↓", base: ["Tile Both Windows", snapFn("tile")],
+                            shift: ["Minimize Window", minimizeFront] }
         }
       },
       media: {
         label: "Media",
         zones: {
-          tl:     { g: "↖", base: ["Hide App", function () { transientState("is-hide", 1100); }],
-                                  shift: ["Quit App", function () { transientState("is-hide", 1100); }] },
-          tr:     { g: "↗", base: ["Toggle Dark Mode", function () { toggleTheme(true); }] },
-          bl:     { g: "↙", base: ["Seek Backward", noop] },
-          br:     { g: "↘", base: ["Seek Forward", noop] },
-          top:    { g: "↑", base: ["Volume Up", function () { showLevel("volume", 12.5); }],
-                                  shift: ["Volume Down", function () { showLevel("volume", -12.5); }] },
-          bottom: { g: "↓", base: ["Play / Pause", function () { showMediaAction("toggle"); }] },
-          left:   { g: "←", base: ["Previous Track", function () { showMediaAction("prev"); }] },
-          right:  { g: "→", base: ["Next Track", function () { showMediaAction("next"); }] }
-        }
-      },
-      system: {
-        label: "System",
-        zones: {
-          tl:     { g: "↖", base: ["Screenshot", screenshot] },
-          tr:     { g: "↗", base: ["Toggle Dark Mode", function () { toggleTheme(true); }],
-                                  shift: ["Do Not Disturb", function () { transientState("is-dnd", 1600); }] },
-          bl:     { g: "↙", base: ["Empty Trash", noop] },
-          br:     { g: "↘", base: ["Lock Screen", function () { desktop.classList.add("is-locked"); }],
-                                  shift: ["Sleep Display", function () { transientState("is-sleep", 1300); }] },
-          top:    { g: "↑", base: ["Display Brightness Up", function () { showLevel("brightness", 12.5); }],
-                                  shift: ["Display Brightness Down", function () { showLevel("brightness", -12.5); }] },
-          bottom: { g: "↓", base: ["Log Out", noop] },
-          left:   { g: "←", base: ["Keyboard Brightness Up", function () { showLevel("keyboard", 12.5); }],
-                                  shift: ["Keyboard Brightness Down", function () { showLevel("keyboard", -12.5); }] },
-          right:  { g: "→", base: ["Restart", noop] }
+          tl:     { g: "↖", base: ["Previous Track", function () { showMedia("prev"); }] },
+          tr:     { g: "↗", base: ["Next Track", function () { showMedia("next"); }] },
+          top:    { g: "↑", base: ["Volume Up", function () { setVolume(volume + 12.5); }],
+                            shift: ["Mute", muteToggle] },
+          bottom: { g: "↓", base: ["Play / Pause", playPause] },
+          left:   { g: "←", base: ["Seek Back 10 s", function () { showMedia("rw"); }] },
+          right:  { g: "→", base: ["Seek Forward 10 s", function () { showMedia("ff"); }] },
+          bl:     { g: "↙", base: ["Volume Down", function () { setVolume(volume - 12.5); }] },
+          br:     { g: "↘", base: ["Sleep Display", sleepDisplay] }
         }
       }
     };
 
-    var currentProfile = "window";
-
-    var zoneLabelPrefix = {
-      tl: "Top-left corner", tr: "Top-right corner", bl: "Bottom-left corner", br: "Bottom-right corner",
-      top: "Top edge", bottom: "Bottom edge", left: "Left edge", right: "Right edge"
+    var ZONE_NAMES = {
+      tl: "Top-left corner", tr: "Top-right corner",
+      bl: "Bottom-left corner", br: "Bottom-right corner",
+      top: "Top edge", bottom: "Bottom edge",
+      left: "Left edge", right: "Right edge"
     };
 
-    var applyProfile = function (name) {
-      if (!PROFILES[name]) return;
-      currentProfile = name;
-      var zones = PROFILES[name].zones;
-      Array.prototype.forEach.call(demo.querySelectorAll(".zone"), function (zoneEl) {
-        var id = zoneEl.dataset.zone;
-        var entry = zones[id];
-        if (!entry) return;
-        var label = entry.base[0] + (entry.shift ? ", or " + entry.shift[0] + " with Shift" : "");
-        zoneEl.setAttribute("aria-label", zoneLabelPrefix[id] + ": " + label.toLowerCase());
-      });
-      lastFire = {};
-    };
+    var currentProfile = "everyday";
+    var zoneEls = {};
+    var lastGlobalFire = 0;
 
-    if (profileBar) {
-      profileBar.addEventListener("click", function (e) {
-        var btn = e.target.closest(".demo-profile-btn");
-        if (!btn) return;
-        var name = btn.dataset.profile;
-        if (!PROFILES[name] || name === currentProfile) return;
-        Array.prototype.forEach.call(profileBar.querySelectorAll(".demo-profile-btn"), function (b) {
-          b.classList.toggle("active", b === btn);
-          b.setAttribute("aria-selected", String(b === btn));
-        });
-        applyProfile(name);
-        showHud("", PROFILES[name].label + " profile", false);
-      });
-    }
-    applyProfile(currentProfile);
-
-    var fire = function (zoneEl) {
-      var id = zoneEl.dataset.zone;
+    var fire = function (id) {
       var zone = PROFILES[currentProfile].zones[id];
       if (!zone) return;
 
+      // one action at a time: clipping two zones in one motion fires once
       var now = performance.now();
-      if (lastFire[id] && now - lastFire[id] < 650) return;
-      lastFire[id] = now;
+      if (now - lastGlobalFire < 240) return;
+      lastGlobalFire = now;
 
       desktop.classList.add("touched");
       if (desktop.classList.contains("is-locked")) desktop.classList.remove("is-locked");
@@ -431,26 +581,74 @@
       showHud(zone.g, entry[0], shiftHeld && !!zone.shift);
       entry[1]();
 
+      var zoneEl = zoneEls[id];
       zoneEl.classList.remove("zap");
       void zoneEl.offsetWidth;
       zoneEl.classList.add("zap");
     };
 
-    /* Real gestures are hover-triggered — a click handler would double-fire
-       whenever a mouse user hovered a zone and then clicked it out of habit.
-       Only wire clicks for coarse (touch) pointers, which have no hover. */
+    /* Gesture detection: a zone fires when the cursor lands in it and stays
+       for a beat (a flick that merely clips an edge on its way to a corner
+       doesn't count), and it won't re-fire until the cursor leaves the zone.
+       Click/tap always works and can deliberately repeat an action. */
+    var DWELL = 100; // ms the cursor must stay before the gesture lands
+
     Array.prototype.forEach.call(demo.querySelectorAll(".zone"), function (zoneEl) {
+      var id = zoneEl.dataset.zone;
+      zoneEls[id] = zoneEl;
+      var armed = true, dwellTimer = null;
+
       zoneEl.addEventListener("pointerenter", function (e) {
-        if (e.pointerType === "mouse") fire(zoneEl);
+        if (e.pointerType !== "mouse" || !armed) return;
+        clearTimeout(dwellTimer);
+        dwellTimer = setTimeout(function () {
+          armed = false;
+          fire(id);
+        }, DWELL);
       });
-      if (coarsePointer) {
-        zoneEl.addEventListener("click", function () { fire(zoneEl); });
-      }
+      zoneEl.addEventListener("pointerleave", function (e) {
+        if (e.pointerType !== "mouse") return;
+        clearTimeout(dwellTimer);
+        armed = true;
+      });
+      zoneEl.addEventListener("click", function () {
+        clearTimeout(dwellTimer);
+        fire(id);
+      });
     });
 
     lockscreen.addEventListener("click", function () {
       desktop.classList.remove("is-locked");
     });
+
+    /* ---------- Profile tabs ---------- */
+
+    var dpTabs = Array.prototype.slice.call(document.querySelectorAll(".dp-tab"));
+
+    var setProfile = function (id, announce) {
+      currentProfile = id;
+      dpTabs.forEach(function (b) {
+        b.setAttribute("aria-pressed", String(b.dataset.profile === id));
+      });
+      Object.keys(zoneEls).forEach(function (zid) {
+        var z = PROFILES[id].zones[zid];
+        var label = ZONE_NAMES[zid] + ": " + z.base[0] +
+          (z.shift ? " (hold Shift: " + z.shift[0] + ")" : "");
+        zoneEls[zid].setAttribute("aria-label", label);
+      });
+      if (announce) {
+        desktop.classList.add("touched");
+        showHud("⟳", "Switch Profile → " + PROFILES[id].label, false);
+      }
+    };
+
+    dpTabs.forEach(function (b) {
+      b.addEventListener("click", function () {
+        if (b.dataset.profile !== currentProfile) setProfile(b.dataset.profile, true);
+      });
+    });
+
+    setProfile("everyday", false);
 
     /* ---------- Cursor comet trail ---------- */
 

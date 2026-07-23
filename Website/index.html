@@ -64,7 +64,8 @@
     <nav class="nav-links" id="navMenu" aria-label="Primary">
       <a href="#how">How it works</a>
       <a href="#actions">Actions</a>
-      <a href="#pro">Pricing</a>
+      <a href="#features">Features</a>
+      <a href="#pricing">Pricing</a>
       <a href="#faq">FAQ</a>
     </nav>
     <div class="nav-cta">
@@ -111,10 +112,10 @@
 
     <!-- Live playground: the app's real interaction model, in miniature -->
     <div class="hero-demo">
-      <div class="demo-profiles" id="demoProfiles" role="tablist" aria-label="Demo gesture profile">
-        <button class="demo-profile-btn active" type="button" data-profile="window" role="tab" aria-selected="true">Window Management</button>
-        <button class="demo-profile-btn" type="button" data-profile="media" role="tab" aria-selected="false">Media</button>
-        <button class="demo-profile-btn" type="button" data-profile="system" role="tab" aria-selected="false">System</button>
+      <div class="demo-profiles" role="group" aria-label="Demo gesture profile">
+        <button type="button" class="dp-tab" data-profile="everyday" aria-pressed="true">Everyday</button>
+        <button type="button" class="dp-tab" data-profile="windows" aria-pressed="false">Windows</button>
+        <button type="button" class="dp-tab" data-profile="media" aria-pressed="false">Media</button>
       </div>
       <div class="demo-frame" id="demo">
         <div class="demo-desktop" id="desktop" data-snap="none">
@@ -137,35 +138,35 @@
 
           <div class="dock" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
 
-          <!-- 8 trigger zones: 4 corners + 4 edges, exactly like the app.
-               aria-labels are rewritten by JS to match the active profile. -->
+          <!-- 8 trigger zones: 4 corners + 4 edges, exactly like the app -->
           <button class="zone z-corner z-tl" data-zone="tl" type="button" aria-label="Top-left corner: Mission Control"></button>
           <button class="zone z-edge z-top" data-zone="top" type="button" aria-label="Top edge: volume up"></button>
-          <button class="zone z-corner z-tr" data-zone="tr" type="button" aria-label="Top-right corner: tile all windows"></button>
+          <button class="zone z-corner z-tr" data-zone="tr" type="button" aria-label="Top-right corner: toggle dark mode"></button>
           <button class="zone z-edge z-left" data-zone="left" type="button" aria-label="Left edge: snap window left"></button>
           <button class="zone z-edge z-right" data-zone="right" type="button" aria-label="Right edge: snap window right"></button>
           <button class="zone z-corner z-bl" data-zone="bl" type="button" aria-label="Bottom-left corner: show desktop"></button>
-          <button class="zone z-edge z-bottom" data-zone="bottom" type="button" aria-label="Bottom edge: cycle windows"></button>
-          <button class="zone z-corner z-br" data-zone="br" type="button" aria-label="Bottom-right corner: close window"></button>
+          <button class="zone z-edge z-bottom" data-zone="bottom" type="button" aria-label="Bottom edge: play or pause"></button>
+          <button class="zone z-corner z-br" data-zone="br" type="button" aria-label="Bottom-right corner: lock screen"></button>
 
           <div class="hud" id="hud" role="status" aria-live="polite"></div>
 
-          <div class="vol-hud" id="volHud" data-kind="volume" aria-hidden="true">
-            <svg class="lvl-icon lvl-volume" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4Z"/><path class="vw" fill="none" stroke-linecap="round" d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>
-            <svg class="lvl-icon lvl-bright" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2"/><path class="vw" fill="none" stroke-linecap="round" d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></svg>
-            <svg class="lvl-icon lvl-kbd" viewBox="0 0 24 24"><rect x="2.5" y="6.5" width="19" height="12" rx="2.2" fill="none" stroke-width="1.6"/><rect x="5" y="9.3" width="2" height="2" rx=".5"/><rect x="8.6" y="9.3" width="2" height="2" rx=".5"/><rect x="12.2" y="9.3" width="2" height="2" rx=".5"/><rect x="15.8" y="9.3" width="2" height="2" rx=".5"/><rect x="6" y="13" width="12" height="2" rx="1"/></svg>
+          <div class="vol-hud" id="volHud" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4Z"/><path class="vw" d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12" fill="none" stroke-linecap="round"/></svg>
             <div class="vol-bar" id="volBar"></div>
           </div>
 
-          <div class="media-hud" id="mediaHud" data-action="toggle" aria-hidden="true">
+          <div class="media-hud" id="mediaHud" data-ic="play" aria-hidden="true">
             <svg class="mh-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10-6.5Z"/></svg>
             <svg class="mh-pause" viewBox="0 0 24 24"><path d="M7.5 5.5h3.4v13H7.5Zm5.6 0h3.4v13h-3.4Z"/></svg>
-            <svg class="mh-next" viewBox="0 0 24 24"><path d="M6 5.5v13l9-6.5Z"/><rect x="16" y="5.5" width="2.6" height="13" rx="0.6"/></svg>
-            <svg class="mh-prev" viewBox="0 0 24 24"><path d="M18 5.5v13l-9-6.5Z"/><rect x="5.4" y="5.5" width="2.6" height="13" rx="0.6"/></svg>
+            <svg class="mh-next" viewBox="0 0 24 24"><path d="M5 5.5v13l9-6.5Z"/><rect x="15.5" y="5.5" width="3.2" height="13" rx="1.1"/></svg>
+            <svg class="mh-prev" viewBox="0 0 24 24"><path d="M19 5.5v13L10 12Z"/><rect x="5.3" y="5.5" width="3.2" height="13" rx="1.1"/></svg>
+            <svg class="mh-ff" viewBox="0 0 24 24"><path d="M3.5 6.5v11l7.5-5.5Z"/><path d="M12.5 6.5v11L20 12Z"/></svg>
+            <svg class="mh-rw" viewBox="0 0 24 24"><path d="M20.5 6.5v11L13 12Z"/><path d="M11.5 6.5v11L4 12Z"/></svg>
           </div>
 
           <div class="shot-flash" id="shotFlash" aria-hidden="true"></div>
           <div class="shot-thumb" id="shotThumb" aria-hidden="true"></div>
+          <div class="sleep-veil" id="sleepVeil" aria-hidden="true"></div>
 
           <div class="lockscreen" id="lockscreen" aria-hidden="true">
             <svg viewBox="0 0 24 24"><rect x="5.5" y="10.5" width="13" height="9" rx="2.2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" fill="none" stroke-width="2" stroke-linecap="round"/></svg>
@@ -175,9 +176,9 @@
         </div>
       </div>
       <p class="demo-caption" id="demoCaption">
-        <strong>Try it:</strong> flick your cursor into a corner or edge of the little desktop, or switch
-        profiles above. Hold <kbd>&#8679;</kbd> for a second gesture in most zones — in the real app, your
-        whole screen is the canvas.
+        <strong>Try it:</strong> flick your cursor into a corner or edge of the little
+        desktop, and switch profiles above. Hold <kbd>&#8679;</kbd> for a zone's second
+        layer. In the real app, your whole screen is the canvas.
       </p>
     </div>
   </section>
@@ -191,87 +192,69 @@
           <span class="stat-label">Built-in actions</span>
         </div>
         <div class="stat">
-          <span class="stat-value">4</span>
-          <span class="stat-label">Ways to trigger any action</span>
+          <span class="stat-value">8</span>
+          <span class="stat-label">Trigger zones — every corner &amp; edge</span>
         </div>
         <div class="stat">
-          <span class="stat-value">6</span>
-          <span class="stat-label">Action categories, one per workflow</span>
+          <span class="stat-value">30</span>
+          <span class="stat-label">Day full-feature trial — no account</span>
         </div>
         <div class="stat">
           <span class="stat-value">$9.99</span>
           <span class="stat-label">Pro, once — no subscription</span>
         </div>
       </div>
-      <p class="stats-note">Every action fires from a screen zone, a mouse button, a keyboard shortcut, or an app profile that switches automatically &mdash; mix and match without memorizing a single menu.</p>
+      <p class="stats-note">Zones layer with &#8984; &#8997; &#8963; &#8679;, spare mouse buttons, and global hotkeys &mdash; one profile holds hundreds of distinct gestures, and App Profiles switch with the app in front.</p>
     </div>
   </section>
 
   <!-- ============================== HOW ============================== -->
   <section class="section shell" id="how">
     <header class="section-head reveal">
-      <h2>Three steps to <span class="grad">zero friction.</span></h2>
+      <h2>Three steps to zero friction.</h2>
+      <p>A gesture is just a place, a trigger, and an action — and your cursor already travels through the place.</p>
     </header>
     <div class="steps">
-      <article class="card step reveal">
-        <div class="step-art" aria-hidden="true">
-          <svg viewBox="0 0 200 130">
-            <rect x="18" y="12" width="164" height="106" rx="10" class="art-screen"/>
-            <g class="art-dots">
-              <circle cx="18" cy="12" r="7"/><circle cx="100" cy="12" r="5"/><circle cx="182" cy="12" r="7"/>
-              <circle cx="18" cy="65" r="5"/><circle cx="182" cy="65" r="5"/>
-              <circle cx="18" cy="118" r="7"/><circle cx="100" cy="118" r="5"/><circle cx="182" cy="118" r="7"/>
-            </g>
-            <path class="art-path" d="M96 78 Q130 60 168 26" fill="none" stroke-linecap="round"/>
-            <path class="art-cursor" d="M92 70 l14 8 -9 2.5 3.5 9 -4.5 1.5 -3.5-9 -6.5 5 Z"/>
-          </svg>
+      <article class="step reveal">
+        <div class="step-visual" aria-hidden="true">
+          <div class="sv-zones">
+            <span class="sv-cell on"></span><span class="sv-cell"></span><span class="sv-cell"></span>
+            <span class="sv-cell"></span><span class="sv-cell mid"></span><span class="sv-cell"></span>
+            <span class="sv-cell"></span><span class="sv-cell"></span><span class="sv-cell on2"></span>
+          </div>
         </div>
         <h3><span class="step-n">1</span> Glide into a zone</h3>
-        <p>Move the cursor to any of the 8 screen edges and corners — space it already travels through.</p>
+        <p>Any of the 8 screen edges and corners — space your cursor crosses all day anyway.</p>
       </article>
-      <article class="card step reveal">
-        <div class="step-art" aria-hidden="true">
-          <svg viewBox="0 0 200 130">
-            <g class="art-keys">
-              <rect x="22" y="30" width="34" height="30" rx="7"/><text x="39" y="50">&#8984;</text>
-              <rect x="62" y="30" width="34" height="30" rx="7"/><text x="79" y="50">&#8997;</text>
-              <rect x="102" y="30" width="34" height="30" rx="7"/><text x="119" y="50">&#8963;</text>
-              <rect x="142" y="30" width="34" height="30" rx="7"/><text x="159" y="50">&#8679;</text>
-            </g>
-            <g class="art-mouse">
-              <rect x="76" y="72" width="48" height="46" rx="22"/>
-              <line x1="100" y1="72" x2="100" y2="92"/>
-              <rect class="art-mbtn" x="78" y="74" width="21" height="20" rx="10"/>
-            </g>
-          </svg>
+      <article class="step reveal">
+        <div class="step-visual keys" aria-hidden="true">
+          <kbd>&#8984;</kbd><kbd>&#8997;</kbd><kbd>&#8963;</kbd><kbd>&#8679;</kbd>
         </div>
         <h3><span class="step-n">2</span> Hold a modifier</h3>
-        <p>&#8984;, &#8997;, &#8963;, &#8679; — alone or in any combination. Fifteen distinct layers per zone.</p>
+        <p>&#8984; &#8997; &#8963; &#8679; — alone or in any combination. Fifteen distinct layers per zone.</p>
       </article>
-      <article class="card step reveal">
-        <div class="step-art step-art-bolt" aria-hidden="true">
-          <svg viewBox="0 0 200 130">
-            <path class="art-bolt" d="M104 26 l-22 38 h17 l-12 36 32 -44 h-17 l17 -30 Z"/>
-          </svg>
+      <article class="step reveal">
+        <div class="step-visual" aria-hidden="true">
+          <svg class="sv-bolt" viewBox="0 0 24 24"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg>
         </div>
         <h3><span class="step-n">3</span> It fires. Instantly.</h3>
-        <p>The mapped action executes the moment you arrive. No click, no menu, no waiting.</p>
+        <p>The action executes the moment you arrive. No click, no menu, no waiting.</p>
       </article>
     </div>
     <div class="triggers reveal">
-      <p class="triggers-title">And zones are just the start — three more ways to trigger anything:</p>
+      <p class="triggers-title">Zones are just the start — three more ways to fire anything:</p>
       <div class="triggers-grid">
-        <div class="card trigger-card">
+        <div class="trigger-card">
           <h4>Mouse buttons</h4>
-          <p>Map back, forward, middle, and other extra buttons to any action.</p>
+          <p>Back, forward, middle — map any spare button to any action.</p>
         </div>
-        <div class="card trigger-card">
+        <div class="trigger-card">
           <h4>Keyboard shortcuts</h4>
           <p>Every action can also live on a global hotkey.</p>
         </div>
-        <div class="card trigger-card">
-          <h4>Automatic profile switching</h4>
-          <p>A detector watches the frontmost app and swaps gesture profiles for you.</p>
+        <div class="trigger-card">
+          <h4>App Profiles</h4>
+          <p>Your gesture set swaps automatically with the frontmost app.</p>
         </div>
       </div>
     </div>
@@ -282,16 +265,15 @@
     <div class="shell">
       <header class="section-head reveal">
         <h2>47 actions, six categories, every one configurable.</h2>
-        <p>Everything below ships in the box — and each action exposes its parameters (direction, amount, scope, target) in the app's Settings.</p>
+        <p>Everything below ships in the box, and each action exposes its parameters (direction, amount, scope, target) in the app's Settings. Pick a category to jump to it — or grab the ribbon and drag.</p>
       </header>
-      <div class="catalog-tabs pill-tabs reveal" id="catalogTabs" role="tablist" aria-label="Jump to an action category">
-        <button class="pill-tab active" type="button" data-fam="all" role="tab" aria-selected="true">All</button>
-        <button class="pill-tab" type="button" data-fam="core" role="tab" aria-selected="false">Core</button>
-        <button class="pill-tab" type="button" data-fam="window" role="tab" aria-selected="false">Window</button>
-        <button class="pill-tab" type="button" data-fam="media" role="tab" aria-selected="false">Media</button>
-        <button class="pill-tab" type="button" data-fam="system" role="tab" aria-selected="false">System</button>
-        <button class="pill-tab" type="button" data-fam="automation" role="tab" aria-selected="false">Automation</button>
-        <button class="pill-tab" type="button" data-fam="bundle" role="tab" aria-selected="false">Bundles</button>
+      <div class="cat-tabs reveal" role="group" aria-label="Jump to an action category">
+        <button type="button" class="cat-tab" data-fam="core" aria-pressed="false"><i class="dot"></i>Core</button>
+        <button type="button" class="cat-tab" data-fam="window" aria-pressed="false"><i class="dot"></i>Window</button>
+        <button type="button" class="cat-tab" data-fam="media" aria-pressed="false"><i class="dot"></i>Media</button>
+        <button type="button" class="cat-tab" data-fam="system" aria-pressed="false"><i class="dot"></i>System</button>
+        <button type="button" class="cat-tab" data-fam="automation" aria-pressed="false"><i class="dot"></i>Automation</button>
+        <button type="button" class="cat-tab" data-fam="bundle" aria-pressed="false"><i class="dot"></i>Bundles</button>
       </div>
     </div>
     <div class="marquee" data-marquee>
@@ -357,83 +339,53 @@
         </div>
       </div>
     </div>
-    <div class="shell">
-      <div class="catalog-focus" id="catalogFocus" hidden>
-        <div class="catalog-focus-group" data-fam="core">
-          <span class="chip">Close Window</span><span class="chip">Minimize</span><span class="chip">Toggle Fullscreen</span>
-          <span class="chip">Hide App</span><span class="chip">Quit App</span><span class="chip">Mission Control</span>
-          <span class="chip">Show Desktop</span><span class="chip">App Exposé</span><span class="chip">Cycle Windows</span>
-          <span class="chip">Cycle Spaces</span><span class="chip">Lock Screen</span><span class="chip">Sleep Display</span>
-          <span class="chip">Empty Trash</span><span class="chip">Switch Profile</span>
-        </div>
-        <div class="catalog-focus-group" data-fam="window" hidden>
-          <span class="chip">Snap to Region</span><span class="chip">Resize to Percent</span><span class="chip">Grow / Shrink</span>
-          <span class="chip">Switch to Window</span><span class="chip">Position Memory</span><span class="chip">Named Layouts</span>
-          <span class="chip">Tile All</span><span class="chip">Cascade</span><span class="chip">Set Size</span><span class="chip">Set Position</span>
-        </div>
-        <div class="catalog-focus-group" data-fam="media" hidden>
-          <span class="chip">Play / Pause</span><span class="chip">Next / Previous Track</span><span class="chip">Volume</span><span class="chip">Seek</span>
-        </div>
-        <div class="catalog-focus-group" data-fam="system" hidden>
-          <span class="chip">Display Brightness</span><span class="chip">Keyboard Brightness</span><span class="chip">Toggle Dark Mode</span>
-          <span class="chip">Do Not Disturb</span><span class="chip">Screenshot</span><span class="chip">Restart</span><span class="chip">Shut Down</span><span class="chip">Log Out</span>
-        </div>
-        <div class="catalog-focus-group" data-fam="automation" hidden>
-          <span class="chip">Keyboard Shortcut</span><span class="chip">Run Shortcut</span><span class="chip">Run Script</span>
-          <span class="chip">Open App</span><span class="chip">Open File</span><span class="chip">Open URL</span><span class="chip">Clipboard Actions</span>
-        </div>
-        <div class="catalog-focus-group" data-fam="bundle" hidden>
-          <span class="chip">Action Sequence</span><span class="chip">Conditional (If / Else)</span><span class="chip">Repeat Action</span><span class="chip">Timed Delay</span>
-        </div>
-      </div>
-    </div>
   </section>
 
-  <!-- ============================== POWER ============================== -->
-  <section class="section shell" id="power">
+  <!-- ============================== FEATURES ============================== -->
+  <section class="section shell" id="features">
     <header class="section-head reveal">
-      <h2>Everything within a <span class="grad">flick's reach.</span></h2>
-      <p>Six categories cover windows, media, system, and full automation — and every one of them is remappable to any gesture.</p>
+      <h2>Everything within a flick's reach.</h2>
+      <p>Six categories cover windows, media, system, and full automation — and every action is remappable to any gesture.</p>
     </header>
-    <div class="powergrid">
-      <article class="card power reveal">
-        <div class="power-icon" aria-hidden="true">
+    <div class="features-grid">
+      <article class="card feature reveal">
+        <div class="feature-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8.5" height="18" rx="2"/><rect x="14.5" y="3" width="6.5" height="8" rx="2"/><rect x="14.5" y="14" width="6.5" height="7" rx="2"/></svg>
         </div>
         <h3>Window management</h3>
         <p>Snap to any of 11 screen regions, tile, cascade, and resize by percent or pixel. Save whole named layouts — and restore them with a flick.</p>
       </article>
-      <article class="card power reveal">
-        <div class="power-icon" aria-hidden="true">
+      <article class="card feature reveal">
+        <div class="feature-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17l6-5-6-5"/><path d="M12 19h8"/></svg>
         </div>
         <h3>Automation &amp; scripting</h3>
         <p>Run Shortcuts, AppleScript, shell, Python, or JavaScript. Fire keyboard shortcuts, open apps, files, and URLs, or transform the clipboard.</p>
       </article>
-      <article class="card power reveal">
-        <div class="power-icon" aria-hidden="true">
+      <article class="card feature reveal">
+        <div class="feature-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3"/><path d="M1.5 14h5M9.5 8h5M17.5 16h5"/></svg>
         </div>
         <h3>Media &amp; system control</h3>
         <p>Volume, brightness, playback, dark mode, Do Not Disturb, screenshots, lock, sleep — the whole control center, moved to your cursor.</p>
       </article>
-      <article class="card power reveal">
-        <div class="power-icon" aria-hidden="true">
+      <article class="card feature reveal">
+        <div class="feature-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="12" height="12" rx="2.5"/><rect x="9" y="9" width="12" height="12" rx="2.5"/></svg>
         </div>
-        <h3>App profiles</h3>
-        <p>Your gesture set switches automatically with the frontmost app. The same corner can mean one thing in Safari and another in Xcode.</p>
+        <h3>App Profiles</h3>
+        <p>Gesture sets live in profiles that switch automatically with the frontmost app. The same corner can mean one thing in Safari and another in Xcode.</p>
       </article>
-      <article class="card power reveal">
-        <div class="power-icon" aria-hidden="true">
+      <article class="card feature reveal">
+        <div class="feature-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="6" r="2.2"/><circle cx="5" cy="18" r="2.2"/><path d="M7.2 6H15a4 4 0 0 1 0 8H9a4 4 0 0 0 0 8h1"/><path d="M14 19l3 3 3-3M17 22v-6"/></svg>
         </div>
         <h3>Action bundles</h3>
         <p>Chain actions into sequences or run them in parallel, branch on conditions, repeat, add delays — one gesture can run a whole routine.</p>
       </article>
-      <article class="card power reveal">
-        <div class="power-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3h4a1 1 0 0 1 1 1v2.2a1 1 0 0 0 1 1h2.8a1 1 0 0 1 1 1V12h-2a2.5 2.5 0 0 0 0 5h2v3a1 1 0 0 1-1 1h-3v-2a2.5 2.5 0 0 0-5 0v2H6a1 1 0 0 1-1-1v-3.8H4a1 1 0 0 1-1-1V8.2a1 1 0 0 1 1-1h5a1 1 0 0 0 1-1V4a1 1 0 0 1 0-1z" transform="translate(0 .5) scale(.98)"/></svg>
+      <article class="card feature reveal">
+        <div class="feature-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3h4a1 1 0 0 1 1 1v2.2a1 1 0 0 0 1 1h2.8a1 1 0 0 1 1 1V12h-2a2.5 2.5 0 0 0 0 5h2v3a1 1 0 0 1-1 1h-3v-2a2.5 2.5 0 0 0-5 0v2H6a1 1 0 0 1-1-1v-3.8H4a1 1 0 0 1-1-1V8.2a1 1 0 0 1 1-1h5a1 1 0 0 0 1-1V4a1 1 0 0 1 0-1z"/></svg>
         </div>
         <h3>Plugins, all the way down</h3>
         <p>Detection, actions, UI, and services are all plugins behind one protocol — external <code>.plugin</code> bundles install exactly like the built-ins.</p>
@@ -445,61 +397,60 @@
   <section class="section section-tint" id="trust">
     <div class="shell">
       <header class="section-head reveal">
-        <h2>Private by design.</h2>
-        <p>No account, no tracking, no data to sell — the only two permissions it asks for are the ones it actually needs.</p>
+        <h2>Quiet by design.</h2>
+        <p>No account, no cloud, no eyes on you.</p>
       </header>
       <div class="trustgrid">
         <div class="trust reveal">
           <h3>No account. No subscription.</h3>
-          <p>Pro unlocks with a one-time license key that validates <strong>offline</strong>. Nothing to sign up for, no recurring charge, ever.</p>
+          <p>Pro is a license key that validates entirely <strong>offline</strong>. Nothing to sign up for, nothing recurring, nothing to cancel.</p>
         </div>
         <div class="trust reveal">
-          <h3>We don't sell your data — because we don't collect it.</h3>
-          <p>No analytics, no telemetry, no tracking SDKs. MouseGestures doesn't know how you use it, and neither does anyone else.</p>
+          <h3>Your data stays on your Mac</h3>
+          <p>No analytics, no telemetry, no tracking. We never see your data, so we can't sell it — the app's only network call is an optional update check.</p>
         </div>
         <div class="trust reveal">
-          <h3>Zero third-party code</h3>
-          <p>Built entirely on Apple's own frameworks. A 30-test suite guards the licensing and gesture math — nothing else runs under the hood.</p>
+          <h3>No third-party code</h3>
+          <p>Built purely on Apple's system frameworks — no bundled SDKs, no ad libraries, nothing quietly phoning home.</p>
         </div>
         <div class="trust reveal">
-          <h3>Two permissions. Nothing more.</h3>
-          <p>Accessibility, so it can see your gestures — and Automation, so it can act on them. That's the whole list.</p>
+          <h3>Two permissions, explained</h3>
+          <p>It asks for Accessibility (to see your gestures) and Automation (to drive system actions) — the two permissions that make it work, and the only ones it requests.</p>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- ============================== FREE / PRO ============================== -->
-  <section class="section shell" id="pro">
+  <!-- ============================== PRICING ============================== -->
+  <section class="section shell" id="pricing">
     <header class="section-head reveal">
-      <h2>Free forever. Pro when you're ready.</h2>
-      <p>Every download starts a 30-day full-feature trial — no account, no card. When it ends, Free keeps working.</p>
+      <h2>One price. Forever.</h2>
+      <p>Every download starts a 30-day full-feature Pro trial — no account, no card. When it ends, Free keeps working.</p>
     </header>
     <div class="plans">
       <article class="plan card reveal">
         <h3>Free</h3>
         <p class="plan-price">$0</p>
-        <p class="plan-sub">Yours after the trial, no strings</p>
+        <p class="plan-sub">Yours forever, no strings</p>
         <ul>
-          <li>The full core action set</li>
-          <li>All 8 zones, modifiers &amp; mouse buttons</li>
-          <li>One App Profile</li>
-          <li>Guided first-run tour</li>
-          <li>In-app update checks</li>
+          <li>Core window &amp; system actions</li>
+          <li>All trigger types — zones, mouse buttons, hotkeys</li>
+          <li>One gesture profile</li>
+          <li>30-day full Pro trial included</li>
         </ul>
         <a class="btn btn-ghost" href="https://github.com/TheElderWyrm/MouseGestures/releases/latest/download/MouseGestures.dmg">Download Free</a>
       </article>
       <article class="plan card plan-pro reveal">
-        <div class="plan-badge">30-day trial included</div>
+        <div class="plan-badge">Recommended</div>
         <h3>Pro</h3>
         <p class="plan-price">$9.99 <span>one-time</span></p>
         <p class="plan-sub">An offline license key — no subscription, no account</p>
         <ul>
           <li><strong>Everything in Free</strong>, plus:</li>
-          <li>Unlimited App Profiles</li>
-          <li>Profiles switch automatically per app</li>
-          <li>The advanced action set &amp; developer tools</li>
-          <li>Priority support</li>
+          <li>Unlimited gesture profiles</li>
+          <li>App Profiles — switch automatically with the app in front</li>
+          <li>Advanced automation &amp; scripting actions</li>
+          <li>Action bundles — sequences, conditions, repeats</li>
         </ul>
         <a class="btn btn-primary" href="https://github.com/TheElderWyrm/MouseGestures/releases/latest/download/MouseGestures.dmg">Try Pro free for 30 days</a>
         <p class="plan-note">The trial is in the download — Pro unlocks the moment you launch. License sales open soon.</p>
@@ -516,23 +467,27 @@
       <div class="faqs reveal">
         <details>
           <summary>Which Macs does it run on?</summary>
-          <p>MouseGestures targets Apple silicon (arm64) on macOS 13 Ventura or later — Intel Macs aren't supported. It lives in the menu bar with no Dock icon and no clutter.</p>
+          <p>macOS 13 Ventura or later, on Apple silicon — Intel Macs aren't supported. The app lives in the menu bar: no Dock icon, no clutter.</p>
         </details>
         <details>
           <summary>Why does it need Accessibility and Automation permissions?</summary>
-          <p>Accessibility lets it watch cursor position and modifier keys system-wide — that's how gestures are detected — and move or resize windows. Automation lets it drive actions like volume and brightness. Both are granted once in System Settings → Privacy &amp; Security, and everything is processed locally: nothing is recorded or sent anywhere.</p>
+          <p>Accessibility lets it watch mouse and keyboard input so gestures can be recognized system-wide; Automation lets it drive actions like volume, brightness, and controlling other apps. macOS asks for both on first run — grant them in System Settings → Privacy &amp; Security. Without them, gestures simply do nothing.</p>
+        </details>
+        <details>
+          <summary>Is the download safe to open?</summary>
+          <p>Yes — the DMG is signed with an Apple Developer ID certificate, built with the hardened runtime, and notarized by Apple, so Gatekeeper verifies it on first launch and it opens right up.</p>
         </details>
         <details>
           <summary>What happens when the 30-day trial ends?</summary>
-          <p>The app keeps working on the Free tier: the core action set and one App Profile. Your gestures and settings stay exactly as you left them, and entering a Pro license key at any point unlocks everything again — no account or subscription, ever.</p>
-        </details>
-        <details>
-          <summary>Why isn't it on the Mac App Store, and is the download safe to open?</summary>
-          <p>System-wide gesture detection and window control need Accessibility APIs the App Store sandbox forbids, so MouseGestures ships as a direct download instead. It's still a Developer ID–signed, Apple-notarized DMG, so Gatekeeper opens it cleanly with no warnings.</p>
+          <p>The app keeps working on the Free tier: the core action set and one profile. Your gestures and settings stay put, and upgrading to Pro later re-unlocks everything exactly as you left it.</p>
         </details>
         <details>
           <summary>Will it conflict with Rectangle, Raycast, or BetterTouchTool?</summary>
           <p>They coexist fine. MouseGestures only acts when one of <em>its</em> configured triggers fires — a zone-plus-modifier combination, a mapped mouse button, or a hotkey — so as long as your triggers don't overlap with another tool's, they stay out of each other's way.</p>
+        </details>
+        <details>
+          <summary>Why isn't it on the Mac App Store?</summary>
+          <p>The Accessibility access a gesture app needs doesn't fit inside the App Store sandbox. MouseGestures ships as a notarized direct download instead — and that's also why Pro uses a simple offline license key rather than an in-app purchase.</p>
         </details>
       </div>
     </div>
@@ -552,7 +507,7 @@
         <svg viewBox="0 0 24 24" aria-hidden="true" class="btn-ic"><path d="M12 3v11m0 0 4.5-4.5M12 14 7.5 9.5M4.5 18.5h15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         Download MouseGestures
       </a>
-      <p class="fineprint" id="dl-meta">Version 1.0 · macOS 13+ · Apple silicon · Opens right up, no Gatekeeper warnings</p>
+      <p class="fineprint" id="dl-meta">Version 1.0 · macOS 13+ · Apple silicon</p>
       <p class="fineprint">Published on <a href="https://github.com/TheElderWyrm/MouseGestures/releases" rel="noopener">GitHub Releases</a> — watch the repo to get notified of updates.</p>
     </div>
   </section>
@@ -567,7 +522,10 @@
         <path d="M44 16 L58 23 L49 26.5 L52.5 36 L47.5 37.5 L44 28 L37 32 Z" class="brand-cursor"/>
         <defs><linearGradient id="footGrad" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#5e5ce6"/><stop offset="1" stop-color="#00c7fc"/></linearGradient></defs>
       </svg>
-      <span>MouseGestures</span>
+      <div>
+        <span>MouseGestures</span>
+        <p class="footer-tag">Every corner of your screen is a shortcut.</p>
+      </div>
     </div>
     <nav class="footer-links" aria-label="Footer">
       <a href="https://github.com/TheElderWyrm/MouseGestures" rel="noopener">GitHub</a>
