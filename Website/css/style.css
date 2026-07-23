@@ -908,7 +908,8 @@ svg linearGradient stop:last-child { stop-color: var(--accent-2); }
   transition: background-color 0.35s ease;
 }
 
-:root[data-theme="dark"] .section-tint { background: #0d1322; }
+/* dark mode needs no override here — var(--bg-raise) above already resolves
+   per-theme; a hardcoded hex used to sit here and go stale on every palette change */
 
 /* every section opens on a centered heading + subhead, same as Actions'
    (the grids/cards below stay left-aligned — only the intro centers) */
@@ -1314,7 +1315,7 @@ svg linearGradient stop:last-child { stop-color: var(--accent-2); }
   transition: background-color 0.35s ease;
 }
 
-:root[data-theme="dark"] .footer { background: #0e0e19; }
+/* same fix as .section-tint above: no hardcoded dark override, just var(--bg-raise) */
 
 .footer-inner {
   display: grid;
@@ -1545,7 +1546,7 @@ svg linearGradient stop:last-child { stop-color: var(--accent-2); }
   transition: background-color 0.35s ease;
 }
 
-:root[data-theme="dark"] .stats { background: #0e0e19; }
+/* same fix as .section-tint above: no hardcoded dark override, just var(--bg-raise) */
 
 .stats-grid {
   display: grid;
