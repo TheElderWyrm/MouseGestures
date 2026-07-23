@@ -1535,6 +1535,8 @@ svg linearGradient stop:last-child { stop-color: var(--accent-2); }
 @media (max-width: 540px) {
   .nav-cta .nav-icon { display: none; }
   .nav-inner { gap: 14px; }
+  .nav-cta-label { display: none; }
+  .nav-cta .btn-small { padding: 0.5em; }
 }
 
 /* ---------- Stats band ---------- */
@@ -1669,7 +1671,7 @@ svg linearGradient stop:last-child { stop-color: var(--accent-2); }
 .egg-hint {
   position: fixed;
   right: 1.2rem;
-  bottom: 1.2rem;
+  top: calc(62px + 14px);
   z-index: 1500;
   background: var(--bg-raise);
   border: 1px solid var(--line);
