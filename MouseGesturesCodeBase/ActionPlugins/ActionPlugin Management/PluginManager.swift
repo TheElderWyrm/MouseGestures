@@ -16,13 +16,15 @@ public class PluginManager: NSObject {
 
     // Public accessor for loaded plugins
     public var allLoadedPlugins: [GestureActionPlugin] {
-        return Array(loadedPlugins.values)
+        return pluginQueue.sync { Array(loadedPlugins.values) }
     }
 
     // Get actions for a specific plugin
     public func getActionsForPlugin(identifier: String) -> [PluginAction] {
-        return actionRegistry.compactMap { key, value in
-            value.plugin.identifier == identifier ? value.action : nil
+        return pluginQueue.sync {
+            actionRegistry.compactMap { _, value in
+                value.plugin.identifier == identifier ? value.action : nil
+            }
         }
     }
     internal var sandboxedPlugins: [String: PluginSandbox] = [:] // Sandboxed wrappers
@@ -154,16 +156,23 @@ public class PluginManager: NSObject {
             let sandbox = PluginSandbox(plugin: plugin, permissions: permissions)
             try sandbox.initialize()
 
-            // Store the plugin and sandbox
-            loadedPlugins[plugin.identifier] = plugin
-            sandboxedPlugins[plugin.identifier] = sandbox
-            pluginPermissions[plugin.identifier] = permissions
-            pluginBundles[plugin.identifier] = bundle
+            // Store the plugin and register actions under a SYNCHRONOUS
+            // barrier. sync(barrier) runs the block immediately and orders it
+            // against concurrent readers, so callers (init, install) see the
+            // registration complete before this returns — which init relies
+            // on — and a concurrent executeAction/getAction reader can't see
+            // a half-populated actionRegistry.
+            pluginQueue.sync(flags: .barrier) {
+                self.loadedPlugins[plugin.identifier] = plugin
+                self.sandboxedPlugins[plugin.identifier] = sandbox
+                self.pluginPermissions[plugin.identifier] = permissions
+                self.pluginBundles[plugin.identifier] = bundle
 
-            // Register actions
-            for action in plugin.providedActions {
-                let actionId = "\(plugin.identifier).\(action.id)"
-                actionRegistry[actionId] = (plugin, action)
+                // Register actions
+                for action in plugin.providedActions {
+                    let actionId = "\(plugin.identifier).\(action.id)"
+                    self.actionRegistry[actionId] = (plugin, action)
+                }
             }
 
             // Notify delegates
@@ -198,15 +207,18 @@ public class PluginManager: NSObject {
                 let sandbox = PluginSandbox(plugin: plugin, permissions: permissions)
                 try sandbox.initialize()
 
-                // Store both the plugin and its sandbox
-                loadedPlugins[plugin.identifier] = plugin
-                sandboxedPlugins[plugin.identifier] = sandbox
-                pluginPermissions[plugin.identifier] = permissions
+                // Store under a synchronous barrier (see loadPlugin). Runs once
+                // at init, before any gesture can fire.
+                pluginQueue.sync(flags: .barrier) {
+                    self.loadedPlugins[plugin.identifier] = plugin
+                    self.sandboxedPlugins[plugin.identifier] = sandbox
+                    self.pluginPermissions[plugin.identifier] = permissions
 
-                // Register actions
-                for action in plugin.providedActions {
-                    let actionId = "\(plugin.identifier).\(action.id)"
-                    actionRegistry[actionId] = (plugin, action)
+                    // Register actions
+                    for action in plugin.providedActions {
+                        let actionId = "\(plugin.identifier).\(action.id)"
+                        self.actionRegistry[actionId] = (plugin, action)
+                    }
                 }
 
                 log.log("Loaded built-in plugin: \(plugin.name) (sandboxed)")
@@ -220,7 +232,7 @@ public class PluginManager: NSObject {
 
     /// Reload a built-in plugin by re-instantiating and re-registering it
     public func reloadBuiltInPlugin(identifier: String) -> Bool {
-        guard loadedPlugins[identifier] != nil else {
+        guard getPlugin(identifier: identifier) != nil else {
             log.log("Cannot reload: plugin \(identifier) not found")
             return false
         }
@@ -249,13 +261,19 @@ public class PluginManager: NSObject {
             let sandbox = PluginSandbox(plugin: plugin, permissions: .builtIn)
             try sandbox.initialize()
 
-            loadedPlugins[plugin.identifier] = plugin
-            sandboxedPlugins[plugin.identifier] = sandbox
-            pluginPermissions[plugin.identifier] = .builtIn
+            // Register under a barrier, ordered after unloadPlugin's removal
+            // barrier (barriers on the same queue execute in submission order),
+            // so readers never see the old plugin's entries interleaved with
+            // the new ones.
+            pluginQueue.async(flags: .barrier) {
+                self.loadedPlugins[plugin.identifier] = plugin
+                self.sandboxedPlugins[plugin.identifier] = sandbox
+                self.pluginPermissions[plugin.identifier] = .builtIn
 
-            for action in plugin.providedActions {
-                let actionId = "\(plugin.identifier).\(action.id)"
-                actionRegistry[actionId] = (plugin, action)
+                for action in plugin.providedActions {
+                    let actionId = "\(plugin.identifier).\(action.id)"
+                    self.actionRegistry[actionId] = (plugin, action)
+                }
             }
 
             lifecycleDelegates.forEach { $0.pluginDidLoad(plugin) }
@@ -269,54 +287,61 @@ public class PluginManager: NSObject {
 
     /// Reload an external plugin from its bundle
     public func reloadExternalPlugin(identifier: String) -> Bool {
-        guard let bundle = pluginBundles[identifier] else {
+        let bundle = pluginQueue.sync { pluginBundles[identifier] }
+        guard let bundle = bundle else {
             log.log("Cannot reload external plugin \(identifier): no bundle found")
             return false
         }
 
         let bundleURL = bundle.bundleURL
-        let wasSystem = pluginPermissions[identifier] == .default
+        let wasSystem = pluginQueue.sync { pluginPermissions[identifier] } == .default
 
         // Unload the plugin (this also unloads the bundle)
         unloadPlugin(identifier: identifier)
 
         // Reload from disk
         loadPlugin(at: bundleURL, isSystem: wasSystem)
-        return loadedPlugins[identifier] != nil
+        return getPlugin(identifier: identifier) != nil
     }
 
     // MARK: - Plugin Unloading
 
     public func unloadPlugin(identifier: String) {
-        guard let plugin = loadedPlugins[identifier] else {
+        // Snapshot the plugin under the reader lock, then perform cleanup
+        // (which can call back into arbitrary plugin code) OUTSIDE the lock,
+        // and finally mutate the registries under a barrier so a concurrent
+        // executeAction/getAction reader can't see a half-removed plugin.
+        let plugin: GestureActionPlugin? = pluginQueue.sync {
+            loadedPlugins[identifier]
+        }
+        guard let plugin = plugin else {
             log.log("Plugin not found: \(identifier)")
             return
         }
+        let sandbox = pluginQueue.sync { sandboxedPlugins[identifier] }
+        let bundle = pluginQueue.sync { pluginBundles[identifier] }
 
         // Notify delegates
         lifecycleDelegates.forEach { $0.pluginWillUnload(plugin) }
 
         // Clean up the sandbox first
-        if let sandbox = sandboxedPlugins[identifier] {
-            sandbox.cleanup()
-        }
+        sandbox?.cleanup()
 
         // Clean up the plugin
         plugin.cleanup()
 
         // Unload the bundle if it exists
-        if let bundle = pluginBundles[identifier] {
-            bundle.unload()
+        bundle?.unload()
+
+        // Remove from registries under a barrier (serializes with readers).
+        pluginQueue.async(flags: .barrier) {
+            self.loadedPlugins.removeValue(forKey: identifier)
+            self.sandboxedPlugins.removeValue(forKey: identifier)
+            self.pluginPermissions.removeValue(forKey: identifier)
+            self.pluginBundles.removeValue(forKey: identifier)
+            // Remove actions
+            self.actionRegistry = self.actionRegistry.filter { !$0.key.hasPrefix("\(identifier).") }
         }
-
-        // Remove from registry
-        loadedPlugins.removeValue(forKey: identifier)
-        sandboxedPlugins.removeValue(forKey: identifier)
-        pluginPermissions.removeValue(forKey: identifier)
-        pluginBundles.removeValue(forKey: identifier)
-
-        // Remove actions
-        actionRegistry = actionRegistry.filter { !$0.key.hasPrefix("\(identifier).") }
 
         log.log("Unloaded plugin: \(plugin.name)")
     }
@@ -324,12 +349,22 @@ public class PluginManager: NSObject {
     // MARK: - Plugin Execution
 
     public func executeAction(identifier: String, parameters: ActionParameters = ActionParameters()) throws {
-        guard let (plugin, action) = actionRegistry[identifier] else {
+        // Snapshot the (plugin, action, sandbox) under the reader lock so a
+        // concurrent unloadPlugin/reload (which mutates these under a barrier)
+        // can't release a plugin mid-execute or hand back a torn registry entry.
+        // Execute OUTSIDE the lock so plugin code can re-enter PluginManager
+        // (e.g. executeActionFromPlugin) without deadlocking.
+        let snapshot: (plugin: GestureActionPlugin, action: PluginAction, sandbox: PluginSandbox?)? =
+            pluginQueue.sync {
+                guard let entry = actionRegistry[identifier] else { return nil }
+                return (entry.plugin, entry.action, sandboxedPlugins[entry.plugin.identifier])
+            }
+        guard let (plugin, action, sandbox) = snapshot else {
             throw PluginError.actionNotFound(identifier)
         }
 
         // Use sandboxed execution if available
-        if let sandbox = sandboxedPlugins[plugin.identifier] {
+        if let sandbox = sandbox {
             // Execute through sandbox for safety
             try sandbox.executeAction(action, with: parameters)
         } else {
@@ -340,8 +375,8 @@ public class PluginManager: NSObject {
 
     /// Execute an action requested by another plugin (with permission checking)
     internal func executeActionFromPlugin(identifier: String, parameters: ActionParameters, requestingPlugin: String) {
-        // Check if requesting plugin has permission
-        guard let permissions = pluginPermissions[requestingPlugin],
+        // Check if requesting plugin has permission (read under the lock).
+        guard let permissions = getPermissions(for: requestingPlugin),
               permissions.canExecuteOtherActions else {
             log.log("⚠️ Plugin '\(requestingPlugin)' denied permission to execute action '\(identifier)'")
             return
@@ -385,12 +420,14 @@ public class PluginManager: NSObject {
 
     /// Update permissions for a specific plugin
     public func updatePermissions(for pluginId: String, permissions: PluginPermissions) {
-        pluginPermissions[pluginId] = permissions
+        pluginQueue.async(flags: .barrier) {
+            self.pluginPermissions[pluginId] = permissions
 
-        // If plugin is loaded, update its sandbox
-        if let plugin = loadedPlugins[pluginId] {
-            // Recreate sandbox with new permissions
-            sandboxedPlugins[pluginId] = PluginSandbox(plugin: plugin, permissions: permissions)
+            // If plugin is loaded, update its sandbox
+            if let plugin = self.loadedPlugins[pluginId] {
+                // Recreate sandbox with new permissions
+                self.sandboxedPlugins[pluginId] = PluginSandbox(plugin: plugin, permissions: permissions)
+            }
         }
 
         log.log("Updated permissions for plugin '\(pluginId)'")
@@ -398,38 +435,44 @@ public class PluginManager: NSObject {
 
     /// Get current permissions for a plugin
     public func getPermissions(for pluginId: String) -> PluginPermissions? {
-        return pluginPermissions[pluginId]
+        return pluginQueue.sync { pluginPermissions[pluginId] }
     }
 
     // MARK: - Plugin Query
 
     public func getAllPlugins() -> [GestureActionPlugin] {
-        Array(loadedPlugins.values)
+        pluginQueue.sync { Array(loadedPlugins.values) }
     }
 
     public func getPlugin(identifier: String) -> GestureActionPlugin? {
-        loadedPlugins[identifier]
+        pluginQueue.sync { loadedPlugins[identifier] }
     }
 
     public func getAllActions() -> [(pluginId: String, action: PluginAction)] {
-        actionRegistry.compactMap { key, value in
-            let components = key.split(separator: ".")
-            guard components.count >= 2 else { return nil }
-            // Reconstruct the plugin identifier in case it contains dots.
-            let pluginId = components.dropLast().joined(separator: ".")
-            return (pluginId, value.action)
+        pluginQueue.sync {
+            actionRegistry.compactMap { _, value in
+                // Use the stored plugin's actual identifier rather than
+                // reconstructing it by splitting the compound key on ".". The old
+                // reconstruction mis-parsed any action id that itself contains a
+                // dot (e.g. an action id "system.mute" under plugin
+                // "com.mousegestures.core" produced plugin id
+                // "com.mousegestures.core.system" — wrong).
+                return (value.plugin.identifier, value.action)
+            }
         }
     }
 
     public func getActionsForCategory(_ category: ActionCategory) -> [(plugin: GestureActionPlugin, action: PluginAction)] {
-        loadedPlugins.values.flatMap { plugin -> [(GestureActionPlugin, PluginAction)] in
-            guard plugin.category == category else { return [] }
-            return plugin.providedActions.map { (plugin, $0) }
+        pluginQueue.sync {
+            loadedPlugins.values.flatMap { plugin -> [(GestureActionPlugin, PluginAction)] in
+                guard plugin.category == category else { return [] }
+                return plugin.providedActions.map { (plugin, $0) }
+            }
         }
     }
 
     public func getAction(identifier: String) -> (plugin: GestureActionPlugin, action: PluginAction)? {
-        actionRegistry[identifier]
+        pluginQueue.sync { actionRegistry[identifier] }
     }
 
     // MARK: - Lifecycle Delegates
@@ -460,7 +503,7 @@ public class PluginManager: NSObject {
     }
 
     public func uninstallPlugin(identifier: String) throws {
-        guard let bundle = pluginBundles[identifier] else {
+        guard let bundle = pluginQueue.sync(execute: { pluginBundles[identifier] }) else {
             throw PluginError.actionNotFound(identifier)
         }
 
@@ -474,7 +517,7 @@ public class PluginManager: NSObject {
     // MARK: - Configuration
 
     public func getConfigurationView(for actionIdentifier: String) -> NSView? {
-        guard let (plugin, action) = actionRegistry[actionIdentifier] else {
+        guard let (plugin, action) = pluginQueue.sync(execute: { actionRegistry[actionIdentifier] }) else {
             return nil
         }
 

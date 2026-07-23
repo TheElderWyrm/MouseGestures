@@ -101,6 +101,11 @@ class ActionExecutionManager {
 
     // Delegates
     private var delegates: [ActionExecutionDelegate] = []
+    // Serializes delegate add/remove vs. notification iteration. Notifications
+    // fire from the .userInitiated background completion handler, while
+    // addDelegate/removeDelegate are called from main (UI); without a lock the
+    // forEach over `delegates` could race a concurrent removeAll → crash.
+    private let delegateLock = NSLock()
 
     // Configuration
     private var maxHistorySize = 100
@@ -362,8 +367,13 @@ class ActionExecutionManager {
                                        result: ActionExecutionResult,
                                        context: ActionExecutionContext,
                                        executionId: UUID) {
-        // Update statistics
-        executionStats.recordSuccess(actionId: actionId, executionTime: result.executionTime)
+        // Update statistics under the same barrier the read-side
+        // (getExecutionStatistics) uses its sync on. Without it, this runs on
+        // the .userInitiated background thread and races the reader, producing
+        // torn reads / lost updates (and the value-type dict mutation can crash).
+        executionQueue.async(flags: .barrier) {
+            self.executionStats.recordSuccess(actionId: actionId, executionTime: result.executionTime)
+        }
 
         // Record execution
         recordExecution(actionId: actionId, result: result, context: context)
@@ -391,8 +401,11 @@ class ActionExecutionManager {
             executionTime: Date().timeIntervalSince(startTime)
         )
 
-        // Update statistics
-        executionStats.recordFailure(actionId: actionId, error: error)
+        // Update statistics under a barrier (matches getExecutionStatistics's
+        // sync read; see handleExecutionSuccess for rationale).
+        executionQueue.async(flags: .barrier) {
+            self.executionStats.recordFailure(actionId: actionId, error: error)
+        }
 
         // Record execution
         recordExecution(actionId: actionId, result: result, context: context)
@@ -549,27 +562,45 @@ class ActionExecutionManager {
     // MARK: - Delegate Management
 
     func addDelegate(_ delegate: ActionExecutionDelegate) {
+        delegateLock.lock()
         delegates.append(delegate)
+        delegateLock.unlock()
     }
 
     func removeDelegate(_ delegate: ActionExecutionDelegate) {
+        delegateLock.lock()
         delegates.removeAll { $0 === delegate }
+        delegateLock.unlock()
+    }
+
+    /// Snapshot the delegate list under the lock so iteration (off the lock)
+    /// is safe against concurrent add/remove. A delegate's callback may
+    /// itself call removeDelegate; iterating the snapshot (not the live array)
+    /// avoids mutation-during-iteration.
+    private func snapshotDelegates() -> [ActionExecutionDelegate] {
+        delegateLock.lock()
+        let snapshot = delegates
+        delegateLock.unlock()
+        return snapshot
     }
 
     private func notifyDelegatesWillExecute(actionId: String, context: ActionExecutionContext) {
-        delegates.forEach { delegate in
+        let snapshot = snapshotDelegates()
+        snapshot.forEach { delegate in
             delegate.actionExecutionManager(self, willExecuteAction: actionId, context: context)
         }
     }
 
     private func notifyDelegatesDidExecute(actionId: String, result: ActionExecutionResult, context: ActionExecutionContext) {
-        delegates.forEach { delegate in
+        let snapshot = snapshotDelegates()
+        snapshot.forEach { delegate in
             delegate.actionExecutionManager(self, didExecuteAction: actionId, result: result, context: context)
         }
     }
 
     private func notifyDelegatesDidFail(actionId: String, error: Error, context: ActionExecutionContext) {
-        delegates.forEach { delegate in
+        let snapshot = snapshotDelegates()
+        snapshot.forEach { delegate in
             delegate.actionExecutionManager(self, didFailToExecuteAction: actionId, error: error, context: context)
         }
     }

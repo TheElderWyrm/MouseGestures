@@ -91,8 +91,16 @@ struct Gesture: Codable, Equatable {
     // MARK: - Unique Identifiers
 
     var id: String {
-        let dragPart = dragModifier != .none ? "_\(dragModifier.rawValue)" : ""
-        return "\(zone.rawValue)_\(modifiers.rawValue)\(dragPart)_\(actionIdentifier)"
+        // `triggerKey` is built generically from ALL enabled components (zone,
+        // modifiers, drag, keyboard shortcut, mouse button — see
+        // ActivationComponents.triggerKey), so it distinguishes gestures that
+        // share zone+modifiers+drag+action but differ by key/button trigger.
+        // The old `id` omitted keyboard/mouse-button, so two such gestures
+        // collided — corrupting SwiftUI ForEach identity and the
+        // `firstIndex(where: $0.id == …)` gesture lookups in the UI/config
+        // services. Append actionIdentifier for readability/debuggability;
+        // triggerKey is already the unique discriminator.
+        return "\(components.triggerKey)@\(actionIdentifier)"
     }
 
     var triggerKey: String {

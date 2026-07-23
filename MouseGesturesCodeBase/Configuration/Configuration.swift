@@ -28,9 +28,6 @@ public class Configuration: Codable {
     // Plugin configuration storage - allows plugins to store arbitrary data
     var pluginConfigurations: [String: AnyCodable] = [:]
 
-    // Non-persisted flag
-    private var isAppBasedSwitch: Bool = false
-
     // Thread safety
     private let configQueue = DispatchQueue(label: "com.mousegestures.config", attributes: .concurrent)
 
@@ -254,17 +251,23 @@ public class Configuration: Codable {
     }
 
     func applyProfile(_ profile: ConfigurationProfile, setAsDefault: Bool = false) {
-        self.activeProfileId = profile.id
+        // Mutate under a barrier so this serializes with configQueue readers
+        // (getters and the save encoder) instead of racing them — a plain
+        // assignment here concurrent with `JSONEncoder().encode(self)` in
+        // performSave could read a half-published array.
+        configQueue.async(flags: .barrier) {
+            self.activeProfileId = profile.id
 
-        // If setAsDefault is true, mark this as the new default profile
-        if setAsDefault {
-            // Mark all profiles as non-default
-            for i in 0..<profiles.count {
-                profiles[i].isDefault = false
-            }
-            // Mark the selected profile as default
-            if let index = profiles.firstIndex(where: { $0.id == profile.id }) {
-                profiles[index].isDefault = true
+            // If setAsDefault is true, mark this as the new default profile
+            if setAsDefault {
+                // Mark all profiles as non-default
+                for i in 0..<self.profiles.count {
+                    self.profiles[i].isDefault = false
+                }
+                // Mark the selected profile as default
+                if let index = self.profiles.firstIndex(where: { $0.id == profile.id }) {
+                    self.profiles[index].isDefault = true
+                }
             }
         }
     }
@@ -272,36 +275,56 @@ public class Configuration: Codable {
     // --- Profile Management Methods (for UI) ---
 
     func createProfile(name: String) -> ConfigurationProfile? {
-        // Enforce license limits: only 1 profile allowed for Free version
-        if !LicenseService.shared.canUseMultipleProfiles && !profiles.isEmpty {
+        // Enforce license limits: only 1 profile allowed for Free version.
+        // Read profiles under the queue (not nested inside the barrier below).
+        let currentProfiles = configQueue.sync { profiles }
+        if !LicenseService.shared.canUseMultipleProfiles && !currentProfiles.isEmpty {
             log.log("Access Denied: Multiple profiles require a Pro license.")
             return nil
         }
 
+        // Snapshot the active profile's gestures BEFORE the barrier (the
+        // `gestures` computed property does a configQueue.sync read; calling
+        // it from inside a barrier on the same concurrent queue would
+        // deadlock).
+        let activeGestures = self.gestures
+
         // Create the new profile by copying gestures from the currently active one.
         let newProfile = ConfigurationProfile(
             name: name,
-            gestures: self.gestures, // Uses computed property to get active gestures
+            gestures: activeGestures,
             isDefault: false
         )
-        profiles.append(newProfile)
+        configQueue.async(flags: .barrier) {
+            self.profiles.append(newProfile)
+        }
         save()
         return newProfile
     }
 
     func deleteProfile(id: UUID) -> Bool {
-        guard let index = profiles.firstIndex(where: { $0.id == id }),
-              profiles.count > 1 else {
+        // Read + decide synchronously, then mutate under a barrier so the
+        // mutation is serialized with configQueue readers (the getters and the
+        // save encoder). Without the barrier, a concurrent save could encode
+        // a half-removed profiles array (crash / corrupt file).
+        var index: Int?
+        var canDelete = false
+        configQueue.sync {
+            index = profiles.firstIndex { $0.id == id }
+            canDelete = profiles.count > 1
+        }
+        guard let idx = index, canDelete else {
             log.log("Cannot delete profile: It is the last one or not found.")
             return false
         }
 
         let wasActive = (activeProfileId == id)
-        profiles.remove(at: index)
-
-        // If the deleted profile was active, switch to the default or the first available.
-        if wasActive {
-            activeProfileId = profiles.first(where: { $0.isDefault })?.id ?? profiles.first?.id
+        configQueue.async(flags: .barrier) {
+            self.profiles.remove(at: idx)
+            // If the deleted profile was active, switch to the default or the first available.
+            if wasActive {
+                self.activeProfileId = self.profiles.first(where: { $0.isDefault })?.id ?? self.profiles.first?.id
+            }
         }
 
         save()
@@ -310,19 +333,22 @@ public class Configuration: Codable {
 
     func duplicateProfile(id: UUID, newName: String) -> ConfigurationProfile? {
         // Enforce license limits
-        if !LicenseService.shared.canUseMultipleProfiles && !profiles.isEmpty {
+        let currentProfiles = configQueue.sync { profiles }
+        if !LicenseService.shared.canUseMultipleProfiles && !currentProfiles.isEmpty {
             log.log("Access Denied: Multiple profiles require a Pro license.")
             return nil
         }
 
-        guard var profileToDuplicate = profiles.first(where: { $0.id == id }) else { return nil }
+        guard var profileToDuplicate = currentProfiles.first(where: { $0.id == id }) else { return nil }
 
         profileToDuplicate.id = UUID() // Assign a new unique ID
         profileToDuplicate.name = newName
         profileToDuplicate.isDefault = false
         profileToDuplicate.updateModifiedDate()
 
-        profiles.append(profileToDuplicate)
+        configQueue.async(flags: .barrier) {
+            self.profiles.append(profileToDuplicate)
+        }
         save()
         return profileToDuplicate
     }
@@ -336,36 +362,44 @@ public class Configuration: Codable {
             return
         }
 
-        appProfileMappings.removeAll { $0.appBundleIdentifier == bundleId }
         let newMapping = AppProfileMapping(appBundleIdentifier: bundleId, appName: appName, profileId: profileId)
-        appProfileMappings.append(newMapping)
+        configQueue.async(flags: .barrier) {
+            self.appProfileMappings.removeAll { $0.appBundleIdentifier == bundleId }
+            self.appProfileMappings.append(newMapping)
+        }
         save()
     }
 
     func removeAppProfileMapping(bundleId: String) {
-        appProfileMappings.removeAll { $0.appBundleIdentifier == bundleId }
+        configQueue.async(flags: .barrier) {
+            self.appProfileMappings.removeAll { $0.appBundleIdentifier == bundleId }
+        }
         save()
     }
 
     func getProfileForApp(bundleId: String) -> ConfigurationProfile? {
-        guard let mapping = appProfileMappings.first(where: { $0.appBundleIdentifier == bundleId }) else { return nil }
-        return profiles.first { $0.id == mapping.profileId }
+        return configQueue.sync {
+            guard let mapping = appProfileMappings.first(where: { $0.appBundleIdentifier == bundleId }) else { return nil }
+            return profiles.first { $0.id == mapping.profileId }
+        }
     }
 
     func switchToAppProfile(bundleId: String) {
         // If the app has a specific profile mapping, use it
         // Otherwise, stay with the current profile (don't switch to default)
+        let currentActive = activeProfileId
         guard let targetProfile = getProfileForApp(bundleId: bundleId),
-              targetProfile.id != activeProfileId else {
+              targetProfile.id != currentActive else {
             // App doesn't have a mapping - keep current profile
             return
         }
 
-        configQueue.async(flags: .barrier) {
-            self.isAppBasedSwitch = true
-            self.applyProfile(targetProfile)
-            self.isAppBasedSwitch = false
-        }
+        // applyProfile dispatches its own barrier; the old code wrapped that in
+        // a second barrier to toggle isAppBasedSwitch around it, but the inner
+        // async barrier doesn't run synchronously inside the outer one, so the
+        // flag toggling was already non-load-bearing here. Drop the redundant
+        // nesting and just call applyProfile.
+        applyProfile(targetProfile)
 
         // Save on main queue to avoid race conditions
         DispatchQueue.main.async {
@@ -376,26 +410,33 @@ public class Configuration: Codable {
     // --- Disabled Apps Methods ---
 
     func isAppDisabled(bundleId: String) -> Bool {
-        return disabledApps.contains { $0.appBundleIdentifier == bundleId }
+        return configQueue.sync {
+            disabledApps.contains { $0.appBundleIdentifier == bundleId }
+        }
     }
 
     func addDisabledApp(bundleId: String, appName: String) {
-        // Remove any existing entry for this bundle ID
-        disabledApps.removeAll { $0.appBundleIdentifier == bundleId }
-
-        // Add new disabled app entry
         let disabledApp = DisabledApp(appBundleIdentifier: bundleId, appName: appName)
-        disabledApps.append(disabledApp)
+        configQueue.async(flags: .barrier) {
+            // Remove any existing entry for this bundle ID
+            self.disabledApps.removeAll { $0.appBundleIdentifier == bundleId }
+            // Add new disabled app entry
+            self.disabledApps.append(disabledApp)
+        }
         save()
     }
 
     func removeDisabledApp(bundleId: String) {
-        disabledApps.removeAll { $0.appBundleIdentifier == bundleId }
+        configQueue.async(flags: .barrier) {
+            self.disabledApps.removeAll { $0.appBundleIdentifier == bundleId }
+        }
         save()
     }
 
     func clearAllDisabledApps() {
-        disabledApps.removeAll()
+        configQueue.async(flags: .barrier) {
+            self.disabledApps.removeAll()
+        }
         save()
     }
 

@@ -513,17 +513,23 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
         }
     }
 
-    /// Execute a single bundled sub-action directly through its plugin, bypassing
-    /// the full sandbox enter/exit cycle that can interfere when multiple actions
-    /// target the same plugin in rapid succession.
+    /// Execute a single bundled sub-action.
+    ///
+    /// Routes through `PluginManager.executeAction` so each sub-action re-enters
+    /// its owning plugin's OWN sandbox, which re-checks that plugin's permissions
+    /// and runs under its (possibly more restricted) context. The previous
+    /// implementation called `plugin.execute(...)` directly, handing the
+    /// BundleActionsPlugin's own high-privilege (`builtIn`) context to every
+    /// sub-action — including ones owned by third-party/`.restricted` plugins
+    /// — effectively a sandbox escape (a restricted plugin referenced from a
+    /// bundle ran with full system-API / file-system / cross-action privileges).
     private func executeBundledSubAction(_ bundledAction: BundledAction, context: PluginContext) throws {
-        guard let (plugin, action) = PluginManager.shared.getAction(identifier: bundledAction.actionIdentifier) else {
+        guard PluginManager.shared.getAction(identifier: bundledAction.actionIdentifier) != nil else {
             throw PluginError.actionNotFound(bundledAction.actionIdentifier)
         }
-        try plugin.execute(
-            action: action,
-            with: ActionParameters(values: bundledAction.parameters),
-            context: context
+        try PluginManager.shared.executeAction(
+            identifier: bundledAction.actionIdentifier,
+            parameters: ActionParameters(values: bundledAction.parameters)
         )
     }
 
