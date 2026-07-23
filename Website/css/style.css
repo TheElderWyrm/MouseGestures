@@ -252,14 +252,24 @@ svg linearGradient stop:last-child { stop-color: var(--accent-2); }
 
 /* ---------- Hero ---------- */
 
+/* .hero spans the full viewport width so its corner glows can reach the
+   real page edges; .hero-grid is the centered 1120px content column inside
+   it (previously these were the same element, which clipped the glows at
+   the narrow content edge instead of the page edge). */
 .hero {
+  position: relative;
+  overflow: hidden;
+  padding-block: clamp(48px, 8vh, 96px) clamp(40px, 6vh, 72px);
+}
+
+.hero-grid {
   display: grid;
   grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
   align-items: center;
   gap: clamp(32px, 5vw, 64px);
-  padding-block: clamp(48px, 8vh, 96px) clamp(40px, 6vh, 72px);
   position: relative;
-  overflow: hidden;
+  z-index: 1; /* above the glows: position:absolute siblings otherwise
+                 paint after static in-flow content, not behind it */
 }
 
 /* soft corner glows behind the copy — v1's touch that keeps a flat
@@ -277,11 +287,6 @@ svg linearGradient stop:last-child { stop-color: var(--accent-2); }
 .hero::after { width: 380px; height: 380px; background: var(--accent-2); bottom: -200px; right: -120px; }
 :root[data-theme="dark"] .hero::before,
 :root[data-theme="dark"] .hero::after { opacity: 0.22; }
-
-/* z-index:1 lifts the real content into its own stacking layer, above the
-   glows (position:absolute descendants otherwise paint on top of static
-   in-flow content, not behind it) */
-.hero-copy, .hero-demo { position: relative; z-index: 1; }
 
 .eyebrow {
   font-size: 0.85rem;
@@ -905,7 +910,9 @@ svg linearGradient stop:last-child { stop-color: var(--accent-2); }
 
 :root[data-theme="dark"] .section-tint { background: #0d1322; }
 
-.section-head { max-width: 640px; margin-bottom: clamp(32px, 5vh, 52px); }
+/* every section opens on a centered heading + subhead, same as Actions'
+   (the grids/cards below stay left-aligned — only the intro centers) */
+.section-head { max-width: 640px; margin-inline: auto; margin-bottom: clamp(32px, 5vh, 52px); text-align: center; }
 
 .section-head h2 {
   font-size: clamp(1.7rem, 3.4vw, 2.5rem);
@@ -913,9 +920,6 @@ svg linearGradient stop:last-child { stop-color: var(--accent-2); }
 }
 
 .section-head p { color: var(--text-2); font-size: 1.05rem; }
-
-/* the actions header sits above a centered category picker, so it's centered too */
-#actions .section-head { margin-inline: auto; text-align: center; }
 
 /* cards */
 .card {
@@ -1372,7 +1376,8 @@ svg linearGradient stop:last-child { stop-color: var(--accent-2); }
 /* ---------- Responsive ---------- */
 
 @media (max-width: 960px) {
-  .hero { grid-template-columns: 1fr; padding-top: 40px; }
+  .hero { padding-top: 40px; }
+  .hero-grid { grid-template-columns: 1fr; }
   .hero-copy { text-align: center; }
   .lede { margin-inline: auto; }
   .cta-row { justify-content: center; }
