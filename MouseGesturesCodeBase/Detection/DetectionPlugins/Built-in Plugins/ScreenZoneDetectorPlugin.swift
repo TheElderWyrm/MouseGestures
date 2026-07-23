@@ -175,6 +175,11 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
 
     // Repeat timer for gestures
     private var repeatTimer: Timer?
+    // One-shot initial-delay timer that gates the start of the repeating timer.
+    // Must be tracked so it can be invalidated if the gesture ends during the
+    // delay window; otherwise a rapid zone re-entry can fire the orphaned
+    // delay timer and corrupt the repeat state for the new gesture.
+    private var repeatInitialDelayTimer: Timer?
     private var currentRepeatingGesture: Gesture?
 
     // Gesture lookup for efficient matching
@@ -395,6 +400,15 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     /// Check if mouse is currently in a zone
     private func checkCurrentMousePosition() {
         let mouseLocation = NSEvent.mouseLocation
+        // Refresh the cached drag/modifier state BEFORE zone processing.
+        // handleMousePosition() is what normally populates these caches, but
+        // it has not run for this enable. processZoneEntry/detectGesture read
+        // the caches directly, so without this refresh a gesture that fires
+        // the instant tracking engages would use stale (or default .none/[])
+        // values and match the wrong gesture — e.g. a ⌘+drag-gated corner
+        // gesture wouldn't fire, and a no-modifier one might fire instead.
+        cachedDragModifier = DragModifier.currentSystem
+        cachedModifiers = NSEvent.ModifierFlags.currentSystem
         if let zone = detectZoneFromCache(point: mouseLocation) {
             if context?.logger.isDebugEnabled ?? false {
                 context?.logger.log("Mouse already in zone \(zone.rawValue) when tracking enabled", file: #file, function: #function, line: #line)
@@ -523,7 +537,10 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         }
 
         if gesture.repeatInitialDelay > 0 {
-            Timer.scheduledTimer(withTimeInterval: gesture.repeatInitialDelay, repeats: false) { _ in
+            repeatInitialDelayTimer = Timer.scheduledTimer(withTimeInterval: gesture.repeatInitialDelay, repeats: false) { [weak self] _ in
+                // Clear the delay timer reference once it has fired so a later
+                // stopRepeatTimer() doesn't try to invalidate a dead timer.
+                self?.repeatInitialDelayTimer = nil
                 startRepeating()
             }
         } else {
@@ -534,6 +551,8 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     private func stopRepeatTimer() {
         repeatTimer?.invalidate()
         repeatTimer = nil
+        repeatInitialDelayTimer?.invalidate()
+        repeatInitialDelayTimer = nil
         currentRepeatingGesture = nil
     }
 
@@ -578,7 +597,13 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         let required = gesture.modifiers
         if required.isEmpty {
             if gesture.dragModifier != .none { return true } // Drag check passed above
-            return !mods.isEmpty // Any modifier counts
+            // A zone-only gesture (no modifier, no drag requirement) has no
+            // modifier/drag condition to keep held — the cursor staying in the
+            // zone (already verified above) is the entire "hold". Repeating
+            // must continue regardless of modifier state; the old `!mods.isEmpty`
+            // check made repeat-on-hold silently never work for plain zone
+            // gestures (it only repeated while an unrelated key happened down).
+            return true
         }
         return mods.contains(required)
     }

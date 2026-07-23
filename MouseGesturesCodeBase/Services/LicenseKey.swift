@@ -78,6 +78,26 @@ public enum LicenseKey {
 
         let providedSignature = String(normalized.suffix(signatureLength))
         let core = String(normalized.dropLast(signatureLength))
-        return signature(for: core) == providedSignature
+        let computedSignature = signature(for: core)
+        // Constant-time comparison: Swift `==` on String short-circuits on the
+        // first differing character, leaking how many leading bytes of the
+        // signature are correct via response time. XOR-accumulate over the
+        // whole signature so every byte always contributes to the result.
+        return constantTimeEquals(computedSignature, providedSignature)
+    }
+
+    /// Compare two equal-length hex strings in constant time. Returns `false`
+    /// immediately when the lengths differ (length is not a secret here — both
+    /// sides derive from `signatureLength`, which is public).
+    private static func constantTimeEquals(_ a: String, _ b: String) -> Bool {
+        let aScalars = Array(a.unicodeScalars)
+        let bScalars = Array(b.unicodeScalars)
+        guard aScalars.count == bScalars.count else { return false }
+
+        var diff: UInt32 = 0
+        for (x, y) in zip(aScalars, bScalars) {
+            diff |= x.value ^ y.value
+        }
+        return diff == 0
     }
 }

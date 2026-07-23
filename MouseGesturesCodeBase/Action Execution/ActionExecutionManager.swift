@@ -301,6 +301,19 @@ class ActionExecutionManager {
         let executionId = UUID()
         let startTime = Date()
 
+        // requireNoMouse guard — skip execution if a mouse button is currently held.
+        // This must run BEFORE we insert the executionId, notify delegates, or fire
+        // haptics: otherwise the id leaks into activeExecutions forever (the
+        // success/failure removal paths are never reached for an early return),
+        // isExecuting() reports true permanently, and the user gets a haptic +
+        // notification for an action that never ran.
+        if let gesture = context.gesture, gesture.components.requireNoMouse {
+            if DragModifier.currentSystem != .none {
+                log.log("Skipping action '\(actionId)': requireNoMouse set and a mouse button is held.")
+                return
+            }
+        }
+
         // Track active execution
         executionQueue.async(flags: .barrier) {
             self.activeExecutions.insert(executionId)
@@ -311,11 +324,6 @@ class ActionExecutionManager {
 
         // Haptic feedback on activation (immediate, not after execution completes)
         provideHapticFeedback()
-
-        // requireNoMouse guard — skip execution if a mouse button is currently held
-        if let gesture = context.gesture, gesture.components.requireNoMouse {
-            if DragModifier.currentSystem != .none { return }
-        }
 
         // Activation notification (optional, user-controlled; suppressed on repeated holds)
         var isRepeatSource = false
@@ -451,6 +459,10 @@ class ActionExecutionManager {
         var focusedRef: CFTypeRef?
         guard AXUIElementCopyAttributeValue(appEl, kAXFocusedUIElementAttribute as CFString, &focusedRef) == .success,
               let focusedAny = focusedRef else { return "" }
+        // Verify the returned CFType is actually an AXUIElement before treating
+        // it as one. `unsafeBitCast` on an arbitrary CFType is undefined behavior
+        // if the API ever returns a non-element value for a misbehaving app.
+        guard CFGetTypeID(focusedAny) == AXUIElementGetTypeID() else { return "" }
         let focused = unsafeBitCast(focusedAny, to: AXUIElement.self)
         var textRef: CFTypeRef?
         guard AXUIElementCopyAttributeValue(focused, kAXSelectedTextAttribute as CFString, &textRef) == .success,

@@ -349,11 +349,27 @@ public struct ActionParameters: Codable {
     }
 
     public func number(for key: String) -> Double? {
-        values[key]?.value as? Double
+        guard let any = values[key]?.value else { return nil }
+        // AnyCodable decodes Int before Double, so whole-number JSON values
+        // (e.g. a repeat count of 10, brightness 30) are boxed as Int. Swift
+        // does not bridge Int→Double through `as?`, so `any as? Double` would
+        // wrongly return nil and callers would fall back to their default.
+        // Coerce across all the numeric types AnyCodable may store.
+        if let d = any as? Double { return d }
+        if let i = any as? Int { return Double(i) }
+        if let f = any as? Float { return Double(f) }
+        if let n = any as? NSNumber { return n.doubleValue }
+        return nil
     }
 
     public func bool(for key: String) -> Bool? {
-        values[key]?.value as? Bool
+        guard let any = values[key]?.value else { return nil }
+        if let b = any as? Bool { return b }
+        // NSNumber bridges Bool through; guard against 0/1 Int being read as Bool
+        if let n = any as? NSNumber, CFGetTypeID(n) == CFBooleanGetTypeID() {
+            return n.boolValue
+        }
+        return nil
     }
 
     public func array(for key: String) -> [Any]? {

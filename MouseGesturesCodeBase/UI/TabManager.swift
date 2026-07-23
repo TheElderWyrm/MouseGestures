@@ -308,15 +308,22 @@ struct PluginRow: View {
 
             Spacer()
 
-            Toggle("", isOn: .constant(isEnabled))
-                .toggleStyle(.switch)
-                .onChange(of: isEnabled) { newValue in
+            // Bind to a real get/set binding: `.constant(isEnabled)` made the
+            // toggle a read-only display that could never change the plugin's
+            // enabled state, so the switch visually flipped back instantly and
+            // the onChange branch above was dead. The set side drives the
+            // uiPluginManager, whose @Published change re-evaluates `isEnabled`.
+            Toggle("", isOn: Binding(
+                get: { isEnabled },
+                set: { newValue in
                     if newValue {
                         uiPluginManager.enablePlugin(identifier: plugin.identifier)
                     } else {
                         uiPluginManager.disablePlugin(identifier: plugin.identifier)
                     }
                 }
+            ))
+            .toggleStyle(.switch)
         }
         .padding(.vertical, MGStyle.Spacing.sm)
     }

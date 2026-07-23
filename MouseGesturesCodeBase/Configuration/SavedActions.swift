@@ -143,11 +143,22 @@ class SavedActionsManager {
             if replaceExisting {
                 savedActions = importedActions
             } else {
-                // Merge with existing, avoiding duplicates by name
+                // Merge with existing, avoiding duplicates by name AND id.
                 for action in importedActions {
-                    if !savedActions.contains(where: { $0.name == action.name }) {
-                        var newAction = action
-                        newAction.dateModified = Date()
+                    if !savedActions.contains(where: { $0.name == action.name || $0.id == action.id }) {
+                        // Always mint a fresh id on import. The single-action
+                        // import path does this; the bulk path previously reused
+                        // the imported id, which could collide with an existing
+                        // action (same id, different name) and make getAction /
+                        // updateAction / deleteAction operate on the wrong row.
+                        let newAction = SavedAction(
+                            id: UUID(),
+                            name: action.name,
+                            actionIdentifier: action.actionIdentifier,
+                            parameters: action.parameters,
+                            dateCreated: action.dateCreated,
+                            dateModified: Date()
+                        )
                         savedActions.append(newAction)
                     }
                 }

@@ -36,9 +36,31 @@ public class LicenseService: ObservableObject {
 
     private var checkTimer: Timer?
     private let lastCheckDateKey = "MGLastTrialCheckDate"
+    /// Monotonic high-water mark of the latest date we've ever observed. Used to
+    /// resist trial bypass-by-clock-rollback: if the system clock is set back
+    /// before `firstLaunch` (or before the last seen date), the trial would
+    /// otherwise reset to "more than 30 days remaining". We clamp `now` to
+    /// never go below this mark so a backwards clock can't extend the trial.
+    private let highWaterMarkDateKey = "MGTrialHighWaterMarkDate"
     // Suppresses the initial refresh at launch from firing a "trial expired"
     // notification before the UI is up; re-enabled immediately after.
     private var notificationsEnabled = false
+
+    /// Returns `now` clamped to the persisted high-water-mark, then advances
+    /// the mark. Guards against the user setting the system clock backwards to
+    /// extend or reset the trial window. Offline-only defense (not airtight —
+    /// a user who deletes this UserDefaults key still wins), but it closes the
+    /// trivial `defaults write` / System Preferences clock-rollback path.
+    private func clampedNow() -> Date {
+        let now = Date()
+        let lastMark = defaults.object(forKey: highWaterMarkDateKey) as? Date ?? .distantPast
+        // If the clock was rolled back, keep using the last-seen (later) date.
+        let effective = now > lastMark ? now : lastMark
+        if effective > lastMark {
+            defaults.set(effective, forKey: highWaterMarkDateKey)
+        }
+        return effective
+    }
 
     // MARK: - Initialization
 
@@ -61,7 +83,7 @@ public class LicenseService: ObservableObject {
     }
 
     private func performDailyCheck() {
-        let now = Date()
+        let now = clampedNow()
         let lastCheck = defaults.object(forKey: lastCheckDateKey) as? Date ?? .distantPast
 
         if !Calendar.current.isDate(now, inSameDayAs: lastCheck) {
@@ -90,12 +112,12 @@ public class LicenseService: ObservableObject {
         // Check trial status
         if let firstLaunch = defaults.object(forKey: firstLaunchKey) as? Date {
             let result = LicenseLogic.trialStatus(firstLaunch: firstLaunch,
-                                                  now: Date(),
+                                                  now: clampedNow(),
                                                   durationDays: trialDurationDays)
             updateStatus(result.status, remaining: result.remaining)
         } else {
             // First launch - start trial
-            let now = Date()
+            let now = clampedNow()
             defaults.set(now, forKey: firstLaunchKey)
             updateStatus(.trial, remaining: trialDurationDays)
         }

@@ -154,6 +154,7 @@ class ZoneHighlightManager {
     private var configChangeObserver: Any?
     private var screenChangeObserver: Any?
     private var dimensionChangeObserver: Any?
+    private var modifierStateObserver: Any?
     private var currentModifiers: NSEvent.ModifierFlags = []
     private var localModifierMonitor: Any?
     private var modifierCheckTimer: Timer?
@@ -171,7 +172,7 @@ class ZoneHighlightManager {
 
         // Listen for modifier state changes from ModifierKeyDetectorPlugin
         // This ensures zones are hidden even if flagsChanged events are missed
-        NotificationCenter.default.addObserver(
+        modifierStateObserver = NotificationCenter.default.addObserver(
             forName: NSNotification.Name("ModifierStateChanged"),
             object: nil,
             queue: .main
@@ -218,6 +219,10 @@ class ZoneHighlightManager {
         if let observer = dimensionChangeObserver {
             NotificationCenter.default.removeObserver(observer)
             dimensionChangeObserver = nil
+        }
+        if let observer = modifierStateObserver {
+            NotificationCenter.default.removeObserver(observer)
+            modifierStateObserver = nil
         }
         for observer in appEventObservers {
             NotificationCenter.default.removeObserver(observer)

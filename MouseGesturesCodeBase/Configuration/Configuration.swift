@@ -192,21 +192,29 @@ public class Configuration: Codable {
         }
     }
 
-    private func performSave() {
-        saveQueue.async { [weak self] in
-            guard let self = self, self.pendingSave else { return }
-
-            self.pendingSave = false
+    /// Encodes the configuration and writes it atomically to disk.
+    /// `requirePending` gates the batched path (only write if a save is
+    /// actually pending); the synchronous `saveImmediate()` path passes
+    /// `false` so it always persists regardless of the pending flag.
+    private func writeConfigurationToDisk(requirePending: Bool) {
+        saveQueue.sync {
+            if requirePending {
+                guard pendingSave else { return }
+                pendingSave = false
+            }
 
             log.log("Saving configuration to disk. Mappings count: \(self.appProfileMappings.count)")
 
             do {
-                // Create a snapshot of the configuration to save
-                let data = try self.configQueue.sync {
+                // Snapshot under a barrier so concurrent mutators can't tear the
+                // arrays while the encoder walks them.
+                let data = try self.configQueue.sync(flags: .barrier) {
                     try JSONEncoder().encode(self)
                 }
 
-                try data.write(to: Configuration.configurationURL)
+                // Atomic write: writes to a temp file then renames, so a
+                // crash mid-write can't leave a truncated gestures.json.
+                try data.write(to: Configuration.configurationURL, options: .atomic)
 
                 DispatchQueue.main.async {
                     NotificationCenter.default.post(name: NSNotification.Name("GestureConfigurationChanged"), object: nil)
@@ -217,14 +225,32 @@ public class Configuration: Codable {
         }
     }
 
-    // Force immediate save (for critical operations)
+    private func performSave() {
+        saveQueue.async { [weak self] in
+            guard let self = self else { return }
+            self.writeConfigurationToDisk(requirePending: true)
+        }
+    }
+
+    // Force immediate, synchronous save (for critical operations / termination).
     func saveImmediate() {
+        // Cancel any pending batched save so it can't fire after this one and
+        // clobber a newer state. The timer lives on the main run loop, so hop
+        // to main to invalidate it safely — but only via async if we're already
+        // on the main thread (main.sync from main would deadlock).
+        let invalidateTimer = { [weak self] in
+            self?.saveTimer?.invalidate()
+            self?.saveTimer = nil
+        }
+        if Thread.isMainThread {
+            invalidateTimer()
+        } else {
+            DispatchQueue.main.sync(execute: invalidateTimer)
+        }
         saveQueue.sync {
             pendingSave = false
-            saveTimer?.invalidate()
-            saveTimer = nil
         }
-        performSave()
+        writeConfigurationToDisk(requirePending: false)
     }
 
     func applyProfile(_ profile: ConfigurationProfile, setAsDefault: Bool = false) {
@@ -478,6 +504,7 @@ public class Configuration: Codable {
         self.hideFromMenuBar = false
         self.debugModeEnabled = false
         self.developerModeEnabled = false
+        self.notificationOnActivation = false
         self.pluginConfigurations = [:]
 
         // Reset global zone/haptic settings
@@ -485,6 +512,11 @@ public class Configuration: Codable {
         self.edgeThreshold = 30
         self.cornerSize = 100
         self.cornerBuffer = 50
+
+        // Point Free mode at the freshly created profile so a non-Pro user
+        // can actually switch to it. Leaving a stale UUID here would lock
+        // Free users out of every profile (the new default has a new UUID).
+        self.freeModeProfileId = defaultProfile.id
     }
 
     // --- Global Settings Export/Import ---

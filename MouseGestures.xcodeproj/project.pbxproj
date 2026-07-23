@@ -121,6 +121,7 @@
 		DD0000000000000000000021 /* LicenseKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD0000000000000000000020 /* LicenseKey.swift */; };
 		DD0000000000000000000022 /* LicenseKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD0000000000000000000020 /* LicenseKey.swift */; };
 		DD0000000000000000000024 /* LicenseKeyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD0000000000000000000023 /* LicenseKeyTests.swift */; };
+		DD0000000000000000000026 /* ActionParametersTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD0000000000000000000025 /* ActionParametersTests.swift */; };
 		DD0000000000000000000008 /* AnyCodable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4842F368ED800D1FE6A /* AnyCodable.swift */; };
 		DD0000000000000000000009 /* ScreenZone.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C43B2F368ED800D1FE6A /* ScreenZone.swift */; };
 		DD000000000000000000000A /* LicenseLogic.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD0000000000000000000001 /* LicenseLogic.swift */; };
@@ -248,6 +249,7 @@
 		DD0000000000000000000001 /* LicenseLogic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LicenseLogic.swift; path = MouseGesturesCodeBase/Services/LicenseLogic.swift; sourceTree = SOURCE_ROOT; };
 		DD0000000000000000000020 /* LicenseKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LicenseKey.swift; path = MouseGesturesCodeBase/Services/LicenseKey.swift; sourceTree = SOURCE_ROOT; };
 		DD0000000000000000000023 /* LicenseKeyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LicenseKeyTests.swift; sourceTree = "<group>"; };
+		DD0000000000000000000025 /* ActionParametersTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionParametersTests.swift; sourceTree = "<group>"; };
 		DD0000000000000000000003 /* AnyCodableTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnyCodableTests.swift; sourceTree = "<group>"; };
 		DD0000000000000000000004 /* ScreenZoneTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenZoneTests.swift; sourceTree = "<group>"; };
 		DD0000000000000000000005 /* LicenseLogicTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LicenseLogicTests.swift; sourceTree = "<group>"; };
@@ -587,6 +589,7 @@
 				DD0000000000000000000004 /* ScreenZoneTests.swift */,
 				DD0000000000000000000005 /* LicenseLogicTests.swift */,
 				DD0000000000000000000023 /* LicenseKeyTests.swift */,
+				DD0000000000000000000025 /* ActionParametersTests.swift */,
 				DD0000000000000000000033 /* UpdateLogicTests.swift */,
 			);
 			path = MouseGesturesTests;
@@ -801,6 +804,7 @@
 				DD000000000000000000000A /* LicenseLogic.swift in Sources */,
 				DD0000000000000000000022 /* LicenseKey.swift in Sources */,
 				DD0000000000000000000024 /* LicenseKeyTests.swift in Sources */,
+				DD0000000000000000000026 /* ActionParametersTests.swift in Sources */,
 				DD0000000000000000000008 /* AnyCodable.swift in Sources */,
 				DD0000000000000000000009 /* ScreenZone.swift in Sources */,
 				DD0000000000000000000032 /* UpdateLogic.swift in Sources */,

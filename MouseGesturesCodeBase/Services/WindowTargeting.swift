@@ -323,11 +323,16 @@ class WindowTargeting {
         let result = AXUIElementCopyElementAtPosition(AXUIElementCreateSystemWide(), Float(point.x), Float(point.y), &element)
 
         if result == .success, let foundElement = element {
-            // Walk up the hierarchy to find the window
+            // Walk up the hierarchy to find the window.
+            // Bounded depth + safe cast: a misbehaving AX provider can return a
+            // non-AXUIElement CFType or a cyclic parent chain, which the old
+            // unbounded `as!` + `while true` would crash on or hang the
+            // gesture-detection thread against.
             var currentElement = foundElement
             var role: CFTypeRef?
+            let maxDepth = 64
 
-            while true {
+            for _ in 0..<maxDepth {
                 AXUIElementCopyAttributeValue(currentElement, kAXRoleAttribute as CFString, &role)
 
                 if let roleString = role as? String, roleString == kAXWindowRole as String {
@@ -345,7 +350,14 @@ class WindowTargeting {
                     break
                 }
 
-                currentElement = parent as! AXUIElement
+                // Verify the returned value is actually an AXUIElement before
+                // adopting it; `as!` would trap the whole app on a non-element.
+                // `as? AXUIElement` always succeeds for CF types (the compiler
+                // refuses it), so check the CF type id explicitly.
+                guard CFGetTypeID(parent) == AXUIElementGetTypeID() else { break }
+                let parentElement = parent as! AXUIElement
+                if parentElement == currentElement { break } // cycle guard
+                currentElement = parentElement
             }
         }
 
@@ -449,8 +461,24 @@ class WindowTargeting {
             var position = CGPoint.zero
             var size = CGSize.zero
 
-            AXValueGetValue(positionValue as! AXValue, .cgPoint, &position)
-            AXValueGetValue(sizeValue as! AXValue, .cgSize, &size)
+            // The accessibility API can hand back a CFType that isn't an AXValue
+            // for unresponsive/malformed windows; `as!` would trap. Verify the
+            // CF type id and the AXValue type tag before extracting, else bail.
+            // `as? AXValue` always succeeds for CF types (the compiler refuses
+            // the conditional cast), so use CFGetTypeID to discriminate.
+            guard CFGetTypeID(positionValue) == AXValueGetTypeID(),
+                  CFGetTypeID(sizeValue) == AXValueGetTypeID() else {
+                return nil
+            }
+            let posVal = positionValue as! AXValue
+            let sizeVal = sizeValue as! AXValue
+            guard AXValueGetType(posVal) == .cgPoint,
+                  AXValueGetType(sizeVal) == .cgSize else {
+                return nil
+            }
+
+            AXValueGetValue(posVal, .cgPoint, &position)
+            AXValueGetValue(sizeVal, .cgSize, &size)
 
             return CGRect(origin: position, size: size)
         }
