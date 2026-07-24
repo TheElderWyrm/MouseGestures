@@ -204,8 +204,12 @@ struct GesturesView: View {
                 .padding(.top, MGStyle.Spacing.md)
 
                 Button("Upgrade to Pro") {
-                    // Navigate to upgrade tab - we can't do this easily from here, 
-                    // but they can click the tab once they select a profile
+                    if let url = URL(string: "https://mousegestures.app/purchase") {
+                        NSWorkspace.shared.open(url)
+                    }
+                    // Settings is already open (this overlay only renders inside the
+                    // Gestures tab), so this reliably lands on the Upgrade tab too.
+                    NotificationCenter.default.post(name: .openUpgradeTab, object: nil)
                 }
                 .buttonStyle(.link)
                 .font(.caption)

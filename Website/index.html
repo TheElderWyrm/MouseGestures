@@ -26,13 +26,14 @@
 <script src="js/theme-init.js"></script>
 <link rel="stylesheet" href="css/style.css">
 
-<script type="application/ld+json">
+<script type="application/ld+json" id="ldjson">
 {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
   "name": "MouseGestures",
   "operatingSystem": "macOS 13.0 or later",
   "applicationCategory": "UtilitiesApplication",
+  "softwareVersion": "1.0",
   "description": "A macOS menu-bar utility that maps screen-zone gestures, mouse buttons, and keyboard triggers to window-management, media, system, browser, and automation actions.",
   "url": "https://mousegestures.app/",
   "downloadUrl": "https://github.com/TheElderWyrm/MouseGestures/releases/latest/download/MouseGestures.dmg",
@@ -90,7 +91,7 @@
   <section class="hero">
    <div class="shell hero-grid">
     <div class="hero-copy">
-      <p class="eyebrow">Version 1.0 · macOS 13+ · menu-bar utility</p>
+      <p class="eyebrow" id="heroVersion">Version 1.0 · macOS 13+ · menu-bar utility</p>
       <h1>Every corner of your screen is a <span class="grad">shortcut.</span></h1>
       <p class="lede">
         MouseGestures turns flicks to your screen's edges and corners — layered with

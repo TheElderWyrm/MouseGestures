@@ -345,12 +345,14 @@
 
   /* ---------- GitHub release auto-check ----------
      The static button already links to releases/latest/download; this refines
-     the page with the exact version, size, and release date — so it stays
-     current on every future release without a redeploy. */
+     every version mention on the page — download meta, hero eyebrow, JSON-LD —
+     with the real latest release, so nothing goes stale after a future release. */
   (function checkRelease() {
     var btn = document.getElementById("dl-btn");
     var meta = document.getElementById("dl-meta");
-    if (!btn || !meta || !window.fetch) return;
+    var heroVersion = document.getElementById("heroVersion");
+    var ld = document.getElementById("ldjson");
+    if (!window.fetch || (!btn && !meta && !heroVersion && !ld)) return;
 
     fetch("https://api.github.com/repos/TheElderWyrm/MouseGestures/releases/latest", {
       headers: { Accept: "application/vnd.github+json" }
@@ -359,20 +361,37 @@
       return r.json();
     }).then(function (rel) {
       if (!rel || rel.draft || rel.prerelease) return;
+      var version = rel.tag_name ? rel.tag_name.replace(/^v/, "") : null;
       var dmg = (rel.assets || []).filter(function (a) {
         return /\.dmg$/i.test(a.name || "");
       })[0];
-      if (dmg) btn.lastChild.textContent = " Download MouseGestures " + (rel.tag_name || "");
-      var bits = [];
-      if (rel.tag_name) bits.push("Version " + rel.tag_name.replace(/^v/, ""));
-      if (dmg && dmg.size) bits.push((dmg.size / 1048576).toFixed(1) + " MB");
-      bits.push("macOS 13+ · Apple silicon");
-      if (rel.published_at) {
-        bits.push("released " + new Date(rel.published_at).toLocaleDateString(undefined,
-          { year: "numeric", month: "short", day: "numeric" }));
+
+      if (btn && dmg) btn.lastChild.textContent = " Download MouseGestures " + (rel.tag_name || "");
+
+      if (meta) {
+        var bits = [];
+        if (version) bits.push("Version " + version);
+        if (dmg && dmg.size) bits.push((dmg.size / 1048576).toFixed(1) + " MB");
+        bits.push("macOS 13+ · Apple silicon");
+        if (rel.published_at) {
+          bits.push("released " + new Date(rel.published_at).toLocaleDateString(undefined,
+            { year: "numeric", month: "short", day: "numeric" }));
+        }
+        meta.textContent = bits.join(" · ");
       }
-      meta.textContent = bits.join(" · ");
-    }).catch(function () { /* static button already links to releases/latest */ });
+
+      if (heroVersion && version) {
+        heroVersion.textContent = "Version " + version + " · macOS 13+ · menu-bar utility";
+      }
+
+      if (ld && version) {
+        try {
+          var data = JSON.parse(ld.textContent);
+          data.softwareVersion = version;
+          ld.textContent = JSON.stringify(data);
+        } catch (e) { /* malformed JSON-LD — leave the static fallback in place */ }
+      }
+    }).catch(function () { /* static content already shows a sane fallback version */ });
   })();
 
   /* ---------- Toast ---------- */

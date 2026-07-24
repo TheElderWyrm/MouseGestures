@@ -61,7 +61,11 @@ struct TrialExpiredProfileSelectionView: View {
                 .disabled(selectedProfileId == nil)
 
                 Button("Upgrade to Pro") {
-                    // This window will close, and we'll tell the app to open the Upgrade tab
+                    if let url = URL(string: "https://mousegestures.app/purchase") {
+                        NSWorkspace.shared.open(url)
+                    }
+                    // Also close this window and tell the app to open the Upgrade tab,
+                    // in case Settings is already open behind it.
                     onComplete()
                     NotificationCenter.default.post(name: .openUpgradeTab, object: nil)
                 }
