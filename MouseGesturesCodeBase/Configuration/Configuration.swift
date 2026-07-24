@@ -83,10 +83,25 @@ public class Configuration: Codable {
         loadConfigurationFromFile()
     }
 
-    // Helper struct for robust decoding from JSON.
-    private struct DecodedConfiguration: Codable {
+    /// Decodes `T` but never throws: a malformed element becomes `nil` instead
+    /// of failing its whole container. Used to decode the profiles array
+    /// element-wise so one corrupt / hand-edited profile can't take down every
+    /// profile (the outer load would otherwise throw and silently revert the
+    /// entire configuration to a single default — total data loss, not a crash).
+    private struct FailableDecodable<T: Decodable>: Decodable {
+        let value: T?
+        init(from decoder: Decoder) throws {
+            let container = try decoder.singleValueContainer()
+            self.value = try? container.decode(T.self)
+        }
+    }
+
+    // Helper struct for robust decoding from JSON. Decode-only (Configuration
+    // encodes itself, never this shim), so it conforms to Decodable, letting
+    // `profiles` use the lossy wrapper above.
+    private struct DecodedConfiguration: Decodable {
         var isEnabled: Bool
-        var profiles: [ConfigurationProfile]
+        var profiles: [FailableDecodable<ConfigurationProfile>]
         var activeProfileId: UUID?
         var appProfileMappings: [AppProfileMapping]
         var disabledApps: [DisabledApp]?
@@ -152,6 +167,60 @@ public class Configuration: Codable {
         }
     }
 
+    // MARK: - Thread-safe profile access (for the profile-service layer)
+    //
+    // ProfileManager / ProfileManagementService / ProfileImportExportService /
+    // ProfileTemplateService historically read and mutated `profiles` (and
+    // `activeProfileId`) directly, off `configQueue`. That races the save
+    // encoder, which walks the same arrays under a configQueue barrier in
+    // `writeConfigurationToDisk`: a concurrent append/remove can reallocate the
+    // array's backing buffer while `JSONEncoder().encode(self)` is iterating it
+    // — a crash, or a truncated/corrupt gestures.json. (The `switch_profile`
+    // gesture action reaches ProfileManager off the main thread, so this is not
+    // hypothetical.) These accessors route those reads and writes through the
+    // same barrier the rest of Configuration uses.
+    //
+    // The `mutate*`/`set*` calls run synchronously (`.sync(flags: .barrier)`)
+    // so a caller observes its own write on return. The closures passed to
+    // `mutateProfiles` must NOT call back into any of these synchronized
+    // accessors (doing so re-enters the same queue and deadlocks).
+
+    /// Synchronized snapshot of all profiles.
+    var profilesSnapshot: [ConfigurationProfile] {
+        configQueue.sync { profiles }
+    }
+
+    /// Synchronized read of the active profile id.
+    var activeProfileIdSnapshot: UUID? {
+        configQueue.sync { activeProfileId }
+    }
+
+    /// Synchronized snapshot of the profiles and the active id, read together
+    /// (so an index computed from the array stays consistent with the id).
+    var profilesState: (profiles: [ConfigurationProfile], activeId: UUID?) {
+        configQueue.sync { (self.profiles, self.activeProfileId) }
+    }
+
+    /// Synchronized lookup of a single profile by id.
+    func profileSnapshot(withId id: UUID) -> ConfigurationProfile? {
+        configQueue.sync { profiles.first { $0.id == id } }
+    }
+
+    /// Atomic read-modify-write over the profiles array under the configQueue
+    /// barrier. Returns the closure's result.
+    @discardableResult
+    func mutateProfiles<T>(_ body: (inout [ConfigurationProfile]) -> T) -> T {
+        configQueue.sync(flags: .barrier) { body(&self.profiles) }
+    }
+
+    /// Atomically replaces all profiles and the active id under the barrier.
+    func setProfiles(_ newProfiles: [ConfigurationProfile], activeProfileId newActiveId: UUID?) {
+        configQueue.sync(flags: .barrier) {
+            self.profiles = newProfiles
+            self.activeProfileId = newActiveId
+        }
+    }
+
     // --- Core Methods ---
 
     private func loadConfigurationFromFile() {
@@ -171,7 +240,14 @@ public class Configuration: Codable {
             let decoded = try JSONDecoder().decode(DecodedConfiguration.self, from: data)
 
             self.isEnabled = decoded.isEnabled
-            self.profiles = decoded.profiles.map(Configuration.migratingLegacyCoreActions)
+            // Drop any profile that failed to decode rather than failing the
+            // whole load; log so the loss is visible.
+            let decodedProfiles = decoded.profiles.compactMap { $0.value }
+            let skippedCount = decoded.profiles.count - decodedProfiles.count
+            if skippedCount > 0 {
+                log.log("WARNING: Skipped \(skippedCount) unreadable profile(s) while loading configuration.")
+            }
+            self.profiles = decodedProfiles.map(Configuration.migratingLegacyCoreActions)
             self.activeProfileId = decoded.activeProfileId
             self.appProfileMappings = decoded.appProfileMappings
             self.disabledApps = decoded.disabledApps ?? []
@@ -203,6 +279,20 @@ public class Configuration: Codable {
                 let defaultProfile = ConfigurationProfile(name: "Default", isDefault: true)
                 self.profiles = [defaultProfile]
                 self.activeProfileId = defaultProfile.id
+                self.save()
+            } else if let activeId = self.activeProfileId {
+                // Guard against an active id that points nowhere (e.g. the active
+                // profile failed to decode and was skipped above). Without this,
+                // `activeProfile` returns nil and no gestures resolve until the
+                // user manually switches profiles.
+                if !self.profiles.contains(where: { $0.id == activeId }) {
+                    log.log("Active profile \(activeId) not found after load; falling back to default/first.")
+                    self.activeProfileId = self.profiles.first(where: { $0.isDefault })?.id ?? self.profiles.first?.id
+                    self.save()
+                }
+            } else {
+                // No active profile recorded — pick the default (or first).
+                self.activeProfileId = self.profiles.first(where: { $0.isDefault })?.id ?? self.profiles.first?.id
                 self.save()
             }
 
@@ -391,28 +481,31 @@ public class Configuration: Codable {
     }
 
     func deleteProfile(id: UUID) -> Bool {
-        // Read + decide synchronously, then mutate under a barrier so the
+        // Find, decide, and remove atomically inside a single barrier so the
         // mutation is serialized with configQueue readers (the getters and the
-        // save encoder). Without the barrier, a concurrent save could encode
-        // a half-removed profiles array (crash / corrupt file).
-        var index: Int?
-        var canDelete = false
-        configQueue.sync {
-            index = profiles.firstIndex { $0.id == id }
-            canDelete = profiles.count > 1
-        }
-        guard let idx = index, canDelete else {
-            log.log("Cannot delete profile: It is the last one or not found.")
-            return false
-        }
-
-        let wasActive = (activeProfileId == id)
-        configQueue.async(flags: .barrier) {
+        // save encoder) AND the index can't go stale between lookup and
+        // removal. The previous version read the index under one `sync`, then
+        // removed at that index in a later `async` barrier — a concurrent
+        // mutation in between could shift/invalidate the index (wrong profile
+        // removed, or out-of-bounds crash). `wasActive` is likewise read inside
+        // the barrier rather than off-queue.
+        let removed: Bool = configQueue.sync(flags: .barrier) {
+            guard profiles.count > 1,
+                  let idx = profiles.firstIndex(where: { $0.id == id }) else {
+                return false
+            }
+            let wasActive = (self.activeProfileId == id)
             self.profiles.remove(at: idx)
             // If the deleted profile was active, switch to the default or the first available.
             if wasActive {
                 self.activeProfileId = self.profiles.first(where: { $0.isDefault })?.id ?? self.profiles.first?.id
             }
+            return true
+        }
+
+        guard removed else {
+            log.log("Cannot delete profile: It is the last one or not found.")
+            return false
         }
 
         save()

@@ -217,88 +217,76 @@ struct BundleCondition: Codable, Equatable {
     private func doesScriptReturnTrue() -> Bool {
         guard let script = scriptInfo else { return false }
 
-        let semaphore = DispatchSemaphore(value: 0)
-        var result = false
-
-        DispatchQueue.global(qos: .userInitiated).async {
-            let process = Process()
-
-            // Get the script content
-            var scriptContent: String?
-            if script.isFile, let path = script.scriptPath {
-                // Read from file
-                do {
-                    scriptContent = try String(contentsOfFile: path)
-                } catch {
-                    log.log("Error reading script file for condition: \(error)")
-                    semaphore.signal()
-                    return
-                }
-            } else {
-                scriptContent = script.scriptContent
-            }
-
-            guard let finalScript = scriptContent else {
-                log.log("No script content available for condition")
-                semaphore.signal()
-                return
-            }
-
-            // Configure process based on script type
-            switch script.scriptType {
-            case .shellScript:
-                process.executableURL = URL(fileURLWithPath: "/bin/sh")
-                process.arguments = ["-c", finalScript]
-
-            case .appleScript:
-                process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
-                process.arguments = ["-e", finalScript]
-
-            case .pythonScript:
-                process.executableURL = URL(fileURLWithPath: "/usr/bin/python3")
-                process.arguments = ["-c", finalScript]
-
-            case .jsScript:
-                process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
-                process.arguments = ["-l", "JavaScript", "-e", finalScript]
-            }
-
-            // Capture output
-            let pipe = Pipe()
-            process.standardOutput = pipe
-            process.standardError = Pipe() // Ignore errors for condition evaluation
-
+        // Resolve the script content (from an external file or inline).
+        let scriptContent: String?
+        if script.isFile, let path = script.scriptPath {
             do {
-                try process.run()
-                process.waitUntilExit()
-
-                let exitCode = process.terminationStatus
-
-                // Check exit code (0 = true, non-zero = false)
-                if exitCode == 0 {
-                    // Also check if output contains "true" or "1"
-                    let outputData = pipe.fileHandleForReading.readDataToEndOfFile()
-                    if let output = String(data: outputData, encoding: .utf8) {
-                        let trimmed = output.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-                        result = (trimmed == "true" || trimmed == "1" || trimmed == "yes" || exitCode == 0)
-                    } else {
-                        result = true // Exit code 0 means success/true
-                    }
-                } else {
-                    result = false
-                }
+                scriptContent = try String(contentsOfFile: path)
             } catch {
-                log.log("Error executing condition script: \(error)")
-                result = false
+                log.log("Error reading script file for condition: \(error)")
+                return false
             }
-
-            semaphore.signal()
+        } else {
+            scriptContent = script.scriptContent
+        }
+        guard let finalScript = scriptContent else {
+            log.log("No script content available for condition")
+            return false
         }
 
-        // Wait for script to complete (with timeout)
-        _ = semaphore.wait(timeout: .now() + 2.0) // 2 second timeout for condition scripts
+        // Configure process based on script type
+        let process = Process()
+        switch script.scriptType {
+        case .shellScript:
+            process.executableURL = URL(fileURLWithPath: "/bin/sh")
+            process.arguments = ["-c", finalScript]
 
-        return result
+        case .appleScript:
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
+            process.arguments = ["-e", finalScript]
+
+        case .pythonScript:
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/python3")
+            process.arguments = ["-c", finalScript]
+
+        case .jsScript:
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
+            process.arguments = ["-l", "JavaScript", "-e", finalScript]
+        }
+
+        // Capture output
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = Pipe() // Ignore errors for condition evaluation
+
+        do {
+            try process.run()
+        } catch {
+            log.log("Error executing condition script: \(error)")
+            return false
+        }
+
+        // Bound the condition script to ~2s. The process runs on the calling
+        // thread — condition evaluation is only ever reached from
+        // BundleActionsPlugin's background execution queue, never the main
+        // thread — and a watchdog terminates it if it overruns. The previous
+        // semaphore-with-timeout approach, on timeout, both read `result` while
+        // the worker thread was still writing it (a data race) AND abandoned a
+        // still-running process; terminating bounds the runtime cleanly.
+        let timeoutWork = DispatchWorkItem {
+            if process.isRunning { process.terminate() }
+        }
+        DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + 2.0, execute: timeoutWork)
+        process.waitUntilExit()
+        timeoutWork.cancel()
+
+        // Drain stdout so a chatty script can't wedge on a full pipe buffer.
+        _ = pipe.fileHandleForReading.readDataToEndOfFile()
+
+        // Exit code 0 == condition passes (unchanged from the prior behavior:
+        // the old stdout "true"/"1" test was OR'd with `exitCode == 0`, which
+        // made it a no-op — see the honor-output suggestion in the audit).
+        return process.terminationStatus == 0
     }
 }
 

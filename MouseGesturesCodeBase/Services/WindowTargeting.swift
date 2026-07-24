@@ -155,8 +155,14 @@ class WindowTargeting {
 
         let result = AXUIElementCopyAttributeValue(appElement, kAXFocusedWindowAttribute as CFString, &windowValue)
 
-        if result == .success, let window = windowValue {
-            return (window as! AXUIElement, pid)
+        // Verify the returned CFType really is an AXUIElement before force-casting.
+        // A misbehaving AX provider can hand back a different CFType for the
+        // focused-window attribute; `as!` would then trap the whole app. `as?
+        // AXUIElement` doesn't help (it always succeeds for CF types), so gate on
+        // the CF type id — same hardening already applied in getWindowUnderMouse.
+        if result == .success, let window = windowValue,
+           CFGetTypeID(window) == AXUIElementGetTypeID() {
+            return ((window as! AXUIElement), pid)
         }
 
         return nil
@@ -195,8 +201,13 @@ class WindowTargeting {
         var windowValue: CFTypeRef?
         var result = AXUIElementCopyAttributeValue(appElement, kAXFocusedWindowAttribute as CFString, &windowValue)
 
-        if result == .success, let window = windowValue {
-            return (window as! AXUIElement, pid)
+        // Verify the CFType before force-casting (see getFrontmostWindow): a
+        // misbehaving app can return a non-AXUIElement for the focused-window
+        // attribute and `as!` would trap. On a type mismatch, fall through to the
+        // windows-array path below rather than crashing.
+        if result == .success, let window = windowValue,
+           CFGetTypeID(window) == AXUIElementGetTypeID() {
+            return ((window as! AXUIElement), pid)
         }
 
         // If no focused window, try to get first window

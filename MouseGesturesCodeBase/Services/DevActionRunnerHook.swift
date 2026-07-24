@@ -28,13 +28,23 @@ enum DevActionRunnerHook {
     static let distributedNotificationName = Notification.Name("com.mousegestures.devRunAction")
 
     /// Call once from `applicationDidFinishLaunching`, after plugins have
-    /// loaded. Registers the distributed-notification listener (always, so a
-    /// running instance can be scripted later) and, if a run request is
-    /// already present via argv/env, executes it once at startup.
+    /// loaded. Registers the distributed-notification listener — gated behind
+    /// Developer Mode, since `DistributedNotificationCenter` is machine-wide:
+    /// with no gate, *any* local process could post this notification and
+    /// make a release build run an arbitrary configured action (lock screen,
+    /// quit apps, etc.) with no authentication. Ordinary users never enable
+    /// Developer Mode, so this keeps the hook available for its intended
+    /// live-verification use without exposing it on every install. The gate
+    /// is re-checked inside the handler too, so toggling Developer Mode off
+    /// mid-session revokes it without needing to add/remove the observer.
+    /// The argv/env `--run-action` path below stays ungated — it requires
+    /// controlling the app's launch, a strictly stronger privilege than
+    /// posting a distributed notification to a running instance.
     static func runIfRequested() {
         DistributedNotificationCenter.default().addObserver(
             forName: distributedNotificationName, object: nil, queue: .main
         ) { notification in
+            guard Configuration.shared.developerModeEnabled else { return }
             guard let identifier = notification.userInfo?["identifier"] as? String else { return }
             let paramsText = notification.userInfo?["parameters"] as? String ?? ""
             execute(identifier: identifier, paramsText: paramsText, exitAfter: false)

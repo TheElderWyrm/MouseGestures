@@ -131,6 +131,16 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
     /// a lightweight "press again to undo" toggle. In-memory only (not
     /// persisted): it's a transient UX nicety, not durable state.
     private var lastSnapByApp: [String: (position: String, originalFrame: CGRect)] = [:]
+    /// Guards the three dictionaries above. `execute()` runs on a concurrent
+    /// background queue (ActionExecutionManager dispatches there), so two
+    /// overlapping gesture firings — or a UI option-provider read
+    /// (getAvailableLayouts/getAvailablePositionSlots, called from the main
+    /// thread) racing a background write — can mutate/read these Dictionaries
+    /// at the same time, which can crash. Never hold this across AX calls,
+    /// disk I/O, or app-launch waits — only around the dictionary access
+    /// itself (snapshot-then-release, matching the lock pattern already used
+    /// for BundleActionsPlugin.activeExecutions / SpaceSentinelManager.sentinels).
+    private let stateLock = NSLock()
 
     struct WindowPosition: Codable {
         let x: CGFloat
@@ -860,7 +870,8 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
                 context.sendKeyboardShortcut(keyCode: 13, modifiers: [.maskCommand])
             } else {
                 for (window, _) in closeTargets {
-                    if let btnObj = context.getAccessibilityAttribute(window, attribute: kAXCloseButtonAttribute as String) {
+                    if let btnObj = context.getAccessibilityAttribute(window, attribute: kAXCloseButtonAttribute as String),
+                       CFGetTypeID(btnObj) == AXUIElementGetTypeID() {
                         _ = context.performAccessibilityAction(unsafeBitCast(btnObj, to: AXUIElement.self), action: kAXPressAction as String)
                     }
                 }
@@ -894,7 +905,8 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
                 for (window, _) in fsTargets {
                     // Try AX full-screen button; fall back to Cmd+Ctrl+F if absent or if press fails
                     var pressed = false
-                    if let btnObj = context.getAccessibilityAttribute(window, attribute: "AXFullScreenButton") {
+                    if let btnObj = context.getAccessibilityAttribute(window, attribute: "AXFullScreenButton"),
+                       CFGetTypeID(btnObj) == AXUIElementGetTypeID() {
                         let btn = unsafeBitCast(btnObj, to: AXUIElement.self)
                         pressed = context.performAccessibilityAction(btn, action: kAXPressAction as String)
                     }
@@ -1173,9 +1185,15 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
 
             // Snapping to the same position twice in a row undoes the first
             // snap instead of re-applying a no-op move.
-            if let previous = lastSnapByApp[key], previous.position == position {
+            stateLock.lock()
+            let previous = lastSnapByApp[key]
+            stateLock.unlock()
+
+            if let previous = previous, previous.position == position {
                 setWindowFrame(window, frame: previous.originalFrame, context: context)
+                stateLock.lock()
                 lastSnapByApp.removeValue(forKey: key)
+                stateLock.unlock()
                 context.logger.log("Reverted snap-to-\(position); restored previous window position", file: #file, function: #function, line: #line)
                 continue
             }
@@ -1185,7 +1203,9 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
                 continue
             }
 
+            stateLock.lock()
             lastSnapByApp[key] = (position: position, originalFrame: currentFrame)
+            stateLock.unlock()
         }
     }
 
@@ -1262,6 +1282,14 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
               let sizeValue = context.getAccessibilityAttribute(window, attribute: kAXSizeAttribute as String) else {
             return nil
         }
+        // getAccessibilityAttribute hands back an opaque CFTypeRef; a
+        // misbehaving app can return something that is not an AXValue, which
+        // would make `as! AXValue` trap. Verify the CF type first (same guard
+        // as ActionExecutionManager.getSelectedText).
+        guard CFGetTypeID(positionValue) == AXValueGetTypeID(),
+              CFGetTypeID(sizeValue) == AXValueGetTypeID() else {
+            return nil
+        }
         var position = CGPoint.zero
         var size = CGSize.zero
         AXValueGetValue(positionValue as! AXValue, .cgPoint, &position)
@@ -1285,29 +1313,46 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
     }
 
     private func getScreenForWindow(_ window: AXUIElement, context: PluginContext) -> NSScreen? {
-        if let frame = getWindowFrame(window, context: context) {
-            let windowCenter = CGPoint(x: frame.midX, y: frame.midY)
-            for screen in NSScreen.screens {
-                if screen.frame.contains(windowCenter) { return screen }
-            }
-            var bestScreen = NSScreen.main
-            var maxOverlap: CGFloat = 0
-            for screen in NSScreen.screens {
-                let overlap = screen.frame.intersection(frame).width * screen.frame.intersection(frame).height
-                if overlap > maxOverlap { maxOverlap = overlap; bestScreen = screen }
-            }
-            return bestScreen
+        guard let frame = getWindowFrame(window, context: context) else { return NSScreen.main }
+        // getWindowFrame returns AX coordinates (origin top-left of the primary
+        // screen, Y increasing downward); NSScreen.frame is Cocoa coordinates
+        // (origin bottom-left of the primary screen, Y increasing upward).
+        // Convert before comparing — the same flip tileAllWindows/
+        // setWindowPositionSingle already apply in the opposite direction.
+        // Comparing raw AX Y against Cocoa frames happens to still work on
+        // the primary screen (both fall in the same [0, primaryH] band) but
+        // silently picks the wrong display for any window off the primary
+        // screen.
+        let primaryH = NSScreen.screens.first?.frame.height ?? frame.height
+        let cocoaFrame = CGRect(x: frame.minX, y: primaryH - frame.maxY, width: frame.width, height: frame.height)
+        for screen in NSScreen.screens {
+            if screen.frame.contains(CGPoint(x: cocoaFrame.midX, y: cocoaFrame.midY)) { return screen }
         }
-        return NSScreen.main
+        var bestScreen = NSScreen.main
+        var maxOverlap: CGFloat = 0
+        for screen in NSScreen.screens {
+            let overlap = screen.frame.intersection(cocoaFrame).width * screen.frame.intersection(cocoaFrame).height
+            if overlap > maxOverlap { maxOverlap = overlap; bestScreen = screen }
+        }
+        return bestScreen
     }
 
     // MARK: - Positioning Helpers
 
     private func positionWindow(_ window: AXUIElement, relativeTo screen: NSScreen, x: CGFloat, y: CGFloat, width: CGFloat, height: CGFloat, context: PluginContext) {
         let frame = screen.visibleFrame
+        // AX y-origin of this screen's visible area = primaryScreenHeight -
+        // frame.maxY (same conversion as tileAllWindows/setWindowPositionSingle).
+        // The old `NSStatusBar.system.thickness` constant is only correct on
+        // the primary screen (it happens to equal this formula's result
+        // there); on a secondary screen it produced the wrong Y, so
+        // snap-to-region misplaced windows vertically on any non-primary
+        // display.
+        let primaryH = NSScreen.screens.first?.frame.height ?? screen.frame.height
+        let axTopY = primaryH - frame.maxY
         let newFrame = CGRect(
             x: frame.minX + x * frame.width,
-            y: NSStatusBar.system.thickness + y * frame.height,
+            y: axTopY + y * frame.height,
             width: width * frame.width,
             height: height * frame.height
         )
@@ -1610,11 +1655,13 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
         let app = NSRunningApplication(processIdentifier: pid)
         let bundleId = app?.bundleIdentifier ?? "unknown"
         let key = slot.map { "slot:\($0)" } ?? "app:\(bundleId)"
+        stateLock.lock()
         savedWindowPositions[key] = WindowPosition(
             x: frame.origin.x, y: frame.origin.y,
             width: frame.size.width, height: frame.size.height,
             appIdentifier: bundleId
         )
+        stateLock.unlock()
         saveSavedPositions()
         context.logger.log("Saved window position [\(key)]", file: #file, function: #function, line: #line)
     }
@@ -1624,7 +1671,10 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
         let app = NSRunningApplication(processIdentifier: pid)
         let bundleId = app?.bundleIdentifier ?? "unknown"
         let key = slot.map { "slot:\($0)" } ?? "app:\(bundleId)"
-        guard let saved = savedWindowPositions[key] else {
+        stateLock.lock()
+        let saved = savedWindowPositions[key]
+        stateLock.unlock()
+        guard let saved = saved else {
             context.logger.log("No saved position for key: \(key)", file: #file, function: #function, line: #line)
             return
         }
@@ -1636,7 +1686,9 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
         guard let (_, pid) = getTargetWindow(target, context: context) else { return }
         let bundleId = NSRunningApplication(processIdentifier: pid)?.bundleIdentifier ?? "unknown"
         let key = slot.map { "slot:\($0)" } ?? "app:\(bundleId)"
+        stateLock.lock()
         savedWindowPositions.removeValue(forKey: key)
+        stateLock.unlock()
         saveSavedPositions()
         context.logger.log("Deleted saved position [\(key)]", file: #file, function: #function, line: #line)
     }
@@ -1644,22 +1696,29 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
     // MARK: - Window Layouts
 
     func getAvailableLayouts() -> [String] {
+        stateLock.lock(); defer { stateLock.unlock() }
         return Array(savedLayouts.keys).sorted()
     }
 
     func getAvailablePositionSlots() -> [String] {
-        return Array(savedWindowPositions.keys)
+        stateLock.lock()
+        let keys = Array(savedWindowPositions.keys)
+        stateLock.unlock()
+        return keys
             .filter { $0.hasPrefix("slot:") }
             .map { String($0.dropFirst("slot:".count)) }
             .sorted()
     }
 
     func hasLayout(named name: String) -> Bool {
+        stateLock.lock(); defer { stateLock.unlock() }
         return savedLayouts[name] != nil
     }
 
     func deleteLayout(named name: String) {
+        stateLock.lock()
         savedLayouts.removeValue(forKey: name)
+        stateLock.unlock()
         saveLayoutsToDisk()
         context?.logger.log("Deleted window layout: \(name)", file: #file, function: #function, line: #line)
     }
@@ -1688,13 +1747,18 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
                 spaceNumber: nil
             ))
         }
+        stateLock.lock()
         savedLayouts[name] = WindowLayout(name: name, windows: windowInfos)
+        stateLock.unlock()
         saveLayoutsToDisk()
         context.logger.log("Saved layout '\(name)' with \(windowInfos.count) windows", file: #file, function: #function, line: #line)
     }
 
     private func restoreWindowLayout(name: String, reopenApps: Bool = true, context: PluginContext) {
-        guard let layout = savedLayouts[name] else {
+        stateLock.lock()
+        let layout = savedLayouts[name]
+        stateLock.unlock()
+        guard let layout = layout else {
             context.logger.log("No saved layout: \(name)", file: #file, function: #function, line: #line)
             return
         }
@@ -1831,8 +1895,11 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
     }
 
     private func saveSavedPositions() {
+        stateLock.lock()
+        let snapshot = savedWindowPositions
+        stateLock.unlock()
         do {
-            let data = try JSONEncoder().encode(savedWindowPositions)
+            let data = try JSONEncoder().encode(snapshot)
             try data.write(to: savedPositionsURL())
         } catch {
             context?.logger.log("Error saving window positions: \(error)", file: #file, function: #function, line: #line)
@@ -1844,7 +1911,10 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
         guard FileManager.default.fileExists(atPath: url.path) else { return }
         do {
             let data = try Data(contentsOf: url)
-            savedWindowPositions = try JSONDecoder().decode([String: WindowPosition].self, from: data)
+            let decoded = try JSONDecoder().decode([String: WindowPosition].self, from: data)
+            stateLock.lock()
+            savedWindowPositions = decoded
+            stateLock.unlock()
         } catch {
             context.logger.log("Error loading saved positions: \(error)", file: #file, function: #function, line: #line)
         }
@@ -1858,8 +1928,11 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
     }
 
     private func saveLayoutsToDisk() {
+        stateLock.lock()
+        let snapshot = savedLayouts
+        stateLock.unlock()
         do {
-            let data = try JSONEncoder().encode(savedLayouts)
+            let data = try JSONEncoder().encode(snapshot)
             try data.write(to: layoutsURL())
         } catch {
             context?.logger.log("Error saving window layouts: \(error)", file: #file, function: #function, line: #line)
@@ -1871,8 +1944,11 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
         guard FileManager.default.fileExists(atPath: url.path) else { return }
         do {
             let data = try Data(contentsOf: url)
-            savedLayouts = try JSONDecoder().decode([String: WindowLayout].self, from: data)
-            context.logger.log("Loaded \(savedLayouts.count) window layouts", file: #file, function: #function, line: #line)
+            let decoded = try JSONDecoder().decode([String: WindowLayout].self, from: data)
+            stateLock.lock()
+            savedLayouts = decoded
+            stateLock.unlock()
+            context.logger.log("Loaded \(decoded.count) window layouts", file: #file, function: #function, line: #line)
         } catch {
             context.logger.log("Error loading window layouts: \(error)", file: #file, function: #function, line: #line)
         }

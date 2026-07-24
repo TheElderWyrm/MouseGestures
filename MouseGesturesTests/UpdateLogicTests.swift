@@ -92,4 +92,67 @@ final class UpdateLogicTests: XCTestCase {
         let release = GitHubRelease(tagName: "v1.0.0", draft: false, prerelease: true, body: nil, assets: [])
         XCTAssertFalse(UpdateLogic.isEligible(release))
     }
+
+    // MARK: - Logger log-file retention
+    //
+    // `Logger.swift` (Services/) is not linked into this no-host logic
+    // target, so `Logger.logFilesToPrune` itself isn't reachable here. This
+    // is an exact copy of that pure retention rule (mirrors the
+    // ActionParametersTests.swift "coercion-recipe copy" pattern) so the
+    // off-by-one / sort-direction logic stays regression-tested without
+    // needing Logger reachable from tests.
+    private static func logFilesToPrune(_ files: [(url: URL, date: Date)], keeping: Int) -> [URL] {
+        guard keeping >= 0, files.count > keeping else { return [] }
+        return files
+            .sorted { $0.date > $1.date }   // newest first
+            .dropFirst(keeping)             // keep the newest `keeping`
+            .map { $0.url }
+    }
+
+    /// Builds `count` (url, date) pairs, oldest first, one second apart.
+    private func makeLogFiles(_ count: Int) -> [(url: URL, date: Date)] {
+        (0..<count).map { i in
+            (url: URL(fileURLWithPath: "/tmp/MouseGestures_\(i).log"),
+             date: Date(timeIntervalSince1970: TimeInterval(i)))
+        }
+    }
+
+    func testPruneKeepsAllWhenUnderLimit() {
+        let files = makeLogFiles(3)
+        XCTAssertTrue(Self.logFilesToPrune(files, keeping: 10).isEmpty)
+    }
+
+    func testPruneKeepsAllWhenExactlyAtLimit() {
+        let files = makeLogFiles(10)
+        XCTAssertTrue(Self.logFilesToPrune(files, keeping: 10).isEmpty)
+    }
+
+    func testPruneDeletesOldestBeyondLimit() {
+        // 12 files, keep newest 10 -> the two oldest (indices 0 and 1) go.
+        let files = makeLogFiles(12)
+        let toDelete = Self.logFilesToPrune(files, keeping: 10)
+        XCTAssertEqual(Set(toDelete), Set([
+            URL(fileURLWithPath: "/tmp/MouseGestures_0.log"),
+            URL(fileURLWithPath: "/tmp/MouseGestures_1.log")
+        ]))
+    }
+
+    func testPruneIgnoresInputOrderAndDeletesByDate() {
+        // Same set, shuffled: the decision must be date-driven, not order-driven.
+        let files = makeLogFiles(12).shuffled()
+        let toDelete = Self.logFilesToPrune(files, keeping: 10)
+        XCTAssertEqual(Set(toDelete), Set([
+            URL(fileURLWithPath: "/tmp/MouseGestures_0.log"),
+            URL(fileURLWithPath: "/tmp/MouseGestures_1.log")
+        ]))
+    }
+
+    func testPruneKeepingZeroDeletesEverything() {
+        let files = makeLogFiles(4)
+        XCTAssertEqual(Set(Self.logFilesToPrune(files, keeping: 0)), Set(files.map { $0.url }))
+    }
+
+    func testPruneEmptyInputDeletesNothing() {
+        XCTAssertTrue(Self.logFilesToPrune([], keeping: 10).isEmpty)
+    }
 }

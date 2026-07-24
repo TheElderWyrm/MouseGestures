@@ -283,6 +283,16 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         lastTriggeredDrag = .none
         lastTriggeredModifiers = []
         zoneBoundsCache.removeAll()
+        // Reset the screen-frame watermark alongside clearing the cache.
+        // rebuildZoneBoundsCache() and detectZoneFromCache() both short-circuit
+        // when `screen.frame == lastScreenFrame`, so leaving the old frame here
+        // means that after a stop()/start() cycle with an UNCHANGED display
+        // (e.g. the menu-bar "Enable Gestures" toggle off→on — see
+        // AppDelegate.menuIconDidToggleGestures), the emptied cache would never
+        // be rebuilt and zone detection would silently stay dead until a screen
+        // change or a zone-size setting edit. Zeroing it forces the next
+        // detectZoneFromCache() to rebuild.
+        lastScreenFrame = .zero
         super.stop()
     }
 

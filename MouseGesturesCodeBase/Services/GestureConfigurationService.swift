@@ -98,7 +98,8 @@ class GestureConfigurationService {
         // Check for name conflicts and adjust
         var importName = profile.name
         var counter = 2
-        while configuration.profiles.contains(where: { $0.name == importName }) {
+        let existingNames = Set(configuration.profilesSnapshot.map(\.name))
+        while existingNames.contains(importName) {
             importName = "\(profile.name) \(counter)"
             counter += 1
         }
@@ -108,7 +109,7 @@ class GestureConfigurationService {
         newProfile.id = UUID()
         newProfile.isDefault = false
 
-        configuration.profiles.append(newProfile)
+        configuration.mutateProfiles { $0.append(newProfile) }
         configuration.save()
 
         NotificationCenter.default.post(name: .profilesDidChange, object: nil)
@@ -125,8 +126,7 @@ class GestureConfigurationService {
             isDefault: true
         )
 
-        configuration.profiles = [defaultProfile]
-        configuration.activeProfileId = defaultProfile.id
+        configuration.setProfiles([defaultProfile], activeProfileId: defaultProfile.id)
         configuration.save()
 
         NotificationCenter.default.post(name: .profilesDidChange, object: nil)

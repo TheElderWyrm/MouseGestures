@@ -152,23 +152,13 @@ struct PluginSettingRow: View {
     // MARK: - Stepper Control
 
     private func stepperControl(min: Int, max: Int, step: Int) -> some View {
-        HStack {
-            settingLabel
-            Spacer()
-            Stepper(
-                value: Binding(
-                    get: { plugin.settings.getInt(definition.key, default: definition.defaultValue as? Int ?? min) },
-                    set: { newValue in
-                        updateSetting(value: newValue, affectsDependents: false)
-                    }
-                ),
-                in: min...max,
-                step: step
-            ) {
-                Text("\(plugin.settings.getInt(definition.key, default: definition.defaultValue as? Int ?? min))")
-                    .font(.system(size: MGStyle.FontSize.body, design: .monospaced))
-            }
-        }
+        StepperSettingControl(
+            plugin: plugin,
+            definition: definition,
+            min: min,
+            max: max,
+            step: step
+        )
     }
 
     // MARK: - Picker Control
@@ -306,27 +296,7 @@ struct PluginSettingRow: View {
     // MARK: - Setting Label
 
     private var settingLabel: some View {
-        VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
-            HStack(spacing: MGStyle.Spacing.sm) {
-                Text(definition.displayName)
-                    .font(.system(size: MGStyle.FontSize.body, weight: .medium))
-
-                if definition.isAdvanced {
-                    MGBadge("Advanced", color: .orange)
-                }
-            }
-
-            if let description = definition.description {
-                Text(description)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-
-            // Show plugin name for clarity
-            Text("Plugin: \(plugin.name)")
-                .font(.system(size: MGStyle.FontSize.badge))
-                .foregroundColor(.secondary.opacity(0.7))
-        }
+        PluginSettingLabel(plugin: plugin, definition: definition)
     }
 
     // MARK: - Helpers
@@ -360,26 +330,7 @@ private struct SliderSettingControl: View {
     var body: some View {
         VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
             HStack {
-                VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
-                    HStack(spacing: MGStyle.Spacing.sm) {
-                        Text(definition.displayName)
-                            .font(.system(size: MGStyle.FontSize.body, weight: .medium))
-
-                        if definition.isAdvanced {
-                            MGBadge("Advanced", color: .orange)
-                        }
-                    }
-
-                    if let description = definition.description {
-                        Text(description)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-
-                    Text("Plugin: \(plugin.name)")
-                        .font(.system(size: MGStyle.FontSize.badge))
-                        .foregroundColor(.secondary.opacity(0.7))
-                }
+                PluginSettingLabel(plugin: plugin, definition: definition)
                 Spacer()
                 Text(formatValue(localValue, unit: unit))
                     .font(.system(size: MGStyle.FontSize.caption, design: .monospaced))
@@ -418,6 +369,80 @@ private struct SliderSettingControl: View {
             return "\(formatted) \(unit)"
         }
         return formatted
+    }
+}
+
+// MARK: - Plugin Setting Label
+/// Shared label block (title + Advanced badge + description + plugin name) used by
+/// every setting row and by the self-managed slider/stepper controls.
+private struct PluginSettingLabel: View {
+    let plugin: DetectionPlugin
+    let definition: PluginSettingDefinition
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
+            HStack(spacing: MGStyle.Spacing.sm) {
+                Text(definition.displayName)
+                    .font(.system(size: MGStyle.FontSize.body, weight: .medium))
+
+                if definition.isAdvanced {
+                    MGBadge("Advanced", color: .orange)
+                }
+            }
+
+            if let description = definition.description {
+                Text(description)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            // Show plugin name for clarity
+            Text("Plugin: \(plugin.name)")
+                .font(.system(size: MGStyle.FontSize.badge))
+                .foregroundColor(.secondary.opacity(0.7))
+        }
+    }
+}
+
+// MARK: - Stepper Setting Control
+/// Separate view for steppers that manages its own local state, mirroring
+/// SliderSettingControl. PluginSettings is not observable, so a Stepper bound
+/// directly to `plugin.settings.getInt(...)` would persist the new value but never
+/// re-render its own number label (the displayed value would stay stale until an
+/// unrelated refresh). Local @State makes the display update immediately while
+/// still writing through to the store.
+private struct StepperSettingControl: View {
+    let plugin: DetectionPlugin
+    let definition: PluginSettingDefinition
+    let min: Int
+    let max: Int
+    let step: Int
+
+    @State private var localValue: Int = 0
+    @State private var isInitialized = false
+
+    var body: some View {
+        HStack {
+            PluginSettingLabel(plugin: plugin, definition: definition)
+            Spacer()
+            Stepper(value: $localValue, in: min...max, step: step) {
+                Text("\(localValue)")
+                    .font(.system(size: MGStyle.FontSize.body, design: .monospaced))
+            }
+            .onChange(of: localValue) { newValue in
+                guard isInitialized else { return }
+                DetectionPluginManager.shared.updatePluginSetting(
+                    plugin.identifier, key: definition.key, value: newValue
+                )
+            }
+        }
+        .onAppear {
+            localValue = plugin.settings.getInt(definition.key, default: (definition.defaultValue as? Int) ?? min)
+            // Delay setting initialized to avoid triggering onChange from onAppear
+            DispatchQueue.main.async {
+                isInitialized = true
+            }
+        }
     }
 }
 

@@ -27,10 +27,11 @@ class ProfileTemplateService {
     func importTemplateProfile(type: DefaultProfileType) -> ConfigurationProfile? {
         var profile = createTemplateProfile(type: type)
 
-        // Generate unique name if needed
+        // Generate unique name if needed (against a live synchronized snapshot).
+        let existingNames = Set(configuration.profilesSnapshot.map { $0.name })
         var importName = profile.name
         var counter = 2
-        while configuration.profiles.contains(where: { $0.name == importName }) {
+        while existingNames.contains(importName) {
             importName = "\(profile.name) (\(counter))"
             counter += 1
         }
@@ -38,8 +39,8 @@ class ProfileTemplateService {
         profile.id = UUID() // New ID
         profile.isDefault = false // Template imports are not default
 
-        // Add to configuration
-        configuration.profiles.append(profile)
+        // Add to configuration (under the configQueue barrier).
+        configuration.mutateProfiles { $0.append(profile) }
         configuration.save()
 
         log.log("Imported template profile: \(profile.name)")
@@ -77,23 +78,21 @@ class ProfileTemplateService {
     /// Checks if a template has already been imported (by name)
     func isTemplateImported(type: DefaultProfileType) -> Bool {
         let templateName = type.rawValue
-        return configuration.profiles.contains { profile in
+        return configuration.profilesSnapshot.contains { profile in
             profile.name == templateName || profile.name.hasPrefix("\(templateName) (")
         }
     }
 
     /// Resets to default profiles (removes all custom profiles and imports defaults)
     func resetToDefaults() {
-        // Clear existing profiles
-        configuration.profiles.removeAll()
-
         // Import default Window Management profile as the default
         var defaultProfile = DefaultProfiles.createWindowManagementProfile()
         defaultProfile.isDefault = true
-        configuration.profiles.append(defaultProfile)
 
-        // Set as active
-        configuration.activeProfileId = defaultProfile.id
+        // Replace all profiles and set the active id atomically under the
+        // configQueue barrier (previously three separate unsynchronized writes,
+        // any of which could race the save encoder).
+        configuration.setProfiles([defaultProfile], activeProfileId: defaultProfile.id)
         configuration.save()
 
         log.log("Reset to default profiles")

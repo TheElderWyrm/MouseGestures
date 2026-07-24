@@ -145,7 +145,12 @@ struct BundleEditorView: View {
                     delay: Binding(
                         get: { action.delayAfter ?? 0.2 },
                         set: { newVal in
-                            bundledActions[index].delayAfter = newVal
+                            // Look up by id, not the captured index: the index can go
+                            // stale when the list is mutated (remove/reorder), and
+                            // `bundledActions[staleIndex]` would crash.
+                            if let i = bundledActions.firstIndex(where: { $0.id == action.id }) {
+                                bundledActions[i].delayAfter = newVal
+                            }
                         }
                     ),
                     onMoveUp: { moveAction(action, direction: -1) },

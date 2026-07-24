@@ -230,12 +230,12 @@ class KeyboardShortcutDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     // MARK: - Event Handlers
 
     private func handleKeyPress(_ event: NSEvent) -> Bool {
-        // Prevent double-triggering
-        if doubleTapPreventionEnabled,
-           let lastTime = lastKeyPressTime,
-           Date().timeIntervalSince(lastTime) < preventionInterval {
-            return false
-        }
+        // Double-tap prevention is applied per-shortcut at each match site below
+        // (see isSuppressedRepeat), NOT as a blanket gate here. A blanket gate on
+        // lastKeyPressTime alone dropped a DIFFERENT shortcut pressed within the
+        // interval — e.g. ⌘1 then ⌘2 to switch profiles quickly — which the
+        // setting ("Ignore rapid repeated presses of the same shortcut") never
+        // intended.
 
         // NOTE: App-disabled filtering is handled centrally by DetectionPluginManager
         // in its detectionPlugin(_:didDetectGesture:context:) delegate method.
@@ -252,6 +252,10 @@ class KeyboardShortcutDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
                profile.keyboardShortcutEnabled,
                trigger.keyCode == CGKeyCode(keyCode) &&
                trigger.modifiers.normalized == modifiers {
+
+                // Per-shortcut double-tap prevention: ignore a rapid repeat of
+                // THIS shortcut only, never a different one.
+                if isSuppressedRepeat(of: trigger.displayString) { return false }
 
                 lastKeyPressTime = Date()
                 lastTriggeredShortcut = trigger.displayString
@@ -294,6 +298,8 @@ class KeyboardShortcutDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
             if trigger.keyCode == CGKeyCode(keyCode) &&
                trigger.modifiers.normalized == modifiers {
 
+                if isSuppressedRepeat(of: trigger.displayString) { return false }
+
                 lastKeyPressTime = Date()
                 lastTriggeredShortcut = trigger.displayString
                 shortcutsTriggered += 1
@@ -330,6 +336,19 @@ class KeyboardShortcutDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     // MARK: - Helper Methods
     // Modifier normalization uses shared NSEvent.ModifierFlags.normalized
     // from Extensions.swift.
+
+    /// Per-shortcut double-tap prevention. True only when `shortcut` is the SAME
+    /// shortcut that last fired and it recurred within `preventionInterval` —
+    /// the exact behavior the "Prevent Double Triggering" setting documents
+    /// ("Ignore rapid repeated presses of the same shortcut"). `lastKeyPressTime`
+    /// is advanced only on an actual fire, so the window is measured from the
+    /// last real trigger (held-key auto-repeat behaves as before).
+    private func isSuppressedRepeat(of shortcut: String) -> Bool {
+        guard doubleTapPreventionEnabled,
+              let lastTime = lastKeyPressTime,
+              lastTriggeredShortcut == shortcut else { return false }
+        return Date().timeIntervalSince(lastTime) < preventionInterval
+    }
 
     private func logActiveShortcuts() {
         guard let config = context?.configuration else { return }

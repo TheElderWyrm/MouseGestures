@@ -136,8 +136,8 @@ public class UIServices: ObservableObject {
 
     func loadData() {
         let update = {
-            self.profiles = self.configuration.profiles
-            self.activeProfileId = self.configuration.activeProfileId
+            self.profiles = self.configuration.profilesSnapshot
+            self.activeProfileId = self.configuration.activeProfileIdSnapshot
             self.gestures = self.configuration.gestures
             self.savedActions = SavedActionsManager.shared.savedActions
         }

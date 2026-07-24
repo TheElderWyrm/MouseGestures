@@ -606,6 +606,23 @@ class ZoneHighlightManager {
     // MARK: - Modifier Monitoring
 
     private func startModifierMonitoring() {
+        // Guard against double-registration. startHighlighting() (our only
+        // caller) is re-entered while already active — e.g. every time a zone
+        // setting is re-synced (ScreenZoneDetectorPlugin.syncSettingsToConfiguration
+        // / settingChanged) or detection is restarted. Without removing the
+        // existing monitors first, each re-entry overwrites these references
+        // with fresh monitors, orphaning the old ones: they can no longer be
+        // passed to NSEvent.removeMonitor, so they keep firing handleModifierChange()
+        // forever (leaked monitors + redundant show/hide work).
+        if let monitor = modifierMonitor {
+            NSEvent.removeMonitor(monitor)
+            modifierMonitor = nil
+        }
+        if let monitor = localModifierMonitor {
+            NSEvent.removeMonitor(monitor)
+            localModifierMonitor = nil
+        }
+
         modifierMonitor = NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged) { [weak self] _ in
             self?.handleModifierChange()
         }

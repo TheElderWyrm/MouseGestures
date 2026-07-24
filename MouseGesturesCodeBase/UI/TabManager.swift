@@ -83,6 +83,18 @@ struct TabManager: View {
                 .onReceive(NotificationCenter.default.publisher(for: .openUpgradeTab)) { _ in
                     selectedTabID = "com.mousegestures.ui.upgrade"
                 }
+                .onChange(of: licenseService.status) { newStatus in
+                    // The synthetic "Upgrade" tab only exists while status != .pro
+                    // (see the TabView content above). If the user upgrades while
+                    // it's selected, the tab vanishes but selectedTabID still
+                    // points at its tag, matching no tab in the TabView -- fall
+                    // back to the first real plugin tab, same as initializeFirstTab.
+                    if newStatus == .pro,
+                       selectedTabID == "com.mousegestures.ui.upgrade",
+                       let firstPlugin = uiPluginManager.visiblePlugins.first {
+                        selectedTabID = firstPlugin.identifier
+                    }
+                }
             }
         }
     }

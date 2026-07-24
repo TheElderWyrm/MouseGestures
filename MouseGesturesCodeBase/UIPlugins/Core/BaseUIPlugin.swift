@@ -155,11 +155,18 @@ open class BaseUIPlugin: NSObject, UIPlugin, ObservableObject {
 
     /// Observe a notification
     internal func observeNotification(_ name: Notification.Name, using block: @escaping (Notification) -> Void) {
-        guard let context = context else { return }
+        guard context != nil else { return }
 
-        _ = context.observeNotification(name: name, using: block)
-        // Store the observer to prevent it from being deallocated
+        // Use a single Combine subscription as the sole observer. It is retained
+        // by — and torn down with — `cancellables` in cleanup(). The previous
+        // code ALSO called `context.observeNotification(...)` and discarded the
+        // returned token: that registered a second, block-based observer that
+        // (a) invoked `block` a SECOND time for every matching notification and
+        // (b) could never be removed (token was dropped), so it leaked and, on
+        // plugin reload, accumulated stale registrations. `.receive(on: .main)`
+        // preserves the main-queue delivery the discarded path used to provide.
         NotificationCenter.default.publisher(for: name)
+            .receive(on: DispatchQueue.main)
             .sink { notification in
                 block(notification)
             }

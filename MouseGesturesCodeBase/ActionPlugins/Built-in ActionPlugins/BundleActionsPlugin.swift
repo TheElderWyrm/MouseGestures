@@ -286,7 +286,29 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
 
     private var context: PluginContext?
     private let executionQueue = DispatchQueue(label: "com.mousegestures.bundle.execution", attributes: .concurrent)
+    // `activeExecutions` is touched from several threads: the calling
+    // (background) execution thread inserts/removes an id, the parallel-bundle
+    // worker blocks read it concurrently, and cleanup() (plugin unload) clears
+    // it. A Swift Set is not safe under concurrent mutation+read, so guard every
+    // access with this lock. (The lock is never held across a call that re-locks,
+    // so it can't self-deadlock.)
+    private let activeExecutionsLock = NSLock()
     private var activeExecutions = Set<UUID>()
+
+    private func addActiveExecution(_ id: UUID) {
+        activeExecutionsLock.lock(); activeExecutions.insert(id); activeExecutionsLock.unlock()
+    }
+
+    private func removeActiveExecution(_ id: UUID) {
+        activeExecutionsLock.lock(); activeExecutions.remove(id); activeExecutionsLock.unlock()
+    }
+
+    /// Coarse "is a bundle still live" check used to bail out of a run once the
+    /// plugin has been cleaned up (which clears the set).
+    private func hasActiveExecutions() -> Bool {
+        activeExecutionsLock.lock(); defer { activeExecutionsLock.unlock() }
+        return !activeExecutions.isEmpty
+    }
 
     func initialize(context: PluginContext) throws {
         self.context = context
@@ -294,7 +316,7 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
     }
 
     func cleanup() {
-        activeExecutions.removeAll()
+        activeExecutionsLock.lock(); activeExecutions.removeAll(); activeExecutionsLock.unlock()
         context?.logger.log("Bundle Actions Plugin cleaned up", file: #file, function: #function, line: #line)
         context = nil
     }
@@ -400,7 +422,11 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
                         dict["delayAfter"] = delay
                     }
                     if let condData = ba.conditionData {
-                        dict["conditionData"] = condData
+                        // Persist as base64: AnyCodable (used by Configuration's
+                        // JSON persistence) has no Data case and encodes a raw
+                        // Data value as null — silently dropping the sub-action's
+                        // condition on the next save/reload. A String survives.
+                        dict["conditionData"] = condData.base64EncodedString()
                     }
                     return dict
                 }
@@ -501,8 +527,8 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
         }
 
         let executionId = UUID()
-        activeExecutions.insert(executionId)
-        defer { activeExecutions.remove(executionId) }
+        addActiveExecution(executionId)
+        defer { removeActiveExecution(executionId) }
 
         context.logger.log("Executing bundle with \(bundledActions.count) actions", file: #file, function: #function, line: #line)
 
@@ -537,7 +563,7 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
         context.logger.log("Sequential bundle: \(actions.count) actions to execute", file: #file, function: #function, line: #line)
 
         for (index, bundledAction) in actions.enumerated() {
-            guard activeExecutions.contains(where: { _ in true }) else {
+            guard hasActiveExecutions() else {
                 context.logger.log("Bundle execution cancelled at action \(index + 1)", file: #file, function: #function, line: #line)
                 break
             }
@@ -581,7 +607,7 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
             executionQueue.async {
                 defer { group.leave() }
 
-                guard self.activeExecutions.contains(where: { _ in true }) else {
+                guard self.hasActiveExecutions() else {
                     context.logger.log("Bundle execution cancelled", file: #file, function: #function, line: #line)
                     return
                 }
@@ -626,7 +652,8 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
             if let appEl = appEl {
                 var focusedRef: CFTypeRef?
                 if AXUIElementCopyAttributeValue(appEl, kAXFocusedWindowAttribute as CFString, &focusedRef) == .success,
-                   let focused = focusedRef {
+                   let focused = focusedRef,
+                   CFGetTypeID(focused) == AXUIElementGetTypeID() {
                     var titleRef: CFTypeRef?
                     AXUIElementCopyAttributeValue(unsafeBitCast(focused, to: AXUIElement.self), kAXTitleAttribute as CFString, &titleRef)
                     windowTitle = (titleRef as? String ?? "").lowercased()
@@ -688,6 +715,13 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
         let delay = parameters.number(for: "delay") ?? 0.2
         let actionParams = (parameters.dictionary(for: "parameters") as? [String: AnyCodable]) ?? [:]
 
+        // execute() never runs validate(), so a count of 0 (or negative) can
+        // reach here — `1...count` would trap. Bail out instead of crashing.
+        guard count >= 1 else {
+            context.logger.log("Repeat count must be at least 1 (got \(count)); skipping", file: #file, function: #function, line: #line)
+            return
+        }
+
         context.logger.log("Repeating action \(actionId) \(count) times with \(delay)s delay", file: #file, function: #function, line: #line)
 
         guard PluginManager.shared.getAction(identifier: actionId) != nil else {
@@ -695,10 +729,18 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
             return
         }
 
+        // Register our own execution id: the cancellation guard below tests
+        // activeExecutions, which is otherwise only populated by executeBundle —
+        // so a standalone repeat_action gesture would abort before the first
+        // iteration. cleanup() clearing the set still cancels an in-flight repeat.
+        let executionId = UUID()
+        addActiveExecution(executionId)
+        defer { removeActiveExecution(executionId) }
+
         let subAction = BundledAction(actionIdentifier: actionId, parameters: actionParams, delayAfter: nil)
 
         for i in 1...count {
-            guard activeExecutions.contains(where: { _ in true }) else {
+            guard hasActiveExecutions() else {
                 context.logger.log("Repeat execution cancelled", file: #file, function: #function, line: #line)
                 break
             }
@@ -744,7 +786,16 @@ class BundleActionsPlugin: NSObject, GestureActionPlugin {
                   let id = dict["actionIdentifier"] as? String else { return nil }
             let params = (dict["parameters"] as? [String: Any])?.mapValues { AnyCodable($0) } ?? [:]
             let delay = parseTimeInterval(dict["delayAfter"])
-            let condData = dict["conditionData"] as? Data
+            // Accept both the raw Data (in-memory / legacy) and the base64 String
+            // (persisted) forms of conditionData — see presentAdvancedConfiguration.
+            let condData: Data?
+            if let d = dict["conditionData"] as? Data {
+                condData = d
+            } else if let s = dict["conditionData"] as? String {
+                condData = Data(base64Encoded: s)
+            } else {
+                condData = nil
+            }
             return BundledAction(actionIdentifier: id, parameters: params, delayAfter: delay, conditionData: condData)
         } ?? []
     }

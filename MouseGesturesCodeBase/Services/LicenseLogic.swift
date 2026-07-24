@@ -33,7 +33,14 @@ public enum LicenseLogic {
                                    durationDays: Int = trialDurationDays,
                                    calendar: Calendar = .current) -> (status: LicenseStatus, remaining: Int) {
         let components = calendar.dateComponents([.day], from: firstLaunch, to: now)
-        let daysElapsed = components.day ?? 0
+        // Clamp elapsed days to be non-negative. If `now` precedes `firstLaunch`
+        // (clock skew, a rolled-back clock that slipped past the high-water-mark
+        // clamp, or a corrupted/cleared high-water mark), a negative elapsed count
+        // makes `durationDays - daysElapsed` exceed the full trial length —
+        // effectively *extending* the trial past its duration. Treating any such
+        // case as day 0 guarantees the trial can never report more than
+        // `durationDays` remaining, no matter what date arrives.
+        let daysElapsed = max(0, components.day ?? 0)
 
         if daysElapsed < durationDays {
             return (.trial, durationDays - daysElapsed)

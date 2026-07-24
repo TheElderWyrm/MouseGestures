@@ -45,7 +45,7 @@ class ProfileImportExportService {
 
     /// Exports all profiles
     func exportAllProfiles(to url: URL) throws {
-        try exportProfiles(configuration.profiles, to: url)
+        try exportProfiles(configuration.profilesSnapshot, to: url)
     }
 
     // MARK: - Import Methods
@@ -113,10 +113,13 @@ class ProfileImportExportService {
     // MARK: - Helper Methods
 
     private func generateUniqueProfileName(baseName: String) -> String {
+        // Snapshot the live names once (synchronized read) rather than touching
+        // `configuration.profiles` unsynchronized on every loop iteration.
+        let existingNames = Set(configuration.profilesSnapshot.map { $0.name })
         var name = baseName
         var counter = 2
 
-        while configuration.profiles.contains(where: { $0.name == name }) {
+        while existingNames.contains(name) {
             name = "\(baseName) (\(counter))"
             counter += 1
         }

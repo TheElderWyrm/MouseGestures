@@ -431,6 +431,8 @@ public class SelfUpdateService: NSObject, ObservableObject {
             try script.write(to: scriptURL, atomically: true, encoding: .utf8)
             try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: scriptURL.path)
         } catch {
+            // Don't leave a half-written/unexecutable script behind in the temp dir.
+            try? FileManager.default.removeItem(at: scriptURL)
             throw SelfUpdateError.scriptWriteFailed(error.localizedDescription)
         }
 
@@ -445,6 +447,9 @@ public class SelfUpdateService: NSObject, ObservableObject {
         do {
             try task.run()
         } catch {
+            // The script normally deletes itself once it runs; if it never
+            // launches, clean it up here so it doesn't linger in the temp dir.
+            try? FileManager.default.removeItem(at: scriptURL)
             throw SelfUpdateError.scriptLaunchFailed(error.localizedDescription)
         }
     }
@@ -503,6 +508,17 @@ extension SelfUpdateService: URLSessionDownloadDelegate {
         // Called for both success (error == nil, already handled above) and
         // network-level failures that happen before a download ever
         // finishes (e.g. connection dropped, DNS failure).
+        //
+        // This is the guaranteed terminal callback for the task, so tear the
+        // session down here regardless of outcome. A URLSession created with a
+        // delegate retains that delegate (and keeps its own operation queue
+        // alive) until it is explicitly invalidated -- without this, every
+        // update download would orphan a session + queue for the life of the
+        // process.
+        defer {
+            session.finishTasksAndInvalidate()
+            self.session = nil
+        }
         guard let error = error else { return }
         let completion = downloadCompletion
         downloadCompletion = nil

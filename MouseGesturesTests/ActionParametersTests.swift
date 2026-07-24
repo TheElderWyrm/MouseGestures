@@ -68,3 +68,48 @@ final class ActionParametersNumberCoercionTests: XCTestCase {
         XCTAssertEqual(coerce(dict["level"]?.value), 0.5)
     }
 }
+
+/// Regression tests for the bundle sub-action `conditionData` persistence fix in
+/// `BundleActionsPlugin`.
+///
+/// `AnyCodable.encode(to:)` has no `Data` case, so a raw `Data` value falls
+/// through to `encodeNil()`. A `BundledAction.conditionData` stored as `Data`
+/// inside the persisted `[[String: Any]]` bundle blob was therefore written as
+/// `null` and silently lost on the next save/reload — a sub-action's condition
+/// vanished when the app restarted. The plugin now persists `conditionData` as a
+/// base64 `String` (which AnyCodable *does* encode) and decodes both the Data
+/// and base64-String forms. These tests pin the root cause and the fix recipe
+/// using only `AnyCodable` (matching this target's no-host logic style).
+final class BundleConditionDataPersistenceTests: XCTestCase {
+
+    /// Encode a value inside a dict under "conditionData" (mirroring the real
+    /// persisted bundle-blob shape), JSON round-trip it, and return the decoded
+    /// value.
+    private func roundTripConditionData(_ value: Any) -> Any {
+        let dict: [String: AnyCodable] = ["conditionData": AnyCodable(value)]
+        let data = try! JSONEncoder().encode(dict)
+        let decoded = try! JSONDecoder().decode([String: AnyCodable].self, from: data)
+        return decoded["conditionData"]!.value
+    }
+
+    func testRawDataConditionNowRoundTripsViaAnyCodable() {
+        // AnyCodable gained native Data support this same session (see
+        // AnyCodableTests.swift's dataTagKey-wrapped encoding), so the
+        // original silent-drop-to-NSNull bug is now fixed at that layer too.
+        // BundleActionsPlugin still persists conditionData as a base64
+        // String of its own (tested below) rather than relying on this, for
+        // backward compatibility with gestures.json files saved before
+        // AnyCodable supported Data directly.
+        let original = "cond-blob".data(using: .utf8)!
+        XCTAssertEqual(roundTripConditionData(original) as? Data, original,
+                      "AnyCodable now natively round-trips Data")
+    }
+
+    func testBase64StringConditionSurvivesPersist() {
+        // Fix: persist as base64 String, which survives and decodes back to Data.
+        let original = "cond-blob".data(using: .utf8)!
+        let restored = roundTripConditionData(original.base64EncodedString())
+        XCTAssertEqual((restored as? String).flatMap { Data(base64Encoded: $0) }, original,
+                       "base64-String conditionData must survive persistence and decode back to Data")
+    }
+}

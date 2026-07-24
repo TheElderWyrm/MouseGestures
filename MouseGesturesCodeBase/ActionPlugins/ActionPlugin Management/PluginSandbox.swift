@@ -638,13 +638,11 @@ public struct PluginPermissions: Equatable {
     // MARK: - Permission Checking
 
     func canObserveNotification(_ name: NSNotification.Name) -> Bool {
-        return allowedNotificationsToObserve.contains(name) ||
-               allowedNotificationsToObserve.isEmpty // Empty set means all allowed
+        return allowedNotificationsToObserve.contains(name)
     }
 
     func canPostNotification(_ name: NSNotification.Name) -> Bool {
-        return allowedNotificationsToPost.contains(name) ||
-               allowedNotificationsToPost.isEmpty // Empty set means all allowed
+        return allowedNotificationsToPost.contains(name)
     }
 
     func canExecuteAction(_ action: PluginAction) -> Bool {

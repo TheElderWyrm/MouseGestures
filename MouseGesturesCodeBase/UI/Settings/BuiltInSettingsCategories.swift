@@ -381,6 +381,9 @@ struct DataManagementSettingsView: View {
     @State private var importSuccessMessage: String?
     @State private var exportSuccessMessage: String?
     @State private var errorMessage: String?
+    /// Serialized settings payload, populated only when the user taps Export
+    /// (avoids re-serializing all settings on every body evaluation).
+    @State private var exportData = Data()
 
     var body: some View {
         VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {
@@ -393,7 +396,10 @@ struct DataManagementSettingsView: View {
                     .foregroundColor(.secondary)
 
                 HStack(spacing: MGStyle.Spacing.lg) {
-                    Button(action: { showingExportDialog = true }) {
+                    Button(action: {
+                        exportData = uiServices.configuration.exportGlobalSettings() ?? Data()
+                        showingExportDialog = true
+                    }) {
                         Label("Export Settings", systemImage: "square.and.arrow.up")
                             .frame(maxWidth: .infinity)
                     }
@@ -449,7 +455,7 @@ struct DataManagementSettingsView: View {
         }
         .fileExporter(
             isPresented: $showingExportDialog,
-            document: SettingsExportDocument(data: uiServices.configuration.exportGlobalSettings() ?? Data()),
+            document: SettingsExportDocument(data: exportData),
             contentType: UTType.json,
             defaultFilename: "MouseGestures_Settings_\(Date().formatted(date: .numeric, time: .omitted).replacingOccurrences(of: "/", with: "-")).json"
         ) { result in handleExport(result: result) }

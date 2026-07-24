@@ -501,7 +501,7 @@ struct ActionSelectionView: View {
             }
         case .number:
             paramRow(p) {
-                if let minV = p.validation?.minValue, let maxV = p.validation?.maxValue {
+                if let minV = p.validation?.minValue, let maxV = p.validation?.maxValue, minV < maxV {
                     // Slider + text field for bounded ranges
                     HStack(spacing: MGStyle.Spacing.md) {
                         Slider(

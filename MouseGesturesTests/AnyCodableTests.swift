@@ -41,6 +41,32 @@ final class AnyCodableTests: XCTestCase {
         XCTAssertEqual(dict["count"] as? Int, 3)
     }
 
+    // Data has no native JSON representation; without a dedicated case,
+    // encode(to:) fell through to `encodeNil()` and silently dropped any
+    // Data-valued parameter to null on every save (found via
+    // BundleActionsPlugin's conditionData). It's wrapped as a tagged
+    // single-key object rather than a bare base64 string so it can't decode
+    // back as a plain String.
+    func testDataRoundTrip() throws {
+        let original = Data([0x00, 0x01, 0xFF, 0x10, 0x42])
+        let decoded = try roundTrip(AnyCodable(original))
+        XCTAssertEqual(decoded.value as? Data, original)
+    }
+
+    func testEmptyDataRoundTrip() throws {
+        let decoded = try roundTrip(AnyCodable(Data()))
+        XCTAssertEqual(decoded.value as? Data, Data())
+    }
+
+    // The tagged wrapper must not collide with an ordinary one-key dictionary
+    // whose value happens to be a plain string.
+    func testSingleKeyStringDictionaryIsNotMistakenForData() throws {
+        let decoded = try roundTrip(AnyCodable(["name": "gesture"] as [String: Any]))
+        let dict = try XCTUnwrap(decoded.value as? [String: Any])
+        XCTAssertEqual(dict["name"] as? String, "gesture")
+        XCTAssertNil(decoded.value as? Data)
+    }
+
     func testArrayRoundTrip() throws {
         let original = AnyCodable([1, 2, 3] as [Any])
         let data = try JSONEncoder().encode(original)
@@ -82,5 +108,37 @@ final class AnyCodableTests: XCTestCase {
     // collapse true == 1).
     func testBoolNotEqualToNumericOne() {
         XCTAssertNotEqual(AnyCodable(true), AnyCodable(1))
+    }
+
+    // Regression: a *boxed numeric* NSNumber(1) (as opposed to a Swift Int) must
+    // still not equal a Bool `true`. `NSNumber(1) as? Bool` succeeds (returns
+    // true), so the old equality — which cast to Bool first — reported these
+    // equal. Equality must key off the CFBoolean type, not the Bool bridge.
+    func testBoxedNumericOneNotEqualToBoolTrue() {
+        XCTAssertNotEqual(AnyCodable(NSNumber(value: 1)), AnyCodable(true))
+        XCTAssertNotEqual(AnyCodable(NSNumber(value: 0)), AnyCodable(false))
+        // ...but a boxed numeric 1 still equals a plain Int 1 (numeric coercion).
+        XCTAssertEqual(AnyCodable(NSNumber(value: 1)), AnyCodable(1))
+    }
+
+    // The Bool/number distinction must also hold when nested inside a container
+    // (this is where gesture parameters actually live).
+    func testBoolVsNumberDistinctInsideDictionary() {
+        XCTAssertEqual(AnyCodable(["flag": true] as [String: Any]),
+                       AnyCodable(["flag": true] as [String: Any]))
+        XCTAssertNotEqual(AnyCodable(["flag": true] as [String: Any]),
+                          AnyCodable(["flag": 1] as [String: Any]))
+    }
+
+    func testDataEquality() {
+        XCTAssertEqual(AnyCodable(Data([1, 2, 3])), AnyCodable(Data([1, 2, 3])))
+        XCTAssertNotEqual(AnyCodable(Data([1, 2, 3])), AnyCodable(Data([1, 2, 4])))
+    }
+
+    // NSNull compares equal only to another NSNull, never to a numeric/other value.
+    func testNullEquality() {
+        XCTAssertEqual(AnyCodable(NSNull()), AnyCodable(NSNull()))
+        XCTAssertNotEqual(AnyCodable(NSNull()), AnyCodable(0))
+        XCTAssertNotEqual(AnyCodable(NSNull()), AnyCodable(""))
     }
 }

@@ -47,9 +47,12 @@ class ProfileManagementService: ObservableObject {
     // MARK: - Profile Loading
 
     func loadProfiles() {
+        // Read the live state through the synchronized snapshot, then publish on
+        // the main thread (these @Published properties feed SwiftUI bindings).
+        let state = configuration.profilesState
         let update = {
-            self.profiles = self.configuration.profiles
-            self.activeProfileId = self.configuration.activeProfileId
+            self.profiles = state.profiles
+            self.activeProfileId = state.activeId
         }
         if Thread.isMainThread { update() } else { DispatchQueue.main.async { update() } }
     }
@@ -76,14 +79,17 @@ class ProfileManagementService: ObservableObject {
             return nil
         }
 
-        // Check for duplicate names
-        if profiles.contains(where: { $0.name == name }) {
+        // Check for duplicate names against LIVE configuration state. `profiles`
+        // is a @Published UI cache refreshed via loadProfiles() (often async on
+        // main), so it can lag behind an in-flight mutation and let a duplicate
+        // slip through; validate against the source of truth instead.
+        if configuration.profilesSnapshot.contains(where: { $0.name == name }) {
             log.log("Profile with name '\(name)' already exists")
             return nil
         }
 
         let baseProfile = baseProfileId.flatMap { id in
-            profiles.first { $0.id == id }
+            configuration.profileSnapshot(withId: id)
         }
 
         let newProfile = profileManager.createProfile(named: name, basedOn: baseProfile)
@@ -100,39 +106,50 @@ class ProfileManagementService: ObservableObject {
     /// - Returns: True if update was successful
     @discardableResult
     func updateProfile(profileId: UUID, name: String? = nil, gestures: [Gesture]? = nil, keyboardShortcut: KeyboardTrigger?? = nil, keyboardShortcutEnabled: Bool? = nil) -> Bool {
-        guard let profileIndex = configuration.profiles.firstIndex(where: { $0.id == profileId }) else {
+        // Duplicate-name check against LIVE state, not the @Published cache.
+        if let newName = name,
+           configuration.profilesSnapshot.contains(where: { $0.id != profileId && $0.name == newName }) {
+            log.log("Profile with name '\(newName)' already exists")
+            return false
+        }
+
+        // Look up by id and apply the edits inside the configQueue barrier, so
+        // the mutation serializes with the save encoder and never relies on an
+        // index computed outside the lock (which a concurrent add/remove could
+        // invalidate — wrong profile overwritten, or an out-of-bounds crash).
+        let found = configuration.mutateProfiles { profileList -> Bool in
+            guard let profileIndex = profileList.firstIndex(where: { $0.id == profileId }) else {
+                return false
+            }
+
+            // Update name if provided
+            if let newName = name {
+                profileList[profileIndex].name = newName
+            }
+
+            // Update gestures if provided
+            if let newGestures = gestures {
+                profileList[profileIndex].gestures = newGestures
+            }
+
+            // Update keyboard shortcut if provided (double-optional: nil means no change, .some(nil) means clear)
+            if let newShortcut = keyboardShortcut {
+                profileList[profileIndex].keyboardShortcut = newShortcut
+            }
+
+            // Update shortcut enabled state if provided
+            if let enabled = keyboardShortcutEnabled {
+                profileList[profileIndex].keyboardShortcutEnabled = enabled
+            }
+
+            return true
+        }
+
+        guard found else {
             log.log("Profile not found for update: \(profileId)")
             return false
         }
 
-        var profile = configuration.profiles[profileIndex]
-
-        // Update name if provided
-        if let newName = name {
-            // Check for duplicate names (excluding current profile)
-            if profiles.contains(where: { $0.id != profileId && $0.name == newName }) {
-                log.log("Profile with name '\(newName)' already exists")
-                return false
-            }
-            profile.name = newName
-        }
-
-        // Update gestures if provided
-        if let newGestures = gestures {
-            profile.gestures = newGestures
-        }
-
-        // Update keyboard shortcut if provided (double-optional: nil means no change, .some(nil) means clear)
-        if let newShortcut = keyboardShortcut {
-            profile.keyboardShortcut = newShortcut
-        }
-
-        // Update shortcut enabled state if provided
-        if let enabled = keyboardShortcutEnabled {
-            profile.keyboardShortcutEnabled = enabled
-        }
-
-        configuration.profiles[profileIndex] = profile
         configuration.save()
 
         NotificationCenter.default.post(name: .profilesDidChange, object: nil)
@@ -147,14 +164,15 @@ class ProfileManagementService: ObservableObject {
     @discardableResult
     func deleteProfile(profileId: UUID) -> Bool {
         // Check against Configuration's live activeProfileId (not our cached @Published one,
-        // which may be stale if a switch just happened via DispatchQueue.main.async)
-        if profileId == configuration.activeProfileId {
+        // which may be stale if a switch just happened via DispatchQueue.main.async),
+        // read through the synchronized snapshot.
+        if profileId == configuration.activeProfileIdSnapshot {
             log.log("Cannot delete active profile — switch to another profile first")
             return false
         }
 
         // Prevent deletion if it's the last profile
-        if configuration.profiles.count <= 1 {
+        if configuration.profilesSnapshot.count <= 1 {
             log.log("Cannot delete the last profile")
             return false
         }
@@ -239,7 +257,7 @@ class ProfileManagementService: ObservableObject {
     func importProfile(from url: URL) -> ConfigurationProfile? {
         do {
             let imported = try importExportService.importProfile(from: url)
-            configuration.profiles.append(imported)
+            configuration.mutateProfiles { $0.append(imported) }
             configuration.save()
             loadProfiles()
             return imported
@@ -254,11 +272,9 @@ class ProfileManagementService: ObservableObject {
     func importMultipleProfiles(from url: URL) -> [ConfigurationProfile] {
         do {
             let imported = try importExportService.importProfileBundle(from: url)
-            for profile in imported {
-                configuration.profiles.append(profile)
-            }
-            configuration.save()
             if !imported.isEmpty {
+                configuration.mutateProfiles { $0.append(contentsOf: imported) }
+                configuration.save()
                 loadProfiles()
             }
             return imported
@@ -282,10 +298,11 @@ class ProfileManagementService: ObservableObject {
         // Generate new ID
         profile.id = UUID()
 
-        // Handle name conflicts
+        // Handle name conflicts against LIVE state (not the @Published cache).
+        let existingNames = Set(configuration.profilesSnapshot.map { $0.name })
         var importName = profile.name
         var counter = 2
-        while profiles.contains(where: { $0.name == importName }) {
+        while existingNames.contains(importName) {
             importName = "\(profile.name) \(counter)"
             counter += 1
         }
@@ -294,8 +311,8 @@ class ProfileManagementService: ObservableObject {
         // Mark as non-default
         profile.isDefault = false
 
-        // Add to configuration
-        configuration.profiles.append(profile)
+        // Add to configuration (under the configQueue barrier).
+        configuration.mutateProfiles { $0.append(profile) }
         configuration.save()
 
         NotificationCenter.default.post(name: .profilesDidChange, object: nil)
@@ -307,22 +324,33 @@ class ProfileManagementService: ObservableObject {
 
     /// Resets the current active profile's gestures to factory defaults
     func resetToDefaults() {
-        guard let activeId = configuration.activeProfileId,
-              let index = configuration.profiles.firstIndex(where: { $0.id == activeId }) else {
+        guard let activeId = configuration.activeProfileIdSnapshot else {
             log.log("Cannot reset: no active profile")
             return
         }
 
-        // Replace the active profile's gestures with the factory defaults
-        configuration.profiles[index].gestures = Configuration.defaultGestures
-        configuration.profiles[index].updateModifiedDate()
+        // Replace the active profile's gestures with the factory defaults inside
+        // the barrier (serialized with the save encoder, no stale index).
+        let defaults = Configuration.defaultGestures
+        var resetName: String?
+        configuration.mutateProfiles { profileList in
+            guard let index = profileList.firstIndex(where: { $0.id == activeId }) else { return }
+            profileList[index].gestures = defaults
+            profileList[index].updateModifiedDate()
+            resetName = profileList[index].name
+        }
+
+        guard let name = resetName else {
+            log.log("Cannot reset: no active profile")
+            return
+        }
 
         configuration.save()
 
         NotificationCenter.default.post(name: .profilesDidChange, object: nil)
         loadProfiles()
 
-        log.log("Reset active profile '\(configuration.profiles[index].name)' gestures to defaults")
+        log.log("Reset active profile '\(name)' gestures to defaults")
     }
 
     // MARK: - Search and Filter
@@ -373,7 +401,9 @@ class ProfileManagementService: ObservableObject {
             return .invalid(reason: "Profile name is too long (max 50 characters)")
         }
 
-        let isDuplicate = profiles.contains { profile in
+        // Validate against LIVE state (source of truth), not the @Published
+        // cache, so validation can't pass/fail on a stale profile list.
+        let isDuplicate = configuration.profilesSnapshot.contains { profile in
             profile.id != excludingId && profile.name == trimmedName
         }
 

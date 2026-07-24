@@ -39,7 +39,16 @@ final class SpaceSentinelManager {
     }
 
     /// One hidden sentinel window per Space ID the user has visited since launch.
+    /// Guarded by `sentinelsLock`: it is WRITTEN on the main thread (from the
+    /// activeSpaceDidChange observer, which is registered with `queue: .main`,
+    /// and the launch dispatch), but READ and PRUNED on a background queue —
+    /// action execution runs `switchToSpace(...)` off the main thread (see
+    /// ActionExecutionManager, which dispatches plugin execution to
+    /// `DispatchQueue.global(qos: .userInitiated)`). Unsynchronized `Dictionary`
+    /// access from two threads is a data race that can corrupt the heap during a
+    /// copy-on-write resize, so every access below takes the lock.
     private var sentinels: [UInt64: Sentinel] = [:]
+    private let sentinelsLock = NSLock()
     private var observer: NSObjectProtocol?
     private let myPid = ProcessInfo.processInfo.processIdentifier
 
@@ -138,7 +147,10 @@ final class SpaceSentinelManager {
             log.log("SpaceSentinel: no currentSpaceID (private API unavailable)", file: #file, function: #function, line: #line)
             return
         }
-        guard sentinels[spaceID] == nil else { return }
+        sentinelsLock.lock()
+        let alreadyHave = sentinels[spaceID] != nil
+        sentinelsLock.unlock()
+        guard !alreadyHave else { return }
 
         let window = NSWindow(
             contentRect: NSRect(x: -20000, y: -20000, width: 4, height: 4),
@@ -170,7 +182,9 @@ final class SpaceSentinelManager {
         }
         log.log("SpaceSentinel: sentinel ready for space \(spaceID)", file: #file, function: #function, line: #line)
 
+        sentinelsLock.lock()
         sentinels[spaceID] = Sentinel(window: window, axElement: axElement, windowID: targetWid)
+        sentinelsLock.unlock()
     }
 
     /// Drops the sentinel for Space IDs that are no longer present on any
@@ -181,10 +195,20 @@ final class SpaceSentinelManager {
     /// fails and the caller falls back to key simulation) so this is a
     /// housekeeping nicety, not a correctness requirement.
     private func pruneStaleSentinels(validSpaceIDs: Set<UInt64>) {
-        for (spaceID, sentinel) in sentinels where !validSpaceIDs.contains(spaceID) {
-            sentinel.window.orderOut(nil)
-            sentinels.removeValue(forKey: spaceID)
-        }
+        sentinelsLock.lock()
+        let stale = sentinels.filter { !validSpaceIDs.contains($0.key) }
+        for key in stale.keys { sentinels.removeValue(forKey: key) }
+        sentinelsLock.unlock()
+
+        guard !stale.isEmpty else { return }
+        // `orderOut` is an AppKit call and must run on the main thread; prune is
+        // reachable from the background action-execution queue (via
+        // `switchToSpace`), so marshal the window teardown to main. The captured
+        // windows stay retained by the closure until it runs, so there's no
+        // use-after-free even though they've already left the dictionary.
+        let windows = stale.values.map { $0.window }
+        let hide = { windows.forEach { $0.orderOut(nil) } }
+        if Thread.isMainThread { hide() } else { DispatchQueue.main.async(execute: hide) }
     }
 
     // MARK: - Focus (the actual switch)
@@ -246,7 +270,10 @@ final class SpaceSentinelManager {
     /// unavailable.
     @discardableResult
     func switchToSpace(_ spaceID: UInt64) -> Bool {
-        guard let sentinel = sentinels[spaceID] else { return false }
+        sentinelsLock.lock()
+        let sentinel = sentinels[spaceID]
+        sentinelsLock.unlock()
+        guard let sentinel else { return false }
         pruneStaleSentinels(validSpaceIDs: Set(orderedSpaceIDs()))
         return focus(sentinel)
     }
