@@ -175,16 +175,62 @@ class ZoneView: NSView {
             case .left: start = CGPoint(x: 0, y: bounds.midY); end = CGPoint(x: bounds.width, y: bounds.midY)
             default: start = CGPoint(x: bounds.width, y: bounds.midY); end = CGPoint(x: 0, y: bounds.midY) // .right
             }
-            // The perpendicular fade above already reaches zero smoothly at
-            // the zone's inner edge, but an edge zone is a long thin band
-            // with square far corners where it meets open desktop -- clip to
-            // a pill/capsule shape (corner radius = half the short side) so
-            // it tapers into rounded ends instead of stopping at a hard
-            // right-angle corner.
+            // An edge zone is a long thin band with square far corners where
+            // it meets open desktop. Round those off -- but ONLY on the fade
+            // side (where alpha is already ~0, so it's an invisible no-op
+            // change) and NEVER on the bright side (the physical screen
+            // edge): rounding that corner instead carves a visible notch out
+            // of solid color right where the glow should be flush against
+            // the screen boundary, which reads as the glow peeling away from
+            // the edge rather than a smooth taper.
             let capRadius = min(bounds.width, bounds.height) / 2
-            NSBezierPath(roundedRect: bounds, xRadius: capRadius, yRadius: capRadius).addClip()
+            ctx.addPath(edgeGlowClipPath(bounds: bounds, radius: capRadius, brightSide: zone))
+            ctx.clip()
             ctx.drawLinearGradient(gradient, start: start, end: end, options: [])
         }
+    }
+
+    /// A clip path for an edge-zone glow: square corners on the side facing
+    /// `brightSide` (flush against the screen edge), rounded corners on the
+    /// opposite (fading) side.
+    private func edgeGlowClipPath(bounds: CGRect, radius: CGFloat, brightSide: ScreenZone) -> CGPath {
+        let r = min(radius, bounds.width / 2, bounds.height / 2)
+        let path = CGMutablePath()
+        switch brightSide {
+        case .top: // round the bottom two corners
+            path.move(to: CGPoint(x: bounds.minX, y: bounds.maxY))
+            path.addLine(to: CGPoint(x: bounds.maxX, y: bounds.maxY))
+            path.addLine(to: CGPoint(x: bounds.maxX, y: bounds.minY + r))
+            path.addArc(center: CGPoint(x: bounds.maxX - r, y: bounds.minY + r), radius: r, startAngle: 0, endAngle: -.pi / 2, clockwise: true)
+            path.addLine(to: CGPoint(x: bounds.minX + r, y: bounds.minY))
+            path.addArc(center: CGPoint(x: bounds.minX + r, y: bounds.minY + r), radius: r, startAngle: -.pi / 2, endAngle: .pi, clockwise: true)
+            path.closeSubpath()
+        case .bottom: // round the top two corners
+            path.move(to: CGPoint(x: bounds.minX, y: bounds.minY))
+            path.addLine(to: CGPoint(x: bounds.maxX, y: bounds.minY))
+            path.addLine(to: CGPoint(x: bounds.maxX, y: bounds.maxY - r))
+            path.addArc(center: CGPoint(x: bounds.maxX - r, y: bounds.maxY - r), radius: r, startAngle: 0, endAngle: .pi / 2, clockwise: false)
+            path.addLine(to: CGPoint(x: bounds.minX + r, y: bounds.maxY))
+            path.addArc(center: CGPoint(x: bounds.minX + r, y: bounds.maxY - r), radius: r, startAngle: .pi / 2, endAngle: .pi, clockwise: false)
+            path.closeSubpath()
+        case .left: // round the right two corners
+            path.move(to: CGPoint(x: bounds.minX, y: bounds.minY))
+            path.addLine(to: CGPoint(x: bounds.minX, y: bounds.maxY))
+            path.addLine(to: CGPoint(x: bounds.maxX - r, y: bounds.maxY))
+            path.addArc(center: CGPoint(x: bounds.maxX - r, y: bounds.maxY - r), radius: r, startAngle: .pi / 2, endAngle: 0, clockwise: true)
+            path.addLine(to: CGPoint(x: bounds.maxX, y: bounds.minY + r))
+            path.addArc(center: CGPoint(x: bounds.maxX - r, y: bounds.minY + r), radius: r, startAngle: 0, endAngle: -.pi / 2, clockwise: true)
+            path.closeSubpath()
+        default: // .right: round the left two corners
+            path.move(to: CGPoint(x: bounds.maxX, y: bounds.minY))
+            path.addLine(to: CGPoint(x: bounds.maxX, y: bounds.maxY))
+            path.addLine(to: CGPoint(x: bounds.minX + r, y: bounds.maxY))
+            path.addArc(center: CGPoint(x: bounds.minX + r, y: bounds.maxY - r), radius: r, startAngle: .pi / 2, endAngle: .pi, clockwise: false)
+            path.addLine(to: CGPoint(x: bounds.minX, y: bounds.minY + r))
+            path.addArc(center: CGPoint(x: bounds.minX + r, y: bounds.minY + r), radius: r, startAngle: .pi, endAngle: 3 * .pi / 2, clockwise: false)
+            path.closeSubpath()
+        }
+        return path
     }
 }
 

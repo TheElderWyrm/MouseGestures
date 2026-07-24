@@ -22,6 +22,19 @@ queue in performSave() instead of saveQueue itself.]
   aborts (leaves everything in place) if the old process is somehow still alive after the
   30s wait, instead of proceeding to swap files out from under a live process. Also added a
   "No release notes were provided for this update" fallback for the empty What's New case.
+  Round 4: the update DID work after the round-3 fix, but with a visible close/reopen/close
+  flicker on the sheet right before quitting — caused by quitForRelaunch() ending the sheet
+  directly at the AppKit level while SwiftUI's own @State-driven .sheet(isPresented:)
+  binding (TabManager.swift) still thought it should be showing, so SwiftUI tried to
+  re-present it. Fixed by having TabManager dismiss the sheet itself (through its own
+  binding) as soon as it observes stage == .relaunching, and having quitForRelaunch() just
+  wait long enough for that real dismissal to finish before calling NSApp.terminate --
+  only one thing drives the sheet now. Round 4 also answered "does accessibility permission
+  survive updates?": yes, for a properly signed release, because macOS ties the grant to
+  (bundle ID + signing team), not the file/path, and the update swaps the bundle in place
+  keeping both identical. Added a bundle-identifier match check alongside the existing
+  signature/team check as extra insurance (if it doesn't match, this isn't really "the same
+  app" and shouldn't auto-install as an update regardless of permissions).
   Also redesigned the update source per round 2: pulls live from GitHub's
   release API (api.github.com/repos/.../releases/latest) instead of a hand-maintained
   version.json (deleted) — matches the pattern Website/js/main.js's own release lookup
@@ -47,6 +60,15 @@ queue in performSave() instead of saveQueue itself.]
   -> Zone Detection -> Highlight Color is a working color picker already wired to this
   exact color (Configuration.zoneHighlightColor), confirmed it live-updates without a
   restart. Just not very discoverable, evidently.
+  Round 4 correction: the round-3 rounding was applied to the WRONG end, causing the glow to
+  look like it was peeling away from the screen edge. Rendered the actual drawing code
+  offscreen (to check precisely, rather than guess from a description) and confirmed:
+  rounding the corners on the BRIGHT side (the physical screen edge, where the gradient is
+  strongest) carves a visible notch out of solid color right where it should be flush
+  against the boundary. Rounding the FADE side (already ~0 alpha) is invisible either way.
+  Fixed with an asymmetric clip path — square corners on the bright/screen-edge side,
+  rounded only on the fade side — verified correct for all four edge orientations
+  (top/bottom/left/right) before touching the real file.
 - [DONE] Create Browser Navigation Plugin (Even if this is done using shortcuts in the backend, they should be able to select it as an action)
   -> BrowserActionsPlugin already existed as a selectable action; added a "Browser Navigation" default profile that actually uses it (previously only an ad hoc "Tab Navigation" profile using raw keyboard shortcuts existed - removed/replaced).
 - [DONE] Move 'Core' actions into relevant plugins
@@ -96,6 +118,15 @@ queue in performSave() instead of saveQueue itself.]
   already close to right). Restored a 3rd "Everyday" profile mixing categories (Mission
   Control/App Exposé, Volume, Dark Mode/Screenshot, window snap, Show Desktop, Play/Pause,
   Lock Screen) - replaces the "System" profile from round 1, which was mostly no-ops.
+  Round 4 corrections: moved "Everyday" to the leftmost tab and made it the demo's default
+  profile on load (was "Windows"). Swapped Everyday's Volume Up/Play-Pause for
+  Fullscreen/Minimize. Renamed the Windows-secondary fill-screen zone label back from
+  "Fullscreen" to "Maximize" (reversing the round-2 rename - Everyday now owns the
+  "Fullscreen" label instead, since real macOS fullscreen and this fill-the-screen snap are
+  different things and conflating the two names across two profiles was confusing).
+  Re-verified all of this live with Playwright: tab order/default/aria-labels, and that
+  clicking each swapped zone produces the right real effect (data-snap="max", winFront
+  gets is-min, etc.) with zero console errors.
 - [DONE, round 2] Update website with the new actions/plugin
   -> BrowserActionsPlugin (Browser Navigation / Tab Management / Browser Zoom) was fully
   shipped in the app but wasn't represented anywhere on the marketing site. Added a

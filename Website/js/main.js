@@ -580,8 +580,8 @@
           tl:     { g: "↖", s: "Top-Left ¼",
                             base: ["Snap Top-Left", snapFn("tl")],
                             shift: ["Snap Bottom-Right", snapFn("br")] },
-          top:    { g: "↑", s: "Fullscreen",
-                            base: ["Fullscreen", snapFn("max")],
+          top:    { g: "↑", s: "Maximize",
+                            base: ["Maximize", snapFn("max")],
                             shift: ["Center Window", snapFn("center")] },
           tr:     { g: "↗", s: "Top-Right ¼",
                             base: ["Snap Top-Right", snapFn("tr")],
@@ -597,7 +597,7 @@
                             shift: ["Snap Top-Right", snapFn("tr")] },
           bottom: { g: "↓", s: "Center Window",
                             base: ["Center Window", snapFn("center")],
-                            shift: ["Fullscreen", snapFn("max")] },
+                            shift: ["Maximize", snapFn("max")] },
           br:     { g: "↘", s: "Bottom-Right ¼",
                             base: ["Snap Bottom-Right", snapFn("br")],
                             shift: ["Snap Top-Left", snapFn("tl")] }
@@ -627,24 +627,22 @@
       /* Everyday: a curated mix across system, media and window categories —
          Mission Control/App Exposé share a corner, Dark Mode/Screenshot
          share another, Show Desktop and Lock Screen anchor the remaining
-         corners, volume rides the top, and window snap covers the sides.
-         Every zone is a real, distinct effect. */
+         corners, Fullscreen/Minimize ride the top and bottom, and window
+         snap covers the sides. Every zone is a real, distinct effect. */
       everyday: {
         label: "Everyday",
         zones: {
           tl:     { g: "↖", s: "Mission Control",
                             base: ["Mission Control", function () { transientState("is-mission", 1500); }],
                             shift: ["App Exposé", function () { transientState("is-expose", 1500); }] },
-          top:    { g: "↑", s: "Vol Up",
-                            base: ["Volume Up", function () { setVolume(volume + 12.5); }],
-                            shift: ["Volume Down", function () { setVolume(volume - 12.5); }] },
+          top:    { g: "↑", s: "Fullscreen", base: ["Fullscreen", snapFn("max")] },
           tr:     { g: "↗", s: "Dark Mode",
                             base: ["Toggle Dark Mode", toggleDemoTheme],
                             shift: ["Screenshot", screenshot] },
           left:   { g: "←", s: "Snap Left", base: ["Snap Window Left", snapFn("left")] },
           right:  { g: "→", s: "Snap Right", base: ["Snap Window Right", snapFn("right")] },
           bl:     { g: "↙", s: "Show Desktop", base: ["Show Desktop", function () { transientState("is-showdesk", 1500); }] },
-          bottom: { g: "↓", s: "Play / Pause", base: ["Play / Pause", playPause] },
+          bottom: { g: "↓", s: "Minimize", base: ["Minimize Window", minimizeFront] },
           br:     { g: "↘", s: "Lock Screen", base: ["Lock Screen", function () { desktop.classList.add("is-locked"); }] }
         }
       }
@@ -657,7 +655,7 @@
       left: "Left edge", right: "Right edge"
     };
 
-    var currentProfile = "windows";
+    var currentProfile = "everyday";
     var zoneEls = {};
     var lastGlobalFire = 0;
 
@@ -760,7 +758,7 @@
       });
     });
 
-    setProfile("windows", false);
+    setProfile("everyday", false);
 
     /* ---------- Cursor comet trail ---------- */
 
@@ -926,7 +924,7 @@
 
       function nextStop() {
         if (!running) return;
-        var tour = TOURS[currentProfile] || TOURS.windows;
+        var tour = TOURS[currentProfile] || TOURS.everyday;
         idx = (idx + 1) % tour.length;
         var stop = tour[idx];
         var t = zoneTarget(stop.z);

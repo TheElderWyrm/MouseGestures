@@ -204,25 +204,22 @@ public class SelfUpdateService: NSObject, ObservableObject {
 
     /// Terminates the app so the handed-off installer script can safely swap
     /// the bundle. This is presented from a sheet (`UpdateNotificationView`
-    /// via `.sheet(isPresented:)` on the main window) -- an NSWindow won't
-    /// close while it still has a sheet attached, and `NSApp.terminate`'s
-    /// orderly-quit sequence needs every window to actually close, so calling
-    /// it with the sheet still up can silently fail to quit at all (the app
-    /// just sits there, which from the outside looks exactly like a hang).
-    /// End every window's sheet and close the window directly at the AppKit
-    /// level first -- independent of whatever SwiftUI's own `@State`-driven
-    /// `isPresented` binding happens to be doing -- then terminate on the
-    /// next runloop turn once that's actually taken effect.
+    /// via `.sheet(isPresented:)` on the main window, `TabManager.swift`) --
+    /// an NSWindow won't close while it still has a sheet attached, and
+    /// `NSApp.terminate`'s orderly-quit sequence needs every window to
+    /// actually close, so calling it with the sheet still up can silently
+    /// fail to quit at all (the app just sits there, which from the outside
+    /// looks exactly like a hang).
+    ///
+    /// `TabManager` observes `stage` and dismisses the sheet itself through
+    /// its own `@State` binding as soon as it sees `.relaunching` -- that's
+    /// the one place that should drive the dismissal. Ending the sheet here
+    /// too, at the raw AppKit level, fights with SwiftUI's own state and
+    /// produces a visible close/reopen/close flicker right before quitting.
+    /// So this just waits long enough for that SwiftUI-driven dismissal to
+    /// actually finish animating, then terminates.
     private func quitForRelaunch() {
-        for window in NSApp.windows {
-            if let sheet = window.attachedSheet {
-                window.endSheet(sheet, returnCode: .cancel)
-            }
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            for window in NSApp.windows {
-                window.close()
-            }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
             NSApp.terminate(nil)
         }
     }
@@ -295,6 +292,18 @@ public class SelfUpdateService: NSObject, ObservableObject {
             guard let newTeam = teamIdentifier(ofAppAt: newAppPath), newTeam == myTeam else {
                 return .failure(.signatureInvalid("not signed by the same developer as this app"))
             }
+        }
+
+        // Also require the same bundle identifier. macOS ties the
+        // Accessibility permission grant to (bundle ID + signing team), not
+        // to the file path or exact binary -- so as long as both match,
+        // swapping the bundle in place at the same path (which is exactly
+        // what happens below) keeps the existing grant, no re-prompt needed.
+        // A mismatched bundle ID would both break that AND mean this isn't
+        // really "the same app" being updated.
+        guard let newBundleId = Bundle(path: newAppPath)?.bundleIdentifier,
+              newBundleId == Bundle.main.bundleIdentifier else {
+            return .failure(.signatureInvalid("bundle identifier does not match"))
         }
 
         return .success(())

@@ -114,9 +114,9 @@
     <!-- Live playground: the app's real interaction model, in miniature -->
     <div class="hero-demo">
       <div class="demo-profiles" role="group" aria-label="Demo gesture profile">
-        <button type="button" class="dp-tab" data-profile="windows" aria-pressed="true">Windows</button>
+        <button type="button" class="dp-tab" data-profile="everyday" aria-pressed="true">Everyday</button>
+        <button type="button" class="dp-tab" data-profile="windows" aria-pressed="false">Windows</button>
         <button type="button" class="dp-tab" data-profile="media" aria-pressed="false">Media Management</button>
-        <button type="button" class="dp-tab" data-profile="everyday" aria-pressed="false">Everyday</button>
       </div>
       <div class="demo-frame" id="demo">
         <div class="demo-desktop" id="desktop" data-snap="none">
@@ -153,14 +153,14 @@
 
           <!-- 8 trigger zones: 4 corners + 4 edges, exactly like the app.
                Each shows its current action, so nobody has to guess. -->
-          <button class="zone z-corner z-tl" data-zone="tl" type="button" aria-label="Top-left corner: snap top-left"><span class="zl" aria-hidden="true"></span></button>
+          <button class="zone z-corner z-tl" data-zone="tl" type="button" aria-label="Top-left corner: mission control"><span class="zl" aria-hidden="true"></span></button>
           <button class="zone z-edge z-top" data-zone="top" type="button" aria-label="Top edge: fullscreen"><span class="zl" aria-hidden="true"></span></button>
-          <button class="zone z-corner z-tr" data-zone="tr" type="button" aria-label="Top-right corner: snap top-right"><span class="zl" aria-hidden="true"></span></button>
-          <button class="zone z-edge z-left" data-zone="left" type="button" aria-label="Left edge: snap left half"><span class="zl" aria-hidden="true"></span></button>
-          <button class="zone z-edge z-right" data-zone="right" type="button" aria-label="Right edge: snap right half"><span class="zl" aria-hidden="true"></span></button>
-          <button class="zone z-corner z-bl" data-zone="bl" type="button" aria-label="Bottom-left corner: snap bottom-left"><span class="zl" aria-hidden="true"></span></button>
-          <button class="zone z-edge z-bottom" data-zone="bottom" type="button" aria-label="Bottom edge: center window"><span class="zl" aria-hidden="true"></span></button>
-          <button class="zone z-corner z-br" data-zone="br" type="button" aria-label="Bottom-right corner: snap bottom-right"><span class="zl" aria-hidden="true"></span></button>
+          <button class="zone z-corner z-tr" data-zone="tr" type="button" aria-label="Top-right corner: toggle dark mode"><span class="zl" aria-hidden="true"></span></button>
+          <button class="zone z-edge z-left" data-zone="left" type="button" aria-label="Left edge: snap window left"><span class="zl" aria-hidden="true"></span></button>
+          <button class="zone z-edge z-right" data-zone="right" type="button" aria-label="Right edge: snap window right"><span class="zl" aria-hidden="true"></span></button>
+          <button class="zone z-corner z-bl" data-zone="bl" type="button" aria-label="Bottom-left corner: show desktop"><span class="zl" aria-hidden="true"></span></button>
+          <button class="zone z-edge z-bottom" data-zone="bottom" type="button" aria-label="Bottom edge: minimize window"><span class="zl" aria-hidden="true"></span></button>
+          <button class="zone z-corner z-br" data-zone="br" type="button" aria-label="Bottom-right corner: lock screen"><span class="zl" aria-hidden="true"></span></button>
 
           <div class="hud" id="hud" role="status" aria-live="polite"></div>
 

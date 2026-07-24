@@ -7,6 +7,7 @@ struct TabManager: View {
     @StateObject private var uiServices = UIServices.shared
     @StateObject private var licenseService = LicenseService.shared
     @StateObject private var tutorialService = TutorialService.shared
+    @ObservedObject private var selfUpdateService = SelfUpdateService.shared
     @State private var selectedTabID: String = ""
     @State private var previousTabID: String = ""
     // Memory optimization: Track which tabs have been loaded to enable lazy loading
@@ -67,6 +68,17 @@ struct TabManager: View {
                 }
                 .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("MGUpdateAvailable"))) { _ in
                     showingUpdateNotification = true
+                }
+                .onChange(of: selfUpdateService.stage) { newStage in
+                    // Dismiss through SwiftUI's own binding as soon as we're
+                    // about to relaunch, rather than letting
+                    // SelfUpdateService end the sheet at the raw AppKit
+                    // level -- doing both fights over the same sheet and
+                    // produces a visible close/reopen/close flicker right
+                    // before quitting.
+                    if case .relaunching = newStage {
+                        showingUpdateNotification = false
+                    }
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .openUpgradeTab)) { _ in
                     selectedTabID = "com.mousegestures.ui.upgrade"
