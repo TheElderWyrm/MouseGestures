@@ -49,9 +49,13 @@ class ZoneView: NSView {
     var label: String?
     var forceShowLabel: Bool = false
 
-    private var glowColor: NSColor {
-        Configuration.shared.zoneHighlightColor
+    private var inactiveColor: NSColor {
+        Configuration.shared.zoneHighlightColor.withAlphaComponent(0.1)
     }
+    private var activeColor: NSColor {
+        Configuration.shared.zoneHighlightColor.withAlphaComponent(0.3)
+    }
+    private let borderColor = NSColor.white.withAlphaComponent(0.5)
 
     init(frame: NSRect, zone: ScreenZone) {
         self.zone = zone
@@ -63,11 +67,16 @@ class ZoneView: NSView {
     }
 
     override func draw(_ dirtyRect: NSRect) {
-        // No flat fill: like the website demo's zone visualization, the
-        // entire visual is the directional glow drawn below (corners glow
-        // from the screen corner inward, edges glow from the screen edge
-        // inward) — never a hard box.
-        drawGlow()
+        // Fill the entire view (the window is already sized to the zone)
+        let fillColor = isActive ? activeColor : inactiveColor
+        fillColor.setFill()
+        bounds.fill()
+
+        // Draw border
+        borderColor.setStroke()
+        let borderPath = NSBezierPath(rect: bounds.insetBy(dx: 0.5, dy: 0.5))
+        borderPath.lineWidth = 1.0
+        borderPath.stroke()
 
         // Draw label if present (forceShowLabel bypasses the global setting for preview mode)
         if let label = label, forceShowLabel || Configuration.shared.showZoneLabels {
@@ -130,99 +139,6 @@ class ZoneView: NSView {
                 label.draw(with: drawRect, options: [.usesLineFragmentOrigin, .truncatesLastVisibleLine], attributes: attrs, context: nil)
             }
         }
-    }
-
-    /// Directional glow matching the website demo's zone visualization:
-    /// corner zones glow outward from the screen's actual corner (radial),
-    /// edge zones glow inward from the screen's edge (linear) — brightest at
-    /// the screen boundary, fading all the way to nothing before the zone
-    /// window's own edge (so there's no visible seam where the window ends),
-    /// never a hard-edged box.
-    private func drawGlow() {
-        guard let ctx = NSGraphicsContext.current?.cgContext else { return }
-        guard bounds.width > 0, bounds.height > 0 else { return }
-
-        let peakAlpha: CGFloat = isActive ? 0.6 : 0.2
-        let bright = glowColor.withAlphaComponent(peakAlpha).cgColor
-        let clear = glowColor.withAlphaComponent(0).cgColor
-        guard let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: [bright, clear] as CFArray, locations: [0, 1]) else { return }
-
-        ctx.saveGState()
-        defer { ctx.restoreGState() }
-
-        switch zone {
-        case .topLeft, .topRight, .bottomLeft, .bottomRight:
-            let corner: CGPoint
-            switch zone {
-            case .topLeft: corner = CGPoint(x: 0, y: bounds.height)
-            case .topRight: corner = CGPoint(x: bounds.width, y: bounds.height)
-            case .bottomLeft: corner = CGPoint(x: 0, y: 0)
-            default: corner = CGPoint(x: bounds.width, y: 0) // .bottomRight
-            }
-            // Shorter than either side (not the diagonal), so the gradient
-            // has fully reached zero alpha before it can reach the window's
-            // own boundary in any direction -- otherwise the window edge cuts
-            // off a still-visible glow, which reads as a hard seam.
-            let radius = min(bounds.width, bounds.height) * 0.85
-            ctx.drawRadialGradient(gradient, startCenter: corner, startRadius: 0, endCenter: corner, endRadius: radius, options: [])
-
-        case .top, .bottom, .left, .right:
-            let start: CGPoint
-            let end: CGPoint
-            let lateralIsHorizontal: Bool
-            switch zone {
-            case .top: start = CGPoint(x: bounds.midX, y: bounds.height); end = CGPoint(x: bounds.midX, y: 0); lateralIsHorizontal = true
-            case .bottom: start = CGPoint(x: bounds.midX, y: 0); end = CGPoint(x: bounds.midX, y: bounds.height); lateralIsHorizontal = true
-            case .left: start = CGPoint(x: 0, y: bounds.midY); end = CGPoint(x: bounds.width, y: bounds.midY); lateralIsHorizontal = false
-            default: start = CGPoint(x: bounds.width, y: bounds.midY); end = CGPoint(x: 0, y: bounds.midY); lateralIsHorizontal = false // .right
-            }
-            // Straight-edged rectangle -- no rounded-corner clip. The bright
-            // side stays flush against the screen edge; smoothness instead
-            // comes from tapering the alpha itself along the lateral axis
-            // too (see drawLateralFade), so the glow spreads smoothly in
-            // both dimensions from the middle of the bright edge, like a
-            // real light source, rather than a shape with rounded corners.
-            ctx.clip(to: bounds)
-            ctx.drawLinearGradient(gradient, start: start, end: end, options: [])
-            drawLateralFade(ctx, horizontal: lateralIsHorizontal)
-        }
-    }
-
-    /// Tapers the already-drawn glow's alpha near the zone's far lateral
-    /// ends (where it meets open desktop, perpendicular to the main
-    /// gradient) using a smooth eased ramp, leaving a flat plateau across
-    /// most of the zone's length. Composited as a destinationIn mask, so it
-    /// only affects the glow just drawn, not anything drawn afterward (e.g.
-    /// the zone label).
-    private func drawLateralFade(_ ctx: CGContext, horizontal: Bool) {
-        let extent = horizontal ? bounds.width : bounds.height
-        let crossExtent = horizontal ? bounds.height : bounds.width
-        guard extent > 0 else { return }
-        let fadeSpan = min(crossExtent, extent) / 2
-        let fadeFraction = min(fadeSpan / extent, 0.5)
-        guard fadeFraction > 0.001 else { return }
-
-        func maskColor(_ alpha: CGFloat) -> CGColor { NSColor.black.withAlphaComponent(alpha).cgColor }
-        // Quarter-sine ease from each end up to a flat, fully-opaque plateau.
-        let locations: [CGFloat] = [
-            0, fadeFraction / 3, fadeFraction * 2 / 3, fadeFraction,
-            1 - fadeFraction, 1 - fadeFraction * 2 / 3, 1 - fadeFraction / 3, 1
-        ]
-        let colors: [CGColor] = [
-            maskColor(0), maskColor(0.25), maskColor(0.75), maskColor(1),
-            maskColor(1), maskColor(0.75), maskColor(0.25), maskColor(0)
-        ]
-        guard let mask = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colors as CFArray, locations: locations) else { return }
-
-        ctx.saveGState()
-        ctx.clip(to: bounds)
-        ctx.setBlendMode(.destinationIn)
-        if horizontal {
-            ctx.drawLinearGradient(mask, start: CGPoint(x: bounds.minX, y: bounds.midY), end: CGPoint(x: bounds.maxX, y: bounds.midY), options: [])
-        } else {
-            ctx.drawLinearGradient(mask, start: CGPoint(x: bounds.midX, y: bounds.minY), end: CGPoint(x: bounds.midX, y: bounds.maxY), options: [])
-        }
-        ctx.restoreGState()
     }
 }
 

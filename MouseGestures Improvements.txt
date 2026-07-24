@@ -45,8 +45,15 @@ queue in performSave() instead of saveQueue itself.]
   content is now entirely subsumed by the 5 reorganized ones, so keeping them around was
   just redundant clutter in the "add a default profile" picker. Only Window Management /
   Application Management / Media Control / Browser Navigation / System remain.
-- [DONE] Switch boxes for showing the zone borders to a glow effect (Possibly turn on by default? Might be helpful for new users who haven't learned their actions yet).
-  -> Round 2 correction: first version was a stroked border with a shadow blur, which
+- [REVERTED] Switch boxes for showing the zone borders to a glow effect (Possibly turn on by default? Might be helpful for new users who haven't learned their actions yet).
+  -> Round 6: after 5 rounds iterating on the glow (see history below), the verdict was
+  "just go back to the flat, it was the best version." Reverted ZoneView entirely to the
+  original pre-glow rendering (`git checkout db86410 -- .../ZoneHighlightWindow.swift`) --
+  flat inactiveColor/activeColor fill + a 1px white border stroke, no gradients, no glow.
+  showZoneHighlights still defaults to true for new installs (that part of the request
+  stands independent of the box-vs-glow visual question). History of the glow attempts,
+  kept for reference in case this is ever revisited:
+  Round 2 correction: first version was a stroked border with a shadow blur, which
   wasn't the right effect. Rewritten as a directional glow matching the website demo's
   zone visualization — corners glow radially from the actual screen corner, edges glow
   linearly from the screen edge, both fading inward, no flat box fill at all now.
