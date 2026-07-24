@@ -726,6 +726,7 @@ enum DefaultProfileType: String, CaseIterable {
     case mediaControl = "Media Control"
     case browserNavigation = "Browser Navigation"
     case system = "System"
+    case full = "Full"
 
     var description: String {
         switch self {
@@ -739,6 +740,8 @@ enum DefaultProfileType: String, CaseIterable {
             return "Browser page and tab navigation: back/forward, reload, tabs"
         case .system:
             return "Brightness, Do Not Disturb, Dark Mode, lock screen, and screenshots"
+        case .full:
+            return "All default profiles combined, each on its own modifier combination"
         }
     }
 
@@ -754,6 +757,8 @@ enum DefaultProfileType: String, CaseIterable {
             return "safari"
         case .system:
             return "gearshape"
+        case .full:
+            return "square.stack.3d.up"
         }
     }
 }

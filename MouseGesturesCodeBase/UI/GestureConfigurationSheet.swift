@@ -686,9 +686,9 @@ struct GestureConfigurationSheet: View {
                         HStack {
                             Text("Repeat Interval:")
                                 .frame(width: 120, alignment: .leading)
-                            Slider(value: $timing.repeatInterval, in: 0.1...2.0, step: 0.1)
+                            Slider(value: $timing.repeatInterval, in: 0.02...2.0, step: 0.02)
                                 .frame(width: 200)
-                            Text(String(format: "%.1f s", timing.repeatInterval))
+                            Text(String(format: "%.2f s", timing.repeatInterval))
                                 .frame(width: 50, alignment: .trailing)
                                 .foregroundColor(.secondary)
                         }

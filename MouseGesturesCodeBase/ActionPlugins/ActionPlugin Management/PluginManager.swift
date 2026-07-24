@@ -189,7 +189,6 @@ public class PluginManager: NSObject {
     private func loadBuiltInPlugins() {
         // Register built-in plugins with appropriate permissions
         let builtInPlugins: [(plugin: GestureActionPlugin, permissions: PluginPermissions)] = [
-            (CoreActionsPlugin(), .builtIn),
             (WindowManagementPlugin(), .builtIn),
             (MediaControlPlugin(), .builtIn),
             (BrowserActionsPlugin(), .builtIn),
@@ -239,7 +238,6 @@ public class PluginManager: NSObject {
 
         // Map identifier to a fresh instance of the built-in plugin
         let builtInMap: [String: () -> GestureActionPlugin] = [
-            "com.mousegestures.core": { CoreActionsPlugin() },
             "com.mousegestures.window": { WindowManagementPlugin() },
             "com.mousegestures.media": { MediaControlPlugin() },
             "com.mousegestures.browser": { BrowserActionsPlugin() },

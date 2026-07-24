@@ -1,4 +1,5 @@
 import Foundation
+import Cocoa
 
 // DefaultProfiles.swift - Pre-configured profiles for common use cases
 //
@@ -36,12 +37,12 @@ struct DefaultProfiles {
             // Main (⌘⌃)
             Gesture(zone: .topLeft, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.window.close_window", name: "Close Window"),
             Gesture(zone: .top, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.window.fullscreen", name: "Fullscreen"),
-            Gesture(zone: .topRight, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.quit_app", name: "Quit Application"),
+            Gesture(zone: .topRight, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.window.quit_app", name: "Quit Application"),
             Gesture(zone: .left, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.window.move_to_display", parameters: ["display": AnyCodable("previous")], name: "Move to Previous Display"),
             Gesture(zone: .right, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.window.move_to_display", parameters: ["display": AnyCodable("next")], name: "Move to Next Display"),
-            Gesture(zone: .bottomLeft, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.app_expose", name: "App Exposé"),
+            Gesture(zone: .bottomLeft, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.window.app_expose", name: "App Exposé"),
             Gesture(zone: .bottom, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.window.minimize", name: "Minimize"),
-            Gesture(zone: .bottomRight, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.mission_control", name: "Mission Control"),
+            Gesture(zone: .bottomRight, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.window.mission_control", name: "Mission Control"),
 
             // Secondary (⌘⌥) - region snapping
             Gesture(zone: .topLeft, modifiers: [.command, .option], actionIdentifier: "com.mousegestures.window.snap_window", parameters: ["position": AnyCodable("top_left")], name: "Top Left"),
@@ -66,12 +67,12 @@ struct DefaultProfiles {
         let gestures = [
             Gesture(zone: .topLeft, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.window.close_window", name: "Close Window"),
             Gesture(zone: .top, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.window.fullscreen", name: "Fullscreen"),
-            Gesture(zone: .topRight, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.quit_app", name: "Quit App"),
-            Gesture(zone: .left, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.cycle_space", parameters: ["direction": AnyCodable("previous")], name: "Previous Space"),
-            Gesture(zone: .right, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.cycle_space", parameters: ["direction": AnyCodable("next")], name: "Next Space"),
-            Gesture(zone: .bottomLeft, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.app_expose", name: "App Exposé"),
-            Gesture(zone: .bottom, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.hide_app", name: "Hide App"),
-            Gesture(zone: .bottomRight, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.mission_control", name: "Mission Control")
+            Gesture(zone: .topRight, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.window.quit_app", name: "Quit App"),
+            Gesture(zone: .left, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.window.cycle_space", parameters: ["direction": AnyCodable("previous")], name: "Previous Space"),
+            Gesture(zone: .right, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.window.cycle_space", parameters: ["direction": AnyCodable("next")], name: "Next Space"),
+            Gesture(zone: .bottomLeft, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.window.app_expose", name: "App Exposé"),
+            Gesture(zone: .bottom, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.window.hide_app", name: "Hide App"),
+            Gesture(zone: .bottomRight, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.window.mission_control", name: "Mission Control")
         ]
 
         return ConfigurationProfile(
@@ -111,18 +112,14 @@ struct DefaultProfiles {
     // plugin (com.mousegestures.browser). Holding Shift on New Tab reopens the
     // last closed tab instead.
     static func createBrowserNavigationProfile() -> ConfigurationProfile {
-        // Keyboard shortcut modifiers stored as CGEventFlags UInt values:
-        //   maskCommand = 1048576 (0x100000)
-        let cmdMask = UInt(1048576)
-
         let gestures = [
             Gesture(zone: .topLeft, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.browser.navigation", parameters: ["action": AnyCodable("refresh")], name: "Reload"),
             Gesture(zone: .top, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.browser.tab_management", parameters: ["action": AnyCodable("new_tab")], name: "New Tab"),
             Gesture(zone: .top, modifiers: [.command, .control, .shift], actionIdentifier: "com.mousegestures.browser.tab_management", parameters: ["action": AnyCodable("reopen_closed_tab")], name: "Reopen Last Tab"),
             Gesture(
                 zone: .topRight, modifiers: [.command, .control],
-                actionIdentifier: "com.mousegestures.automation.keyboard_shortcut",
-                parameters: ["shortcut": AnyCodable(["keyCode": UInt16(37), "modifiers": cmdMask, "displayString": "⌘L"] as [String: Any])],
+                actionIdentifier: "com.mousegestures.browser.navigation",
+                parameters: ["action": AnyCodable("focus_address_bar")],
                 name: "Focus Address Bar"
             ),
 
@@ -152,7 +149,7 @@ struct DefaultProfiles {
             Gesture(zone: .left, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.system.keyboard_brightness", parameters: ["direction": AnyCodable("down")], name: "Keyboard Brightness Down", timing: TimingSettings(repeatOnHold: true)),
             Gesture(zone: .right, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.system.keyboard_brightness", parameters: ["direction": AnyCodable("up")], name: "Keyboard Brightness Up", timing: TimingSettings(repeatOnHold: true)),
 
-            Gesture(zone: .bottomLeft, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.lock_screen", name: "Lock Screen"),
+            Gesture(zone: .bottomLeft, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.system.lock_screen", name: "Lock Screen"),
             Gesture(zone: .bottom, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.system.display_brightness", parameters: ["direction": AnyCodable("down")], name: "Brightness Down", timing: TimingSettings(repeatOnHold: true)),
             Gesture(zone: .bottomRight, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.system.screenshot", parameters: ["type": AnyCodable("selection")], name: "Screenshot")
         ]
@@ -164,6 +161,62 @@ struct DefaultProfiles {
         )
     }
 
+    // Full Profile - every default profile combined into one, with each
+    // source profile moved onto its own reserved modifier combination so none
+    // of their zone+modifier pairs collide:
+    //   ⌘⌃        = Window Management, Main       (unchanged)
+    //   ⌘⌥  / ⌘⌥⇧ = Media Control                 (was ⌘⌃ / ⌘⌃⇧)
+    //   ⌃⌥  / ⌃⌥⇧ = Browser Navigation             (was ⌘⌃ / ⌘⌃⇧)
+    //   ⌘⇧        = Window Management, Secondary   (was ⌘⌥)
+    //   ⌃⇧        = Application Management         (was ⌘⌃)
+    //   ⌥⇧        = System                         (was ⌘⌃)
+    static func createFullProfile() -> ConfigurationProfile {
+        // Rebuilds each gesture with a substituted modifier combo (looked up
+        // by exact match against `from`), leaving zone/action/parameters/timing untouched.
+        func remap(_ gestures: [Gesture], _ table: [(from: NSEvent.ModifierFlags, to: NSEvent.ModifierFlags)]) -> [Gesture] {
+            gestures.map { gesture in
+                let newModifiers = table.first(where: { $0.from == gesture.modifiers })?.to ?? gesture.modifiers
+                return Gesture(
+                    zone: gesture.zone,
+                    modifiers: newModifiers,
+                    dragModifier: gesture.dragModifier,
+                    actionIdentifier: gesture.actionIdentifier,
+                    parameters: gesture.parameters,
+                    name: gesture.name,
+                    timing: gesture.timing
+                )
+            }
+        }
+
+        let window = remap(createWindowManagementProfile().gestures, [
+            (from: [.command, .option], to: [.command, .shift])
+        ])
+
+        let applicationManagement = remap(createApplicationManagementProfile().gestures, [
+            (from: [.command, .control], to: [.control, .shift])
+        ])
+
+        let media = remap(createMediaControlProfile().gestures, [
+            (from: [.command, .control], to: [.command, .option]),
+            (from: [.command, .control, .shift], to: [.command, .option, .shift])
+        ])
+
+        let browser = remap(createBrowserNavigationProfile().gestures, [
+            (from: [.command, .control], to: [.control, .option]),
+            (from: [.command, .control, .shift], to: [.control, .option, .shift])
+        ])
+
+        let system = remap(createSystemProfile().gestures, [
+            (from: [.command, .control], to: [.option, .shift])
+        ])
+
+        return ConfigurationProfile(
+            name: "Full",
+            gestures: window + applicationManagement + media + browser + system,
+            isDefault: false
+        )
+    }
+
     // Get all default profiles
     static func getAllDefaultProfiles() -> [ConfigurationProfile] {
         return [
@@ -171,7 +224,8 @@ struct DefaultProfiles {
             createApplicationManagementProfile(),
             createMediaControlProfile(),
             createBrowserNavigationProfile(),
-            createSystemProfile()
+            createSystemProfile(),
+            createFullProfile()
         ]
     }
 
@@ -188,6 +242,8 @@ struct DefaultProfiles {
             return createBrowserNavigationProfile()
         case .system:
             return createSystemProfile()
+        case .full:
+            return createFullProfile()
         }
     }
 

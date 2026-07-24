@@ -28,37 +28,23 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
 
     // MARK: - Private DisplayServices API (direct brightness control)
 
-    /// Set/get the main display's brightness directly via the private
-    /// `DisplayServices.framework` API, instead of simulating 16 NX media-key
-    /// presses. Direct set is precise (any 0.0–1.0 value), instantaneous, and
-    /// flicker-free; the NX-key fallback is only used when the private API is
+    /// Set the main display's brightness directly via the private
+    /// `DisplayServices.framework` API. Used only for jumping straight to an
+    /// absolute value (the "set" direction) — precise and instantaneous.
+    /// Single-step up/down adjustments instead simulate the hardware
+    /// brightness key (see `adjustBrightness`) so the OS's own animated ramp
+    /// applies. The NX-key fallback below is used when the private API is
     /// unavailable (e.g. a future OS that removes it).
     ///
-    /// Verified live on macOS 26.5 (Tahoe): `DisplayServicesSetBrightness` and
-    /// `DisplayServicesGetBrightness` both return 0 on the built-in display and
-    /// the value round-trips exactly.
-    private typealias DisplayServicesGetBrightnessFunc = @convention(c) (UInt32, UnsafeMutablePointer<Float>) -> Int32
+    /// Verified live on macOS 26.5 (Tahoe): `DisplayServicesSetBrightness`
+    /// returns 0 on the built-in display and the value round-trips exactly.
     private typealias DisplayServicesSetBrightnessFunc = @convention(c) (UInt32, Float) -> Int32
 
-    private static var displayServicesGetBrightness: DisplayServicesGetBrightnessFunc? = {
-        guard let sym = dlsym(dlopen("/System/Library/PrivateFrameworks/DisplayServices.framework/DisplayServices", RTLD_LAZY),
-                              "DisplayServicesGetBrightness") else { return nil }
-        return unsafeBitCast(sym, to: DisplayServicesGetBrightnessFunc.self)
-    }()
     private static var displayServicesSetBrightness: DisplayServicesSetBrightnessFunc? = {
         guard let sym = dlsym(dlopen("/System/Library/PrivateFrameworks/DisplayServices.framework/DisplayServices", RTLD_LAZY),
                               "DisplayServicesSetBrightness") else { return nil }
         return unsafeBitCast(sym, to: DisplayServicesSetBrightnessFunc.self)
     }()
-
-    /// Returns the main display's current brightness in [0.0, 1.0], or nil if
-    /// the private API is unavailable.
-    private static func getDisplayBrightness() -> Float? {
-        guard let get = displayServicesGetBrightness else { return nil }
-        var value: Float = 0
-        guard get(CGMainDisplayID(), &value) == 0 else { return nil }
-        return value
-    }
 
     /// Sets the main display's brightness to `level` (clamped to [0.0, 1.0]).
     /// Returns true on success. Falls back to nil (caller handles NX keys) when
@@ -448,19 +434,13 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
         }
     }
 
-    // MARK: - Brightness (direct DisplayServices API, NX-key fallback)
-
-    /// Per-step brightness delta for relative up/down. Matches the 16-step
-    /// granularity the hardware brightness keys use.
-    private static let brightnessStep: Float = 1.0 / 16.0
+    // MARK: - Brightness (key simulation for steps, direct API for set)
 
     private func adjustBrightness(increase: Bool) {
-        // Direct path: read current, nudge, write back — precise and flicker-free.
-        if let current = SystemControlPlugin.getDisplayBrightness() {
-            let target = max(0, min(1, current + (increase ? SystemControlPlugin.brightnessStep : -SystemControlPlugin.brightnessStep)))
-            if SystemControlPlugin.setDisplayBrightnessDirect(target) { return }
-        }
-        // Fallback: hardware brightness key.
+        // Simulate the real hardware brightness key rather than jumping the
+        // value via the direct DisplayServices set: the OS animates the key
+        // press with its own smooth ramp + HUD, whereas a direct set snaps
+        // straight to the target and reads as a harsher, less fluid step.
         sendNXKeyEvent(increase ? .brightnessUp : .brightnessDown)
     }
 

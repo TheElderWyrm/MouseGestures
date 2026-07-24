@@ -555,7 +555,7 @@ struct GestureCardView: View {
                             : (gesture.timing.repeatOnHold ? "On Hold" : "On Click")
                         detailLine("Repeat", repeatMode)
                         detailLine("Delay", String(format: "%.1fs", gesture.timing.repeatInitialDelay))
-                        detailLine("Interval", String(format: "%.1fs", gesture.timing.repeatInterval))
+                        detailLine("Interval", String(format: "%.2fs", gesture.timing.repeatInterval))
                     }
                     if gesture.timing.longPressEnabled {
                         detailLine("Long Press", String(format: "%.1fs", gesture.timing.longPressThreshold))

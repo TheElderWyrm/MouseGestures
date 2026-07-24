@@ -32,13 +32,15 @@ class BrowserActionsPlugin: NSObject, GestureActionPlugin {
                         AnyCodable("back"),
                         AnyCodable("forward"),
                         AnyCodable("refresh"),
-                        AnyCodable("home")
+                        AnyCodable("home"),
+                        AnyCodable("focus_address_bar")
                     ]),
                     displayValues: [
                         "back": "Go Back",
                         "forward": "Go Forward",
                         "refresh": "Reload Page",
-                        "home": "Go Home"
+                        "home": "Go Home",
+                        "focus_address_bar": "Focus Address Bar"
                     ]
                 )
             ],
@@ -191,6 +193,8 @@ class BrowserActionsPlugin: NSObject, GestureActionPlugin {
             context.sendKeyboardShortcut(keyCode: 0x0F, modifiers: .maskCommand) // Cmd + R
         case "home":
             context.sendKeyboardShortcut(keyCode: 0x04, modifiers: [.maskCommand, .maskShift]) // Cmd + Shift + H
+        case "focus_address_bar":
+            context.sendKeyboardShortcut(keyCode: 0x25, modifiers: .maskCommand) // Cmd + L
         default:
             break
         }

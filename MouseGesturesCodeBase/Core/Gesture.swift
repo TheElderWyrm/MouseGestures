@@ -20,7 +20,7 @@ struct TimingSettings: Codable, Equatable {
     init(repeatOnHold: Bool = false,
          repeatOnClick: Bool = false,
          repeatInitialDelay: TimeInterval = 0.5,
-         repeatInterval: TimeInterval = 0.5,
+         repeatInterval: TimeInterval = 0.1,
          longPressEnabled: Bool = false,
          longPressThreshold: TimeInterval = 0.8) {
         self.repeatOnHold = repeatOnHold

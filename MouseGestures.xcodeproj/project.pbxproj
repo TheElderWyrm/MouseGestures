@@ -77,7 +77,6 @@
 		77A1C4C22F368ED800D1FE6A /* SystemInformationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C45F2F368ED800D1FE6A /* SystemInformationService.swift */; };
 		77A1C4C32F368ED800D1FE6A /* GestureConfigurationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4542F368ED800D1FE6A /* GestureConfigurationService.swift */; };
 		77A1C4C42F368ED800D1FE6A /* ServicePluginAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4472F368ED800D1FE6A /* ServicePluginAdapter.swift */; };
-		77A1C4C52F368ED800D1FE6A /* CoreActionsPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C41B2F368ED800D1FE6A /* CoreActionsPlugin.swift */; };
 		77A1C4C62F368ED800D1FE6A /* DeveloperModeToggleService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4532F368ED800D1FE6A /* DeveloperModeToggleService.swift */; };
 		77A1C4C72F368ED800D1FE6A /* PluginSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4362F368ED800D1FE6A /* PluginSettings.swift */; };
 		77A1C4C82F368ED800D1FE6A /* ActionExecutionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A1C4132F368ED800D1FE6A /* ActionExecutionManager.swift */; };
@@ -155,7 +154,6 @@
 		77A1C4172F368ED800D1FE6A /* PluginSandbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PluginSandbox.swift; sourceTree = "<group>"; };
 		77A1C4192F368ED800D1FE6A /* AutomationPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutomationPlugin.swift; sourceTree = "<group>"; };
 		77A1C41A2F368ED800D1FE6A /* BundleActionsPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BundleActionsPlugin.swift; sourceTree = "<group>"; };
-		77A1C41B2F368ED800D1FE6A /* CoreActionsPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreActionsPlugin.swift; sourceTree = "<group>"; };
 		77A1C41C2F368ED800D1FE6A /* MediaControlPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaControlPlugin.swift; sourceTree = "<group>"; };
 		77A1C41D2F368ED800D1FE6A /* SystemControlPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemControlPlugin.swift; sourceTree = "<group>"; };
 		77A1C41E2F368ED800D1FE6A /* WindowManagementPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowManagementPlugin.swift; sourceTree = "<group>"; };
@@ -296,7 +294,6 @@
 			children = (
 				77A1C4192F368ED800D1FE6A /* AutomationPlugin.swift */,
 				77A1C41A2F368ED800D1FE6A /* BundleActionsPlugin.swift */,
-				77A1C41B2F368ED800D1FE6A /* CoreActionsPlugin.swift */,
 				77A1C41C2F368ED800D1FE6A /* MediaControlPlugin.swift */,
 				77A1C41D2F368ED800D1FE6A /* SystemControlPlugin.swift */,
 				77A1C41E2F368ED800D1FE6A /* WindowManagementPlugin.swift */,
@@ -747,7 +744,6 @@
 				77A1C4C22F368ED800D1FE6A /* SystemInformationService.swift in Sources */,
 				77A1C4C32F368ED800D1FE6A /* GestureConfigurationService.swift in Sources */,
 				77A1C4C42F368ED800D1FE6A /* ServicePluginAdapter.swift in Sources */,
-				77A1C4C52F368ED800D1FE6A /* CoreActionsPlugin.swift in Sources */,
 				77A1C4C62F368ED800D1FE6A /* DeveloperModeToggleService.swift in Sources */,
 				77A1C4C72F368ED800D1FE6A /* PluginSettings.swift in Sources */,
 				77A1C4C82F368ED800D1FE6A /* ActionExecutionManager.swift in Sources */,

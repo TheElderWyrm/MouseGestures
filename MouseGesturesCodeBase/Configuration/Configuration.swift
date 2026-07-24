@@ -171,7 +171,7 @@ public class Configuration: Codable {
             let decoded = try JSONDecoder().decode(DecodedConfiguration.self, from: data)
 
             self.isEnabled = decoded.isEnabled
-            self.profiles = decoded.profiles
+            self.profiles = decoded.profiles.map(Configuration.migratingLegacyCoreActions)
             self.activeProfileId = decoded.activeProfileId
             self.appProfileMappings = decoded.appProfileMappings
             self.disabledApps = decoded.disabledApps ?? []
@@ -212,6 +212,40 @@ public class Configuration: Codable {
             self.profiles = [defaultProfile]
             self.activeProfileId = defaultProfile.id
         }
+    }
+
+    /// Rewrites action identifiers from the retired `com.mousegestures.core`
+    /// plugin (deleted — it only ever forwarded to the plugin that actually
+    /// owns each action) to their current equivalents, so gestures saved
+    /// before the plugin reorg keep resolving instead of silently failing.
+    private static func migratingLegacyCoreActions(_ profile: ConfigurationProfile) -> ConfigurationProfile {
+        let windowActions: Set<String> = [
+            "close_window", "minimize", "maximize", "fullscreen", "hide_app",
+            "quit_app", "mission_control", "show_desktop", "app_expose",
+            "cycle_window", "cycle_space"
+        ]
+        let systemActions: Set<String> = ["lock_screen", "sleep_display", "empty_trash"]
+
+        func migrate(_ identifier: String) -> String {
+            let prefix = "com.mousegestures.core."
+            guard identifier.hasPrefix(prefix) else { return identifier }
+            let action = String(identifier.dropFirst(prefix.count))
+            if action == "switch_profile" { return "com.mousegestures.automation.switch_profile" }
+            if windowActions.contains(action) { return "com.mousegestures.window.\(action)" }
+            if systemActions.contains(action) { return "com.mousegestures.system.\(action)" }
+            return identifier
+        }
+
+        var migrated = profile
+        migrated.gestures = profile.gestures.map { gesture in
+            var g = gesture
+            g.actionIdentifier = migrate(g.actionIdentifier)
+            if let longPress = g.longPressActionIdentifier {
+                g.longPressActionIdentifier = migrate(longPress)
+            }
+            return g
+        }
+        return migrated
     }
 
     func save() {
