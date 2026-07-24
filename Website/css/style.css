@@ -1665,10 +1665,10 @@ svg linearGradient stop:last-child { stop-color: var(--accent-2); }
 /* a selected category dims everything else */
 .marquee .chip { transition: opacity 0.25s ease; }
 .marquee[data-filter] .chip { opacity: 0.3; }
-.marquee[data-filter="core"] .chip[data-fam="core"],
 .marquee[data-filter="window"] .chip[data-fam="window"],
 .marquee[data-filter="media"] .chip[data-fam="media"],
 .marquee[data-filter="system"] .chip[data-fam="system"],
+.marquee[data-filter="browser"] .chip[data-fam="browser"],
 .marquee[data-filter="automation"] .chip[data-fam="automation"],
 .marquee[data-filter="bundle"] .chip[data-fam="bundle"] { opacity: 1; }
 

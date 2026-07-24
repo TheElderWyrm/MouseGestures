@@ -200,6 +200,21 @@ queue in performSave() instead of saveQueue itself.]
   Re-verified all of this live with Playwright: tab order/default/aria-labels, and that
   clicking each swapped zone produces the right real effect (data-snap="max", winFront
   gets is-min, etc.) with zero console errors.
+  Round 5: "the two demo layers are different [now, after the dwell/click fix], but the
+  shift version is basically a scrambled version of the normal layer and should probably
+  be removed." Agreed with the underlying design point -- round 2's "shift sends each zone
+  to its geometric opposite" isn't a second genuine mode the way Media's 10s/30s seek or
+  Everyday's Mission Control/App Exposé pairing are; it's just a mirror of the same 8
+  targets. Removed the shift entry from all 8 Windows zones (each zone is base-only now)
+  and rewrote its class comment accordingly. `fire()` already treated a missing
+  `zone.shift` as "fall through to base" regardless of the Shift key, so this was a pure
+  data change -- no logic touched. Also rewrote the ghost-cursor tour script for this
+  profile (previously 4 stops explicitly demonstrated the shift layer) to a plain 8-stop
+  loop of the zones instead. Media and Everyday's shift layers are untouched (still
+  genuinely distinct: seek magnitude, and Mission Control/Dark Mode vs. App Exposé/
+  Screenshot) -- confirmed with a regression check after the change.
+  Also removed the "¼" suffix from zone labels ("Top-Left ¼" -> "Top-Left", etc.) --
+  Windows was the only profile using it.
 - [DONE, round 2] Update website with the new actions/plugin
   -> BrowserActionsPlugin (Browser Navigation / Tab Management / Browser Zoom) was fully
   shipped in the app but wasn't represented anywhere on the marketing site. Added a
@@ -227,6 +242,17 @@ queue in performSave() instead of saveQueue itself.]
   lede, stats counter, actions section heading). Verified with Playwright: exact chip
   count, no leftover [data-fam="core"] elements, browser dot color resolves to a real
   non-default value, zero console errors, reduced-motion fallback path unaffected.
+  Round 4: "selecting the browser category jumps to the right spot but doesn't highlight
+  browser." The glide-to-category scroll (trackForFam/glideTo) uses a generic selector and
+  already worked for any data-fam value, including browser -- but the actual dim/highlight
+  effect (`.marquee[data-filter] .chip { opacity: 0.3 }`, `opacity: 1` for the matching
+  category) was driven by a SEPARATE hardcoded list of `.marquee[data-filter="X"]
+  .chip[data-fam="X"]` selectors that still had the round-3-removed "core" and never
+  had "browser" added when it was introduced in round 2 -- the same class of bug as the
+  missing --fam-browser color, just in a second hardcoded list the round-3 pass didn't
+  catch. Swapped "core" for "browser" in that list. Verified with Playwright: clicking the
+  Browser tab now sets aria-pressed, filters the marquee, and browser chips stay at full
+  opacity while others dim to 0.3, exactly like every other category.
 
 --- Organization Drafts ---
 Cmnd + Control = Main (Consider dropping the control. Would this be easier or interfere with normal computer navigation)

@@ -572,35 +572,20 @@
          snapping) layer: the Main layer (close/fullscreen/quit/move-display)
          has nothing this mini desktop can show, but Secondary's 8 real snap
          targets (4 quarters, 2 halves, center, fill-screen) map perfectly
-         onto the 8 zones. Shift sends each zone to its opposite region, so
-         every zone demonstrates two distinct, genuine snaps instead of one. */
+         onto the 8 zones, one per zone. No shift layer here -- mirroring
+         each zone to its opposite region isn't a second genuine mode, just
+         a scramble of the same 8 targets. */
       windows: {
         label: "Windows",
         zones: {
-          tl:     { g: "↖", s: "Top-Left ¼",
-                            base: ["Snap Top-Left", snapFn("tl")],
-                            shift: ["Snap Bottom-Right", snapFn("br")] },
-          top:    { g: "↑", s: "Maximize",
-                            base: ["Maximize", snapFn("max")],
-                            shift: ["Center Window", snapFn("center")] },
-          tr:     { g: "↗", s: "Top-Right ¼",
-                            base: ["Snap Top-Right", snapFn("tr")],
-                            shift: ["Snap Bottom-Left", snapFn("bl")] },
-          left:   { g: "←", s: "Left Half",
-                            base: ["Snap Left Half", snapFn("left")],
-                            shift: ["Snap Right Half", snapFn("right")] },
-          right:  { g: "→", s: "Right Half",
-                            base: ["Snap Right Half", snapFn("right")],
-                            shift: ["Snap Left Half", snapFn("left")] },
-          bl:     { g: "↙", s: "Bottom-Left ¼",
-                            base: ["Snap Bottom-Left", snapFn("bl")],
-                            shift: ["Snap Top-Right", snapFn("tr")] },
-          bottom: { g: "↓", s: "Center Window",
-                            base: ["Center Window", snapFn("center")],
-                            shift: ["Maximize", snapFn("max")] },
-          br:     { g: "↘", s: "Bottom-Right ¼",
-                            base: ["Snap Bottom-Right", snapFn("br")],
-                            shift: ["Snap Top-Left", snapFn("tl")] }
+          tl:     { g: "↖", s: "Top-Left", base: ["Snap Top-Left", snapFn("tl")] },
+          top:    { g: "↑", s: "Maximize", base: ["Maximize", snapFn("max")] },
+          tr:     { g: "↗", s: "Top-Right", base: ["Snap Top-Right", snapFn("tr")] },
+          left:   { g: "←", s: "Left Half", base: ["Snap Left Half", snapFn("left")] },
+          right:  { g: "→", s: "Right Half", base: ["Snap Right Half", snapFn("right")] },
+          bl:     { g: "↙", s: "Bottom-Left", base: ["Snap Bottom-Left", snapFn("bl")] },
+          bottom: { g: "↓", s: "Center Window", base: ["Center Window", snapFn("center")] },
+          br:     { g: "↘", s: "Bottom-Right", base: ["Snap Bottom-Right", snapFn("br")] }
         }
       },
       /* Media Management: prev | play/pause | next on top, seek (Shift for
@@ -881,7 +866,7 @@
       var TOURS = {
         windows: [
           { z: "tl" }, { z: "top" }, { z: "tr" }, { z: "right" },
-          { z: "br", shift: true }, { z: "bottom", shift: true }, { z: "bl", shift: true }, { z: "left", shift: true }
+          { z: "br" }, { z: "bottom" }, { z: "bl" }, { z: "left" }
         ],
         media: [
           { z: "top" }, { z: "right" }, { z: "tr" }, { z: "right", shift: true },
