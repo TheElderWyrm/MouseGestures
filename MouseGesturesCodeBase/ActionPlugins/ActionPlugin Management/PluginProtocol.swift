@@ -387,6 +387,31 @@ public struct ActionParameters: Codable {
     public var isEmpty: Bool {
         values.isEmpty
     }
+
+    /// Parses a simple `key=value,key2=value2` string into ActionParameters,
+    /// coercing each value to Bool/Int/Double where it parses cleanly and
+    /// falling back to String otherwise. Shared by the in-app Action Runner
+    /// dev tool (Developer tab) and the `--run-action` command-line dev hook
+    /// so both accept identical syntax.
+    public static func parse(commaSeparated text: String) -> ActionParameters {
+        var params = ActionParameters()
+        for pair in text.split(separator: ",") {
+            let parts = pair.split(separator: "=", maxSplits: 1).map { $0.trimmingCharacters(in: .whitespaces) }
+            guard parts.count == 2, !parts[0].isEmpty else { continue }
+            let key = parts[0]
+            let raw = parts[1]
+            if let boolValue = ["true": true, "false": false][raw.lowercased()] {
+                params[key] = AnyCodable(boolValue)
+            } else if let intValue = Int(raw) {
+                params[key] = AnyCodable(intValue)
+            } else if let doubleValue = Double(raw) {
+                params[key] = AnyCodable(doubleValue)
+            } else {
+                params[key] = AnyCodable(raw)
+            }
+        }
+        return params
+    }
 }
 
 /// Result of validating an action

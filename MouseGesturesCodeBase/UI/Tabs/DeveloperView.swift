@@ -84,6 +84,7 @@ struct DeveloperView: View {
         case settings = "Developer Settings"
         case logging = "Logging"
         case plugins = "Plugin Management"
+        case actionRunner = "Action Runner"
         case coordinator = "Activation Coordinator"
         case performance = "Performance"
         case diagnostics = "Diagnostics"
@@ -93,12 +94,21 @@ struct DeveloperView: View {
             case .settings: return "gearshape"
             case .logging: return "doc.text"
             case .plugins: return "puzzlepiece.extension"
+            case .actionRunner: return "play.circle"
             case .coordinator: return "flowchart"
             case .performance: return "speedometer"
             case .diagnostics: return "stethoscope"
             }
         }
     }
+
+    // MARK: - Action Runner State
+
+    @State private var runnerSelectedActionId: String? = nil
+    @State private var runnerParametersText: String = ""
+    @State private var runnerResultMessage: String?
+    @State private var runnerResultIsError: Bool = false
+    @State private var runnerSearchText: String = ""
 
     var body: some View {
         HSplitView {
@@ -120,6 +130,7 @@ struct DeveloperView: View {
                     case .settings: developerSettingsSection
                     case .logging: loggingSection
                     case .plugins: pluginsSection
+                    case .actionRunner: actionRunnerSection
                     case .coordinator: coordinatorSection
                     case .performance: performanceSection
                     case .diagnostics: diagnosticsSection
@@ -483,6 +494,109 @@ struct DeveloperView: View {
         .contentShape(Rectangle())
         .onTapGesture { selectedUnifiedPlugin = plugin }
         .background(selectedUnifiedPlugin?.id == plugin.id ? MGStyle.Colors.selectedRow : Color.clear)
+    }
+
+    // MARK: - Action Runner Section
+
+    /// Lets a developer execute any registered action directly by identifier,
+    /// bypassing gesture detection entirely — useful for testing an action's
+    /// real effect (e.g. a live Space switch, window operation, or private-API
+    /// call) without configuring a gesture and reproducing its trigger.
+    private var actionRunnerSection: some View {
+        VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {
+            MGSectionHeader("Action Runner")
+
+            MGContentCard {
+                Text("Execute any registered action immediately, without a gesture trigger. Runs through the same PluginManager.executeAction path a real gesture would use.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            MGContentCard {
+                VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
+                    MGSearchField("Search actions...", text: $runnerSearchText)
+
+                    Picker("Action", selection: $runnerSelectedActionId) {
+                        Text("Select an action...").tag(String?.none)
+                        ForEach(runnerFilteredActions, id: \.identifier) { entry in
+                            Text("\(entry.action.name)  (\(entry.identifier))")
+                                .tag(String?.some(entry.identifier))
+                        }
+                    }
+                    .onChange(of: runnerSelectedActionId) { _ in
+                        runnerParametersText = runnerDefaultParametersText(for: runnerSelectedActionId)
+                        runnerResultMessage = nil
+                    }
+
+                    if let selectedId = runnerSelectedActionId,
+                       let entry = runnerFilteredActions.first(where: { $0.identifier == selectedId }) ?? runnerAllActions.first(where: { $0.identifier == selectedId }) {
+                        Text(entry.action.description)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+
+                        if !entry.action.supportedParameters.isEmpty {
+                            VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
+                                Text("Parameters (key=value, comma-separated)")
+                                    .font(.system(size: MGStyle.FontSize.caption, weight: .medium))
+                                TextField("direction=next,space_number=2", text: $runnerParametersText)
+                                    .textFieldStyle(.roundedBorder)
+                                Text(entry.action.supportedParameters.map { param in
+                                    "\(param.key): \(param.type.rawValue)" + (param.defaultValue.map { " (default \($0.value))" } ?? "")
+                                }.joined(separator: "  •  "))
+                                .font(.system(size: 10, design: .monospaced))
+                                .foregroundColor(.secondary.opacity(0.8))
+                            }
+                        }
+
+                        Button("Run Action") { runSelectedAction(identifier: selectedId, action: entry.action) }
+                            .buttonStyle(.borderedProminent)
+                    }
+
+                    if let message = runnerResultMessage {
+                        Label(message, systemImage: runnerResultIsError ? "xmark.octagon.fill" : "checkmark.circle.fill")
+                            .font(.caption)
+                            .foregroundColor(runnerResultIsError ? .red : .green)
+                    }
+                }
+            }
+        }
+    }
+
+    private var runnerAllActions: [(identifier: String, action: PluginAction)] {
+        PluginManager.shared.getAllActions()
+            .map { (pluginId: $0.pluginId, action: $0.action) }
+            .map { ("\($0.pluginId).\($0.action.id)", $0.action) }
+            .sorted { $0.1.name < $1.1.name }
+    }
+
+    private var runnerFilteredActions: [(identifier: String, action: PluginAction)] {
+        guard !runnerSearchText.isEmpty else { return runnerAllActions }
+        return runnerAllActions.filter {
+            $0.action.name.localizedCaseInsensitiveContains(runnerSearchText) ||
+            $0.identifier.localizedCaseInsensitiveContains(runnerSearchText)
+        }
+    }
+
+    private func runnerDefaultParametersText(for identifier: String?) -> String {
+        guard let identifier, let entry = runnerAllActions.first(where: { $0.identifier == identifier }) else { return "" }
+        return entry.action.supportedParameters
+            .compactMap { param -> String? in
+                guard let defaultValue = param.defaultValue else { return nil }
+                return "\(param.key)=\(defaultValue.value)"
+            }
+            .joined(separator: ",")
+    }
+
+    private func runSelectedAction(identifier: String, action: PluginAction) {
+        let params = ActionParameters.parse(commaSeparated: runnerParametersText)
+        do {
+            try PluginManager.shared.executeAction(identifier: identifier, parameters: params)
+            runnerResultMessage = "Executed \(action.name) successfully"
+            runnerResultIsError = false
+        } catch {
+            runnerResultMessage = "Failed: \(error.localizedDescription)"
+            runnerResultIsError = true
+        }
     }
 
     // MARK: - Activation Coordinator Section

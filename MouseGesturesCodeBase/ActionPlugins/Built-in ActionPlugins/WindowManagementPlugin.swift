@@ -799,7 +799,7 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
         PluginAction(
             id: "cycle_space",
             name: "Cycle Space",
-            description: "Move to the next or previous desktop space",
+            description: "Move to the next, previous, or a specific desktop space",
             requiresParameters: true,
             supportedParameters: [
                 ParameterDefinition(
@@ -810,9 +810,19 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
                     description: "Which direction to move",
                     validation: ValidationRule(allowedValues: [
                         AnyCodable("next"),
-                        AnyCodable("previous")
+                        AnyCodable("previous"),
+                        AnyCodable("specific")
                     ]),
-                    displayValues: ["next": "Next", "previous": "Previous"]
+                    displayValues: ["next": "Next", "previous": "Previous", "specific": "Specific Space"]
+                ),
+                ParameterDefinition(
+                    key: "space_number",
+                    name: "Space Number",
+                    type: .number,
+                    defaultValue: AnyCodable(1),
+                    description: "Which desktop space to switch to, numbered as shown in Mission Control",
+                    validation: ValidationRule(minValue: 1, maxValue: 16),
+                    visibleWhen: ParameterVisibilityRule(key: "direction", value: "specific")
                 )
             ],
             supportsRepeat: true,
@@ -1067,8 +1077,13 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
             }
 
         case "cycle_space":
-            let spaceNext = (parameters.string(for: "direction") ?? "next") == "next"
-            moveToSpace(next: spaceNext, context: context)
+            let direction = parameters.string(for: "direction") ?? "next"
+            if direction == "specific" {
+                let spaceNumber = Int(parameters.number(for: "space_number") ?? 1)
+                moveToSpace(atPosition: spaceNumber, context: context)
+            } else {
+                moveToSpace(next: direction == "next", context: context)
+            }
 
         default:
             throw PluginError.actionNotFound(action.id)
@@ -2006,21 +2021,36 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
     }
 
     private func moveToSpace(next: Bool, context: PluginContext) {
-        // System Events is sensitive to physically-held modifiers;
-        // wait for all modifier keys to be released first.
+        // Preferred path: jump directly via a hidden per-Space sentinel window
+        // (see SpaceSentinelManager) — no keyboard events, so it's immune to
+        // physically-held modifiers, and it drives the real click-focus path
+        // so the Dock's own Space tracking stays in sync (unlike the earlier,
+        // reverted SLSManagedDisplaySetCurrentSpace attempt, which left a
+        // broken hybrid state: both menu bars visible, next switch acting on
+        // the space the Dock still thought was active).
         //
-        // NOTE: a private-API direct switch (SLSManagedDisplaySetCurrentSpace)
-        // was tried here and reverted — it moves the WindowServer's logical
-        // active space but the Dock never learns about it and doesn't play the
-        // transition animation, leaving the system in a broken hybrid state
-        // (both menu bars visible, and the NEXT switch acts on the space the
-        // Dock still thinks is active instead of the one actually on screen).
-        // The AppleScript key-sim below is the only mechanism found that
-        // performs a genuine, Dock-coordinated, animated switch; its only
-        // downside is needing physical modifiers released first, which is
-        // what this wait is for.
+        // Falls back to key simulation only if the adjacent Space hasn't been
+        // visited yet this session (no sentinel there) or the private API is
+        // unavailable.
+        if SpaceSentinelManager.shared.switchToAdjacentSpace(next: next) { return }
+        moveToSpaceViaKeySimulation(keyCode: next ? 124 : 123, context: context)
+    }
+
+    private func moveToSpace(atPosition number: Int, context: PluginContext) {
+        guard SpaceSentinelManager.shared.switchToSpace(atPosition: number) else {
+            // No sentinel for that Space yet (not visited this session) — we
+            // can't jump to an arbitrary, non-adjacent Space via key
+            // simulation, so there's nothing safe to fall back to.
+            context.logger.log("cycle_space: Space \(number) hasn't been visited yet this session, cannot switch to it directly", file: #file, function: #function, line: #line)
+            return
+        }
+    }
+
+    /// System Events is sensitive to physically-held modifiers; wait for all
+    /// modifier keys to be released first. This is the fallback path used
+    /// only when no sentinel is available for the target Space.
+    private func moveToSpaceViaKeySimulation(keyCode: Int, context: PluginContext) {
         _ = waitForModifierRelease()
-        let keyCode = next ? 124 : 123 // Right / Left arrow
         do {
             try context.executeAppleScript("""
                 tell application "System Events"

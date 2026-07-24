@@ -46,6 +46,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         detectionPluginManager = DetectionPluginManager.shared
         detectionPluginManager.delegate = self
 
+        // Start claiming a hidden per-Space sentinel window on launch and on
+        // every Space change, so cycle_space/switch_to_space can jump there
+        // directly later without keyboard simulation.
+        _ = SpaceSentinelManager.shared
+
+        // Dev hook: `--run-action <identifier> [key=value,...]` or the
+        // MG_RUN_ACTION/MG_RUN_ACTION_PARAMS env vars let a developer script
+        // an action run from the shell without configuring a gesture. No-op
+        // if neither is present.
+        DevActionRunnerHook.runIfRequested()
+
         // Initialize menu icon
         menuIcon = MenuIcon(delegate: self)
 
