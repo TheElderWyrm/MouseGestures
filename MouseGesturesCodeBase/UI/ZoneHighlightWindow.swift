@@ -504,7 +504,7 @@ class ZoneHighlightManager {
             guard let self = self else { return }
             // Re-check actual system modifier state before hiding - rapid key
             // transitions may have restored modifiers since the hide was scheduled
-            let realMods = NSEvent.ModifierFlags.currentSystem
+            let realMods = NSEvent.ModifierFlags.currentHardware
             guard realMods.isEmpty else {
                 // Modifiers are held again; update state and keep zones visible
                 self.currentModifiers = realMods
@@ -595,7 +595,7 @@ class ZoneHighlightManager {
         modifierCheckTimer?.invalidate()
         modifierCheckTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
             guard let self = self else { return }
-            let realModifiers = NSEvent.ModifierFlags.currentSystem
+            let realModifiers = NSEvent.ModifierFlags.currentHardware
             if realModifiers.isEmpty && !self.currentModifiers.isEmpty {
                 self.currentModifiers = []
                 self.scheduleHide()
@@ -606,12 +606,12 @@ class ZoneHighlightManager {
     // MARK: - Modifier Monitoring
 
     private func startModifierMonitoring() {
-        modifierMonitor = NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
-            self?.handleModifierChange(event)
+        modifierMonitor = NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged) { [weak self] _ in
+            self?.handleModifierChange()
         }
         // Also monitor locally so modifier changes are tracked when app window is focused
         localModifierMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
-            self?.handleModifierChange(event)
+            self?.handleModifierChange()
             return event
         }
     }
@@ -629,10 +629,16 @@ class ZoneHighlightManager {
         hideTimer = nil
     }
 
-    private func handleModifierChange(_ event: NSEvent) {
+    private func handleModifierChange() {
         guard Configuration.shared.showZoneHighlights else { return }
 
-        let modifiers = event.modifierFlags.normalized
+        // Re-query true hardware state rather than trusting the flagsChanged
+        // event's own flags — see NSEvent.ModifierFlags.currentHardware. An
+        // action's own synthetic keyboard shortcut (sendKeyboardShortcut)
+        // wakes this monitor with a transient, wrong combo; reading it
+        // directly was why the zone-highlight label could flicker to a
+        // different gesture mid-action.
+        let modifiers = NSEvent.ModifierFlags.currentHardware
         currentModifiers = modifiers
 
         if !modifiers.isEmpty {

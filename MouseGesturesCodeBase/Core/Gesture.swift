@@ -7,10 +7,10 @@ import Carbon
 /// Timing configuration for repeating and long press actions
 struct TimingSettings: Codable, Equatable {
     var repeatOnHold: Bool
-    /// Click-to-toggle repeat: a discrete click while in the gesture's zone+modifiers
-    /// starts a hands-free auto-repeat sequence; clicking the same gesture again stops
-    /// it. Distinct from `repeatOnHold`, which requires continuously holding the
-    /// mouse+modifier in the zone. Peer option, not mutually exclusive.
+    /// Repeat on click: each discrete click while in the gesture's zone+modifiers
+    /// re-fires the action once more. Distinct from `repeatOnHold`, which repeats
+    /// continuously while the mouse+modifier stay held in the zone. Peer option,
+    /// not mutually exclusive.
     var repeatOnClick: Bool
     var repeatInitialDelay: TimeInterval
     var repeatInterval: TimeInterval

@@ -114,12 +114,12 @@ class ModifierKeyDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         guard globalModifierMonitor == nil else { return }
 
         // Monitor modifier key changes - both global and local
-        globalModifierMonitor = NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
-            self?.handleModifierChange(event)
+        globalModifierMonitor = NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged) { [weak self] _ in
+            self?.handleModifierChange()
         }
 
         localModifierMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
-            self?.handleModifierChange(event)
+            self?.handleModifierChange()
             return event
         }
 
@@ -133,7 +133,7 @@ class ModifierKeyDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
 
     /// Initialize modifier state from current system state
     private func initializeModifierState() {
-        let systemModifiers = NSEvent.ModifierFlags.currentSystem
+        let systemModifiers = NSEvent.ModifierFlags.currentHardware
 
         if !systemModifiers.isEmpty {
             context?.logger.log("Initializing with modifiers already pressed: \(systemModifiers.symbolString)", file: #file, function: #function, line: #line)
@@ -179,8 +179,12 @@ class ModifierKeyDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
 
     // MARK: - Event Handling
 
-    private func handleModifierChange(_ event: NSEvent) {
-        let newModifiers = event.modifierFlags.normalized
+    private func handleModifierChange() {
+        // Re-query true hardware state instead of trusting the flagsChanged
+        // event's own flags — see NSEvent.ModifierFlags.currentHardware and
+        // clearModifierStateContamination(from:) for why this alone isn't
+        // sufficient and what actually closes the gap on the write side.
+        let newModifiers = NSEvent.ModifierFlags.currentHardware
 
         guard newModifiers != currentModifiers else { return }
 

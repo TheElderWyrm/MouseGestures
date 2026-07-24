@@ -207,7 +207,10 @@ struct BundleCondition: Codable, Equatable {
 
     private func isModifierKeyPressed() -> Bool {
         guard let requiredModifiers = modifierKey else { return false }
-        let currentModifiers = NSEvent.modifierFlags
+        // Hardware-only read: a bundle's earlier steps may have already sent
+        // a synthetic keyboard shortcut, which would otherwise still be
+        // visible in NSEvent.modifierFlags at the moment this condition runs.
+        let currentModifiers = NSEvent.ModifierFlags.currentHardware
         return currentModifiers.contains(requiredModifiers)
     }
 

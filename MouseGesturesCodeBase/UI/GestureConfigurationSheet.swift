@@ -665,12 +665,12 @@ struct GestureConfigurationSheet: View {
             VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
                 Toggle("Repeat on Hold", isOn: $timing.repeatOnHold)
                 Toggle("Repeat on Click", isOn: $timing.repeatOnClick)
-                Text("Repeat on Hold fires continuously while you keep the mouse+modifier in the zone. Repeat on Click fires once and starts repeating hands-free — click the same gesture again to stop.")
+                Text("Repeat on Hold fires continuously while you keep the mouse+modifier in the zone. Repeat on Click re-runs the action once each time you click while the zone+modifiers are active.")
                     .font(.system(size: MGStyle.FontSize.caption))
                     .foregroundColor(.secondary)
                     .padding(.leading, MGStyle.Spacing.xxl)
 
-                if timing.repeatOnHold || timing.repeatOnClick {
+                if timing.repeatOnHold {
                     VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
                         HStack {
                             Text("Initial Delay:")
@@ -686,9 +686,9 @@ struct GestureConfigurationSheet: View {
                         HStack {
                             Text("Repeat Interval:")
                                 .frame(width: 120, alignment: .leading)
-                            Slider(value: $timing.repeatInterval, in: 0.02...2.0, step: 0.02)
+                            Slider(value: $timing.repeatInterval, in: 0.1...2.0, step: 0.1)
                                 .frame(width: 200)
-                            Text(String(format: "%.2f s", timing.repeatInterval))
+                            Text(String(format: "%.1f s", timing.repeatInterval))
                                 .frame(width: 50, alignment: .trailing)
                                 .foregroundColor(.secondary)
                         }

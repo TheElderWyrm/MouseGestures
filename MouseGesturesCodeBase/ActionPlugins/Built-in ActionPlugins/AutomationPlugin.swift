@@ -493,9 +493,14 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
               let keyUp = CGEvent(keyboardEventSource: source, virtualKey: shortcut.keyCode, keyDown: false) else { return }
         keyDown.flags = shortcut.modifiers
         keyUp.flags = shortcut.modifiers
+        SyntheticModifierSuppression.shared.begin(shortcut.modifiers)
         keyDown.post(tap: .cghidEventTap)
         usleep(100_000)
         keyUp.post(tap: .cghidEventTap)
+        // Undo the shared HID key-state contamination this posting causes —
+        // see clearModifierStateContamination(from:).
+        clearModifierStateContamination(from: shortcut.modifiers)
+        SyntheticModifierSuppression.shared.end(shortcut.modifiers)
     }
 
     private func runShortcut(name: String, input: String?) {
@@ -765,9 +770,14 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
               let keyUp = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: false) else { return }
         keyDown.flags = modifiers
         keyUp.flags = modifiers
+        SyntheticModifierSuppression.shared.begin(modifiers)
         keyDown.post(tap: .cghidEventTap)
         usleep(50_000)
         keyUp.post(tap: .cghidEventTap)
+        // Undo the shared HID key-state contamination this posting causes —
+        // see clearModifierStateContamination(from:).
+        clearModifierStateContamination(from: modifiers)
+        SyntheticModifierSuppression.shared.end(modifiers)
     }
 
     private func executeAppleScript(_ script: String) {

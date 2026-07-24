@@ -188,7 +188,7 @@ class BrowserActionsPlugin: NSObject, GestureActionPlugin {
         case "back":
             context.sendKeyboardShortcut(keyCode: 0x7B, modifiers: .maskCommand) // Cmd + [
         case "forward":
-            context.sendKeyboardShortcut(keyCode: 0x7D, modifiers: .maskCommand) // Cmd + ]
+            context.sendKeyboardShortcut(keyCode: 0x7C, modifiers: .maskCommand) // Cmd + Right Arrow
         case "refresh":
             context.sendKeyboardShortcut(keyCode: 0x0F, modifiers: .maskCommand) // Cmd + R
         case "home":

@@ -431,7 +431,7 @@ struct GestureCardView: View {
                         Image(systemName: "repeat.circle")
                             .font(.system(size: 9))
                             .foregroundColor(.secondary.opacity(0.6))
-                            .help("Click to start/stop repeating")
+                            .help("Click again to run it again")
                     }
                     if gesture.timing.longPressEnabled {
                         Image(systemName: "timer")
@@ -554,8 +554,10 @@ struct GestureCardView: View {
                             ? "On Hold + On Click"
                             : (gesture.timing.repeatOnHold ? "On Hold" : "On Click")
                         detailLine("Repeat", repeatMode)
-                        detailLine("Delay", String(format: "%.1fs", gesture.timing.repeatInitialDelay))
-                        detailLine("Interval", String(format: "%.2fs", gesture.timing.repeatInterval))
+                        if gesture.timing.repeatOnHold {
+                            detailLine("Delay", String(format: "%.1fs", gesture.timing.repeatInitialDelay))
+                            detailLine("Interval", String(format: "%.1fs", gesture.timing.repeatInterval))
+                        }
                     }
                     if gesture.timing.longPressEnabled {
                         detailLine("Long Press", String(format: "%.1fs", gesture.timing.longPressThreshold))

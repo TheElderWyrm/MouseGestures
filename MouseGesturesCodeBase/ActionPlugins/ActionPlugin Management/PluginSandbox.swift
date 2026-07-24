@@ -232,9 +232,16 @@ class SandboxedPluginContext: PluginContext {
               let keyUp   = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: false) else { return }
         keyDown.flags = modifiers
         keyUp.flags   = modifiers
+        // Mask these bits out of our own modifier reads for the duration of
+        // this call — see SyntheticModifierSuppression.
+        SyntheticModifierSuppression.shared.begin(modifiers)
         keyDown.post(tap: .cghidEventTap)
         usleep(50_000)
         keyUp.post(tap: .cghidEventTap)
+        // Undo the shared HID key-state contamination this posting causes —
+        // see clearModifierStateContamination(from:).
+        clearModifierStateContamination(from: modifiers)
+        SyntheticModifierSuppression.shared.end(modifiers)
     }
 
     func executeAppleScript(_ script: String) throws {

@@ -389,7 +389,7 @@ class MouseButtonDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     /// Check for a "standard" zone gesture (zone + modifiers only — no click-trigger
     /// or drag component of its own) that has `repeatOnClick` enabled and matches the
     /// zone the mouse currently sits in plus the held modifiers. A discrete click
-    /// there toggles a hands-free auto-repeat sequence via ScreenZoneDetectorPlugin,
+    /// there re-fires the gesture once more via ScreenZoneDetectorPlugin,
     /// independent of the single execution that already fires when the mouse enters
     /// the zone (see ScreenZoneDetectorPlugin.detectGesture).
     private func checkRepeatOnClickGesture(modifiers: NSEvent.ModifierFlags) {
@@ -415,7 +415,7 @@ class MouseButtonDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         guard let gesture = candidate else { return }
 
         (DetectionPluginManager.shared.getPlugin(ScreenZoneDetectorPlugin.pluginIdentifier) as? ScreenZoneDetectorPlugin)?
-            .toggleRepeatOnClick(for: gesture)
+            .fireRepeatOnClick(for: gesture)
     }
 
     private func handleMouseUp(_ event: NSEvent) {

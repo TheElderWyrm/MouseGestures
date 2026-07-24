@@ -4,7 +4,7 @@ import Cocoa
 /// Plugin that detects mouse movement in screen zones.
 /// Only responsible for mouse position → zone detection.
 /// Button hold state is queried in real-time via DragModifier.currentSystem.
-/// Modifier state is queried via NSEvent.ModifierFlags.currentSystem.
+/// Modifier state is queried via NSEvent.ModifierFlags.currentHardware.
 ///
 /// mouseDragged monitors are only installed when drag gestures exist,
 /// avoiding unnecessary event processing during normal mouse-button holds.
@@ -154,6 +154,9 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     private var lastTriggeredZone: ScreenZone?
     private var lastTriggeredDrag: DragModifier = .none
     private var lastTriggeredModifiers: NSEvent.ModifierFlags = []
+    // Debounces a mouse sample landing outside every zone before treating it
+    // as a real exit — see processZoneExit().
+    private var zoneExitDebounceTimer: Timer?
 
     // Cached system state to avoid repeated queries
     private var cachedDragModifier: DragModifier = .none
@@ -181,13 +184,6 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     // delay timer and corrupt the repeat state for the new gesture.
     private var repeatInitialDelayTimer: Timer?
     private var currentRepeatingGesture: Gesture?
-
-    // Click-toggled repeat state — independent of the hold-based repeat above.
-    // Started/stopped by MouseButtonDetectorPlugin via toggleRepeatOnClick(for:)
-    // when a discrete click lands on a `repeatOnClick` gesture's zone+modifiers.
-    private var clickRepeatTimer: Timer?
-    private var clickRepeatInitialDelayTimer: Timer?
-    private var currentClickRepeatingGesture: Gesture?
 
     // Gesture lookup for efficient matching
     private var gestureLookup: GestureLookup?
@@ -283,7 +279,6 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         ActivationCoordinator.shared.pluginStopping(self)
         disableMouseTracking()
         stopRepeatTimer()
-        stopClickRepeatTimer()
         lastTriggeredZone = nil
         lastTriggeredDrag = .none
         lastTriggeredModifiers = []
@@ -360,6 +355,8 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         isMouseTrackingActive = false
         lastTriggeredZone = nil
         stopRepeatTimer()
+        zoneExitDebounceTimer?.invalidate()
+        zoneExitDebounceTimer = nil
 
         // Clear cached state
         cachedDragModifier = .none
@@ -416,7 +413,7 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         // values and match the wrong gesture — e.g. a ⌘+drag-gated corner
         // gesture wouldn't fire, and a no-modifier one might fire instead.
         cachedDragModifier = DragModifier.currentSystem
-        cachedModifiers = NSEvent.ModifierFlags.currentSystem
+        cachedModifiers = NSEvent.ModifierFlags.currentHardware
         if let zone = detectZoneFromCache(point: mouseLocation) {
             if context?.logger.isDebugEnabled ?? false {
                 context?.logger.log("Mouse already in zone \(zone.rawValue) when tracking enabled", file: #file, function: #function, line: #line)
@@ -438,7 +435,7 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
 
         // Update cached state on every mouse event (but only query once per event)
         cachedDragModifier = DragModifier.currentSystem
-        cachedModifiers = NSEvent.ModifierFlags.currentSystem
+        cachedModifiers = NSEvent.ModifierFlags.currentHardware
 
         if let zone = detectZoneFromCache(point: mouseLocation) {
             processZoneEntry(zone)
@@ -450,6 +447,13 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     // MARK: - Zone Processing
 
     private func processZoneEntry(_ zone: ScreenZone) {
+        // A real entry — even back into the SAME zone we were already in —
+        // means we're not exiting after all. Cancel any pending debounced
+        // exit so a boundary wobble that already bounced back in doesn't
+        // later wipe lastTriggeredZone out from under a still-current hold.
+        zoneExitDebounceTimer?.invalidate()
+        zoneExitDebounceTimer = nil
+
         // Use cached state from handleMousePosition (single query per mouse event)
         // Normalize modifiers to only track user-meaningful keys (⌘⌃⌥⇧),
         // preventing spurious re-triggers from transient system flags
@@ -477,9 +481,23 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     }
 
     private func processZoneExit() {
-        if lastTriggeredZone != nil {
-            lastTriggeredZone = nil
-            stopRepeatTimer()
+        guard lastTriggeredZone != nil else { return }
+        guard zoneExitDebounceTimer == nil else { return }  // already debouncing
+
+        // Debounce the exit instead of clearing lastTriggeredZone immediately:
+        // a single mouse sample landing just outside a zone's edge — very
+        // common right at a screen corner/edge, where the reach-and-settle
+        // motion of an actual gesture naturally decelerates and wobbles —
+        // would otherwise wipe the single-fire memory, and the very next
+        // sample (back inside the same zone) would look like a brand-new
+        // entry and fire the gesture a second time. 80ms comfortably absorbs
+        // a frame or two of boundary jitter while still feeling instant for a
+        // real, sustained exit.
+        zoneExitDebounceTimer = Timer.scheduledTimer(withTimeInterval: 0.08, repeats: false) { [weak self] _ in
+            guard let self = self else { return }
+            self.zoneExitDebounceTimer = nil
+            self.lastTriggeredZone = nil
+            self.stopRepeatTimer()
         }
     }
 
@@ -567,7 +585,7 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     private func repeatGesture(_ gesture: Gesture) {
         triggerGesture(gesture, context: GestureContext(
             source: .`repeat`,
-            modifiers: NSEvent.ModifierFlags.currentSystem,
+            modifiers: NSEvent.ModifierFlags.currentHardware,
             timestamp: Date()
         ))
     }
@@ -586,7 +604,7 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         guard currentZone == gesture.zone else { return false }
 
         // Query system state (this is timer-based, not per-mouse-event, so overhead is acceptable)
-        let mods = NSEvent.ModifierFlags.currentSystem
+        let mods = NSEvent.ModifierFlags.currentHardware
         let drag = DragModifier.currentSystem
 
         // Check "No Mouse" requirement — reject if any mouse button is held
@@ -616,81 +634,20 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         return mods.contains(required)
     }
 
-    // MARK: - Click-Toggled Repeat
+    // MARK: - Repeat On Click
 
     /// Called by MouseButtonDetectorPlugin when a discrete click lands inside a
-    /// `repeatOnClick` gesture's zone with its required modifiers held. Toggle
-    /// semantics: if this exact gesture is already auto-repeating, the click stops
-    /// it; otherwise the gesture fires once immediately and a hands-free repeat
-    /// sequence starts (mouse need not stay in the zone — unlike repeat-on-hold).
-    func toggleRepeatOnClick(for gesture: Gesture) {
+    /// `repeatOnClick` gesture's zone with its required modifiers held. Each
+    /// qualifying click just re-fires the gesture once more — independent of
+    /// the single execution that already fires when the mouse first enters
+    /// the zone (see detectGesture above).
+    func fireRepeatOnClick(for gesture: Gesture) {
         guard gesture.repeatOnClick else { return }
-
-        if let current = currentClickRepeatingGesture, current.id == gesture.id {
-            stopClickRepeatTimer()
-            return
-        }
-
-        // Switching to a new gesture (or starting fresh) replaces any prior
-        // click-repeat sequence — only one can run at a time.
-        stopClickRepeatTimer()
-        currentClickRepeatingGesture = gesture
 
         triggerGesture(gesture, context: GestureContext(
             source: .screenZone(zone: gesture.zone, dragState: gesture.dragModifier),
-            modifiers: NSEvent.ModifierFlags.currentSystem, timestamp: Date()
+            modifiers: NSEvent.ModifierFlags.currentHardware, timestamp: Date()
         ))
-
-        guard gesture.repeatInterval > 0 else {
-            currentClickRepeatingGesture = nil
-            return
-        }
-
-        let startRepeating = { [weak self] in
-            guard let self = self, let g = self.currentClickRepeatingGesture,
-                  self.shouldContinueClickRepeating() else { return }
-
-            self.clickRepeatTimer = Timer.scheduledTimer(withTimeInterval: g.repeatInterval, repeats: true) { [weak self] timer in
-                guard let self = self, let g = self.currentClickRepeatingGesture,
-                      self.shouldContinueClickRepeating() else { timer.invalidate(); return }
-                self.repeatGesture(g)
-            }
-        }
-
-        if gesture.repeatInitialDelay > 0 {
-            clickRepeatInitialDelayTimer = Timer.scheduledTimer(withTimeInterval: gesture.repeatInitialDelay, repeats: false) { [weak self] _ in
-                self?.clickRepeatInitialDelayTimer = nil
-                startRepeating()
-            }
-        } else {
-            startRepeating()
-        }
-    }
-
-    private func stopClickRepeatTimer() {
-        clickRepeatTimer?.invalidate()
-        clickRepeatTimer = nil
-        clickRepeatInitialDelayTimer?.invalidate()
-        clickRepeatInitialDelayTimer = nil
-        currentClickRepeatingGesture = nil
-    }
-
-    /// Click-repeat is hands-free (no zone-hold requirement), but still needs a
-    /// safety net so it can't survive the user moving on to an unrelated task.
-    /// Stops if the gesture got disabled, or (for gestures that require modifiers)
-    /// if those modifiers are no longer held — the same real-system-modifier-state
-    /// signal ZoneHighlightWindow's scheduleHide() uses to decide whether to hide
-    /// zone highlights. Gestures with no modifier requirement have nothing to
-    /// release, so the explicit re-click toggle is their only stop mechanism.
-    private func shouldContinueClickRepeating() -> Bool {
-        guard let gesture = currentClickRepeatingGesture else { return false }
-        guard gesture.isEnabled else { return false }
-
-        let required = gesture.modifiers
-        guard !required.isEmpty else { return true }
-
-        let mods = NSEvent.ModifierFlags.currentSystem.normalized
-        return mods.contains(required)
     }
 
     // MARK: - Settings Sync
