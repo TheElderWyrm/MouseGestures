@@ -11,8 +11,10 @@
 		1951437097EA43F68269CAF2 /* TutorialModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E1B4ABD8BDC387CF9C1CFDE /* TutorialModifier.swift */; };
 		212E4EB8A4F446405206B88D /* ActivationComponentService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A7844B6B3BB98B841022947 /* ActivationComponentService.swift */; };
 		231D4D12905AE874B7331D1A /* ActivationMapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08B54313B0ED9B193F3749C6 /* ActivationMapper.swift */; };
+		2388401389912DF3A56467A3 /* LemonSqueezyLicenseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 026841C5897B3A8A29F6A803 /* LemonSqueezyLicenseTests.swift */; };
 		2FE94C40A39A2348888CCEA3 /* DevActionRunnerHook.swift in Sources */ = {isa = PBXBuildFile; fileRef = 696D440FBC79DD976FDA7EF2 /* DevActionRunnerHook.swift */; };
 		410A4D418988160F289DF05D /* GenericActivation.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1D3401DA8E9283C5710D113 /* GenericActivation.swift */; };
+		443E421F8123DDB046C7F24E /* LemonSqueezyLicense.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33DB4B569DDBAAC387A23323 /* LemonSqueezyLicense.swift */; };
 		47664568AFCE2E60CBCAD6AF /* LicenseSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FCB488CA68065730DE07C36 /* LicenseSettingsView.swift */; };
 		490378E9743B2AE4F7F88820 /* SpaceSentinelManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78A77FDC7D6D3B919013C3D3 /* SpaceSentinelManager.swift */; };
 		56614B068B7EE21330CA141F /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89214489A146B36C7BA39BCC /* OnboardingView.swift */; };
@@ -132,10 +134,12 @@
 		DD0000000000000000000031 /* UpdateLogic.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD0000000000000000000030 /* UpdateLogic.swift */; };
 		DD0000000000000000000032 /* UpdateLogic.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD0000000000000000000030 /* UpdateLogic.swift */; };
 		DD0000000000000000000034 /* UpdateLogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD0000000000000000000033 /* UpdateLogicTests.swift */; };
+		E4C343F7B7372EEA22DD1D26 /* LemonSqueezyLicense.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33DB4B569DDBAAC387A23323 /* LemonSqueezyLicense.swift */; };
 		F64847768F1F2D8E06D72CBC /* UIStyles.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E94445AB3BF094E20E605FC /* UIStyles.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		026841C5897B3A8A29F6A803 /* LemonSqueezyLicenseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LemonSqueezyLicenseTests.swift; path = MouseGesturesTests/LemonSqueezyLicenseTests.swift; sourceTree = SOURCE_ROOT; };
 		046848D79A549E69C644FFD7 /* ActivationComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActivationComponents.swift; path = MouseGesturesCodeBase/Detection/ActivationComponents.swift; sourceTree = SOURCE_ROOT; };
 		06BE4D14ACFDD34E9DF4B651 /* UpdateService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UpdateService.swift; path = MouseGesturesCodeBase/Services/UpdateService.swift; sourceTree = SOURCE_ROOT; };
 		08AA45A28A2516DB23980BC2 /* SettingsCategoryProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SettingsCategoryProvider.swift; path = MouseGesturesCodeBase/UI/Settings/SettingsCategoryProvider.swift; sourceTree = SOURCE_ROOT; };
@@ -143,6 +147,7 @@
 		0E1B4ABD8BDC387CF9C1CFDE /* TutorialModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TutorialModifier.swift; path = MouseGesturesCodeBase/UI/TutorialModifier.swift; sourceTree = SOURCE_ROOT; };
 		24834D81A3CF701D5ADE9D92 /* BrowserActionsPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BrowserActionsPlugin.swift; path = "MouseGesturesCodeBase/ActionPlugins/Built-in ActionPlugins/BrowserActionsPlugin.swift"; sourceTree = SOURCE_ROOT; };
 		2DF54CB5B4E798FC72FBB425 /* LicenseService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LicenseService.swift; path = MouseGesturesCodeBase/Services/LicenseService.swift; sourceTree = SOURCE_ROOT; };
+		33DB4B569DDBAAC387A23323 /* LemonSqueezyLicense.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LemonSqueezyLicense.swift; path = MouseGesturesCodeBase/Services/LemonSqueezyLicense.swift; sourceTree = SOURCE_ROOT; };
 		43752886C53B432383537A9E /* SelfUpdateService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SelfUpdateService.swift; path = MouseGesturesCodeBase/Services/SelfUpdateService.swift; sourceTree = SOURCE_ROOT; };
 		696D440FBC79DD976FDA7EF2 /* DevActionRunnerHook.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DevActionRunnerHook.swift; path = MouseGesturesCodeBase/Services/DevActionRunnerHook.swift; sourceTree = SOURCE_ROOT; };
 		6FCB488CA68065730DE07C36 /* LicenseSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LicenseSettingsView.swift; path = MouseGesturesCodeBase/UI/Settings/LicenseSettingsView.swift; sourceTree = SOURCE_ROOT; };
@@ -463,6 +468,7 @@
 				DD0000000000000000000030 /* UpdateLogic.swift */,
 				CE0347CE854263CC12FAA6C3 /* TutorialService.swift */,
 				696D440FBC79DD976FDA7EF2 /* DevActionRunnerHook.swift */,
+				33DB4B569DDBAAC387A23323 /* LemonSqueezyLicense.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -597,6 +603,7 @@
 				DD0000000000000000000023 /* LicenseKeyTests.swift */,
 				DD0000000000000000000025 /* ActionParametersTests.swift */,
 				DD0000000000000000000033 /* UpdateLogicTests.swift */,
+				026841C5897B3A8A29F6A803 /* LemonSqueezyLicenseTests.swift */,
 			);
 			path = MouseGesturesTests;
 			sourceTree = "<group>";
@@ -799,6 +806,7 @@
 				B88740FC8BBF9FCB115197F6 /* TutorialService.swift in Sources */,
 				1951437097EA43F68269CAF2 /* TutorialModifier.swift in Sources */,
 				2FE94C40A39A2348888CCEA3 /* DevActionRunnerHook.swift in Sources */,
+				443E421F8123DDB046C7F24E /* LemonSqueezyLicense.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -817,6 +825,8 @@
 				DD0000000000000000000009 /* ScreenZone.swift in Sources */,
 				DD0000000000000000000032 /* UpdateLogic.swift in Sources */,
 				DD0000000000000000000034 /* UpdateLogicTests.swift in Sources */,
+				E4C343F7B7372EEA22DD1D26 /* LemonSqueezyLicense.swift in Sources */,
+				2388401389912DF3A56467A3 /* LemonSqueezyLicenseTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

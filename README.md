@@ -85,8 +85,8 @@ xcodebuild build \
 
 MouseGestures is free to use with a single active profile. Pro removes that
 limit (multiple profiles, per-app profile switching, advanced targeting) and
-is unlocked with an offline license key — there's no account or subscription
-involved.
+is unlocked with a license key — no account or subscription involved. A
+purchased key verifies once online at activation, then works fully offline.
 
 ## More
 

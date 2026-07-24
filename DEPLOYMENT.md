@@ -190,3 +190,28 @@ separate file to update by hand. As soon as the `release` job above publishes
 the GitHub Release with the DMG attached, the in-app updater picks it up on
 its next check. The release must be public and not marked draft/prerelease
 (the updater ignores both).
+
+---
+
+## Licensing (Lemon Squeezy) — remaining setup
+
+**The app-side code is done and tested**: `LemonSqueezyLicense.swift` (License
+API client) + `LicenseService.swift` (activation/deactivation, cached locally
+so the app never needs network again after the first successful activation)
++ `LicenseSettingsView.swift` (Settings → License UI). This app's own offline
+HMAC keys (`LicenseKey.swift`, still used for manually-issued support/comp
+keys) keep working unchanged — activation tries that format first, and only
+falls back to an online Lemon Squeezy check for anything else.
+
+**What's left is entirely on the Lemon Squeezy side** — none of it can be done
+by an agent, since it requires a real identity, payout details, and agreeing
+to their terms:
+
+1. **Create an account**: [app.lemonsqueezy.com/register](https://app.lemonsqueezy.com/register), then create a Store if you don't have one.
+2. **Create a product**: name it (e.g. "MouseGestures Pro"), **one-time payment** (not a subscription), price $9.99.
+3. On that product's variant, under **License Keys**, turn licensing **on**:
+   - **License length**: no expiry / unlimited — this is a perpetual purchase, not a subscription with a support window.
+   - **Activation limit**: how many Macs one key can activate at once. The site says "every Mac you own," so a generous number (5+) matches that promise better than a strict "1." This is yours to set (and can likely be revisited later) — there's no code-side dependency on the exact number.
+4. **Get the checkout URL** for that product/variant (shown on the product page in your dashboard, something like `https://YOURSTORE.lemonsqueezy.com/buy/...`). Paste it into `Website/purchase.html`'s `#buy-btn` href (currently `href="#" aria-disabled="true"`, marked with a `GO-LIVE` comment right above it) and delete the `aria-disabled` attribute + the `.buy-soon` "sales open soon" badge right below it.
+5. **Test before going live**: Lemon Squeezy stores support a **test mode** — run a real test purchase, confirm the email actually contains a license key, paste that key into MouseGestures' Settings → License → Activate, and confirm it unlocks Pro. This is the one thing that genuinely can't be verified without your account existing, so it's worth doing once before announcing sales are open.
+6. Once verified, flip the site live (step 4) and this is done — no ongoing maintenance, no webhook, no key inventory to manage.

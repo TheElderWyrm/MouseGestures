@@ -5,6 +5,7 @@ struct LicenseSettingsView: View {
     @State private var licenseKeyInput = ""
     @State private var showingActivatedAlert = false
     @State private var activationError: String?
+    @State private var isActivating = false
 
     private let purchaseURL = URL(string: "https://mousegestures.app/purchase")
 
@@ -90,19 +91,27 @@ struct LicenseSettingsView: View {
                 .font(.headline)
 
             Text("Enter the license key from your purchase confirmation to unlock all "
-                + "Pro features. Activation works offline — no account required.")
+                + "Pro features. A purchased key verifies once online, then MouseGestures "
+                + "works fully offline — no account, ever.")
                 .font(.caption)
                 .foregroundColor(.secondary)
 
             HStack(spacing: MGStyle.Spacing.md) {
-                TextField("MGPRO-XXXXX-XXXXX-XXXXX", text: $licenseKeyInput)
+                TextField("Paste your license key", text: $licenseKeyInput)
                     .textFieldStyle(.roundedBorder)
                     .font(.system(.body, design: .monospaced))
+                    .disabled(isActivating)
                     .onSubmit(activate)
 
-                Button("Activate", action: activate)
-                    .buttonStyle(.borderedProminent)
-                    .disabled(licenseKeyInput.trimmingCharacters(in: .whitespaces).isEmpty)
+                Button(action: activate) {
+                    if isActivating {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Text("Activate")
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(licenseKeyInput.trimmingCharacters(in: .whitespaces).isEmpty || isActivating)
             }
 
             if let url = purchaseURL {
@@ -148,12 +157,22 @@ struct LicenseSettingsView: View {
 
     private func activate() {
         let trimmed = licenseKeyInput.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty else { return }
-        if licenseService.activateLicense(trimmed) {
-            licenseKeyInput = ""
-            showingActivatedAlert = true
-        } else {
-            activationError = "That license key isn't valid. Double-check it against your purchase confirmation and try again."
+        guard !trimmed.isEmpty, !isActivating else { return }
+        isActivating = true
+        licenseService.activateLicense(trimmed) { result in
+            isActivating = false
+            switch result {
+            case .success:
+                licenseKeyInput = ""
+                showingActivatedAlert = true
+            case .invalidKey:
+                activationError = "That license key isn't valid. Double-check it against your purchase confirmation and try again."
+            case .activationLimitReached:
+                activationError = "This license is already active on its maximum number of Macs. "
+                    + "Deactivate it on another Mac first, or email support@mousegestures.app."
+            case .networkError:
+                activationError = "Couldn't reach the license server. Check your internet connection and try again."
+            }
         }
     }
 

@@ -20,6 +20,15 @@ public class LicenseService: ObservableObject {
     private let trialDurationDays = LicenseLogic.trialDurationDays
     private let firstLaunchKey = "MGFirstLaunchDate"
     private let licenseKeyKey = "MGLicenseKey"
+    /// Which validation path issued the stored key: `"hmac"` (this app's own
+    /// offline scheme, `LicenseKey`) or `"lemonsqueezy"` (a real purchase,
+    /// verified once online via `LemonSqueezyLicense`). Absent/unrecognized
+    /// values are treated as `"hmac"` for back-compat with keys stored before
+    /// this distinction existed.
+    private let licenseTypeKey = "MGLicenseType"
+    /// The Lemon Squeezy activation instance id for this Mac, so deactivation
+    /// can free the slot on their side too. Only set for `"lemonsqueezy"` keys.
+    private let licenseInstanceIdKey = "MGLicenseInstanceID"
 
     // MARK: - Properties
 
@@ -222,33 +231,101 @@ public class LicenseService: ObservableObject {
 
     // MARK: - Offline License Activation
 
-    /// True if a valid Pro license key is currently stored.
+    /// True if a valid Pro license key is currently stored. Lemon Squeezy keys
+    /// are trusted once activation has succeeded — see `activateLicense` —
+    /// so this never needs network access; the app works fully offline after
+    /// the first successful activation, same as the offline HMAC keys always have.
     public var hasValidLicense: Bool {
         guard let key = defaults.string(forKey: licenseKeyKey), !key.isEmpty else { return false }
+        if defaults.string(forKey: licenseTypeKey) == "lemonsqueezy" { return true }
         return LicenseKey.isValid(key)
     }
 
     /// The stored license key formatted for display, or `nil` if none is stored.
+    /// Lemon Squeezy keys are its own UUID format, shown as-is — `LicenseKey.format`
+    /// would mangle them, since it assumes this app's own dash-grouped scheme.
     public var storedLicenseKeyDisplay: String? {
         guard let key = defaults.string(forKey: licenseKeyKey), !key.isEmpty else { return nil }
+        if defaults.string(forKey: licenseTypeKey) == "lemonsqueezy" { return key }
         return LicenseKey.format(key)
     }
 
-    /// Validates and, if valid, stores a license key to unlock Pro offline.
-    /// - Returns: `true` if the key was accepted and Pro was unlocked; `false` if invalid.
-    @discardableResult
-    public func activateLicense(_ rawKey: String) -> Bool {
+    /// Result of an activation attempt, distinguishing the reasons a key can
+    /// fail so the UI can show something more useful than a single generic message.
+    public enum ActivationResult: Equatable {
+        case success
+        case invalidKey
+        case activationLimitReached
+        case networkError
+    }
+
+    /// Validates and, if valid, stores a license key to unlock Pro.
+    ///
+    /// Tries this app's own offline HMAC scheme first (instant, no network —
+    /// used for manually-issued support/comp keys). Anything else is treated
+    /// as a real Lemon Squeezy purchase key and verified once online via the
+    /// License API; on success the result is cached locally (`hasValidLicense`
+    /// above), so this is the only network call activation ever needs.
+    public func activateLicense(_ rawKey: String, completion: @escaping (ActivationResult) -> Void) {
         let normalized = LicenseKey.normalize(rawKey)
-        guard LicenseKey.isValid(normalized) else { return false }
-        // Storing forceFreeMode wins over a key only while explicitly set for testing.
-        defaults.set(normalized, forKey: licenseKeyKey)
-        refreshLicenseStatus()
-        return true
+        if LicenseKey.isValid(normalized) {
+            defaults.set(normalized, forKey: licenseKeyKey)
+            defaults.set("hmac", forKey: licenseTypeKey)
+            defaults.removeObject(forKey: licenseInstanceIdKey)
+            refreshLicenseStatus()
+            completion(.success)
+            return
+        }
+
+        let trimmedKey = rawKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedKey.isEmpty else {
+            completion(.invalidKey)
+            return
+        }
+
+        let instanceName = Host.current().localizedName ?? "Mac"
+        let request = LemonSqueezyLicense.activateRequest(licenseKey: trimmedKey, instanceName: instanceName)
+
+        URLSession.shared.dataTask(with: request) { [weak self] data, _, error in
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                guard error == nil, let data = data,
+                      let response = try? LemonSqueezyLicense.parseActivateResponse(data) else {
+                    completion(.networkError)
+                    return
+                }
+                guard response.activated, let instance = response.instance else {
+                    if (response.error ?? "").localizedCaseInsensitiveContains("activation limit") {
+                        completion(.activationLimitReached)
+                    } else {
+                        completion(.invalidKey)
+                    }
+                    return
+                }
+                self.defaults.set(trimmedKey, forKey: self.licenseKeyKey)
+                self.defaults.set("lemonsqueezy", forKey: self.licenseTypeKey)
+                self.defaults.set(instance.id, forKey: self.licenseInstanceIdKey)
+                self.refreshLicenseStatus()
+                completion(.success)
+            }
+        }.resume()
     }
 
     /// Removes any stored license key and reverts to trial/free status.
+    /// For a Lemon Squeezy key, also best-effort deactivates the instance on
+    /// their side so the activation slot is freed — but local deactivation
+    /// never waits on (or depends on) that call succeeding, since the user's
+    /// choice to deactivate this Mac shouldn't require being online.
     public func deactivateLicense() {
+        if defaults.string(forKey: licenseTypeKey) == "lemonsqueezy",
+           let key = defaults.string(forKey: licenseKeyKey),
+           let instanceId = defaults.string(forKey: licenseInstanceIdKey) {
+            let request = LemonSqueezyLicense.deactivateRequest(licenseKey: key, instanceId: instanceId)
+            URLSession.shared.dataTask(with: request) { _, _, _ in }.resume()
+        }
         defaults.removeObject(forKey: licenseKeyKey)
+        defaults.removeObject(forKey: licenseTypeKey)
+        defaults.removeObject(forKey: licenseInstanceIdKey)
         refreshLicenseStatus()
     }
 
@@ -285,10 +362,10 @@ public class LicenseService: ObservableObject {
         // Clear trial, stored license key, and pro indicators
         defaults.removeObject(forKey: firstLaunchKey)
         defaults.removeObject(forKey: licenseKeyKey)
+        defaults.removeObject(forKey: licenseTypeKey)
+        defaults.removeObject(forKey: licenseInstanceIdKey)
         defaults.set(true, forKey: "MGFootprintForcedFree") // Optional indicator
         forceFreeMode = true // This will trigger a refresh via didSet
-
-        // If there were other persistence keys for pro status, clear them here.
 
         NotificationCenter.default.post(
             name: NSNotification.Name("LicenseStatusChanged"),
