@@ -45,14 +45,23 @@ queue in performSave() instead of saveQueue itself.]
   content is now entirely subsumed by the 5 reorganized ones, so keeping them around was
   just redundant clutter in the "add a default profile" picker. Only Window Management /
   Application Management / Media Control / Browser Navigation / System remain.
-- [REVERTED] Switch boxes for showing the zone borders to a glow effect (Possibly turn on by default? Might be helpful for new users who haven't learned their actions yet).
-  -> Round 6: after 5 rounds iterating on the glow (see history below), the verdict was
-  "just go back to the flat, it was the best version." Reverted ZoneView entirely to the
-  original pre-glow rendering (`git checkout db86410 -- .../ZoneHighlightWindow.swift`) --
-  flat inactiveColor/activeColor fill + a 1px white border stroke, no gradients, no glow.
-  showZoneHighlights still defaults to true for new installs (that part of the request
-  stands independent of the box-vs-glow visual question). History of the glow attempts,
-  kept for reference in case this is ever revisited:
+- [DONE] Switch boxes for showing the zone borders to a glow effect (Possibly turn on by default? Might be helpful for new users who haven't learned their actions yet).
+  -> Round 7 (final): round 6 reverted all the way to the flat box on a "go back to flat"
+  call, but the very next message corrected that -- "No, we want the glow. That was good.
+  We just wan't a straight edge on the side of the long section." So: glow is back (radial
+  for corners, linear for edges, no flat fill), but edge zones are now deliberately a plain
+  straight-sided rectangle -- no lateral taper, no rounded caps, no 2D alpha fade. Only the
+  perpendicular (screen-edge-to-inner) direction fades; the long sides of each edge zone
+  are flat/constant. This walks back rounds 4-6's lateral treatments specifically (those
+  were solving a problem -- "hard cutoff on the edge" -- that in hindsight was really just
+  the corner-radius bug below, not something the long edges themselves needed). Corner
+  zones keep the bug-fixed radius (0.85x, full fade-to-zero within the window) and the
+  tuned-down intensity (0.6/0.2 peak alpha) from rounds 3-4, since neither of those was
+  ever contested. Verified by rendering the exact drawing code offscreen before touching
+  the real file, same as every prior round -- straight flush edge, no seam, no peeling.
+  showZoneHighlights still defaults to true for new installs. Kept the round-by-round
+  history below since the lateral-fade idea is a real option if this ever comes up again,
+  just not the one that was wanted here:
   Round 2 correction: first version was a stroked border with a shadow blur, which
   wasn't the right effect. Rewritten as a directional glow matching the website demo's
   zone visualization — corners glow radially from the actual screen corner, edges glow

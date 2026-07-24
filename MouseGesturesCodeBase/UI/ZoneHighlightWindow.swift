@@ -49,13 +49,9 @@ class ZoneView: NSView {
     var label: String?
     var forceShowLabel: Bool = false
 
-    private var inactiveColor: NSColor {
-        Configuration.shared.zoneHighlightColor.withAlphaComponent(0.1)
+    private var glowColor: NSColor {
+        Configuration.shared.zoneHighlightColor
     }
-    private var activeColor: NSColor {
-        Configuration.shared.zoneHighlightColor.withAlphaComponent(0.3)
-    }
-    private let borderColor = NSColor.white.withAlphaComponent(0.5)
 
     init(frame: NSRect, zone: ScreenZone) {
         self.zone = zone
@@ -67,16 +63,11 @@ class ZoneView: NSView {
     }
 
     override func draw(_ dirtyRect: NSRect) {
-        // Fill the entire view (the window is already sized to the zone)
-        let fillColor = isActive ? activeColor : inactiveColor
-        fillColor.setFill()
-        bounds.fill()
-
-        // Draw border
-        borderColor.setStroke()
-        let borderPath = NSBezierPath(rect: bounds.insetBy(dx: 0.5, dy: 0.5))
-        borderPath.lineWidth = 1.0
-        borderPath.stroke()
+        // No flat fill: the entire visual is the directional glow drawn
+        // below (corners glow from the screen corner inward, edges glow
+        // from the screen edge inward, with straight sides -- no lateral
+        // taper or rounding on the long edge zones).
+        drawGlow()
 
         // Draw label if present (forceShowLabel bypasses the global setting for preview mode)
         if let label = label, forceShowLabel || Configuration.shared.showZoneLabels {
@@ -138,6 +129,53 @@ class ZoneView: NSView {
                 let drawRect = NSRect(x: x, y: y, width: labelW, height: labelH)
                 label.draw(with: drawRect, options: [.usesLineFragmentOrigin, .truncatesLastVisibleLine], attributes: attrs, context: nil)
             }
+        }
+    }
+
+    /// Directional glow: corner zones glow outward from the screen's actual
+    /// corner (radial), edge zones glow inward from the screen's edge
+    /// (linear) — brightest at the screen boundary, fading to nothing
+    /// before the zone window's own edge. Edge zones keep straight sides:
+    /// only the perpendicular (screen-edge-to-inner) direction fades, with
+    /// no tapering or rounding along the long axis.
+    private func drawGlow() {
+        guard let ctx = NSGraphicsContext.current?.cgContext else { return }
+        guard bounds.width > 0, bounds.height > 0 else { return }
+
+        let peakAlpha: CGFloat = isActive ? 0.6 : 0.2
+        let bright = glowColor.withAlphaComponent(peakAlpha).cgColor
+        let clear = glowColor.withAlphaComponent(0).cgColor
+        guard let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: [bright, clear] as CFArray, locations: [0, 1]) else { return }
+
+        ctx.saveGState()
+        defer { ctx.restoreGState() }
+
+        switch zone {
+        case .topLeft, .topRight, .bottomLeft, .bottomRight:
+            let corner: CGPoint
+            switch zone {
+            case .topLeft: corner = CGPoint(x: 0, y: bounds.height)
+            case .topRight: corner = CGPoint(x: bounds.width, y: bounds.height)
+            case .bottomLeft: corner = CGPoint(x: 0, y: 0)
+            default: corner = CGPoint(x: bounds.width, y: 0) // .bottomRight
+            }
+            // Shorter than either side (not the diagonal), so the gradient
+            // has fully reached zero alpha before it can reach the window's
+            // own boundary in any direction -- otherwise the window edge cuts
+            // off a still-visible glow, which reads as a hard seam.
+            let radius = min(bounds.width, bounds.height) * 0.85
+            ctx.drawRadialGradient(gradient, startCenter: corner, startRadius: 0, endCenter: corner, endRadius: radius, options: [])
+
+        case .top, .bottom, .left, .right:
+            let start: CGPoint
+            let end: CGPoint
+            switch zone {
+            case .top: start = CGPoint(x: bounds.midX, y: bounds.height); end = CGPoint(x: bounds.midX, y: 0)
+            case .bottom: start = CGPoint(x: bounds.midX, y: 0); end = CGPoint(x: bounds.midX, y: bounds.height)
+            case .left: start = CGPoint(x: 0, y: bounds.midY); end = CGPoint(x: bounds.width, y: bounds.midY)
+            default: start = CGPoint(x: bounds.width, y: bounds.midY); end = CGPoint(x: 0, y: bounds.midY) // .right
+            }
+            ctx.drawLinearGradient(gradient, start: start, end: end, options: [])
         }
     }
 }
