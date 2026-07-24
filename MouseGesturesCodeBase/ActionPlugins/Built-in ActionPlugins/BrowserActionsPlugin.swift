@@ -10,7 +10,7 @@ class BrowserActionsPlugin: NSObject, GestureActionPlugin {
     override var description: String { "Specialized actions for web browsers (Safari, Chrome, etc.)" }
     let version = "1.0.0"
     let author = "MouseGestures"
-    let category = ActionCategory.application
+    let category = ActionCategory.browser
     let icon: NSImage? = nil
 
     // MARK: - Actions
@@ -48,7 +48,7 @@ class BrowserActionsPlugin: NSObject, GestureActionPlugin {
         PluginAction(
             id: "tab_management",
             name: "Tab Management",
-            description: "Control browser tabs",
+            description: "Open, close, or reopen browser tabs",
             requiresParameters: true,
             supportedParameters: [
                 ParameterDefinition(
@@ -60,20 +60,62 @@ class BrowserActionsPlugin: NSObject, GestureActionPlugin {
                     validation: ValidationRule(allowedValues: [
                         AnyCodable("new_tab"),
                         AnyCodable("close_tab"),
-                        AnyCodable("next_tab"),
-                        AnyCodable("previous_tab"),
                         AnyCodable("reopen_closed_tab")
                     ]),
                     displayValues: [
                         "new_tab": "New Tab",
                         "close_tab": "Close Tab",
-                        "next_tab": "Next Tab",
-                        "previous_tab": "Previous Tab",
                         "reopen_closed_tab": "Reopen Last Closed Tab"
                     ]
                 )
             ],
             icon: "plus.square.on.square"
+        ),
+
+        // Split out of tab_management: switching WHICH tab is frontmost is a
+        // distinct action from opening/closing tabs, and needed its own
+        // parameters for moving more than one tab at a time or jumping
+        // straight to a specific tab.
+        PluginAction(
+            id: "cycle_tab",
+            name: "Switch Tab",
+            description: "Move to the next tab, the previous tab, or a specific tab",
+            requiresParameters: true,
+            supportedParameters: [
+                ParameterDefinition(
+                    key: "mode",
+                    name: "Mode",
+                    type: .selection,
+                    defaultValue: AnyCodable("next"),
+                    description: "How to select the target tab",
+                    validation: ValidationRule(allowedValues: [
+                        AnyCodable("next"),
+                        AnyCodable("previous"),
+                        AnyCodable("specific")
+                    ]),
+                    displayValues: ["next": "Next Tab", "previous": "Previous Tab", "specific": "Specific Tab Number"]
+                ),
+                ParameterDefinition(
+                    key: "count",
+                    name: "Number of Tabs",
+                    type: .number,
+                    defaultValue: AnyCodable(1),
+                    description: "How many tabs to move across",
+                    validation: ValidationRule(minValue: 1, maxValue: 20),
+                    visibleWhen: ParameterVisibilityRule(key: "mode", anyOf: ["next", "previous"])
+                ),
+                ParameterDefinition(
+                    key: "tab_number",
+                    name: "Tab Number",
+                    type: .number,
+                    defaultValue: AnyCodable(1),
+                    description: "Which tab to jump to. 1-8 jump to that position; 9 jumps to the last tab (matches Safari/Chrome/Firefox/Edge's own Cmd+1...Cmd+9 shortcuts)",
+                    validation: ValidationRule(minValue: 1, maxValue: 9),
+                    visibleWhen: ParameterVisibilityRule(key: "mode", value: "specific")
+                )
+            ],
+            supportsRepeat: true,
+            icon: "arrow.left.arrow.right.square"
         ),
 
         PluginAction(
@@ -123,6 +165,8 @@ class BrowserActionsPlugin: NSObject, GestureActionPlugin {
             try executeNavigationAction(parameters: parameters, context: context)
         case "tab_management":
             try executeTabAction(parameters: parameters, context: context)
+        case "cycle_tab":
+            try executeCycleTabAction(parameters: parameters, context: context)
         case "zoom":
             try executeZoomAction(parameters: parameters, context: context)
         default:
@@ -160,15 +204,38 @@ class BrowserActionsPlugin: NSObject, GestureActionPlugin {
             context.sendKeyboardShortcut(keyCode: 0x11, modifiers: .maskCommand) // Cmd + T
         case "close_tab":
             context.sendKeyboardShortcut(keyCode: 0x0D, modifiers: .maskCommand) // Cmd + W
-        case "next_tab":
-            context.sendKeyboardShortcut(keyCode: 0x30, modifiers: .maskControl) // Ctrl + Tab
-        case "previous_tab":
-            context.sendKeyboardShortcut(keyCode: 0x30, modifiers: [.maskControl, .maskShift]) // Ctrl + Shift + Tab
         case "reopen_closed_tab":
             context.sendKeyboardShortcut(keyCode: 0x11, modifiers: [.maskCommand, .maskShift]) // Cmd + Shift + T
         default:
             break
         }
+    }
+
+    private func executeCycleTabAction(parameters: ActionParameters, context: PluginContext) throws {
+        let mode = parameters.string(for: "mode") ?? "next"
+
+        switch mode {
+        case "specific":
+            let tabNumber = max(1, min(9, Int(parameters.number(for: "tab_number") ?? 1)))
+            context.sendKeyboardShortcut(keyCode: keyCodeForDigit(tabNumber), modifiers: .maskCommand) // Cmd + 1...9
+        case "previous":
+            let count = max(1, Int(parameters.number(for: "count") ?? 1))
+            for _ in 0..<count {
+                context.sendKeyboardShortcut(keyCode: 0x30, modifiers: [.maskControl, .maskShift]) // Ctrl + Shift + Tab
+            }
+        default: // "next"
+            let count = max(1, Int(parameters.number(for: "count") ?? 1))
+            for _ in 0..<count {
+                context.sendKeyboardShortcut(keyCode: 0x30, modifiers: .maskControl) // Ctrl + Tab
+            }
+        }
+    }
+
+    /// Virtual key codes for the digits 1-9, for jumping directly to a
+    /// numbered browser tab.
+    private func keyCodeForDigit(_ digit: Int) -> CGKeyCode {
+        let codes: [Int: CGKeyCode] = [1: 0x12, 2: 0x13, 3: 0x14, 4: 0x15, 5: 0x17, 6: 0x16, 7: 0x1A, 8: 0x1C, 9: 0x19]
+        return codes[digit] ?? 0x12
     }
 
     private func executeZoomAction(parameters: ActionParameters, context: PluginContext) throws {

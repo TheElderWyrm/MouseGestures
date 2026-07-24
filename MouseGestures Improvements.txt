@@ -39,6 +39,15 @@ queue in performSave() instead of saveQueue itself.]
   release API (api.github.com/repos/.../releases/latest) instead of a hand-maintained
   version.json (deleted) — matches the pattern Website/js/main.js's own release lookup
   already used, so there's nothing to forget to update after cutting a release.
+  Round 5: "Download and apply updates automatically" toggle wouldn't select. Root cause —
+  UpdateService.isAutoUpdateEnabled was a plain computed property reading/writing
+  UserDefaults directly, and a computed property never fires objectWillChange, so the
+  Settings Toggle bound to it persisted the new value correctly but never visually flipped.
+  Replaced with a real @Published stored property (didSet writes UserDefaults). Also wired
+  it up for real: checkForUpdates() previously always just showed the manual "Update
+  Available" notification sheet regardless of this setting — now, when enabled (and the app
+  can self-update in place), it skips straight to SelfUpdateService.startSelfUpdate instead,
+  falling back to the manual sheet otherwise.
 - [DONE] Improve standard profile actions (organize *logically*, see drafts below)
   -> DefaultProfiles.swift rewritten per the drafts below. Round 3: removed the four old
   leftover default profiles (System Navigation, Productivity, Minimal, Developer) — their
@@ -104,6 +113,27 @@ queue in performSave() instead of saveQueue itself.]
   PluginManager.executeAction), so existing saved gestures/profiles keep working unchanged.
   switch_profile is the one action left genuinely in Core — it's about MouseGestures' own
   profile system, not an OS/app action any other plugin's domain covers.
+  Round 3: that last call was overridden by explicit feedback — "Move Switch Profile into
+  Automation." Moved (true move, not duplicate): the real implementation now lives in
+  AutomationPlugin (switchProfile/sendProfileNotification), and CoreActionsPlugin's
+  "switch_profile" is now hidden: true, forwarding to
+  "com.mousegestures.automation.switch_profile" via PluginManager.executeAction — same
+  backward-compat pattern as the round-2 moves, so saved gestures referencing the old
+  identifier keep working. CoreActionsPlugin now has zero actions of its own left; every
+  entry in its providedActions list is a hidden alias.
+  Also this round: gave Browser its own ActionCategory (was piggybacking on
+  ActionCategory.application, which nothing else used) — renamed the enum case to
+  .browser = "Browser" with its own icon ("safari"), one-line change since
+  BrowserActionsPlugin was the case's only consumer.
+  Also split BrowserActionsPlugin's tab_management: next_tab/previous_tab were two of its
+  three action values (alongside new_tab/close_tab/reopen_closed_tab) sharing one action's
+  parameters, so there was no way to move more than one tab at a time or jump to a specific
+  tab. Pulled next_tab/previous_tab out into a new "cycle_tab" ("Switch Tab") action with
+  its own mode (next/previous/specific), a count (1-20) for next/previous, and a tab_number
+  (1-9, matching Safari/Chrome/Firefox/Edge's own Cmd+1...Cmd+9 tab shortcuts) for jumping
+  straight to a specific tab. tab_management keeps new_tab/close_tab/reopen_closed_tab.
+  DefaultProfiles' Browser Navigation profile updated to use the new action for its
+  Previous/Next Tab gestures.
 - [NOT DONE] Draft Icons, choose the best. (App + Website)
   -> Design/visual task, not something to do as code changes. Needs actual icon artwork.
 - [DONE] Setting for what to display it as in the menu bar?
@@ -135,6 +165,24 @@ queue in performSave() instead of saveQueue itself.]
   confirm it lands on a real effect (window snap, volume/HUD, mission control/exposé/show
   desktop, dark mode preview, lock screen, screenshot, play/pause, track skip) - no
   no-ops left anywhere in the demo.
+  Round 3: "Both layers of the window profile on the demo do the same thing" -- the
+  base/shift data for every zone was already genuinely different (verified directly against
+  the PROFILES object; no copy-paste duplication), so this wasn't a content bug. Root cause
+  was a timing bug in Website/js/main.js's zone event handling: each zone fires on hover-
+  dwell (100ms) AND independently on click, and since window snaps toggle (re-firing the
+  same target snaps back to none), dwelling long enough to read the label and then clicking
+  -- a very natural "look, then click to try it" interaction, and specifically more likely
+  when holding Shift, since finding the modifier key naturally takes a moment longer than a
+  quick plain click -- fired the action twice and the click instantly undid what the dwell
+  just did. Confirmed with a Playwright test isolating exactly that sequence (dwell fire ->
+  wait past the 240ms global debounce -> click without leaving the zone): data-snap reverted
+  to "none" every time, for both the base and shift layer equally, which is exactly what
+  "both layers do the same thing" looks like from outside. Fixed by having the click handler
+  respect the same "armed" flag the dwell path already used: a click is only suppressed if
+  this hover session's own dwell already fired the action, so instant clicks (before dwell
+  fires), deliberate repeat-clicks (no dwell involved), leaving-and-re-entering a zone, and
+  touch/tap (which never dwells) are all unaffected -- verified each of those four cases
+  still behaves exactly as before with a follow-up Playwright regression pass.
 - [DONE, round 2] Website: Windows profile -> focus on Window Management Secondary layer (call the fill-screen zone "Fullscreen" not "Maximize"); Media -> "Media Management"; bring back a well-paired combination profile (dark mode, lock screen, etc. - "Everyday")
   -> Windows demo profile reworked to be entirely window-snapping (the Secondary layer),
   since every one of those 8 real snap targets has a genuine visual and the Main layer
@@ -159,6 +207,26 @@ queue in performSave() instead of saveQueue itself.]
   totals site-wide (47 -> 50 actions, six -> seven categories, including meta tags/JSON-LD/
   hero copy), and folded a browser-control mention into the existing "Media & system
   control" feature card.
+  Round 3: "Categories on the website are outdated, also browser doesn't have a color" +
+  "Update the website to reflect current actions and categories." The Browser cat-tab/chips
+  from round 2 above were real but never got a --fam-browser CSS variable, so they rendered
+  with no accent color -- added one (reusing the exact blue --fam-core used to own, see
+  below). Removed the "Core" category entirely: CoreActionsPlugin has had zero real
+  (non-hidden) actions since the round-2 Core migration above, so every one of its 14
+  website chips was stale -- redistributed them to their actual current homes (10 to
+  Window, 3 to System, 1 -- Switch Profile -- to Automation, matching this round's plugin
+  move above). While auditing real vs listed actions found two more pre-existing drifts,
+  unrelated to this session's app changes: WindowManagementPlugin's "System Sleep" action
+  was never listed anywhere on the site (added), and BundleActionsPlugin's "Delay" action
+  is (and was) hidden: true in the real app -- not reachable as a standalone action -- but
+  the site listed it as "Timed Delay" (removed). Also added the new Browser "Switch Tab"
+  chip for this round's tab_management/cycle_tab split. Net category count: six (Core
+  removed, Browser already counted). Net action count: 54 (was 50 at round 2; +1 net from
+  the cycle_tab split, +1 System Sleep, -1 Delay) -- updated everywhere the old "50
+  actions"/"seven categories" figures appeared (title meta, og/twitter description, hero
+  lede, stats counter, actions section heading). Verified with Playwright: exact chip
+  count, no leftover [data-fam="core"] elements, browser dot color resolves to a real
+  non-default value, zero console errors, reduced-motion fallback path unaffected.
 
 --- Organization Drafts ---
 Cmnd + Control = Main (Consider dropping the control. Would this be easier or interfere with normal computer navigation)

@@ -129,9 +129,9 @@ struct DefaultProfiles {
             Gesture(zone: .left, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.browser.navigation", parameters: ["action": AnyCodable("back")], name: "Back"),
             Gesture(zone: .right, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.browser.navigation", parameters: ["action": AnyCodable("forward")], name: "Forward"),
 
-            Gesture(zone: .bottomLeft, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.browser.tab_management", parameters: ["action": AnyCodable("previous_tab")], name: "Previous Tab"),
+            Gesture(zone: .bottomLeft, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.browser.cycle_tab", parameters: ["mode": AnyCodable("previous")], name: "Previous Tab"),
             Gesture(zone: .bottom, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.browser.tab_management", parameters: ["action": AnyCodable("close_tab")], name: "Close Tab"),
-            Gesture(zone: .bottomRight, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.browser.tab_management", parameters: ["action": AnyCodable("next_tab")], name: "Next Tab")
+            Gesture(zone: .bottomRight, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.browser.cycle_tab", parameters: ["mode": AnyCodable("next")], name: "Next Tab")
         ]
 
         return ConfigurationProfile(

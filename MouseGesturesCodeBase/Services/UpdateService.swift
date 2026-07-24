@@ -25,9 +25,19 @@ public class UpdateService: ObservableObject {
     @Published public var isChecking: Bool = false
     @Published public var lastCheckDate: Date?
 
+    /// Download and install updates automatically once found, instead of
+    /// asking the user to click "Update Now". Must be `@Published` (not a
+    /// plain computed property over UserDefaults) -- a computed property
+    /// never fires `objectWillChange`, so the Settings toggle bound to it
+    /// would silently persist the new value but never visually flip.
+    @Published public var isAutoUpdateEnabled: Bool {
+        didSet { UserDefaults.standard.set(isAutoUpdateEnabled, forKey: autoUpdateKey) }
+    }
+
     private init() {
         currentVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
         lastCheckDate = UserDefaults.standard.object(forKey: lastCheckKey) as? Date
+        isAutoUpdateEnabled = UserDefaults.standard.bool(forKey: autoUpdateKey)
     }
 
     // MARK: - Public API
@@ -67,17 +77,21 @@ public class UpdateService: ObservableObject {
                 self.updateDownloadURLString = asset.browserDownloadURL
                 self.isUpdateAvailable = UpdateLogic.isUpdateAvailable(current: self.currentVersion, remote: remoteVersion)
 
-                if self.isUpdateAvailable && !quietly {
+                guard self.isUpdateAvailable && !quietly else { return }
+
+                // Automatic mode skips the "Later" / "Update Now" decision
+                // entirely and goes straight into the real download/verify/
+                // install flow -- that's what the setting's own label
+                // promises ("Download and install updates automatically").
+                // Falls back to the manual notification sheet if the app
+                // isn't in a place it can update itself in place.
+                if self.isAutoUpdateEnabled, SelfUpdateService.shared.canSelfUpdateInPlace() {
+                    SelfUpdateService.shared.startSelfUpdate(downloadURLString: self.updateDownloadURLString)
+                } else {
                     self.showUpdateNotification()
                 }
             }
         }.resume()
-    }
-
-    /// Returns true if auto-update is enabled
-    public var isAutoUpdateEnabled: Bool {
-        get { UserDefaults.standard.bool(forKey: autoUpdateKey) }
-        set { UserDefaults.standard.set(newValue, forKey: autoUpdateKey) }
     }
 
     // MARK: - Helper Methods

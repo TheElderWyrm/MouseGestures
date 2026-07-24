@@ -686,7 +686,15 @@
     /* Gesture detection: a zone fires when the cursor lands in it and stays
        for a beat (a flick that merely clips an edge on its way to a corner
        doesn't count), and it won't re-fire until the cursor leaves the zone.
-       Click/tap always works and can deliberately repeat an action. */
+       Click/tap always works and can deliberately repeat an action -- but a
+       click right after that same hover's own dwell-fire is the SAME
+       interaction, not a second one, so it's gated on "armed" too. Without
+       this, dwelling long enough to read the label and then clicking to
+       "try it" fires the action twice in a row, and since actions like the
+       window snaps toggle, the click instantly undoes what the dwell just
+       did (looks like the zone -- or a whole modifier layer -- "does
+       nothing"). Touch/pen never dwells (armed stays true), so tapping
+       there is unaffected. */
     var DWELL = 100; // ms the cursor must stay before the gesture lands
 
     Array.prototype.forEach.call(demo.querySelectorAll(".zone"), function (zoneEl) {
@@ -709,6 +717,7 @@
       });
       zoneEl.addEventListener("click", function () {
         clearTimeout(dwellTimer);
+        if (!armed) return; // this hover's dwell already fired the action
         fire(id);
       });
     });

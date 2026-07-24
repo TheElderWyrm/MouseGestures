@@ -1,5 +1,6 @@
 import Cocoa
 import Carbon
+import UserNotifications
 
 // MARK: - Automation Plugin  
 
@@ -256,6 +257,46 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
                 )
             ],
             icon: "doc.on.clipboard"
+        ),
+
+        // MARK: Moved from Core: MouseGestures' own profile-switching (not
+        // an OS/app action, but not really "automating" an external app
+        // either -- this is the closest existing home for it).
+        PluginAction(
+            id: "switch_profile",
+            name: "Switch Profile",
+            description: "Switch to a specific, next, or previous gesture profile",
+            requiresParameters: true,
+            supportedParameters: [
+                ParameterDefinition(
+                    key: "mode",
+                    name: "Mode",
+                    type: .selection,
+                    defaultValue: AnyCodable("specific"),
+                    description: "How to select the target profile",
+                    validation: ValidationRule(allowedValues: [
+                        AnyCodable("specific"),
+                        AnyCodable("next"),
+                        AnyCodable("previous")
+                    ]),
+                    displayValues: ["specific": "Specific Profile", "next": "Next Profile", "previous": "Previous Profile"]
+                ),
+                ParameterDefinition(
+                    key: "profile_name",
+                    name: "Profile",
+                    type: .profile,
+                    description: "Select profile to switch to",
+                    visibleWhen: ParameterVisibilityRule(key: "mode", value: "specific")
+                ),
+                ParameterDefinition(
+                    key: "show_notification",
+                    name: "Show Notification",
+                    type: .boolean,
+                    defaultValue: AnyCodable(true),
+                    description: "Show notification when profile switches"
+                )
+            ],
+            icon: "person.crop.circle.fill"
         )
     ]
 
@@ -328,6 +369,11 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
                 executeClipboardAction(action, text: text)
             }
 
+        case "switch_profile":
+            let showNotification = parameters.bool(for: "show_notification") ?? true
+            let mode = parameters.string(for: "mode") ?? "specific"
+            switchProfile(mode: mode, profileName: parameters.string(for: "profile_name"), showNotification: showNotification, context: context)
+
         default:
             throw PluginError.actionNotFound(action.id)
         }
@@ -386,6 +432,12 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
             }
             if action == "set_text" && parameters.string(for: "text") == nil {
                 return ValidationResult.invalid(error: "Text is required for set_text action")
+            }
+
+        case "switch_profile":
+            let mode = parameters.string(for: "mode") ?? "specific"
+            if mode == "specific" && (parameters.string(for: "profile_name") ?? "").isEmpty {
+                return ValidationResult.invalid(error: "A profile must be selected")
             }
 
         default:
@@ -1018,4 +1070,73 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
         }
     }
 
+    // MARK: - Moved from Core: Profile Management
+
+    private func switchProfile(mode: String, profileName: String?, showNotification: Bool, context: PluginContext) {
+        let profiles = context.getProfiles()
+        guard !profiles.isEmpty else { return }
+
+        let targetProfile: [String: Any]?
+
+        switch mode {
+        case "next", "previous":
+            let currentId = context.getActiveProfileId()
+            let currentIndex = profiles.firstIndex(where: {
+                ($0["id"] as? String).flatMap(UUID.init(uuidString:)) == currentId
+            }) ?? 0
+            let targetIndex = mode == "next"
+                ? (currentIndex + 1) % profiles.count
+                : (currentIndex > 0 ? currentIndex - 1 : profiles.count - 1)
+            targetProfile = profiles[targetIndex]
+        default: // "specific"
+            guard let name = profileName, !name.isEmpty else {
+                context.logger.log("switch_profile: no profile name specified", file: #file, function: #function, line: #line)
+                return
+            }
+            targetProfile = profiles.first(where: {
+                ($0["name"] as? String)?.lowercased() == name.lowercased()
+            })
+            if targetProfile == nil {
+                context.logger.log("No profile found with name: \(name)", file: #file, function: #function, line: #line)
+                return
+            }
+        }
+
+        if let target = targetProfile,
+           let idStr = target["id"] as? String,
+           let profileId = UUID(uuidString: idStr),
+           let name = target["name"] as? String {
+            context.applyProfile(profileId: profileId)
+            context.saveConfiguration()
+            context.postNotification(name: NSNotification.Name("GestureConfigurationChanged"), userInfo: nil)
+            if showNotification {
+                sendProfileNotification(profileName: name)
+            }
+        }
+    }
+
+    /// Send a native macOS notification for profile switch
+    private func sendProfileNotification(profileName: String) {
+        let content = UNMutableNotificationContent()
+        content.title = "Profile Switched"
+        content.body = profileName
+        content.sound = nil
+
+        let request = UNNotificationRequest(
+            identifier: "profile-switch-\(UUID().uuidString)",
+            content: content,
+            trigger: nil
+        )
+
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                log.log("Failed to show profile notification: \(error)")
+            }
+        }
+
+        // Auto-dismiss after 2 seconds
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: [request.identifier])
+        }
+    }
 }
