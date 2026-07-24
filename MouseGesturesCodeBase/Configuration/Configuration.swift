@@ -1,10 +1,43 @@
 import Cocoa
 import Carbon
 
-/// What the menu bar status item shows when it's visible.
-enum MenuBarDisplayStyle: String, Codable {
-    case icon
-    case text
+/// Which glyph the menu bar status item shows when it's visible. `.custom`
+/// pairs with `Configuration.customMenuBarIconData` (a user-supplied image);
+/// every other case is a built-in SF Symbol alternative to the default hand.
+enum MenuBarIconOption: String, Codable, CaseIterable {
+    case cursor
+    case cursorFill
+    case tap
+    case tapFill
+    case motion
+    case corners
+    case custom
+
+    /// SF Symbol name for the built-in options; nil for `.custom`, which is
+    /// rendered from `customMenuBarIconData` instead.
+    var symbolName: String? {
+        switch self {
+        case .cursor: return "hand.draw"
+        case .cursorFill: return "hand.draw.fill"
+        case .tap: return "hand.tap"
+        case .tapFill: return "hand.tap.fill"
+        case .motion: return "cursorarrow.motionlines"
+        case .corners: return "rectangle.dashed"
+        case .custom: return nil
+        }
+    }
+
+    var displayName: String {
+        switch self {
+        case .cursor: return "Hand"
+        case .cursorFill: return "Hand (Filled)"
+        case .tap: return "Tap"
+        case .tapFill: return "Tap (Filled)"
+        case .motion: return "Motion Lines"
+        case .corners: return "Corners"
+        case .custom: return "Custom"
+        }
+    }
 }
 
 public class Configuration: Codable {
@@ -26,7 +59,9 @@ public class Configuration: Codable {
     // Transient: not persisted, synced from plugin settings at runtime
     var zoneHighlightColor: NSColor = NSColor.systemBlue.withAlphaComponent(0.3)
     var hideFromMenuBar: Bool = false  // When true, app hides menu bar icon
-    var menuBarDisplayStyle: MenuBarDisplayStyle = .icon  // What to show in the menu bar when visible
+    var menuBarIconOption: MenuBarIconOption = .cursor  // Which glyph to show in the menu bar
+    var customMenuBarIconData: Data?  // User-supplied image, used when menuBarIconOption == .custom
+    var customMenuBarIconIsTemplate: Bool = false  // Render the custom icon monochrome (menu-bar-native) vs. as-is (color)
     var debugModeEnabled: Bool = false  // When true, enables logging
     var developerModeEnabled: Bool = false  // When true, shows developer tab
     var notificationOnActivation: Bool = false  // When true, shows a banner notification when any gesture fires
@@ -62,7 +97,9 @@ public class Configuration: Codable {
         var showZoneHighlights: Bool?
         var showZoneLabels: Bool?
         var hideFromMenuBar: Bool?
-        var menuBarDisplayStyle: MenuBarDisplayStyle?
+        var menuBarIconOption: MenuBarIconOption?
+        var customMenuBarIconData: Data?
+        var customMenuBarIconIsTemplate: Bool?
         var debugModeEnabled: Bool?
         var developerModeEnabled: Bool?
         var notificationOnActivation: Bool?
@@ -72,7 +109,7 @@ public class Configuration: Codable {
 
     // Defines which properties are saved to disk.
     enum CodingKeys: String, CodingKey {
-        case isEnabled, profiles, activeProfileId, appProfileMappings, disabledApps, hapticFeedbackEnabled, edgeThreshold, cornerSize, cornerBuffer, showZoneHighlights, showZoneLabels, hideFromMenuBar, menuBarDisplayStyle, debugModeEnabled, developerModeEnabled, notificationOnActivation, freeModeProfileId, pluginConfigurations
+        case isEnabled, profiles, activeProfileId, appProfileMappings, disabledApps, hapticFeedbackEnabled, edgeThreshold, cornerSize, cornerBuffer, showZoneHighlights, showZoneLabels, hideFromMenuBar, menuBarIconOption, customMenuBarIconData, customMenuBarIconIsTemplate, debugModeEnabled, developerModeEnabled, notificationOnActivation, freeModeProfileId, pluginConfigurations
     }
 
     // --- Computed Properties ---
@@ -147,7 +184,9 @@ public class Configuration: Codable {
             self.cornerSize = decoded.cornerSize ?? 100
             self.cornerBuffer = decoded.cornerBuffer ?? 50
             self.hideFromMenuBar = decoded.hideFromMenuBar ?? false
-            self.menuBarDisplayStyle = decoded.menuBarDisplayStyle ?? .icon
+            self.menuBarIconOption = decoded.menuBarIconOption ?? .cursor
+            self.customMenuBarIconData = decoded.customMenuBarIconData
+            self.customMenuBarIconIsTemplate = decoded.customMenuBarIconIsTemplate ?? false
             self.debugModeEnabled = decoded.debugModeEnabled ?? false
             self.developerModeEnabled = decoded.developerModeEnabled ?? false
             self.notificationOnActivation = decoded.notificationOnActivation ?? false
@@ -558,7 +597,9 @@ public class Configuration: Codable {
         self.showZoneHighlights = true
         self.showZoneLabels = false
         self.hideFromMenuBar = false
-        self.menuBarDisplayStyle = .icon
+        self.menuBarIconOption = .cursor
+        self.customMenuBarIconData = nil
+        self.customMenuBarIconIsTemplate = false
         self.debugModeEnabled = false
         self.developerModeEnabled = false
         self.notificationOnActivation = false
@@ -592,7 +633,9 @@ public class Configuration: Codable {
         let showZoneHighlights: Bool
         let showZoneLabels: Bool
         let hideFromMenuBar: Bool
-        let menuBarDisplayStyle: MenuBarDisplayStyle
+        let menuBarIconOption: MenuBarIconOption
+        let customMenuBarIconData: Data?
+        let customMenuBarIconIsTemplate: Bool
         let debugModeEnabled: Bool
         let pluginConfigurations: [String: AnyCodable]
         let exportDate: Date
@@ -611,7 +654,9 @@ public class Configuration: Codable {
             self.showZoneHighlights = config.showZoneHighlights
             self.showZoneLabels = config.showZoneLabels
             self.hideFromMenuBar = config.hideFromMenuBar
-            self.menuBarDisplayStyle = config.menuBarDisplayStyle
+            self.menuBarIconOption = config.menuBarIconOption
+            self.customMenuBarIconData = config.customMenuBarIconData
+            self.customMenuBarIconIsTemplate = config.customMenuBarIconIsTemplate
             self.debugModeEnabled = config.debugModeEnabled
             self.pluginConfigurations = config.pluginConfigurations
             self.exportDate = Date()
@@ -651,7 +696,9 @@ public class Configuration: Codable {
             self.showZoneHighlights = importData.showZoneHighlights
             self.showZoneLabels = importData.showZoneLabels
             self.hideFromMenuBar = importData.hideFromMenuBar
-            self.menuBarDisplayStyle = importData.menuBarDisplayStyle
+            self.menuBarIconOption = importData.menuBarIconOption
+            self.customMenuBarIconData = importData.customMenuBarIconData
+            self.customMenuBarIconIsTemplate = importData.customMenuBarIconIsTemplate
             self.debugModeEnabled = importData.debugModeEnabled
             self.pluginConfigurations = importData.pluginConfigurations
 

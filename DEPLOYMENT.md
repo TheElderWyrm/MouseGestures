@@ -183,7 +183,10 @@ archive → export → DMG → notarize/staple → GitHub Release with the DMG a
 
 ## Post-release
 
-The in-app updater polls
-`github.com/TheElderWyrm/MouseGestures/main/version.json`. That repo must
-exist, be public, and have `version.json` updated to point at the new DMG for
-auto-update to work.
+The in-app updater polls GitHub's live release API
+(`api.github.com/repos/TheElderWyrm/MouseGestures/releases/latest`) directly
+and reads the DMG's URL from that release's actual assets — there's no
+separate file to update by hand. As soon as the `release` job above publishes
+the GitHub Release with the DMG attached, the in-app updater picks it up on
+its next check. The release must be public and not marked draft/prerelease
+(the updater ignores both).

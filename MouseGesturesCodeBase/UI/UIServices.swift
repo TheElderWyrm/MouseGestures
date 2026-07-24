@@ -410,12 +410,35 @@ public class UIServices: ObservableObject {
         menuBarVisibilityService.setHidden(hidden)
     }
 
-    func menuBarDisplayStyle() -> MenuBarDisplayStyle {
-        return Configuration.shared.menuBarDisplayStyle
+    func menuBarIconOption() -> MenuBarIconOption {
+        return Configuration.shared.menuBarIconOption
     }
 
-    func setMenuBarDisplayStyle(_ style: MenuBarDisplayStyle) {
-        Configuration.shared.menuBarDisplayStyle = style
+    func setMenuBarIconOption(_ option: MenuBarIconOption) {
+        Configuration.shared.menuBarIconOption = option
+        Configuration.shared.save()
+        NotificationCenter.default.post(name: NSNotification.Name("GestureConfigurationChanged"), object: nil)
+    }
+
+    func customMenuBarIconData() -> Data? {
+        return Configuration.shared.customMenuBarIconData
+    }
+
+    func customMenuBarIconIsTemplate() -> Bool {
+        return Configuration.shared.customMenuBarIconIsTemplate
+    }
+
+    /// Sets the custom menu bar icon and switches the active option to `.custom`.
+    func setCustomMenuBarIcon(data: Data, isTemplate: Bool) {
+        Configuration.shared.customMenuBarIconData = data
+        Configuration.shared.customMenuBarIconIsTemplate = isTemplate
+        Configuration.shared.menuBarIconOption = .custom
+        Configuration.shared.save()
+        NotificationCenter.default.post(name: NSNotification.Name("GestureConfigurationChanged"), object: nil)
+    }
+
+    func setCustomMenuBarIconIsTemplate(_ isTemplate: Bool) {
+        Configuration.shared.customMenuBarIconIsTemplate = isTemplate
         Configuration.shared.save()
         NotificationCenter.default.post(name: NSNotification.Name("GestureConfigurationChanged"), object: nil)
     }

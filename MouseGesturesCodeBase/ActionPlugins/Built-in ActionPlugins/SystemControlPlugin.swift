@@ -242,6 +242,36 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
                 )
             ],
             icon: "person.crop.circle.badge.xmark"
+        ),
+
+        // MARK: Moved from Core
+        PluginAction(
+            id: "lock_screen",
+            name: "Lock Screen",
+            description: "Lock the screen",
+            icon: "lock"
+        ),
+        PluginAction(
+            id: "sleep_display",
+            name: "Sleep Display",
+            description: "Put the display(s) to sleep without sleeping the computer",
+            icon: "moon"
+        ),
+        PluginAction(
+            id: "empty_trash",
+            name: "Empty Trash",
+            description: "Empty the trash",
+            requiresParameters: true,
+            supportedParameters: [
+                ParameterDefinition(
+                    key: "confirm",
+                    name: "Show Confirmation",
+                    type: .boolean,
+                    defaultValue: AnyCodable(true),
+                    description: "Show confirmation dialog before emptying"
+                )
+            ],
+            icon: "trash"
         )
     ]
 
@@ -310,6 +340,15 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
         case "logout":
             let confirm = parameters.bool(for: "confirm") ?? true
             logOut(showConfirmation: confirm, context: context)
+
+        // MARK: Moved from Core
+        case "lock_screen":
+            lockScreen(context: context)
+        case "sleep_display":
+            sleepDisplay(context: context)
+        case "empty_trash":
+            let confirm = parameters.bool(for: "confirm") ?? true
+            emptyTrash(showConfirmation: confirm, context: context)
 
         default:
             throw PluginError.actionNotFound(action.id)
@@ -558,5 +597,58 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
                                message: "Are you sure you want to log out?",
                                buttonTitle: "Log Out", showConfirmation: showConfirmation,
                                script: "tell application \"System Events\" to log out", context: context)
+    }
+
+    // MARK: - Moved from Core
+
+    private func lockScreen(context: PluginContext) {
+        context.sendKeyboardShortcut(keyCode: 12, modifiers: [.maskCommand, .maskControl]) // Cmd+Ctrl+Q
+    }
+
+    private func sleepDisplay(context: PluginContext) {
+        try? context.executeAppleScript("do shell script \"pmset displaysleepnow\"")
+    }
+
+    private func emptyTrash(showConfirmation: Bool, context: PluginContext) {
+        // Use Finder via AppleScript. The "empty trash" command requires Finder
+        // to be running (it always is).
+        if showConfirmation {
+            DispatchQueue.main.async {
+                let alert = NSAlert()
+                alert.messageText = "Empty Trash"
+                alert.informativeText = "Are you sure you want to permanently delete the items in the Trash?"
+                alert.alertStyle = .warning
+                alert.addButton(withTitle: "Empty Trash")
+                alert.addButton(withTitle: "Cancel")
+                guard alert.runModal() == .alertFirstButtonReturn else { return }
+                self.performEmptyTrash(context: context)
+            }
+        } else {
+            performEmptyTrash(context: context)
+        }
+    }
+
+    private func performEmptyTrash(context: PluginContext) {
+        DispatchQueue.global(qos: .userInitiated).async {
+            let previousApp = context.getFrontmostApplication()
+            do {
+                // Use Finder's AppleScript command with warning suppressed
+                try context.executeAppleScript("""
+                    tell application "Finder"
+                        set warns before emptying of trash to false
+                        empty trash
+                        set warns before emptying of trash to true
+                    end tell
+                """)
+                usleep(300_000)
+                if let prev = previousApp {
+                    DispatchQueue.main.async {
+                        prev.activate(options: [])
+                    }
+                }
+            } catch {
+                context.logger.log("Failed to empty trash: \(error.localizedDescription)", file: #file, function: #function, line: #line)
+            }
+        }
     }
 }

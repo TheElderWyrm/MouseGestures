@@ -49,12 +49,6 @@ class ZoneView: NSView {
     var label: String?
     var forceShowLabel: Bool = false
 
-    private var inactiveColor: NSColor {
-        Configuration.shared.zoneHighlightColor.withAlphaComponent(0.1)
-    }
-    private var activeColor: NSColor {
-        Configuration.shared.zoneHighlightColor.withAlphaComponent(0.3)
-    }
     private var glowColor: NSColor {
         Configuration.shared.zoneHighlightColor
     }
@@ -69,11 +63,10 @@ class ZoneView: NSView {
     }
 
     override func draw(_ dirtyRect: NSRect) {
-        // Fill the entire view (the window is already sized to the zone)
-        let fillColor = isActive ? activeColor : inactiveColor
-        fillColor.setFill()
-        bounds.fill()
-
+        // No flat fill: like the website demo's zone visualization, the
+        // entire visual is the directional glow drawn below (corners glow
+        // from the screen corner inward, edges glow from the screen edge
+        // inward) — never a hard box.
         drawGlow()
 
         // Draw label if present (forceShowLabel bypasses the global setting for preview mode)
@@ -142,21 +135,45 @@ class ZoneView: NSView {
     /// Soft inner glow along the zone's edge, replacing the old hard-edged
     /// box border. Drawn as a blurred stroke inset from the bounds so the
     /// shadow blur stays within the (unclipped-beyond-bounds) view.
+    /// Directional glow matching the website demo's zone visualization:
+    /// corner zones glow outward from the screen's actual corner (radial),
+    /// edge zones glow inward from the screen's edge (linear) — brightest at
+    /// the screen boundary, fading to nothing at the zone's inner edge.
     private func drawGlow() {
         guard let ctx = NSGraphicsContext.current?.cgContext else { return }
-        let inset: CGFloat = 4
-        guard bounds.width > inset * 2, bounds.height > inset * 2 else { return }
+        guard bounds.width > 0, bounds.height > 0 else { return }
 
-        let glowPath = NSBezierPath(rect: bounds.insetBy(dx: inset, dy: inset))
-        let intensity: CGFloat = isActive ? 0.9 : 0.45
-        let blurRadius: CGFloat = isActive ? 16 : 9
+        let peakAlpha: CGFloat = isActive ? 0.85 : 0.32
+        let bright = glowColor.withAlphaComponent(peakAlpha).cgColor
+        let clear = glowColor.withAlphaComponent(0).cgColor
+        guard let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: [bright, clear] as CFArray, locations: [0, 1]) else { return }
 
         ctx.saveGState()
-        ctx.setShadow(offset: .zero, blur: blurRadius, color: glowColor.withAlphaComponent(intensity).cgColor)
-        glowColor.withAlphaComponent(intensity).setStroke()
-        glowPath.lineWidth = 2.0
-        glowPath.stroke()
-        ctx.restoreGState()
+        defer { ctx.restoreGState() }
+
+        switch zone {
+        case .topLeft, .topRight, .bottomLeft, .bottomRight:
+            let corner: CGPoint
+            switch zone {
+            case .topLeft: corner = CGPoint(x: 0, y: bounds.height)
+            case .topRight: corner = CGPoint(x: bounds.width, y: bounds.height)
+            case .bottomLeft: corner = CGPoint(x: 0, y: 0)
+            default: corner = CGPoint(x: bounds.width, y: 0) // .bottomRight
+            }
+            let radius = max(bounds.width, bounds.height) * 1.15
+            ctx.drawRadialGradient(gradient, startCenter: corner, startRadius: 0, endCenter: corner, endRadius: radius, options: [])
+
+        case .top, .bottom, .left, .right:
+            let start: CGPoint
+            let end: CGPoint
+            switch zone {
+            case .top: start = CGPoint(x: bounds.midX, y: bounds.height); end = CGPoint(x: bounds.midX, y: 0)
+            case .bottom: start = CGPoint(x: bounds.midX, y: 0); end = CGPoint(x: bounds.midX, y: bounds.height)
+            case .left: start = CGPoint(x: 0, y: bounds.midY); end = CGPoint(x: bounds.width, y: bounds.midY)
+            default: start = CGPoint(x: bounds.width, y: bounds.midY); end = CGPoint(x: 0, y: bounds.midY) // .right
+            }
+            ctx.drawLinearGradient(gradient, start: start, end: end, options: [])
+        }
     }
 }
 

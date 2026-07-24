@@ -497,14 +497,19 @@
       if (mpFill) mpFill.style.setProperty("--mp", mpPos + "%");
     };
 
-    var showMedia = function (icon) {
+    var showMedia = function (icon, seconds) {
       mediaHud.setAttribute("data-ic", icon);
       mediaHud.classList.add("show");
       volHud.classList.remove("show");
       clearTimeout(mediaTimer);
       mediaTimer = setTimeout(function () { mediaHud.classList.remove("show"); }, 1000);
-      if (icon === "ff") setMpPos(mpPos + 9);
-      else if (icon === "rw") setMpPos(mpPos - 9);
+      // the progress-bar nudge scales with the seek's duration, so a 30 s
+      // skip visibly moves further than a 10 s one instead of both producing
+      // the same fixed jump (seconds defaults to 10 for callers that don't
+      // represent a timed seek, e.g. next/prev already overrides below)
+      var nudge = (seconds || 10) * 0.6;
+      if (icon === "ff") setMpPos(mpPos + nudge);
+      else if (icon === "rw") setMpPos(mpPos - nudge);
       else if (icon === "next" || icon === "prev") setMpPos(6);
     };
 
@@ -556,82 +561,91 @@
       minTimer = setTimeout(function () { winFront.classList.remove("is-min"); }, 1500);
     };
 
-    /* Three profiles, each a coherent gesture set — matching the app's real
-       default profiles (Window Management / Media Control / System) instead
-       of the old ad hoc "Everyday" grab-bag, laid out on the same 8 zones the
-       app uses: corner-edge-corner top row, edge-edge middle row (no center
-       zone — the cursor never rests there), corner-edge-corner bottom row.
-       Where a profile has a Main + Secondary layer, Secondary rides the
-       demo's existing Shift layer.
+    /* Three profiles, each a coherent gesture set, laid out on the same 8
+       zones the app uses: corner-edge-corner top row, edge-edge middle row
+       (no center zone — the cursor never rests there), corner-edge-corner
+       bottom row. Every zone in every profile must land on one of this
+       demo's real, visible effects — nothing here is wired to a no-op.
        zone id -> { glyph, short on-zone label, base action, shift action } */
     var PROFILES = {
-      /* Window Management: Main (⌘⌃) row-by-row across the 8 zones; the
-         Secondary (⌘⌥) layer is entirely window snapping, so it reuses every
-         data-snap state the demo already understands. */
+      /* Window Management, scoped entirely to the app's Secondary (window
+         snapping) layer: the Main layer (close/fullscreen/quit/move-display)
+         has nothing this mini desktop can show, but Secondary's 8 real snap
+         targets (4 quarters, 2 halves, center, fill-screen) map perfectly
+         onto the 8 zones. Shift sends each zone to its opposite region, so
+         every zone demonstrates two distinct, genuine snaps instead of one. */
       windows: {
         label: "Windows",
         zones: {
-          tl:     { g: "↖", s: "Close Window",
-                            base: ["Close Window", function () {}],
-                            shift: ["Snap Top-Left", snapFn("tl")] },
+          tl:     { g: "↖", s: "Top-Left ¼",
+                            base: ["Snap Top-Left", snapFn("tl")],
+                            shift: ["Snap Bottom-Right", snapFn("br")] },
           top:    { g: "↑", s: "Fullscreen",
                             base: ["Fullscreen", snapFn("max")],
-                            shift: ["Maximize", snapFn("max")] },
-          tr:     { g: "↗", s: "Quit App",
-                            base: ["Quit App", function () {}],
-                            shift: ["Snap Top-Right", snapFn("tr")] },
-          left:   { g: "←", s: "Prev Display",
-                            base: ["Move to Previous Display", function () {}],
-                            shift: ["Snap Left Half", snapFn("left")] },
-          right:  { g: "→", s: "Next Display",
-                            base: ["Move to Next Display", function () {}],
-                            shift: ["Snap Right Half", snapFn("right")] },
-          bl:     { g: "↙", s: "App Exposé",
-                            base: ["App Exposé", function () { transientState("is-expose", 1500); }],
-                            shift: ["Snap Bottom-Left", snapFn("bl")] },
-          bottom: { g: "↓", s: "Minimize",
-                            base: ["Minimize Window", minimizeFront],
                             shift: ["Center Window", snapFn("center")] },
-          br:     { g: "↘", s: "Mission Control",
-                            base: ["Mission Control", function () { transientState("is-mission", 1500); }],
-                            shift: ["Snap Bottom-Right", snapFn("br")] }
+          tr:     { g: "↗", s: "Top-Right ¼",
+                            base: ["Snap Top-Right", snapFn("tr")],
+                            shift: ["Snap Bottom-Left", snapFn("bl")] },
+          left:   { g: "←", s: "Left Half",
+                            base: ["Snap Left Half", snapFn("left")],
+                            shift: ["Snap Right Half", snapFn("right")] },
+          right:  { g: "→", s: "Right Half",
+                            base: ["Snap Right Half", snapFn("right")],
+                            shift: ["Snap Left Half", snapFn("left")] },
+          bl:     { g: "↙", s: "Bottom-Left ¼",
+                            base: ["Snap Bottom-Left", snapFn("bl")],
+                            shift: ["Snap Top-Right", snapFn("tr")] },
+          bottom: { g: "↓", s: "Center Window",
+                            base: ["Center Window", snapFn("center")],
+                            shift: ["Fullscreen", snapFn("max")] },
+          br:     { g: "↘", s: "Bottom-Right ¼",
+                            base: ["Snap Bottom-Right", snapFn("br")],
+                            shift: ["Snap Top-Left", snapFn("tl")] }
         }
       },
-      /* Media Control: prev | play/pause | next on top, seek (with Shift for
-         30 s) on the sides, volume across the bottom — Volume Up/Down repeat
-         automatically while held in the real app. */
+      /* Media Management: prev | play/pause | next on top, seek (Shift for
+         30 s instead of 10 s — the progress-bar nudge itself now scales with
+         that duration) on the sides, volume across the bottom — Volume
+         Up/Down repeat automatically while held in the real app. */
       media: {
-        label: "Media",
+        label: "Media Management",
         zones: {
           tl:     { g: "↖", s: "Prev Track", base: ["Previous Track", function () { showMedia("prev"); }] },
           top:    { g: "↑", s: "Play / Pause", base: ["Play / Pause", playPause] },
           tr:     { g: "↗", s: "Next Track", base: ["Next Track", function () { showMedia("next"); }] },
           left:   { g: "←", s: "Back 10 s",
-                            base: ["Seek Back 10 s", function () { showMedia("rw"); }],
-                            shift: ["Seek Back 30 s", function () { showMedia("rw"); }] },
+                            base: ["Seek Back 10 s", function () { showMedia("rw", 10); }],
+                            shift: ["Seek Back 30 s", function () { showMedia("rw", 30); }] },
           right:  { g: "→", s: "Fwd 10 s",
-                            base: ["Seek Forward 10 s", function () { showMedia("ff"); }],
-                            shift: ["Seek Forward 30 s", function () { showMedia("ff"); }] },
+                            base: ["Seek Forward 10 s", function () { showMedia("ff", 10); }],
+                            shift: ["Seek Forward 30 s", function () { showMedia("ff", 30); }] },
           bl:     { g: "↙", s: "Vol Down", base: ["Volume Down", function () { setVolume(volume - 12.5); }] },
           bottom: { g: "↓", s: "Mute", base: ["Mute", muteToggle] },
           br:     { g: "↘", s: "Vol Up", base: ["Volume Up", function () { setVolume(volume + 12.5); }] }
         }
       },
-      /* System: Do Not Disturb / brightness / Dark Mode on top, keyboard
-         brightness on the sides, Lock Screen / brightness / Screenshot on
-         the bottom — Dark Mode and Lock Screen/Screenshot land on exactly
-         the zones the demo already has real local effects for. */
-      system: {
-        label: "System",
+      /* Everyday: a curated mix across system, media and window categories —
+         Mission Control/App Exposé share a corner, Dark Mode/Screenshot
+         share another, Show Desktop and Lock Screen anchor the remaining
+         corners, volume rides the top, and window snap covers the sides.
+         Every zone is a real, distinct effect. */
+      everyday: {
+        label: "Everyday",
         zones: {
-          tl:     { g: "↖", s: "Do Not Disturb", base: ["Do Not Disturb", function () {}] },
-          top:    { g: "↑", s: "Brightness Up", base: ["Brightness Up", function () {}] },
-          tr:     { g: "↗", s: "Dark Mode", base: ["Toggle Dark Mode", toggleDemoTheme] },
-          left:   { g: "←", s: "Kbd Down", base: ["Keyboard Brightness Down", function () {}] },
-          right:  { g: "→", s: "Kbd Up", base: ["Keyboard Brightness Up", function () {}] },
-          bl:     { g: "↙", s: "Lock Screen", base: ["Lock Screen", function () { desktop.classList.add("is-locked"); }] },
-          bottom: { g: "↓", s: "Brightness Down", base: ["Brightness Down", function () {}] },
-          br:     { g: "↘", s: "Screenshot", base: ["Screenshot", screenshot] }
+          tl:     { g: "↖", s: "Mission Control",
+                            base: ["Mission Control", function () { transientState("is-mission", 1500); }],
+                            shift: ["App Exposé", function () { transientState("is-expose", 1500); }] },
+          top:    { g: "↑", s: "Vol Up",
+                            base: ["Volume Up", function () { setVolume(volume + 12.5); }],
+                            shift: ["Volume Down", function () { setVolume(volume - 12.5); }] },
+          tr:     { g: "↗", s: "Dark Mode",
+                            base: ["Toggle Dark Mode", toggleDemoTheme],
+                            shift: ["Screenshot", screenshot] },
+          left:   { g: "←", s: "Snap Left", base: ["Snap Window Left", snapFn("left")] },
+          right:  { g: "→", s: "Snap Right", base: ["Snap Window Right", snapFn("right")] },
+          bl:     { g: "↙", s: "Show Desktop", base: ["Show Desktop", function () { transientState("is-showdesk", 1500); }] },
+          bottom: { g: "↓", s: "Play / Pause", base: ["Play / Pause", playPause] },
+          br:     { g: "↘", s: "Lock Screen", base: ["Lock Screen", function () { desktop.classList.add("is-locked"); }] }
         }
       }
     };
@@ -853,21 +867,23 @@
         'fill="#fff" stroke="#1e293b" stroke-width="1.4"/></svg>';
       desktop.appendChild(ghostEl);
 
-      /* Scripted tours. The system tour skips Dark Mode (it would only ever
-         preview the demo itself, but flipping it repeatedly while the
+      /* Scripted tours. The everyday tour skips Dark Mode (it would only
+         ever preview the demo itself, but flipping it repeatedly while the
          reader isn't watching is still an odd thing for a "phantom" cursor
          to do) and Lock Screen (it waits for a click to dismiss). */
       var TOURS = {
         windows: [
-          { z: "br" }, { z: "bl", shift: true }, { z: "top" }, { z: "left", shift: true },
-          { z: "bottom" }, { z: "right", shift: true }, { z: "tl", shift: true }, { z: "tr" }
+          { z: "tl" }, { z: "top" }, { z: "tr" }, { z: "right" },
+          { z: "br", shift: true }, { z: "bottom", shift: true }, { z: "bl", shift: true }, { z: "left", shift: true }
         ],
         media: [
-          { z: "top" }, { z: "right" }, { z: "tr" }, { z: "br" },
-          { z: "bottom" }, { z: "left" }, { z: "tl" }, { z: "bl" }
+          { z: "top" }, { z: "right" }, { z: "tr" }, { z: "right", shift: true },
+          { z: "br" }, { z: "bottom" }, { z: "left" }, { z: "tl" },
+          { z: "left", shift: true }, { z: "bl" }
         ],
-        system: [
-          { z: "tl" }, { z: "top" }, { z: "right" }, { z: "bottom" }, { z: "br" }, { z: "left" }
+        everyday: [
+          { z: "tl" }, { z: "top" }, { z: "tr", shift: true }, { z: "right" },
+          { z: "bottom" }, { z: "left" }, { z: "top", shift: true }, { z: "bl" }
         ]
       };
 

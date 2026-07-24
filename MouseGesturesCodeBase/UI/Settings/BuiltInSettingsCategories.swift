@@ -224,7 +224,11 @@ private struct NotificationOnActivationSettingView: View {
 
 private struct MenuBarSettingView: View {
     @State private var iconHidden = false
-    @State private var displayStyle: MenuBarDisplayStyle = .icon
+    @State private var selectedOption: MenuBarIconOption = .cursor
+    @State private var customImage: NSImage?
+    @State private var customIsTemplate = false
+
+    private let builtInOptions: [MenuBarIconOption] = [.cursor, .cursorFill, .tap, .tapFill, .motion, .corners]
 
     var body: some View {
         VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
@@ -235,17 +239,102 @@ private struct MenuBarSettingView: View {
             ) { UIServices.shared.setMenuBarIconHidden(!$0) }
 
             if !iconHidden {
-                Picker("Display As", selection: $displayStyle) {
-                    Text("Icon").tag(MenuBarDisplayStyle.icon)
-                    Text("Text").tag(MenuBarDisplayStyle.text)
+                VStack(alignment: .leading, spacing: MGStyle.Spacing.sm) {
+                    Text("Menu Bar Icon")
+                        .font(.system(size: MGStyle.FontSize.body, weight: .medium))
+
+                    HStack(spacing: MGStyle.Spacing.md) {
+                        ForEach(builtInOptions, id: \.self) { option in
+                            iconSwatch(option) {
+                                Image(systemName: option.symbolName ?? "questionmark")
+                                    .font(.system(size: 15))
+                            }
+                            .help(option.displayName)
+                        }
+
+                        iconSwatch(.custom) {
+                            if let customImage {
+                                Image(nsImage: customImage)
+                                    .resizable()
+                                    .scaledToFit()
+                                    .padding(5)
+                            } else {
+                                Image(systemName: "plus")
+                                    .font(.system(size: 13))
+                            }
+                        }
+                        .help("Choose a custom image…")
+                    }
+
+                    if selectedOption == .custom {
+                        Toggle("Match menu bar style (monochrome)", isOn: $customIsTemplate)
+                            .font(.caption)
+                            .onChange(of: customIsTemplate) { UIServices.shared.setCustomMenuBarIconIsTemplate($0) }
+                    }
                 }
-                .pickerStyle(.segmented)
-                .onChange(of: displayStyle) { UIServices.shared.setMenuBarDisplayStyle($0) }
             }
         }
         .onAppear {
             iconHidden = UIServices.shared.isMenuBarIconHidden()
-            displayStyle = UIServices.shared.menuBarDisplayStyle()
+            selectedOption = UIServices.shared.menuBarIconOption()
+            customIsTemplate = UIServices.shared.customMenuBarIconIsTemplate()
+            if let data = UIServices.shared.customMenuBarIconData() {
+                customImage = NSImage(data: data)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func iconSwatch<Content: View>(_ option: MenuBarIconOption, @ViewBuilder content: () -> Content) -> some View {
+        Button(action: {
+            if option == .custom {
+                pickCustomImage()
+            } else {
+                selectedOption = option
+                UIServices.shared.setMenuBarIconOption(option)
+            }
+        }) {
+            content()
+                .frame(width: 32, height: 32)
+                .background(
+                    RoundedRectangle(cornerRadius: MGStyle.Corner.sm)
+                        .fill(selectedOption == option ? Color.accentColor.opacity(0.15) : Color.clear)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: MGStyle.Corner.sm)
+                        .stroke(selectedOption == option ? Color.accentColor : MGStyle.Colors.separator, lineWidth: selectedOption == option ? 2 : 1)
+                )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func pickCustomImage() {
+        let panel = NSOpenPanel()
+        panel.title = "Choose Menu Bar Icon"
+        panel.allowedContentTypes = [.image]
+        panel.canChooseDirectories = false
+        panel.canChooseFiles = true
+        panel.allowsMultipleSelection = false
+        panel.begin { response in
+            guard response == .OK, let url = panel.url, let sourceImage = NSImage(contentsOf: url) else { return }
+            DispatchQueue.main.async {
+                // Downscale before persisting -- this gets written into
+                // gestures.json, so keep it small and menu-bar-appropriate
+                // rather than storing an arbitrarily large source image.
+                let target = NSSize(width: 44, height: 44)
+                let resized = NSImage(size: target)
+                resized.lockFocus()
+                sourceImage.draw(in: NSRect(origin: .zero, size: target), from: .zero, operation: .copy, fraction: 1.0)
+                resized.unlockFocus()
+
+                guard let tiff = resized.tiffRepresentation,
+                      let rep = NSBitmapImageRep(data: tiff),
+                      let pngData = rep.representation(using: .png, properties: [:]) else { return }
+
+                customImage = resized
+                selectedOption = .custom
+                UIServices.shared.setCustomMenuBarIcon(data: pngData, isTemplate: customIsTemplate)
+            }
         }
     }
 }

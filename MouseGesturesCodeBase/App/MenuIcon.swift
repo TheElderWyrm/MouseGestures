@@ -160,18 +160,22 @@ class MenuIcon: NSObject {
         if Thread.isMainThread { work() } else { DispatchQueue.main.async(execute: work) }
     }
 
-    /// Sets the status item's image/title according to `Configuration.shared.menuBarDisplayStyle`.
+    /// Sets the status item's image according to `Configuration.shared.menuBarIconOption`.
     private func applyDisplayStyle() {
         guard let button = statusItem?.button else { return }
-        switch Configuration.shared.menuBarDisplayStyle {
-        case .icon:
-            button.image = NSImage(systemSymbolName: "hand.draw", accessibilityDescription: "Mouse Gestures")
-            button.image?.isTemplate = true
-            button.title = ""
-        case .text:
-            button.image = nil
-            button.title = "Gestures"
+        button.title = ""
+
+        let config = Configuration.shared
+        if config.menuBarIconOption == .custom, let data = config.customMenuBarIconData, let custom = NSImage(data: data) {
+            custom.size = NSSize(width: 18, height: 18)
+            custom.isTemplate = config.customMenuBarIconIsTemplate
+            button.image = custom
+            return
         }
+
+        let symbolName = config.menuBarIconOption.symbolName ?? "hand.draw"
+        button.image = NSImage(systemSymbolName: symbolName, accessibilityDescription: "Mouse Gestures")
+        button.image?.isTemplate = true
     }
 
     /// Updates the state of menu items based on accessibility permissions

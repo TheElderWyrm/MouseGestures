@@ -1,8 +1,9 @@
 import XCTest
 
-/// Smoke tests for the pure update-feed rules in `UpdateLogic`.
+/// Smoke tests for the pure update-comparison and GitHub-release-parsing
+/// rules in `UpdateLogic`.
 ///
-/// These exercise the version-compare and version.json parsing logic that
+/// These exercise the version-compare and release-selection logic that
 /// `UpdateService` runs in production, but without URLSession / UserDefaults
 /// side effects, so they are deterministic and fast.
 final class UpdateLogicTests: XCTestCase {
@@ -23,29 +24,72 @@ final class UpdateLogicTests: XCTestCase {
         XCTAssertTrue(UpdateLogic.isUpdateAvailable(current: "1.9.0", remote: "1.10.0"))
     }
 
-    func testParseFeedDecodesValidVersionJSON() throws {
+    func testParseGitHubReleaseDecodesValidResponse() throws {
         let json = """
             {
-                "version": "1.0.0",
-                "releaseNotes": "Initial public release.",
-                "downloadURL": "https://github.com/TheElderWyrm/MouseGestures/releases/latest/download/MouseGestures.dmg"
+                "tag_name": "v1.2.3",
+                "draft": false,
+                "prerelease": false,
+                "body": "Release notes here.",
+                "assets": [
+                    { "name": "MouseGestures.dmg",
+                      "browser_download_url": "https://github.com/TheElderWyrm/MouseGestures/releases/download/v1.2.3/MouseGestures.dmg",
+                      "size": 12345678 }
+                ]
             }
             """
-        let feed = try UpdateLogic.parseFeed(Data(json.utf8))
-        XCTAssertEqual(feed.version, "1.0.0")
-        XCTAssertEqual(feed.releaseNotes, "Initial public release.")
-        XCTAssertEqual(feed.downloadURL, "https://github.com/TheElderWyrm/MouseGestures/releases/latest/download/MouseGestures.dmg")
+        let release = try UpdateLogic.parseGitHubRelease(Data(json.utf8))
+        XCTAssertEqual(release.tagName, "v1.2.3")
+        XCTAssertFalse(release.draft)
+        XCTAssertFalse(release.prerelease)
+        XCTAssertEqual(release.body, "Release notes here.")
+        XCTAssertEqual(release.assets.first?.name, "MouseGestures.dmg")
     }
 
-    func testParseFeedThrowsOnMalformedJSON() {
+    func testParseGitHubReleaseThrowsOnMalformedJSON() {
         let malformed = Data("{ not valid json".utf8)
-        XCTAssertThrowsError(try UpdateLogic.parseFeed(malformed))
+        XCTAssertThrowsError(try UpdateLogic.parseGitHubRelease(malformed))
     }
 
-    func testParseFeedThrowsOnMissingRequiredField() {
-        let missingVersion = Data("""
-            { "releaseNotes": "notes", "downloadURL": "https://example.com/a.dmg" }
+    func testParseGitHubReleaseThrowsOnMissingRequiredField() {
+        let missingTag = Data("""
+            { "draft": false, "prerelease": false, "assets": [] }
             """.utf8)
-        XCTAssertThrowsError(try UpdateLogic.parseFeed(missingVersion))
+        XCTAssertThrowsError(try UpdateLogic.parseGitHubRelease(missingTag))
+    }
+
+    func testVersionStringStripsLeadingV() {
+        XCTAssertEqual(UpdateLogic.versionString(fromTag: "v1.2.3"), "1.2.3")
+        XCTAssertEqual(UpdateLogic.versionString(fromTag: "1.2.3"), "1.2.3")
+    }
+
+    func testDownloadAssetFindsDMGCaseInsensitively() {
+        let release = GitHubRelease(tagName: "v1.0.0", draft: false, prerelease: false, body: nil, assets: [
+            GitHubReleaseAsset(name: "checksums.txt", browserDownloadURL: "https://example.com/checksums.txt", size: 100),
+            GitHubReleaseAsset(name: "MouseGestures.DMG", browserDownloadURL: "https://example.com/MouseGestures.DMG", size: 999)
+        ])
+        XCTAssertEqual(UpdateLogic.downloadAsset(from: release)?.name, "MouseGestures.DMG")
+    }
+
+    func testDownloadAssetReturnsNilWhenNoDMG() {
+        let release = GitHubRelease(tagName: "v1.0.0", draft: false, prerelease: false, body: nil, assets: [
+            GitHubReleaseAsset(name: "checksums.txt", browserDownloadURL: "https://example.com/checksums.txt", size: 100)
+        ])
+        XCTAssertNil(UpdateLogic.downloadAsset(from: release))
+    }
+
+    func testIsEligibleAcceptsPublishedRelease() {
+        let release = GitHubRelease(tagName: "v1.0.0", draft: false, prerelease: false, body: nil, assets: [])
+        XCTAssertTrue(UpdateLogic.isEligible(release))
+    }
+
+    func testIsEligibleRejectsDraft() {
+        let release = GitHubRelease(tagName: "v1.0.0", draft: true, prerelease: false, body: nil, assets: [])
+        XCTAssertFalse(UpdateLogic.isEligible(release))
+    }
+
+    func testIsEligibleRejectsPrerelease() {
+        let release = GitHubRelease(tagName: "v1.0.0", draft: false, prerelease: true, body: nil, assets: [])
+        XCTAssertFalse(UpdateLogic.isEligible(release))
     }
 }

@@ -4,18 +4,18 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>MouseGestures — Every corner of your screen is a shortcut</title>
-<meta name="description" content="MouseGestures is a macOS menu-bar utility that turns flicks to your screen's corners and edges — plus mouse buttons and modifier keys — into instant actions. 47 built-in actions. 30-day full trial, no account.">
+<meta name="description" content="MouseGestures is a macOS menu-bar utility that turns flicks to your screen's corners and edges — plus mouse buttons and modifier keys — into instant actions. 50 built-in actions. 30-day full trial, no account.">
 <link rel="canonical" href="https://mousegestures.app/">
 
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="MouseGestures">
 <meta property="og:title" content="MouseGestures — Every corner of your screen is a shortcut">
-<meta property="og:description" content="Flick to an edge — snap windows, run scripts, control media. 47 actions, per-app profiles, offline license, no subscription.">
+<meta property="og:description" content="Flick to an edge — snap windows, run scripts, control media. 50 actions, per-app profiles, offline license, no subscription.">
 <meta property="og:url" content="https://mousegestures.app/">
 <meta property="og:image" content="https://mousegestures.app/og.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="MouseGestures — Every corner of your screen is a shortcut">
-<meta name="twitter:description" content="Flick to an edge — snap windows, run scripts, control media. 47 actions, per-app profiles, offline license, no subscription.">
+<meta name="twitter:description" content="Flick to an edge — snap windows, run scripts, control media. 50 actions, per-app profiles, offline license, no subscription.">
 <meta name="twitter:image" content="https://mousegestures.app/og.png">
 
 <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f7f9fc">
@@ -33,7 +33,7 @@
   "name": "MouseGestures",
   "operatingSystem": "macOS 13.0 or later",
   "applicationCategory": "UtilitiesApplication",
-  "description": "A macOS menu-bar utility that maps screen-zone gestures, mouse buttons, and keyboard triggers to window-management, media, system, and automation actions.",
+  "description": "A macOS menu-bar utility that maps screen-zone gestures, mouse buttons, and keyboard triggers to window-management, media, system, browser, and automation actions.",
   "url": "https://mousegestures.app/",
   "downloadUrl": "https://github.com/TheElderWyrm/MouseGestures/releases/latest/download/MouseGestures.dmg",
   "offers": [
@@ -95,7 +95,7 @@
       <p class="lede">
         MouseGestures turns flicks to your screen's edges and corners — layered with
         mouse buttons and modifier keys — into instant actions. Snap windows, run
-        scripts, control media, fire Shortcuts. <strong>47 built-in actions</strong>,
+        scripts, control media, fire Shortcuts. <strong>50 built-in actions</strong>,
         and your hand never leaves the mouse.
       </p>
       <div class="cta-row">
@@ -115,8 +115,8 @@
     <div class="hero-demo">
       <div class="demo-profiles" role="group" aria-label="Demo gesture profile">
         <button type="button" class="dp-tab" data-profile="windows" aria-pressed="true">Windows</button>
-        <button type="button" class="dp-tab" data-profile="media" aria-pressed="false">Media</button>
-        <button type="button" class="dp-tab" data-profile="system" aria-pressed="false">System</button>
+        <button type="button" class="dp-tab" data-profile="media" aria-pressed="false">Media Management</button>
+        <button type="button" class="dp-tab" data-profile="everyday" aria-pressed="false">Everyday</button>
       </div>
       <div class="demo-frame" id="demo">
         <div class="demo-desktop" id="desktop" data-snap="none">
@@ -153,14 +153,14 @@
 
           <!-- 8 trigger zones: 4 corners + 4 edges, exactly like the app.
                Each shows its current action, so nobody has to guess. -->
-          <button class="zone z-corner z-tl" data-zone="tl" type="button" aria-label="Top-left corner: close window"><span class="zl" aria-hidden="true"></span></button>
+          <button class="zone z-corner z-tl" data-zone="tl" type="button" aria-label="Top-left corner: snap top-left"><span class="zl" aria-hidden="true"></span></button>
           <button class="zone z-edge z-top" data-zone="top" type="button" aria-label="Top edge: fullscreen"><span class="zl" aria-hidden="true"></span></button>
-          <button class="zone z-corner z-tr" data-zone="tr" type="button" aria-label="Top-right corner: quit app"><span class="zl" aria-hidden="true"></span></button>
-          <button class="zone z-edge z-left" data-zone="left" type="button" aria-label="Left edge: move to previous display"><span class="zl" aria-hidden="true"></span></button>
-          <button class="zone z-edge z-right" data-zone="right" type="button" aria-label="Right edge: move to next display"><span class="zl" aria-hidden="true"></span></button>
-          <button class="zone z-corner z-bl" data-zone="bl" type="button" aria-label="Bottom-left corner: app exposé"><span class="zl" aria-hidden="true"></span></button>
-          <button class="zone z-edge z-bottom" data-zone="bottom" type="button" aria-label="Bottom edge: minimize"><span class="zl" aria-hidden="true"></span></button>
-          <button class="zone z-corner z-br" data-zone="br" type="button" aria-label="Bottom-right corner: mission control"><span class="zl" aria-hidden="true"></span></button>
+          <button class="zone z-corner z-tr" data-zone="tr" type="button" aria-label="Top-right corner: snap top-right"><span class="zl" aria-hidden="true"></span></button>
+          <button class="zone z-edge z-left" data-zone="left" type="button" aria-label="Left edge: snap left half"><span class="zl" aria-hidden="true"></span></button>
+          <button class="zone z-edge z-right" data-zone="right" type="button" aria-label="Right edge: snap right half"><span class="zl" aria-hidden="true"></span></button>
+          <button class="zone z-corner z-bl" data-zone="bl" type="button" aria-label="Bottom-left corner: snap bottom-left"><span class="zl" aria-hidden="true"></span></button>
+          <button class="zone z-edge z-bottom" data-zone="bottom" type="button" aria-label="Bottom edge: center window"><span class="zl" aria-hidden="true"></span></button>
+          <button class="zone z-corner z-br" data-zone="br" type="button" aria-label="Bottom-right corner: snap bottom-right"><span class="zl" aria-hidden="true"></span></button>
 
           <div class="hud" id="hud" role="status" aria-live="polite"></div>
 
@@ -202,7 +202,7 @@
     <div class="shell">
       <div class="stats-grid">
         <div class="stat">
-          <span class="stat-value">47</span>
+          <span class="stat-value">50</span>
           <span class="stat-label">Built-in actions</span>
         </div>
         <div class="stat">
@@ -276,7 +276,7 @@
   <section class="section section-tint" id="actions">
     <div class="shell">
       <header class="section-head reveal">
-        <h2>47 actions, six categories, <span class="grad">every one configurable.</span></h2>
+        <h2>50 actions, seven categories, <span class="grad">every one configurable.</span></h2>
         <p>Everything below ships in the box, and each action exposes its parameters (direction, amount, scope, target) in the app's Settings. Pick a category to jump to it — or grab the ribbon and drag.</p>
       </header>
       <div class="cat-tabs reveal" role="group" aria-label="Jump to an action category">
@@ -284,6 +284,7 @@
         <button type="button" class="cat-tab" data-fam="window" aria-pressed="false"><i class="dot"></i>Window</button>
         <button type="button" class="cat-tab" data-fam="media" aria-pressed="false"><i class="dot"></i>Media</button>
         <button type="button" class="cat-tab" data-fam="system" aria-pressed="false"><i class="dot"></i>System</button>
+        <button type="button" class="cat-tab" data-fam="browser" aria-pressed="false"><i class="dot"></i>Browser</button>
         <button type="button" class="cat-tab" data-fam="automation" aria-pressed="false"><i class="dot"></i>Automation</button>
         <button type="button" class="cat-tab" data-fam="bundle" aria-pressed="false"><i class="dot"></i>Bundles</button>
       </div>
@@ -316,6 +317,10 @@
           <span class="chip" data-fam="bundle">Conditional (If / Else)</span>
           <span class="chip" data-fam="bundle">Repeat Action</span>
           <span class="chip" data-fam="bundle">Timed Delay</span>
+          <span class="chip fam" data-fam="browser"><i class="dot"></i>Browser</span>
+          <span class="chip" data-fam="browser">Browser Navigation</span>
+          <span class="chip" data-fam="browser">Tab Management</span>
+          <span class="chip" data-fam="browser">Browser Zoom</span>
         </div>
       </div>
       <div class="marquee-track reverse">
@@ -357,7 +362,7 @@
   <section class="section shell" id="features">
     <header class="section-head reveal">
       <h2>Everything within a <span class="grad">flick's reach.</span></h2>
-      <p>Six categories cover windows, media, system, and full automation — and every action is remappable to any gesture.</p>
+      <p>Seven categories cover windows, media, system, browser, and full automation — and every action is remappable to any gesture.</p>
     </header>
     <div class="features-grid">
       <article class="card feature reveal">
@@ -378,8 +383,8 @@
         <div class="feature-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3"/><path d="M1.5 14h5M9.5 8h5M17.5 16h5"/></svg>
         </div>
-        <h3>Media &amp; system control</h3>
-        <p>Volume, brightness, playback, dark mode, Do Not Disturb, screenshots, lock, sleep — the whole control center, moved to your cursor.</p>
+        <h3>Media, system &amp; browser control</h3>
+        <p>Volume, brightness, playback, dark mode, Do Not Disturb, screenshots, lock, sleep, browser tabs, zoom and navigation — the whole control center, moved to your cursor.</p>
       </article>
       <article class="card feature reveal">
         <div class="feature-icon" aria-hidden="true">

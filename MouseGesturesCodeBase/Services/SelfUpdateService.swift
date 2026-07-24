@@ -10,6 +10,7 @@ public enum SelfUpdateError: LocalizedError {
     case emptyDownload
     case mountFailed(String)
     case appNotFound
+    case signatureInvalid(String)
     case scriptWriteFailed(String)
     case scriptLaunchFailed(String)
 
@@ -29,6 +30,8 @@ public enum SelfUpdateError: LocalizedError {
             return "Couldn't open the downloaded disk image: \(reason)"
         case .appNotFound:
             return "Couldn't find MouseGestures.app inside the downloaded disk image."
+        case .signatureInvalid(let reason):
+            return "The downloaded update failed a safety check (\(reason)) and was not installed."
         case .scriptWriteFailed(let reason):
             return "Couldn't prepare the installer: \(reason)"
         case .scriptLaunchFailed(let reason):
@@ -42,6 +45,7 @@ public enum SelfUpdateStage: Equatable {
     case idle
     case downloading(progress: Double)
     case mounting
+    case verifying
     case installing
     case relaunching
     case failed(String)
@@ -167,6 +171,17 @@ public class SelfUpdateService: NSObject, ObservableObject {
                     return
                 }
 
+                DispatchQueue.main.async { self.stage = .verifying }
+
+                if case .failure(let error) = self.verifyUpdateIsTrustworthy(newAppPath: appURL.path) {
+                    self.detach(mountPoint: mountPoint)
+                    try? FileManager.default.removeItem(at: dmgURL)
+                    DispatchQueue.main.async {
+                        self.stage = .failed(error.errorDescription ?? "Update failed.")
+                    }
+                    return
+                }
+
                 DispatchQueue.main.async { self.stage = .installing }
 
                 do {
@@ -232,6 +247,65 @@ public class SelfUpdateService: NSObject, ObservableObject {
         return .failure(.mountFailed("No mount point reported for the disk image."))
     }
 
+    // MARK: - Signature Verification
+
+    /// Confirms the downloaded app is safe to install over the running one,
+    /// BEFORE we hand off to the detached script and quit -- so a failure
+    /// shows up as a clear, actionable error in the still-running UI instead
+    /// of leaving the user with a silently-blocked relaunch (Gatekeeper
+    /// refusing to open an unverified/tampered copy after the old app has
+    /// already quit looks like the app just hung).
+    private func verifyUpdateIsTrustworthy(newAppPath: String) -> Result<Void, SelfUpdateError> {
+        guard runCodesignVerify(path: newAppPath) else {
+            return .failure(.signatureInvalid("code signature did not verify"))
+        }
+
+        // If this running copy is itself signed (a real distributed build),
+        // also require the new app to carry the SAME Developer ID team --
+        // this is the actual protection against a malicious or mistakenly
+        // substituted asset that happens to carry some other valid Apple
+        // signature. An unsigned/ad-hoc local dev build has no identity to
+        // pin to, so only the codesign --verify above applies to it.
+        if let myTeam = teamIdentifier(ofAppAt: Bundle.main.bundlePath) {
+            guard let newTeam = teamIdentifier(ofAppAt: newAppPath), newTeam == myTeam else {
+                return .failure(.signatureInvalid("not signed by the same developer as this app"))
+            }
+        }
+
+        return .success(())
+    }
+
+    private func runCodesignVerify(path: String) -> Bool {
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: "/usr/bin/codesign")
+        task.arguments = ["--verify", "--deep", "--strict", path]
+        task.standardOutput = FileHandle.nullDevice
+        task.standardError = FileHandle.nullDevice
+        do { try task.run() } catch { return false }
+        task.waitUntilExit()
+        return task.terminationStatus == 0
+    }
+
+    /// Returns the app's Developer ID Team Identifier, or nil if it's
+    /// unsigned/ad-hoc-signed (no team) or codesign fails to read it.
+    private func teamIdentifier(ofAppAt path: String) -> String? {
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: "/usr/bin/codesign")
+        task.arguments = ["-dv", "--verbose=2", path]
+        let errPipe = Pipe()
+        task.standardOutput = FileHandle.nullDevice
+        task.standardError = errPipe
+        do { try task.run() } catch { return nil }
+        let data = errPipe.fileHandleForReading.readDataToEndOfFile()
+        task.waitUntilExit()
+        guard task.terminationStatus == 0, let output = String(data: data, encoding: .utf8) else { return nil }
+        for line in output.split(separator: "\n") where line.hasPrefix("TeamIdentifier=") {
+            let value = String(line.dropFirst("TeamIdentifier=".count)).trimmingCharacters(in: .whitespaces)
+            return value == "not set" ? nil : value
+        }
+        return nil
+    }
+
     private func findApp(inVolume mountPoint: String) -> URL? {
         guard let contents = try? FileManager.default.contentsOfDirectory(atPath: mountPoint) else {
             return nil
@@ -294,6 +368,11 @@ public class SelfUpdateService: NSObject, ObservableObject {
         mv -- "$OLD_APP" "$BACKUP_APP"
         if cp -R -- "$NEW_APP" "$OLD_APP"; then
             rm -rf -- "$BACKUP_APP"
+            # The Swift side already verified this app's code signature
+            # before handing off here; clear the download quarantine flag so
+            # Gatekeeper doesn't re-check it online before the `open` below --
+            # that re-check is what was hanging/silently failing the relaunch.
+            xattr -cr -- "$OLD_APP" 2>/dev/null || true
         else
             rm -rf -- "$OLD_APP"
             mv -- "$BACKUP_APP" "$OLD_APP"

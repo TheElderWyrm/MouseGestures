@@ -671,6 +671,152 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
                 )
             ],
             icon: "arrow.up.and.down.and.arrow.left.and.right"
+        ),
+
+        // MARK: Moved from Core: app/window arrangement actions
+        PluginAction(
+            id: "hide_app",
+            name: "Hide Application",
+            description: "Hide the active application",
+            requiresParameters: true,
+            supportedParameters: [
+                ParameterDefinition(
+                    key: "target",
+                    name: "Target",
+                    type: .selection,
+                    defaultValue: AnyCodable("frontmost"),
+                    description: "Which application to hide",
+                    validation: ValidationRule(allowedValues: [
+                        AnyCodable("frontmost"),
+                        AnyCodable("specific"),
+                        AnyCodable("all_except_finder")
+                    ]),
+                    displayValues: [
+                        "frontmost": "Frontmost App",
+                        "specific": "Specific App",
+                        "all_except_finder": "All Except Finder"
+                    ]
+                ),
+                ParameterDefinition(
+                    key: "app_bundle_id",
+                    name: "Application",
+                    type: .application,
+                    description: "Application to hide when using specific target",
+                    visibleWhen: ParameterVisibilityRule(key: "target", value: "specific")
+                )
+            ],
+            icon: "eye.slash"
+        ),
+        PluginAction(
+            id: "quit_app",
+            name: "Quit Application",
+            description: "Quit an application",
+            requiresParameters: true,
+            supportedParameters: [
+                ParameterDefinition(
+                    key: "target",
+                    name: "Target",
+                    type: .selection,
+                    defaultValue: AnyCodable("frontmost"),
+                    description: "Which application to quit",
+                    validation: ValidationRule(allowedValues: [
+                        AnyCodable("frontmost"),
+                        AnyCodable("specific"),
+                        AnyCodable("all_except_finder")
+                    ]),
+                    displayValues: ["frontmost": "Frontmost App", "specific": "Specific App", "all_except_finder": "All Except Finder"]
+                ),
+                ParameterDefinition(
+                    key: "app_bundle_id",
+                    name: "Application",
+                    type: .application,
+                    description: "Application to quit (when targeting specific app)",
+                    visibleWhen: ParameterVisibilityRule(key: "target", value: "specific")
+                )
+            ],
+            icon: "xmark.app"
+        ),
+        PluginAction(
+            id: "mission_control",
+            name: "Mission Control",
+            description: "Show Mission Control",
+            icon: "rectangle.3.group"
+        ),
+        PluginAction(
+            id: "show_desktop",
+            name: "Show Desktop",
+            description: "Show the desktop",
+            icon: "menubar.dock.rectangle"
+        ),
+        PluginAction(
+            id: "app_expose",
+            name: "Application Windows",
+            description: "Show all windows of current application",
+            icon: "rectangle.stack"
+        ),
+        PluginAction(
+            id: "cycle_window",
+            name: "Cycle Window",
+            description: "Switch to the next or previous window",
+            requiresParameters: true,
+            supportedParameters: [
+                ParameterDefinition(
+                    key: "direction",
+                    name: "Direction",
+                    type: .selection,
+                    defaultValue: AnyCodable("forward"),
+                    description: "Which direction to cycle",
+                    validation: ValidationRule(allowedValues: [
+                        AnyCodable("forward"),
+                        AnyCodable("backward")
+                    ]),
+                    displayValues: ["forward": "Forward", "backward": "Backward"]
+                ),
+                ParameterDefinition(
+                    key: "scope",
+                    name: "Application",
+                    type: .selection,
+                    defaultValue: AnyCodable("current"),
+                    description: "Which app's windows to cycle",
+                    validation: ValidationRule(allowedValues: [
+                        AnyCodable("current"),
+                        AnyCodable("specific"),
+                        AnyCodable("all_apps")
+                    ]),
+                    displayValues: ["current": "Current App", "specific": "Specific App", "all_apps": "All Windows"]
+                ),
+                ParameterDefinition(
+                    key: "app_bundle_id",
+                    name: "Application",
+                    type: .application,
+                    description: "Application whose windows to cycle",
+                    visibleWhen: ParameterVisibilityRule(key: "scope", value: "specific")
+                )
+            ],
+            supportsRepeat: true,
+            icon: "arrow.right.circle"
+        ),
+        PluginAction(
+            id: "cycle_space",
+            name: "Cycle Space",
+            description: "Move to the next or previous desktop space",
+            requiresParameters: true,
+            supportedParameters: [
+                ParameterDefinition(
+                    key: "direction",
+                    name: "Direction",
+                    type: .selection,
+                    defaultValue: AnyCodable("next"),
+                    description: "Which direction to move",
+                    validation: ValidationRule(allowedValues: [
+                        AnyCodable("next"),
+                        AnyCodable("previous")
+                    ]),
+                    displayValues: ["next": "Next", "previous": "Previous"]
+                )
+            ],
+            supportsRepeat: true,
+            icon: "arrow.right.square"
         )
     ]
 
@@ -891,6 +1037,38 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
                 preset: preset
             )
             setWindowPosition(params: params, target: target, context: context)
+
+        // MARK: Moved from Core: app/window arrangement actions
+        case "hide_app":
+            let hideTarget = parameters.string(for: "target") ?? "frontmost"
+            let hideBundleId = parameters.string(for: "app_bundle_id")
+            hideApplication(target: hideTarget, bundleId: hideBundleId, context: context)
+
+        case "quit_app":
+            let quitTarget = parameters.string(for: "target") ?? "frontmost"
+            let quitBundleId = parameters.string(for: "app_bundle_id")
+            quitApplication(target: quitTarget, bundleId: quitBundleId, context: context)
+
+        case "mission_control":
+            activateMissionControl(context: context)
+        case "show_desktop":
+            showDesktop(context: context)
+        case "app_expose":
+            activateAppExpose(context: context)
+
+        case "cycle_window":
+            let cycleForward = (parameters.string(for: "direction") ?? "forward") == "forward"
+            let cycleScope = parameters.string(for: "scope") ?? "current"
+            if cycleScope == "all_apps" {
+                cycleAcrossAllWindows(forward: cycleForward, context: context)
+            } else {
+                let appBundleId = cycleScope == "specific" ? parameters.string(for: "app_bundle_id") : nil
+                cycleWindows(forward: cycleForward, appBundleId: appBundleId, context: context)
+            }
+
+        case "cycle_space":
+            let spaceNext = (parameters.string(for: "direction") ?? "next") == "next"
+            moveToSpace(next: spaceNext, context: context)
 
         default:
             throw PluginError.actionNotFound(action.id)
@@ -1682,6 +1860,164 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
             context.logger.log("Loaded \(savedLayouts.count) window layouts", file: #file, function: #function, line: #line)
         } catch {
             context.logger.log("Error loading window layouts: \(error)", file: #file, function: #function, line: #line)
+        }
+    }
+
+    // MARK: - Moved from Core: App/Window Arrangement Implementations
+
+    private func hideApplication(target: String, bundleId: String?, context: PluginContext) {
+        switch target {
+        case "specific":
+            guard let bid = bundleId else { return }
+            if let app = context.getRunningApplications().first(where: { $0.bundleIdentifier == bid }) {
+                _ = context.hideApplication(app)
+            }
+        case "all_except_finder":
+            context.getRunningApplications().forEach { app in
+                if app.activationPolicy == .regular,
+                   app.bundleIdentifier != "com.apple.finder",
+                   app.bundleIdentifier != Bundle.main.bundleIdentifier {
+                    _ = context.hideApplication(app)
+                }
+            }
+        default: // frontmost
+            if let app = context.getFrontmostApplication() {
+                _ = context.hideApplication(app)
+            }
+        }
+    }
+
+    private func quitApplication(target: String, bundleId: String?, context: PluginContext) {
+        switch target {
+        case "frontmost":
+            if let app = context.getFrontmostApplication() {
+                if app.bundleIdentifier != "com.apple.finder" {
+                    _ = context.terminateApplication(app)
+                }
+            }
+        case "specific":
+            guard let bid = bundleId, bid != "com.apple.finder" else { return }
+            context.getRunningApplications()
+                .filter { $0.bundleIdentifier == bid }
+                .forEach { _ = context.terminateApplication($0) }
+        case "all_except_finder":
+            context.getRunningApplications().forEach { app in
+                if app.activationPolicy == .regular,
+                   app.bundleIdentifier != "com.apple.finder",
+                   app.bundleIdentifier != Bundle.main.bundleIdentifier {
+                    _ = context.terminateApplication(app)
+                }
+            }
+        default:
+            break
+        }
+    }
+
+    private func activateMissionControl(context: PluginContext) {
+        // Launch Mission Control app directly (most reliable across shortcut configurations)
+        let mcURL = URL(fileURLWithPath: "/System/Applications/Mission Control.app")
+        if NSWorkspace.shared.open(mcURL) { return }
+        // Fallback: Ctrl+Up
+        context.sendKeyboardShortcut(keyCode: 126, modifiers: [.maskControl])
+    }
+
+    private func showDesktop(context: PluginContext) {
+        // F11 (key code 103) is mapped to Show Desktop on macOS.
+        // Wait for modifiers to release so F11 isn't interpreted as a modified key.
+        _ = waitForModifierRelease()
+        do {
+            try context.executeAppleScript("""
+                tell application "System Events"
+                    key code 103
+                end tell
+            """)
+        } catch {
+            // Fallback: Cmd+F3 (older Expose Show Desktop shortcut)
+            context.sendKeyboardShortcut(keyCode: 99, modifiers: [.maskCommand])
+        }
+    }
+
+    private func activateAppExpose(context: PluginContext) {
+        // System Events is sensitive to physically-held modifiers;
+        // wait for all modifier keys to be released first.
+        _ = waitForModifierRelease()
+        do {
+            try context.executeAppleScript("""
+                tell application "System Events"
+                    key code 125 using {control down}
+                end tell
+            """)
+        } catch {
+            context.sendKeyboardShortcut(keyCode: 125, modifiers: [.maskControl])
+        }
+    }
+
+    private func cycleAcrossAllWindows(forward: Bool, context: PluginContext) {
+        let allWindows = context.getAllVisibleWindows()
+        guard !allWindows.isEmpty else { return }
+
+        // Build per-app map: take the frontmost window of each app
+        // Use insertion order from getAllVisibleWindows (z-order: frontmost app first)
+        var appMap: [(pid: pid_t, window: AXUIElement)] = []
+        var seenPids = Set<pid_t>()
+        for (window, pid) in allWindows {
+            if seenPids.insert(pid).inserted {
+                appMap.append((pid: pid, window: window))
+            }
+        }
+        guard appMap.count > 1 else {
+            // Only one app — cycle its own windows using Cmd+`
+            if forward {
+                context.sendKeyboardShortcut(keyCode: 50, modifiers: [.maskCommand])
+            } else {
+                context.sendKeyboardShortcut(keyCode: 50, modifiers: [.maskCommand, .maskShift])
+            }
+            return
+        }
+
+        // Sort by PID for stable ordering that doesn't change when windows get focused
+        appMap.sort { $0.pid < $1.pid }
+
+        let frontPid = context.getFrontmostApplication()?.processIdentifier ?? 0
+        let currentIdx = appMap.firstIndex { $0.pid == frontPid } ?? 0
+        let nextIdx = forward
+            ? (currentIdx + 1) % appMap.count
+            : (currentIdx - 1 + appMap.count) % appMap.count
+
+        let next = appMap[nextIdx]
+        if let app = context.getRunningApplications().first(where: { $0.processIdentifier == next.pid }) {
+            app.activate(options: [.activateIgnoringOtherApps])
+        }
+        _ = context.performAccessibilityAction(next.window, action: kAXRaiseAction as String)
+    }
+
+    private func cycleWindows(forward: Bool, appBundleId: String? = nil, context: PluginContext) {
+        // Activate specific app first if requested
+        if let bundleId = appBundleId,
+           let app = context.getRunningApplications().first(where: { $0.bundleIdentifier == bundleId }) {
+            app.activate(options: [.activateIgnoringOtherApps])
+            usleep(150_000)
+        }
+        if forward {
+            context.sendKeyboardShortcut(keyCode: 50, modifiers: [.maskCommand])           // Cmd+`
+        } else {
+            context.sendKeyboardShortcut(keyCode: 50, modifiers: [.maskCommand, .maskShift]) // Cmd+Shift+`
+        }
+    }
+
+    private func moveToSpace(next: Bool, context: PluginContext) {
+        // System Events is sensitive to physically-held modifiers;
+        // wait for all modifier keys to be released first.
+        _ = waitForModifierRelease()
+        let keyCode = next ? 124 : 123 // Right / Left arrow
+        do {
+            try context.executeAppleScript("""
+                tell application "System Events"
+                    key code \(keyCode) using {control down}
+                end tell
+            """)
+        } catch {
+            context.sendKeyboardShortcut(keyCode: CGKeyCode(keyCode), modifiers: [.maskControl])
         }
     }
 }

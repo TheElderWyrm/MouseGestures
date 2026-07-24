@@ -123,6 +123,8 @@ struct UpdateNotificationView: View {
             }
         case .mounting:
             statusRow("Preparing installer…")
+        case .verifying:
+            statusRow("Verifying update…")
         case .installing:
             statusRow("Installing update…")
         case .relaunching:

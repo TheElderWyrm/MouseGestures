@@ -8,7 +8,11 @@ public class UpdateService: ObservableObject {
     public static let shared = UpdateService()
 
     // MARK: - Constants
-    private let updateURL = URL(string: "https://raw.githubusercontent.com/TheElderWyrm/MouseGestures/main/version.json")
+
+    /// GitHub's "latest release" API -- the live source of truth for what's
+    /// actually published, so there's no separate version.json to keep in
+    /// sync by hand after cutting a release.
+    private let releaseAPIURL = URL(string: "https://api.github.com/repos/TheElderWyrm/MouseGestures/releases/latest")
     private let lastCheckKey = "MGLastUpdateCheck"
     private let autoUpdateKey = "MGAutoUpdateEnabled"
 
@@ -31,28 +35,37 @@ public class UpdateService: ObservableObject {
     /// Check for updates manually
     public func checkForUpdates(quietly: Bool = false) {
         guard !isChecking else { return }
-        guard let url = updateURL else { return }
+        guard let url = releaseAPIURL else { return }
 
         isChecking = true
 
-        URLSession.shared.dataTask(with: url) { [weak self] data, _, error in
+        var request = URLRequest(url: url)
+        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+
+        URLSession.shared.dataTask(with: request) { [weak self] data, _, error in
             DispatchQueue.main.async {
                 guard let self = self else { return }
                 self.isChecking = false
                 self.lastCheckDate = Date()
                 UserDefaults.standard.set(self.lastCheckDate, forKey: self.lastCheckKey)
 
-                // On any network or parse failure, silently leave
-                // isUpdateAvailable as-is (default false) -- no false positives.
+                // On any network/parse failure, a release that isn't really
+                // published yet (draft/prerelease), or one with no macOS
+                // disk image attached, silently leave isUpdateAvailable as-is
+                // (default false) -- no false positives, and never offer an
+                // update we couldn't actually install.
                 guard error == nil, let data = data,
-                      let feed = try? UpdateLogic.parseFeed(data) else {
+                      let release = try? UpdateLogic.parseGitHubRelease(data),
+                      UpdateLogic.isEligible(release),
+                      let asset = UpdateLogic.downloadAsset(from: release) else {
                     return
                 }
 
-                self.latestVersion = feed.version
-                self.updateReleaseNotes = feed.releaseNotes
-                self.updateDownloadURLString = feed.downloadURL
-                self.isUpdateAvailable = UpdateLogic.isUpdateAvailable(current: self.currentVersion, remote: feed.version)
+                let remoteVersion = UpdateLogic.versionString(fromTag: release.tagName)
+                self.latestVersion = remoteVersion
+                self.updateReleaseNotes = release.body ?? ""
+                self.updateDownloadURLString = asset.browserDownloadURL
+                self.isUpdateAvailable = UpdateLogic.isUpdateAvailable(current: self.currentVersion, remote: remoteVersion)
 
                 if self.isUpdateAvailable && !quietly {
                     self.showUpdateNotification()

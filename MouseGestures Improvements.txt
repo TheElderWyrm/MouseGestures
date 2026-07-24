@@ -10,31 +10,81 @@ debounced config save). Fixed in Configuration.swift by hopping onto a separate
 queue in performSave() instead of saveQueue itself.]
 
 - [DONE] Update directly (Download and install from the app, not just pointing to GitHub to download the new version)
-  -> In-app download/mount/install/relaunch flow from the "Update Now" button (SelfUpdateService.swift).
+  -> In-app download/mount/install/relaunch flow (SelfUpdateService.swift). Round 2: the
+  first version got stuck on "Relaunching" with a failure sound — root cause was almost
+  certainly Gatekeeper silently blocking the freshly-copied app after the old one had
+  already quit (nothing left running to show an error). Fixed by verifying the downloaded
+  app's code signature (and Developer ID team match, when this build itself is signed)
+  BEFORE quitting, so a bad update fails with a clear on-screen message instead of hanging,
+  and by clearing the quarantine flag on the swapped-in copy so Gatekeeper doesn't block
+  the relaunch. Also redesigned the update source per round 2: pulls live from GitHub's
+  release API (api.github.com/repos/.../releases/latest) instead of a hand-maintained
+  version.json (deleted) — matches the pattern Website/js/main.js's own release lookup
+  already used, so there's nothing to forget to update after cutting a release.
 - [DONE] Improve standard profile actions (organize *logically*, see drafts below)
   -> DefaultProfiles.swift rewritten per the drafts below.
 - [DONE] Switch boxes for showing the zone borders to a glow effect (Possibly turn on by default? Might be helpful for new users who haven't learned their actions yet).
-  -> ZoneView now draws a soft inner glow instead of a hard box border, and showZoneHighlights now defaults to true for new installs.
+  -> Round 2 correction: first version was a stroked border with a shadow blur, which
+  wasn't the right effect. Rewritten as a directional glow matching the website demo's
+  zone visualization — corners glow radially from the actual screen corner, edges glow
+  linearly from the screen edge, both fading inward, no flat box fill at all now.
+  showZoneHighlights still defaults to true for new installs.
 - [DONE] Create Browser Navigation Plugin (Even if this is done using shortcuts in the backend, they should be able to select it as an action)
   -> BrowserActionsPlugin already existed as a selectable action; added a "Browser Navigation" default profile that actually uses it (previously only an ad hoc "Tab Navigation" profile using raw keyboard shortcuts existed - removed/replaced).
-- [PARTIAL] Move 'Core' actions into relevant plugins
-  -> Found that window actions (close/minimize/maximize/fullscreen) were already migrated to WindowManagementPlugin with hidden backward-compat aliases left in CoreActionsPlugin. The remaining Core actions (mission_control, show_desktop, app_expose, cycle_window, cycle_space, hide_app, quit_app, lock_screen, sleep_display, empty_trash, switch_profile) are NOT yet moved - didn't want to rush a wider plugin-boundary refactor in the same pass as everything else. Left for a future dedicated pass.
+- [DONE] Move 'Core' actions into relevant plugins
+  -> Finished in round 2. mission_control/show_desktop/app_expose/cycle_window/cycle_space/
+  hide_app/quit_app moved into WindowManagementPlugin; lock_screen/sleep_display/empty_trash
+  moved into SystemControlPlugin. CoreActionsPlugin now just forwards the old
+  "com.mousegestures.core.*" identifiers to their new plugin homes (via
+  PluginManager.executeAction), so existing saved gestures/profiles keep working unchanged.
+  switch_profile is the one action left genuinely in Core — it's about MouseGestures' own
+  profile system, not an OS/app action any other plugin's domain covers.
 - [NOT DONE] Draft Icons, choose the best. (App + Website)
   -> Design/visual task, not something to do as code changes. Needs actual icon artwork.
 - [DONE] Setting for what to display it as in the menu bar?
-  -> Added Icon/Text picker (Configuration.menuBarDisplayStyle). Also found and fixed the existing "hide menu bar icon" toggle had no UI control anywhere and didn't live-update - both now wired up in Settings -> General -> Menu Bar.
+  -> Round 2 correction: this was meant to allow alternate/custom menu bar icons, not an
+  icon/text toggle. Replaced with a gallery of 6 built-in SF Symbol alternatives plus a
+  custom-image picker (downscaled and stored in config; optional "match menu bar style/
+  monochrome" toggle for the custom one). Also still fixed the existing "hide menu bar
+  icon" toggle, which had no UI control anywhere and didn't live-update — both wired up in
+  Settings -> General -> Menu Bar.
 - [DONE] Automatically set repeat on hold when helpful for default profiles (For example, volume control, brightness controls).
   -> Volume Up/Down and all four brightness gestures (display + keyboard) in the new Media Control / System profiles now default to repeatOnHold.
 - [DONE] Repeat on click option for standard gestures
   -> New repeatOnClick timing option, independent of repeatOnHold: click once to start a hands-free repeat, click the same gesture again to stop. Toggle in the gesture editor next to Repeat on Hold.
 - [DONE] For window management save previous position in memory. If an action (such as snap window) is done twice in a row without changing targets reset to original position. (Maybe, test to see how well that works)
-  -> Implemented in WindowManagementPlugin.snapWindow: snapping the same region twice in a row (per-app) restores the pre-snap frame instead of re-snapping. Only tested via unit build/compile + code review, not manually clicked through yet - worth trying in practice to see if the toggle-back is discoverable/expected or surprising.
+  -> Implemented in WindowManagementPlugin.snapWindow: snapping the same region twice in a row (per-app) restores the pre-snap frame instead of re-snapping.
 - [DONE] Clean up the README.md. It should focus simply on what the app is and how to use it, not on development practices. Assume people already know what they are doing somewhat.
-  -> Rewritten around what the app is / getting started / what it can do / Free vs Pro. Build/test/lint/CI/architecture detail moved out (not relocated anywhere - trimmed on the assumption a contributor can find xcodebuild/SwiftLint/CI config themselves). Also dropped two references to MouseGestures_actions.txt and add_remove_files_xcode.py, which had already been deleted from the repo (uncommitted) before this session started.
+  -> Rewritten around what the app is / getting started / what it can do / Free vs Pro. Build/test/lint/CI/architecture detail moved out. Also dropped two references to MouseGestures_actions.txt and add_remove_files_xcode.py, which had already been deleted from the repo (uncommitted) before this session started.
 - [DONE] Website demo light mode not working (Also website mode should sync the dark mode selection on the demo, but not the reverse)
-  -> Root cause: the demo's dark-mode override had no .demo-light counterpart, so toggling it off while the site was already dark fell through to the same dark values. Added the missing CSS class and made the toggle explicit (set one class, clear the other) rather than a single-class flip. Site->demo sync confirmed still one-directional (verified live with Playwright).
+  -> Root cause: the demo's dark-mode override had no .demo-light counterpart, so toggling it off while the site was already dark fell through to the same dark values. Added the missing CSS class and made the toggle explicit (set one class, clear the other) rather than a single-class flip. Site->demo sync confirmed still one-directional.
 - [DONE] Improve website demo profile actions based of profiles below.
-  -> Demo's profiles replaced with Window Management / Media Control / System, matching the finalized drafts below.
+  -> Round 2 correction: the first pass left several zones wired to no-op placeholder
+  functions (Close Window, Quit App, Move Display, Do Not Disturb, brightness, keyboard
+  brightness) — every demo action now has a real, visibly distinct effect. See "Website
+  demo real-effects rule" and the profile drafts below for the final shape.
+- [DONE, round 2] If you place an action in the demo it MUST work/do something visibly and unique (e.g. seek 30s must visibly move further than seek 10s)
+  -> The seek nudge (Website/js/main.js showMedia) now scales with the seek's duration
+  (seconds * 0.6) instead of a fixed +/-9% for both 10s and 30s, so 10s -> 6% and 30s ->
+  18%, a clear 3x difference. Every zone across all three demo profiles was audited to
+  confirm it lands on a real effect (window snap, volume/HUD, mission control/exposé/show
+  desktop, dark mode preview, lock screen, screenshot, play/pause, track skip) - no
+  no-ops left anywhere in the demo.
+- [DONE, round 2] Website: Windows profile -> focus on Window Management Secondary layer (call the fill-screen zone "Fullscreen" not "Maximize"); Media -> "Media Management"; bring back a well-paired combination profile (dark mode, lock screen, etc. - "Everyday")
+  -> Windows demo profile reworked to be entirely window-snapping (the Secondary layer),
+  since every one of those 8 real snap targets has a genuine visual and the Main layer
+  (close/quit/move-display) doesn't. Shift sends each zone to its geometric opposite.
+  Top zone labeled "Fullscreen". Media profile renamed "Media Management" (content was
+  already close to right). Restored a 3rd "Everyday" profile mixing categories (Mission
+  Control/App Exposé, Volume, Dark Mode/Screenshot, window snap, Show Desktop, Play/Pause,
+  Lock Screen) - replaces the "System" profile from round 1, which was mostly no-ops.
+- [DONE, round 2] Update website with the new actions/plugin
+  -> BrowserActionsPlugin (Browser Navigation / Tab Management / Browser Zoom) was fully
+  shipped in the app but wasn't represented anywhere on the marketing site. Added a
+  "Browser" category to the action marquee + its chips, recounted the action/category
+  totals site-wide (47 -> 50 actions, six -> seven categories, including meta tags/JSON-LD/
+  hero copy), and folded a browser-control mention into the existing "Media & system
+  control" feature card.
 
 --- Organization Drafts ---
 Cmnd + Control = Main (Consider dropping the control. Would this be easier or interfere with normal computer navigation)
