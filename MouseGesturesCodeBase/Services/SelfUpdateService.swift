@@ -190,7 +190,7 @@ public class SelfUpdateService: NSObject, ObservableObject {
                         self.stage = .relaunching
                         // The detached script is now waiting for this
                         // process to exit before it replaces the bundle.
-                        NSApp.terminate(nil)
+                        self.quitForRelaunch()
                     }
                 } catch {
                     self.detach(mountPoint: mountPoint)
@@ -199,6 +199,31 @@ public class SelfUpdateService: NSObject, ObservableObject {
                     DispatchQueue.main.async { self.stage = .failed(message) }
                 }
             }
+        }
+    }
+
+    /// Terminates the app so the handed-off installer script can safely swap
+    /// the bundle. This is presented from a sheet (`UpdateNotificationView`
+    /// via `.sheet(isPresented:)` on the main window) -- an NSWindow won't
+    /// close while it still has a sheet attached, and `NSApp.terminate`'s
+    /// orderly-quit sequence needs every window to actually close, so calling
+    /// it with the sheet still up can silently fail to quit at all (the app
+    /// just sits there, which from the outside looks exactly like a hang).
+    /// End every window's sheet and close the window directly at the AppKit
+    /// level first -- independent of whatever SwiftUI's own `@State`-driven
+    /// `isPresented` binding happens to be doing -- then terminate on the
+    /// next runloop turn once that's actually taken effect.
+    private func quitForRelaunch() {
+        for window in NSApp.windows {
+            if let sheet = window.attachedSheet {
+                window.endSheet(sheet, returnCode: .cancel)
+            }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            for window in NSApp.windows {
+                window.close()
+            }
+            NSApp.terminate(nil)
         }
     }
 
@@ -352,13 +377,20 @@ public class SelfUpdateService: NSObject, ObservableObject {
         DMG_PATH=\(shellQuote(dmgPath))
 
         # Wait up to ~30s for the running app to fully quit before touching
-        # its bundle on disk.
+        # its bundle on disk. If it's still alive after that, bail out rather
+        # than risk swapping files out from under a live process -- leave
+        # everything in place so the app (still running) is unaffected.
         for i in $(seq 1 300); do
             if ! kill -0 "$PID" 2>/dev/null; then
                 break
             fi
             sleep 0.1
         done
+        if kill -0 "$PID" 2>/dev/null; then
+            hdiutil detach "$MOUNT_POINT" -quiet || true
+            rm -f -- "$DMG_PATH"
+            exit 1
+        fi
 
         # Move the old bundle aside instead of deleting it up front, so a
         # failed copy (e.g. disk full) doesn't leave the user with no app at

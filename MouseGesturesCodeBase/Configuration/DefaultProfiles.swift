@@ -164,96 +164,6 @@ struct DefaultProfiles {
         )
     }
 
-    // System Navigation Profile - Focused on macOS navigation
-    static func createSystemNavigationProfile() -> ConfigurationProfile {
-        let gestures = [
-            Gesture(zone: .top, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.mission_control", name: "Mission Control"),
-            Gesture(zone: .bottom, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.show_desktop", name: "Show Desktop"),
-            Gesture(zone: .left, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.cycle_space", parameters: ["direction": AnyCodable("previous")], name: "Previous Space"),
-            Gesture(zone: .right, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.cycle_space", parameters: ["direction": AnyCodable("next")], name: "Next Space"),
-            Gesture(zone: .topLeft, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.app_expose", name: "App Exposé"),
-            Gesture(zone: .topRight, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.app_expose", name: "App Exposé"),
-            Gesture(zone: .bottomLeft, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.mission_control", name: "Mission Control"),
-            Gesture(zone: .bottomRight, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.mission_control", name: "Mission Control"),
-            Gesture(zone: .topLeft, modifiers: [.command, .option], actionIdentifier: "com.mousegestures.core.show_desktop", name: "Show Desktop"),
-            Gesture(zone: .topRight, modifiers: [.command, .option], actionIdentifier: "com.mousegestures.core.mission_control", name: "Mission Control"),
-            Gesture(zone: .bottom, modifiers: [.command, .option], actionIdentifier: "com.mousegestures.core.cycle_window", parameters: ["direction": AnyCodable("backward")], name: "Previous Window"),
-            Gesture(zone: .top, modifiers: [.command, .option], actionIdentifier: "com.mousegestures.core.cycle_window", parameters: ["direction": AnyCodable("forward")], name: "Next Window")
-        ]
-
-        return ConfigurationProfile(
-            name: "System Navigation",
-            gestures: gestures,
-            isDefault: false
-        )
-    }
-
-    // Productivity Profile - Focused on productivity shortcuts
-    static func createProductivityProfile() -> ConfigurationProfile {
-        let gestures = [
-            Gesture(zone: .topRight, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.window.close_window", name: "Close Window"),
-            Gesture(zone: .top, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.window.fullscreen", name: "Fullscreen"),
-            Gesture(zone: .bottom, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.window.minimize", name: "Minimize"),
-            Gesture(zone: .left, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.cycle_window", parameters: ["direction": AnyCodable("backward")], name: "Previous Window"),
-            Gesture(zone: .right, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.cycle_window", parameters: ["direction": AnyCodable("forward")], name: "Next Window"),
-            Gesture(zone: .topLeft, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.mission_control", name: "Mission Control"),
-            Gesture(zone: .bottomLeft, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.hide_app", name: "Hide App"),
-            Gesture(zone: .bottomRight, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.show_desktop", name: "Show Desktop"),
-            Gesture(zone: .topLeft, modifiers: [.control, .option], actionIdentifier: "com.mousegestures.system.toggle_do_not_disturb", name: "Do Not Disturb"),
-            Gesture(zone: .topRight, modifiers: [.control, .option], actionIdentifier: "com.mousegestures.system.toggle_dark_mode", name: "Dark Mode"),
-            Gesture(zone: .bottom, modifiers: [.command, .option, .control], actionIdentifier: "com.mousegestures.core.lock_screen", name: "Lock Screen")
-        ]
-
-        return ConfigurationProfile(
-            name: "Productivity",
-            gestures: gestures,
-            isDefault: false
-        )
-    }
-
-    // Minimal Profile - Basic essential gestures only
-    static func createMinimalProfile() -> ConfigurationProfile {
-        let gestures = [
-            Gesture(zone: .topRight, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.quit_app", name: "Quit App"),
-            Gesture(zone: .topLeft, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.window.close_window", name: "Close Window"),
-            Gesture(zone: .top, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.window.fullscreen", name: "Fullscreen"),
-            Gesture(zone: .bottom, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.window.minimize", name: "Minimize"),
-            Gesture(zone: .left, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.cycle_space", parameters: ["direction": AnyCodable("previous")], name: "Previous Space"),
-            Gesture(zone: .right, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.cycle_space", parameters: ["direction": AnyCodable("next")], name: "Next Space")
-        ]
-
-        return ConfigurationProfile(
-            name: "Minimal",
-            gestures: gestures,
-            isDefault: false
-        )
-    }
-
-    // Developer Profile - Focused on development workflows
-    static func createDeveloperProfile() -> ConfigurationProfile {
-        let gestures = [
-            Gesture(zone: .left, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.window.snap_window", parameters: ["position": AnyCodable("left_half")], name: "Left Half"),
-            Gesture(zone: .right, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.window.snap_window", parameters: ["position": AnyCodable("right_half")], name: "Right Half"),
-            Gesture(zone: .top, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.window.maximize", name: "Maximize"),
-            Gesture(zone: .topRight, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.window.close_window", name: "Close Window"),
-            Gesture(zone: .topLeft, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.quit_app", name: "Quit App"),
-            Gesture(zone: .bottomLeft, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.cycle_window", parameters: ["direction": AnyCodable("backward")], name: "Previous Window"),
-            Gesture(zone: .bottomRight, modifiers: [.command, .control], actionIdentifier: "com.mousegestures.core.cycle_window", parameters: ["direction": AnyCodable("forward")], name: "Next Window"),
-            Gesture(zone: .left, modifiers: [.command, .option], actionIdentifier: "com.mousegestures.core.cycle_space", parameters: ["direction": AnyCodable("previous")], name: "Previous Space"),
-            Gesture(zone: .right, modifiers: [.command, .option], actionIdentifier: "com.mousegestures.core.cycle_space", parameters: ["direction": AnyCodable("next")], name: "Next Space"),
-            Gesture(zone: .top, modifiers: [.command, .option], actionIdentifier: "com.mousegestures.core.mission_control", name: "Mission Control"),
-            Gesture(zone: .bottom, modifiers: [.command, .option], actionIdentifier: "com.mousegestures.core.app_expose", name: "App Exposé"),
-            Gesture(zone: .topLeft, modifiers: [.command, .shift], actionIdentifier: "com.mousegestures.system.screenshot", parameters: ["type": AnyCodable("selection")], name: "Screenshot"),
-            Gesture(zone: .bottomLeft, modifiers: [.command, .option], actionIdentifier: "com.mousegestures.core.show_desktop", name: "Show Desktop")
-        ]
-
-        return ConfigurationProfile(
-            name: "Developer",
-            gestures: gestures,
-            isDefault: false
-        )
-    }
-
     // Get all default profiles
     static func getAllDefaultProfiles() -> [ConfigurationProfile] {
         return [
@@ -261,11 +171,7 @@ struct DefaultProfiles {
             createApplicationManagementProfile(),
             createMediaControlProfile(),
             createBrowserNavigationProfile(),
-            createSystemProfile(),
-            createSystemNavigationProfile(),
-            createProductivityProfile(),
-            createMinimalProfile(),
-            createDeveloperProfile()
+            createSystemProfile()
         ]
     }
 
@@ -282,14 +188,6 @@ struct DefaultProfiles {
             return createBrowserNavigationProfile()
         case .system:
             return createSystemProfile()
-        case .systemNavigation:
-            return createSystemNavigationProfile()
-        case .productivity:
-            return createProductivityProfile()
-        case .minimal:
-            return createMinimalProfile()
-        case .developer:
-            return createDeveloperProfile()
         }
     }
 

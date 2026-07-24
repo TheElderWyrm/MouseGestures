@@ -47,8 +47,9 @@ struct UpdateNotificationView: View {
                     Text("What's New:")
                         .font(.headline)
 
-                    Text(updateService.updateReleaseNotes)
+                    Text(updateService.updateReleaseNotes.isEmpty ? "No release notes were provided for this update." : updateService.updateReleaseNotes)
                         .font(.system(size: 13, design: .monospaced))
+                        .foregroundColor(updateService.updateReleaseNotes.isEmpty ? .secondary : .primary)
                         .lineSpacing(4)
                         .padding(12)
                         .frame(maxWidth: .infinity, alignment: .leading)

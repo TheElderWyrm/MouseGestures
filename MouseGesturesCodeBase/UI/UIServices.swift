@@ -726,10 +726,6 @@ enum DefaultProfileType: String, CaseIterable {
     case mediaControl = "Media Control"
     case browserNavigation = "Browser Navigation"
     case system = "System"
-    case systemNavigation = "System Navigation"
-    case productivity = "Productivity"
-    case minimal = "Minimal"
-    case developer = "Developer"
 
     var description: String {
         switch self {
@@ -743,14 +739,6 @@ enum DefaultProfileType: String, CaseIterable {
             return "Browser page and tab navigation: back/forward, reload, tabs"
         case .system:
             return "Brightness, Do Not Disturb, Dark Mode, lock screen, and screenshots"
-        case .systemNavigation:
-            return "Navigate macOS with Mission Control, Exposé, and Spaces"
-        case .productivity:
-            return "Essential shortcuts for efficient workflow"
-        case .minimal:
-            return "Basic essential gestures only"
-        case .developer:
-            return "Optimized for development workflows"
         }
     }
 
@@ -766,14 +754,6 @@ enum DefaultProfileType: String, CaseIterable {
             return "safari"
         case .system:
             return "gearshape"
-        case .systemNavigation:
-            return "squares.below.rectangle"
-        case .productivity:
-            return "bolt.circle"
-        case .minimal:
-            return "minus.circle"
-        case .developer:
-            return "chevron.left.forwardslash.chevron.right"
         }
     }
 }

@@ -313,9 +313,8 @@ class ProfileManagementService: ObservableObject {
             return
         }
 
-        // Replace the active profile's gestures with the Minimal profile defaults
-        let minimalGestures = DefaultProfiles.getProfile(for: .minimal)?.gestures ?? Configuration.defaultGestures
-        configuration.profiles[index].gestures = minimalGestures
+        // Replace the active profile's gestures with the factory defaults
+        configuration.profiles[index].gestures = Configuration.defaultGestures
         configuration.profiles[index].updateModifiedDate()
 
         configuration.save()

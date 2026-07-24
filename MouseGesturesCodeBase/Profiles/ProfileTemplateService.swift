@@ -20,7 +20,7 @@ class ProfileTemplateService {
 
     /// Creates and returns a template profile of the specified type
     func createTemplateProfile(type: DefaultProfileType) -> ConfigurationProfile {
-        return DefaultProfiles.getProfile(for: type) ?? DefaultProfiles.createMinimalProfile()
+        return DefaultProfiles.getProfile(for: type) ?? DefaultProfiles.createWindowManagementProfile()
     }
 
     /// Imports a template profile into the configuration

@@ -10,25 +10,43 @@ debounced config save). Fixed in Configuration.swift by hopping onto a separate
 queue in performSave() instead of saveQueue itself.]
 
 - [DONE] Update directly (Download and install from the app, not just pointing to GitHub to download the new version)
-  -> In-app download/mount/install/relaunch flow (SelfUpdateService.swift). Round 2: the
-  first version got stuck on "Relaunching" with a failure sound — root cause was almost
-  certainly Gatekeeper silently blocking the freshly-copied app after the old one had
-  already quit (nothing left running to show an error). Fixed by verifying the downloaded
-  app's code signature (and Developer ID team match, when this build itself is signed)
-  BEFORE quitting, so a bad update fails with a clear on-screen message instead of hanging,
-  and by clearing the quarantine flag on the swapped-in copy so Gatekeeper doesn't block
-  the relaunch. Also redesigned the update source per round 2: pulls live from GitHub's
+  -> In-app download/mount/install/relaunch flow (SelfUpdateService.swift). Round 2 fix
+  (signature verification + quarantine-clearing) turned out not to be the actual bug —
+  round 3 feedback correctly called this out ("app doesn't quit, possibly the sheet is
+  interfering") and that was exactly it: UpdateNotificationView is presented via .sheet()
+  on the main window (TabManager.swift), and NSApp.terminate(nil) can't cleanly quit while
+  a window still has an attached sheet — the app just sits there, which looks identical to
+  a hang. Fixed by explicitly ending every window's attached sheet and closing the windows
+  directly before calling terminate (SelfUpdateService.quitForRelaunch()), with a short
+  delay so that actually takes effect first. Also hardened the installer script: it now
+  aborts (leaves everything in place) if the old process is somehow still alive after the
+  30s wait, instead of proceeding to swap files out from under a live process. Also added a
+  "No release notes were provided for this update" fallback for the empty What's New case.
+  Also redesigned the update source per round 2: pulls live from GitHub's
   release API (api.github.com/repos/.../releases/latest) instead of a hand-maintained
   version.json (deleted) — matches the pattern Website/js/main.js's own release lookup
   already used, so there's nothing to forget to update after cutting a release.
 - [DONE] Improve standard profile actions (organize *logically*, see drafts below)
-  -> DefaultProfiles.swift rewritten per the drafts below.
+  -> DefaultProfiles.swift rewritten per the drafts below. Round 3: removed the four old
+  leftover default profiles (System Navigation, Productivity, Minimal, Developer) — their
+  content is now entirely subsumed by the 5 reorganized ones, so keeping them around was
+  just redundant clutter in the "add a default profile" picker. Only Window Management /
+  Application Management / Media Control / Browser Navigation / System remain.
 - [DONE] Switch boxes for showing the zone borders to a glow effect (Possibly turn on by default? Might be helpful for new users who haven't learned their actions yet).
   -> Round 2 correction: first version was a stroked border with a shadow blur, which
   wasn't the right effect. Rewritten as a directional glow matching the website demo's
   zone visualization — corners glow radially from the actual screen corner, edges glow
   linearly from the screen edge, both fading inward, no flat box fill at all now.
   showZoneHighlights still defaults to true for new installs.
+  Round 3: dialed back the intensity (was too strong), fixed a real "hard cutoff" bug in
+  the corner glow (the gradient's radius was LARGER than the zone window, so it never
+  actually reached zero alpha before hitting the window's edge — now sized to guarantee a
+  full fade-to-nothing inside the window), and gave edge-zone glows rounded pill-shaped
+  ends instead of square corners so they taper instead of stopping abruptly. On the color
+  customization ask: this already exists and didn't need new code — Settings -> Detection
+  -> Zone Detection -> Highlight Color is a working color picker already wired to this
+  exact color (Configuration.zoneHighlightColor), confirmed it live-updates without a
+  restart. Just not very discoverable, evidently.
 - [DONE] Create Browser Navigation Plugin (Even if this is done using shortcuts in the backend, they should be able to select it as an action)
   -> BrowserActionsPlugin already existed as a selectable action; added a "Browser Navigation" default profile that actually uses it (previously only an ad hoc "Tab Navigation" profile using raw keyboard shortcuts existed - removed/replaced).
 - [DONE] Move 'Core' actions into relevant plugins

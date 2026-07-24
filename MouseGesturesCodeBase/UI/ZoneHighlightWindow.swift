@@ -132,18 +132,17 @@ class ZoneView: NSView {
         }
     }
 
-    /// Soft inner glow along the zone's edge, replacing the old hard-edged
-    /// box border. Drawn as a blurred stroke inset from the bounds so the
-    /// shadow blur stays within the (unclipped-beyond-bounds) view.
     /// Directional glow matching the website demo's zone visualization:
     /// corner zones glow outward from the screen's actual corner (radial),
     /// edge zones glow inward from the screen's edge (linear) — brightest at
-    /// the screen boundary, fading to nothing at the zone's inner edge.
+    /// the screen boundary, fading all the way to nothing before the zone
+    /// window's own edge (so there's no visible seam where the window ends),
+    /// never a hard-edged box.
     private func drawGlow() {
         guard let ctx = NSGraphicsContext.current?.cgContext else { return }
         guard bounds.width > 0, bounds.height > 0 else { return }
 
-        let peakAlpha: CGFloat = isActive ? 0.85 : 0.32
+        let peakAlpha: CGFloat = isActive ? 0.6 : 0.2
         let bright = glowColor.withAlphaComponent(peakAlpha).cgColor
         let clear = glowColor.withAlphaComponent(0).cgColor
         guard let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: [bright, clear] as CFArray, locations: [0, 1]) else { return }
@@ -160,7 +159,11 @@ class ZoneView: NSView {
             case .bottomLeft: corner = CGPoint(x: 0, y: 0)
             default: corner = CGPoint(x: bounds.width, y: 0) // .bottomRight
             }
-            let radius = max(bounds.width, bounds.height) * 1.15
+            // Shorter than either side (not the diagonal), so the gradient
+            // has fully reached zero alpha before it can reach the window's
+            // own boundary in any direction -- otherwise the window edge cuts
+            // off a still-visible glow, which reads as a hard seam.
+            let radius = min(bounds.width, bounds.height) * 0.85
             ctx.drawRadialGradient(gradient, startCenter: corner, startRadius: 0, endCenter: corner, endRadius: radius, options: [])
 
         case .top, .bottom, .left, .right:
@@ -172,6 +175,14 @@ class ZoneView: NSView {
             case .left: start = CGPoint(x: 0, y: bounds.midY); end = CGPoint(x: bounds.width, y: bounds.midY)
             default: start = CGPoint(x: bounds.width, y: bounds.midY); end = CGPoint(x: 0, y: bounds.midY) // .right
             }
+            // The perpendicular fade above already reaches zero smoothly at
+            // the zone's inner edge, but an edge zone is a long thin band
+            // with square far corners where it meets open desktop -- clip to
+            // a pill/capsule shape (corner radius = half the short side) so
+            // it tapers into rounded ends instead of stopping at a hard
+            // right-angle corner.
+            let capRadius = min(bounds.width, bounds.height) / 2
+            NSBezierPath(roundedRect: bounds, xRadius: capRadius, yRadius: capRadius).addClip()
             ctx.drawLinearGradient(gradient, start: start, end: end, options: [])
         }
     }
