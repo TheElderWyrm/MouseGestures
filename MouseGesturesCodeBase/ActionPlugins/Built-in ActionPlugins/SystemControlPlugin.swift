@@ -1,4 +1,5 @@
 import Cocoa
+import CoreGraphics
 
 // MARK: - System Control Plugin
 
@@ -23,6 +24,49 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
         case brightnessDown     = 3   // NX_KEYTYPE_BRIGHTNESS_DOWN
         case keyboardBrightUp   = 21  // NX_KEYTYPE_ILLUMINATION_UP
         case keyboardBrightDown = 22  // NX_KEYTYPE_ILLUMINATION_DOWN
+    }
+
+    // MARK: - Private DisplayServices API (direct brightness control)
+
+    /// Set/get the main display's brightness directly via the private
+    /// `DisplayServices.framework` API, instead of simulating 16 NX media-key
+    /// presses. Direct set is precise (any 0.0–1.0 value), instantaneous, and
+    /// flicker-free; the NX-key fallback is only used when the private API is
+    /// unavailable (e.g. a future OS that removes it).
+    ///
+    /// Verified live on macOS 26.5 (Tahoe): `DisplayServicesSetBrightness` and
+    /// `DisplayServicesGetBrightness` both return 0 on the built-in display and
+    /// the value round-trips exactly.
+    private typealias DisplayServicesGetBrightnessFunc = @convention(c) (UInt32, UnsafeMutablePointer<Float>) -> Int32
+    private typealias DisplayServicesSetBrightnessFunc = @convention(c) (UInt32, Float) -> Int32
+
+    private static var displayServicesGetBrightness: DisplayServicesGetBrightnessFunc? = {
+        guard let sym = dlsym(dlopen("/System/Library/PrivateFrameworks/DisplayServices.framework/DisplayServices", RTLD_LAZY),
+                              "DisplayServicesGetBrightness") else { return nil }
+        return unsafeBitCast(sym, to: DisplayServicesGetBrightnessFunc.self)
+    }()
+    private static var displayServicesSetBrightness: DisplayServicesSetBrightnessFunc? = {
+        guard let sym = dlsym(dlopen("/System/Library/PrivateFrameworks/DisplayServices.framework/DisplayServices", RTLD_LAZY),
+                              "DisplayServicesSetBrightness") else { return nil }
+        return unsafeBitCast(sym, to: DisplayServicesSetBrightnessFunc.self)
+    }()
+
+    /// Returns the main display's current brightness in [0.0, 1.0], or nil if
+    /// the private API is unavailable.
+    private static func getDisplayBrightness() -> Float? {
+        guard let get = displayServicesGetBrightness else { return nil }
+        var value: Float = 0
+        guard get(CGMainDisplayID(), &value) == 0 else { return nil }
+        return value
+    }
+
+    /// Sets the main display's brightness to `level` (clamped to [0.0, 1.0]).
+    /// Returns true on success. Falls back to nil (caller handles NX keys) when
+    /// the private API is unavailable.
+    private static func setDisplayBrightnessDirect(_ level: Float) -> Bool {
+        guard let set = displayServicesSetBrightness else { return false }
+        let clamped = max(0, min(1, level))
+        return set(CGMainDisplayID(), clamped) == 0
     }
 
     // MARK: - Actions
@@ -404,9 +448,19 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
         }
     }
 
-    // MARK: - Brightness (fixed: now uses NX media keys)
+    // MARK: - Brightness (direct DisplayServices API, NX-key fallback)
+
+    /// Per-step brightness delta for relative up/down. Matches the 16-step
+    /// granularity the hardware brightness keys use.
+    private static let brightnessStep: Float = 1.0 / 16.0
 
     private func adjustBrightness(increase: Bool) {
+        // Direct path: read current, nudge, write back — precise and flicker-free.
+        if let current = SystemControlPlugin.getDisplayBrightness() {
+            let target = max(0, min(1, current + (increase ? SystemControlPlugin.brightnessStep : -SystemControlPlugin.brightnessStep)))
+            if SystemControlPlugin.setDisplayBrightnessDirect(target) { return }
+        }
+        // Fallback: hardware brightness key.
         sendNXKeyEvent(increase ? .brightnessUp : .brightnessDown)
     }
 
@@ -415,9 +469,12 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
         usleep(20_000)
     }
 
-    // MARK: - Programmatic Brightness (NX key steps)
+    // MARK: - Programmatic Brightness (direct set, NX-key fallback)
 
     private func setDisplayBrightness(_ level: Float) {
+        // Direct set is precise and instantaneous; fall back to the 16-step
+        // media-key ramp only if the private API is unavailable.
+        if SystemControlPlugin.setDisplayBrightnessDirect(level) { return }
         let clamped = max(0, min(1, level))
         for _ in 0..<16 { sendNXKeyEvent(.brightnessDown); usleep(10_000) }
         let steps = Int((Double(clamped) * 16).rounded())
