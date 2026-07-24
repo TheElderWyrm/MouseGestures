@@ -2006,8 +2006,13 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
     }
 
     private func moveToSpace(next: Bool, context: PluginContext) {
-        // System Events is sensitive to physically-held modifiers;
-        // wait for all modifier keys to be released first.
+        // Preferred path: switch spaces directly via the private SkyLight
+        // workspace API — instant, and crucially independent of any physically
+        // held modifier keys (the old key-sim approach had to block up to 1.5s
+        // in waitForModifierRelease() so Ctrl+Left/Right wasn't mangled).
+        if SpaceSwitcher.moveToSpace(next: next) { return }
+
+        // Fallback: Ctrl+Left / Ctrl+Right arrow key simulation.
         _ = waitForModifierRelease()
         let keyCode = next ? 124 : 123 // Right / Left arrow
         do {
@@ -2019,5 +2024,76 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
         } catch {
             context.sendKeyboardShortcut(keyCode: CGKeyCode(keyCode), modifiers: [.maskControl])
         }
+    }
+}
+
+// MARK: - Private SkyLight Space-Switching API
+
+/// Direct desktop-space switching via the private `SkyLight.framework`
+/// workspace API, the same mechanism tools like yabai/Amethyst use.
+///
+/// Verified live on macOS 26.5 (Tahoe): `SLSManagedDisplaySetCurrentSpace`
+/// switches the active display to an adjacent space instantly and the
+/// `SLSGetActiveSpace` read-back confirms the change, with no dependence on
+/// physical modifier-key state (unlike the Ctrl+arrow key simulation it
+/// replaces). Symbols are resolved lazily via `dlopen`/`dlsym` so the link is
+/// optional and the app still runs if a future OS removes them.
+private enum SpaceSwitcher {
+    private typealias MainConnectionIDFn = @convention(c) () -> UInt32
+    private typealias GetActiveSpaceFn = @convention(c) (UInt32) -> UInt64
+    private typealias CopyDisplayForSpaceFn = @convention(c) (UInt32, UInt64) -> CFString?
+    private typealias CopyManagedDisplaySpacesFn = @convention(c) (UInt32) -> CFArray?
+    private typealias SetCurrentSpaceFn = @convention(c) (UInt32, CFString, UInt64) -> Int32
+
+    private static let framework = "/System/Library/PrivateFrameworks/SkyLight.framework/SkyLight"
+
+    private static func load<T>(_ name: String) -> T? {
+        guard let sym = dlsym(dlopen(framework, RTLD_LAZY), name) else { return nil }
+        return unsafeBitCast(sym, to: T.self)
+    }
+
+    private static var mainConnectionID: MainConnectionIDFn? { load("SLSMainConnectionID") }
+    private static var getActiveSpace: GetActiveSpaceFn? { load("SLSGetActiveSpace") }
+    private static var copyDisplayForSpace: CopyDisplayForSpaceFn? { load("SLSCopyManagedDisplayForSpace") }
+    private static var copyManagedDisplaySpaces: CopyManagedDisplaySpacesFn? { load("SLSCopyManagedDisplaySpaces") }
+    private static var setCurrentSpace: SetCurrentSpaceFn? { load("SLSManagedDisplaySetCurrentSpace") }
+
+    /// Returns true if the switch was performed directly. False (caller falls
+    /// back to key simulation) only when the private API is unavailable or the
+    /// active display has a single space (nothing adjacent to switch to).
+    static func moveToSpace(next: Bool) -> Bool {
+        guard let mainConnectionID = mainConnectionID,
+              let getActiveSpace = getActiveSpace,
+              let copyDisplayForSpace = copyDisplayForSpace,
+              let copyManagedDisplaySpaces = copyManagedDisplaySpaces,
+              let setCurrentSpace = setCurrentSpace else { return false }
+
+        let cid = mainConnectionID()
+        let active = getActiveSpace(cid)
+        guard let displayUUID = copyDisplayForSpace(cid, active) else { return false }
+        guard let displaySpaces = copyManagedDisplaySpaces(cid) else { return false }
+
+        // SLSCopyManagedDisplaySpaces returns an array of display dicts
+        // (key "Display Identifier") each containing a "Spaces" array of dicts
+        // with an "id64" NSNumber holding the space's 64-bit identifier.
+        var spaceIDs: [UInt64] = []
+        for i in 0..<CFArrayGetCount(displaySpaces) {
+            guard let raw = CFArrayGetValueAtIndex(displaySpaces, i) else { continue }
+            let dict = Unmanaged<NSDictionary>.fromOpaque(raw).takeUnretainedValue()
+            guard (dict["Display Identifier"] as? String) == (displayUUID as String),
+                  let spaces = dict["Spaces"] as? [NSDictionary] else { continue }
+            for space in spaces {
+                if let id64 = space["id64"] as? NSNumber { spaceIDs.append(id64.uint64Value) }
+            }
+        }
+        guard spaceIDs.count > 1 else { return false }
+
+        let currentIdx = spaceIDs.firstIndex(of: active) ?? 0
+        let targetIdx = next
+            ? (currentIdx + 1) % spaceIDs.count
+            : (currentIdx - 1 + spaceIDs.count) % spaceIDs.count
+        guard targetIdx != currentIdx else { return false }
+
+        return setCurrentSpace(cid, displayUUID, spaceIDs[targetIdx]) == 0
     }
 }

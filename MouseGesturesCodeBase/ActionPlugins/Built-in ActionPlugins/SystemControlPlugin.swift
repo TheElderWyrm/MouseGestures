@@ -535,17 +535,17 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
 
     private func takeScreenshot(type: String, destination: String, saveFolder: String?, context: PluginContext) {
         if type == "interactive" {
-            // Open the screenshot toolbar (same as Cmd+Shift+5)
-            // Destination parameter is ignored — user chooses from the toolbar
-            waitForModifierRelease()
-            do {
-                try context.executeAppleScript("""
-                    tell application "System Events"
-                        key code 23 using {command down, shift down}
-                    end tell
-                """)
-            } catch {
-                context.logger.log("Screenshot toolbar failed: \(error.localizedDescription)", file: #file, function: #function, line: #line)
+            // Open the screenshot toolbar (same as Cmd+Shift+5) by launching the
+            // system Screenshot launcher directly — no key simulation, so it does
+            // not depend on physically-held modifier keys (the old path blocked
+            // up to 1.5s in waitForModifierRelease() before sending key code 23).
+            let screenshotURL = URL(fileURLWithPath: "/System/Applications/Utilities/Screenshot.app")
+            let config = NSWorkspace.OpenConfiguration()
+            config.activates = true
+            NSWorkspace.shared.openApplication(at: screenshotURL, configuration: config) { _, error in
+                if let error = error {
+                    context.logger.log("Screenshot toolbar failed: \(error.localizedDescription)", file: #file, function: #function, line: #line)
+                }
             }
             return
         }
