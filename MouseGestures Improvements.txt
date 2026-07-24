@@ -69,6 +69,15 @@ queue in performSave() instead of saveQueue itself.]
   Fixed with an asymmetric clip path — square corners on the bright/screen-edge side,
   rounded only on the fade side — verified correct for all four edge orientations
   (top/bottom/left/right) before touching the real file.
+  Round 5: direction confirmed right, but geometric rounded corners (even one-sided) read
+  as an artificial "shape" rather than a true glow. Replaced entirely: edge zones are back
+  to a plain straight-edged rectangle (no clip-path rounding at all), and instead the alpha
+  itself now tapers smoothly along the LATERAL axis too (a quarter-sine-eased ramp at each
+  end, down to a flat plateau across most of the length, composited via a destinationIn
+  mask) — combined with the existing perpendicular fade, the glow now spreads smoothly in
+  both dimensions from the middle of the bright edge, like an actual light source, rather
+  than a shape with rounded or square corners. Verified all three test shapes (wide/narrow
+  top edge, tall left edge) by rendering offscreen before touching the real file.
 - [DONE] Create Browser Navigation Plugin (Even if this is done using shortcuts in the backend, they should be able to select it as an action)
   -> BrowserActionsPlugin already existed as a selectable action; added a "Browser Navigation" default profile that actually uses it (previously only an ad hoc "Tab Navigation" profile using raw keyboard shortcuts existed - removed/replaced).
 - [DONE] Move 'Core' actions into relevant plugins

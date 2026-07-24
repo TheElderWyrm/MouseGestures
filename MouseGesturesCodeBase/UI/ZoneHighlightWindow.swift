@@ -169,68 +169,60 @@ class ZoneView: NSView {
         case .top, .bottom, .left, .right:
             let start: CGPoint
             let end: CGPoint
+            let lateralIsHorizontal: Bool
             switch zone {
-            case .top: start = CGPoint(x: bounds.midX, y: bounds.height); end = CGPoint(x: bounds.midX, y: 0)
-            case .bottom: start = CGPoint(x: bounds.midX, y: 0); end = CGPoint(x: bounds.midX, y: bounds.height)
-            case .left: start = CGPoint(x: 0, y: bounds.midY); end = CGPoint(x: bounds.width, y: bounds.midY)
-            default: start = CGPoint(x: bounds.width, y: bounds.midY); end = CGPoint(x: 0, y: bounds.midY) // .right
+            case .top: start = CGPoint(x: bounds.midX, y: bounds.height); end = CGPoint(x: bounds.midX, y: 0); lateralIsHorizontal = true
+            case .bottom: start = CGPoint(x: bounds.midX, y: 0); end = CGPoint(x: bounds.midX, y: bounds.height); lateralIsHorizontal = true
+            case .left: start = CGPoint(x: 0, y: bounds.midY); end = CGPoint(x: bounds.width, y: bounds.midY); lateralIsHorizontal = false
+            default: start = CGPoint(x: bounds.width, y: bounds.midY); end = CGPoint(x: 0, y: bounds.midY); lateralIsHorizontal = false // .right
             }
-            // An edge zone is a long thin band with square far corners where
-            // it meets open desktop. Round those off -- but ONLY on the fade
-            // side (where alpha is already ~0, so it's an invisible no-op
-            // change) and NEVER on the bright side (the physical screen
-            // edge): rounding that corner instead carves a visible notch out
-            // of solid color right where the glow should be flush against
-            // the screen boundary, which reads as the glow peeling away from
-            // the edge rather than a smooth taper.
-            let capRadius = min(bounds.width, bounds.height) / 2
-            ctx.addPath(edgeGlowClipPath(bounds: bounds, radius: capRadius, brightSide: zone))
-            ctx.clip()
+            // Straight-edged rectangle -- no rounded-corner clip. The bright
+            // side stays flush against the screen edge; smoothness instead
+            // comes from tapering the alpha itself along the lateral axis
+            // too (see drawLateralFade), so the glow spreads smoothly in
+            // both dimensions from the middle of the bright edge, like a
+            // real light source, rather than a shape with rounded corners.
+            ctx.clip(to: bounds)
             ctx.drawLinearGradient(gradient, start: start, end: end, options: [])
+            drawLateralFade(ctx, horizontal: lateralIsHorizontal)
         }
     }
 
-    /// A clip path for an edge-zone glow: square corners on the side facing
-    /// `brightSide` (flush against the screen edge), rounded corners on the
-    /// opposite (fading) side.
-    private func edgeGlowClipPath(bounds: CGRect, radius: CGFloat, brightSide: ScreenZone) -> CGPath {
-        let r = min(radius, bounds.width / 2, bounds.height / 2)
-        let path = CGMutablePath()
-        switch brightSide {
-        case .top: // round the bottom two corners
-            path.move(to: CGPoint(x: bounds.minX, y: bounds.maxY))
-            path.addLine(to: CGPoint(x: bounds.maxX, y: bounds.maxY))
-            path.addLine(to: CGPoint(x: bounds.maxX, y: bounds.minY + r))
-            path.addArc(center: CGPoint(x: bounds.maxX - r, y: bounds.minY + r), radius: r, startAngle: 0, endAngle: -.pi / 2, clockwise: true)
-            path.addLine(to: CGPoint(x: bounds.minX + r, y: bounds.minY))
-            path.addArc(center: CGPoint(x: bounds.minX + r, y: bounds.minY + r), radius: r, startAngle: -.pi / 2, endAngle: .pi, clockwise: true)
-            path.closeSubpath()
-        case .bottom: // round the top two corners
-            path.move(to: CGPoint(x: bounds.minX, y: bounds.minY))
-            path.addLine(to: CGPoint(x: bounds.maxX, y: bounds.minY))
-            path.addLine(to: CGPoint(x: bounds.maxX, y: bounds.maxY - r))
-            path.addArc(center: CGPoint(x: bounds.maxX - r, y: bounds.maxY - r), radius: r, startAngle: 0, endAngle: .pi / 2, clockwise: false)
-            path.addLine(to: CGPoint(x: bounds.minX + r, y: bounds.maxY))
-            path.addArc(center: CGPoint(x: bounds.minX + r, y: bounds.maxY - r), radius: r, startAngle: .pi / 2, endAngle: .pi, clockwise: false)
-            path.closeSubpath()
-        case .left: // round the right two corners
-            path.move(to: CGPoint(x: bounds.minX, y: bounds.minY))
-            path.addLine(to: CGPoint(x: bounds.minX, y: bounds.maxY))
-            path.addLine(to: CGPoint(x: bounds.maxX - r, y: bounds.maxY))
-            path.addArc(center: CGPoint(x: bounds.maxX - r, y: bounds.maxY - r), radius: r, startAngle: .pi / 2, endAngle: 0, clockwise: true)
-            path.addLine(to: CGPoint(x: bounds.maxX, y: bounds.minY + r))
-            path.addArc(center: CGPoint(x: bounds.maxX - r, y: bounds.minY + r), radius: r, startAngle: 0, endAngle: -.pi / 2, clockwise: true)
-            path.closeSubpath()
-        default: // .right: round the left two corners
-            path.move(to: CGPoint(x: bounds.maxX, y: bounds.minY))
-            path.addLine(to: CGPoint(x: bounds.maxX, y: bounds.maxY))
-            path.addLine(to: CGPoint(x: bounds.minX + r, y: bounds.maxY))
-            path.addArc(center: CGPoint(x: bounds.minX + r, y: bounds.maxY - r), radius: r, startAngle: .pi / 2, endAngle: .pi, clockwise: false)
-            path.addLine(to: CGPoint(x: bounds.minX, y: bounds.minY + r))
-            path.addArc(center: CGPoint(x: bounds.minX + r, y: bounds.minY + r), radius: r, startAngle: .pi, endAngle: 3 * .pi / 2, clockwise: false)
-            path.closeSubpath()
+    /// Tapers the already-drawn glow's alpha near the zone's far lateral
+    /// ends (where it meets open desktop, perpendicular to the main
+    /// gradient) using a smooth eased ramp, leaving a flat plateau across
+    /// most of the zone's length. Composited as a destinationIn mask, so it
+    /// only affects the glow just drawn, not anything drawn afterward (e.g.
+    /// the zone label).
+    private func drawLateralFade(_ ctx: CGContext, horizontal: Bool) {
+        let extent = horizontal ? bounds.width : bounds.height
+        let crossExtent = horizontal ? bounds.height : bounds.width
+        guard extent > 0 else { return }
+        let fadeSpan = min(crossExtent, extent) / 2
+        let fadeFraction = min(fadeSpan / extent, 0.5)
+        guard fadeFraction > 0.001 else { return }
+
+        func maskColor(_ alpha: CGFloat) -> CGColor { NSColor.black.withAlphaComponent(alpha).cgColor }
+        // Quarter-sine ease from each end up to a flat, fully-opaque plateau.
+        let locations: [CGFloat] = [
+            0, fadeFraction / 3, fadeFraction * 2 / 3, fadeFraction,
+            1 - fadeFraction, 1 - fadeFraction * 2 / 3, 1 - fadeFraction / 3, 1
+        ]
+        let colors: [CGColor] = [
+            maskColor(0), maskColor(0.25), maskColor(0.75), maskColor(1),
+            maskColor(1), maskColor(0.75), maskColor(0.25), maskColor(0)
+        ]
+        guard let mask = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colors as CFArray, locations: locations) else { return }
+
+        ctx.saveGState()
+        ctx.clip(to: bounds)
+        ctx.setBlendMode(.destinationIn)
+        if horizontal {
+            ctx.drawLinearGradient(mask, start: CGPoint(x: bounds.minX, y: bounds.midY), end: CGPoint(x: bounds.maxX, y: bounds.midY), options: [])
+        } else {
+            ctx.drawLinearGradient(mask, start: CGPoint(x: bounds.midX, y: bounds.minY), end: CGPoint(x: bounds.midX, y: bounds.maxY), options: [])
         }
-        return path
+        ctx.restoreGState()
     }
 }
 
