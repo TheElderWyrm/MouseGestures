@@ -230,6 +230,17 @@ class KeyboardShortcutDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     // MARK: - Event Handlers
 
     private func handleKeyPress(_ event: NSEvent) -> Bool {
+        // Ignore OS key auto-repeat. Holding a shortcut down makes macOS emit a
+        // stream of .keyDown events with isARepeat == true; without this guard a
+        // held shortcut re-fires its action (roughly every `preventionInterval`,
+        // since isSuppressedRepeat is keyed off the last *successful* fire — it
+        // rate-limits but never stops the repeats). That produces a burst of
+        // action executions + haptic buzzes from a single press. Most visible
+        // when the action is a no-op (e.g. Fullscreen with no focused window):
+        // the only symptom left is the repeated haptic. No keyboard trigger in
+        // this app is a hold-to-repeat trigger, so auto-repeats are never wanted.
+        if event.isARepeat { return false }
+
         // Double-tap prevention is applied per-shortcut at each match site below
         // (see isSuppressedRepeat), NOT as a blanket gate here. A blanket gate on
         // lastKeyPressTime alone dropped a DIFFERENT shortcut pressed within the
