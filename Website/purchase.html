@@ -4,18 +4,18 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Buy MouseGestures Pro — one-time license</title>
-<meta name="description" content="Upgrade to MouseGestures Pro with a one-time license — no subscription, no account. An offline license key unlocks unlimited profiles, per-app switching, and advanced automation on every Mac you own.">
+<meta name="description" content="Upgrade to MouseGestures Pro with a one-time license — no subscription, no account. A license key unlocks unlimited profiles, per-app switching, and advanced automation on every Mac you own.">
 <link rel="canonical" href="https://mousegestures.app/purchase">
 
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="MouseGestures">
 <meta property="og:title" content="Buy MouseGestures Pro — one-time license">
-<meta property="og:description" content="One-time license, no subscription, no account. An offline key unlocks Pro on every Mac you own.">
+<meta property="og:description" content="One-time license, no subscription, no account. A license key unlocks Pro on every Mac you own.">
 <meta property="og:url" content="https://mousegestures.app/purchase">
 <meta property="og:image" content="https://mousegestures.app/og.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Buy MouseGestures Pro — one-time license">
-<meta name="twitter:description" content="One-time license, no subscription, no account. An offline key unlocks Pro on every Mac you own.">
+<meta name="twitter:description" content="One-time license, no subscription, no account. A license key unlocks Pro on every Mac you own.">
 <meta name="twitter:image" content="https://mousegestures.app/og.png">
 
 <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f7f9fc">
@@ -37,18 +37,12 @@
   .buy-card .plan-price { margin-top: 4px; }
   /* .plan-note is normally absolutely-positioned so two side-by-side pricing
      cards line their buttons up on the same row (see .plans in style.css) —
-     this card is alone, and its extra .buy-cta content (two buttons + the
-     "sales open soon" badge) is taller than that layout's reserved 82px
-     footer, so the absolute note was overlapping the ghost download button.
-     Put it back in normal flow here instead. */
+     this card is alone, and its extra .buy-cta content (two buttons) is
+     taller than that layout's reserved 82px footer, so the absolute note was
+     overlapping the ghost download button. Put it back in normal flow here instead. */
   .buy-card .plan-note { position: static; margin-top: 18px; }
   .buy-cta { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
   .btn-block { width: 100%; justify-content: center; }
-  .btn[aria-disabled="true"] { opacity: 0.55; pointer-events: none; }
-  .buy-soon { display: inline-flex; align-items: center; gap: 8px; justify-content: center;
-    font-size: 0.86rem; color: var(--text-2); background: var(--surface-2);
-    border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; margin: 0 auto; }
-  .buy-soon .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
   /* .step is centered text (see .steps in style.css); .feature-icon is
      otherwise a left-aligned block, so re-center the fixed-size icon box
      here the same way .step-visual already centers itself. */
@@ -108,7 +102,7 @@
         <div class="plan-badge">One-time</div>
         <h3>MouseGestures Pro</h3>
         <p class="plan-price">$9.99 <span>once</span></p>
-        <p class="plan-sub">An offline license key — no subscription, no account.</p>
+        <p class="plan-sub">A one-time license key — no subscription, no account.</p>
         <ul>
           <li><strong>Everything in Free</strong>, plus:</li>
           <li>Unlimited gesture profiles</li>
@@ -117,9 +111,8 @@
           <li>Action bundles — sequences, conditions, repeats</li>
         </ul>
         <div class="buy-cta">
-          <!-- GO-LIVE: replace href with the real Lemon Squeezy checkout URL and drop aria-disabled + the .buy-soon note below. -->
-          <a class="btn btn-primary btn-block" id="buy-btn" href="#" aria-disabled="true" rel="noopener">Buy a license</a>
-          <span class="buy-soon"><span class="dot"></span> License sales open soon — start with the free trial today.</span>
+          <a class="btn btn-primary btn-block lemonsqueezy-button" id="buy-btn" rel="noopener"
+             href="https://mousegestures.lemonsqueezy.com/checkout/buy/c5531982-4bb3-4730-9728-b9128468f9b2?embed=1&media=0&logo=0&desc=0&discount=0">Buy a license</a>
           <a class="btn btn-ghost btn-block" href="https://github.com/TheElderWyrm/MouseGestures/releases/latest/download/MouseGestures.dmg">Download &amp; start 30-day Pro trial</a>
         </div>
         <p class="plan-note">Every download is a full-feature 30-day Pro trial — no card, no account. When it ends, Free keeps working; a license re-unlocks everything.</p>
@@ -131,7 +124,7 @@
     <div class="shell">
       <header class="section-head reveal">
         <h2>How the <span class="grad">license works.</span></h2>
-        <p>Three steps, all offline — no account to create and no server to wait on.</p>
+        <p>One quick online step to activate, then everything runs offline — no account, no server to wait on.</p>
       </header>
       <div class="steps">
         <article class="step reveal">
@@ -214,5 +207,6 @@
 </footer>
 
 <script src="js/main.js" defer></script>
+<script src="https://assets.lemonsqueezy.com/lemon.js" defer></script>
 </body>
 </html>

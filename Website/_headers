@@ -13,3 +13,14 @@
 
 /og.png
   Cache-Control: public, max-age=604800
+
+# Lemon Squeezy's checkout overlay (lemon.js) needs its own script/frame/connect
+# allowances — scoped to just this page so the rest of the site keeps the
+# strict default CSP above untouched. Wildcarded to *.lemonsqueezy.com since
+# their own docs and the actual embed snippet disagree on the exact subdomain
+# (app.lemonsqueezy.com vs assets.lemonsqueezy.com).
+/purchase
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://*.lemonsqueezy.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.lemonsqueezy.com; connect-src https://api.github.com https://*.lemonsqueezy.com; frame-src https://*.lemonsqueezy.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'
+
+/purchase.html
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://*.lemonsqueezy.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.lemonsqueezy.com; connect-src https://api.github.com https://*.lemonsqueezy.com; frame-src https://*.lemonsqueezy.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'
