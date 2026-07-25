@@ -775,8 +775,14 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
         usleep(50_000)
         keyUp.post(tap: .cghidEventTap)
         // Undo the shared HID key-state contamination this posting causes —
-        // see clearModifierStateContamination(from:).
+        // see clearModifierStateContamination(from:). Keep the suppression mask
+        // on briefly after posting the corrective keyUp: it lands with non-zero
+        // latency, and clearing the mask before it reflects in keyState reopens
+        // the gap the mask exists to close (a mouse sample there would read the
+        // still-contaminated bits as a real modifier change and re-trigger).
+        // Runs on a background execution queue, so the wait never touches the UI.
         clearModifierStateContamination(from: modifiers)
+        usleep(15_000)
         SyntheticModifierSuppression.shared.end(modifiers)
     }
 

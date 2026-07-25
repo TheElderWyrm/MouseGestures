@@ -241,6 +241,14 @@ class SandboxedPluginContext: PluginContext {
         // Undo the shared HID key-state contamination this posting causes —
         // see clearModifierStateContamination(from:).
         clearModifierStateContamination(from: modifiers)
+        // The corrective keyUp above is itself a posted CGEvent and lands with
+        // non-zero latency; keep the suppression mask on until it has actually
+        // reflected in keyState. Clearing the mask the instant we *post* the
+        // correction (rather than once it lands) reopens the very gap the mask
+        // exists to cover — a mouse sample in that window would read the still-
+        // contaminated bits as a genuine modifier change and re-trigger. This
+        // runs on a background execution queue, so the wait never touches the UI.
+        usleep(15_000)
         SyntheticModifierSuppression.shared.end(modifiers)
     }
 

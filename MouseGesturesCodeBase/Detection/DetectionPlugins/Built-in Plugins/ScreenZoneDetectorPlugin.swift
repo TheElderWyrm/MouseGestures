@@ -437,6 +437,22 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     /// Unified handler for all mouse position events (moved + dragged).
     /// Caches system state to avoid repeated queries during continuous movement.
     private func handleMousePosition(_ event: NSEvent) {
+        // While one of THIS app's own synthetic modifier shortcuts is in flight
+        // (e.g. the ⌘⌃F that the Fullscreen action posts as its fallback when there's
+        // no focusable window), NSEvent.ModifierFlags.currentHardware deliberately
+        // masks out those bits — see SyntheticModifierSuppression. But a user who is
+        // *physically* holding the gesture's own trigger modifiers (the default
+        // Fullscreen gesture is ⌘⌃ + top edge, the same bits the fallback posts) then
+        // reads, for that brief window, as holding none. Sampling here would record
+        // that phantom "modifiers released" into lastTriggeredModifiers; the instant
+        // suppression lifts and the real ⌘⌃ "returns", processZoneEntry sees a modifier
+        // change and treats it as a brand-new trigger, re-firing the gesture — which
+        // re-posts the same shortcut and loops (repeated haptics, most visible when the
+        // action itself is a no-op, e.g. nothing to fullscreen). The masked reading is
+        // not a real user state, so skip the whole sample until our synthetic shortcut
+        // has fully settled.
+        guard SyntheticModifierSuppression.shared.currentlySuppressed.isEmpty else { return }
+
         let now = Date()
         guard now.timeIntervalSince(lastProcessedMouseTime) >= mouseProcessingInterval else { return }
         lastProcessedMouseTime = now
