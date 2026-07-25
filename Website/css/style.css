@@ -1299,6 +1299,13 @@ svg linearGradient stop:last-child { stop-color: var(--accent-2); }
   text-align: center;
 }
 
+.plan-note a {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 /* ---------- FAQ ---------- */
 
 .faqs { display: grid; gap: 12px; }

@@ -203,15 +203,31 @@ HMAC keys (`LicenseKey.swift`, still used for manually-issued support/comp
 keys) keep working unchanged — activation tries that format first, and only
 falls back to an online Lemon Squeezy check for anything else.
 
-**What's left is entirely on the Lemon Squeezy side** — none of it can be done
-by an agent, since it requires a real identity, payout details, and agreeing
-to their terms:
+**Status: LIVE.** Account, product, and checkout are all set up — the real
+checkout overlay is wired into `Website/purchase.html`'s `#buy-btn` (commit
+`92df62c`), and the homepage pricing card links straight to `/purchase` too.
+Original setup steps (account → store → product → License Keys config →
+checkout URL) are done; the two items below are the only ones still open.
 
-1. **Create an account**: [app.lemonsqueezy.com/register](https://app.lemonsqueezy.com/register), then create a Store if you don't have one.
-2. **Create a product**: name it (e.g. "MouseGestures Pro"), **one-time payment** (not a subscription), price $9.99.
-3. On that product's variant, under **License Keys**, turn licensing **on**:
-   - **License length**: no expiry / unlimited — this is a perpetual purchase, not a subscription with a support window.
-   - **Activation limit**: how many Macs one key can activate at once. The site says "every Mac you own," so a generous number (5+) matches that promise better than a strict "1." This is yours to set (and can likely be revisited later) — there's no code-side dependency on the exact number.
-4. **Get the checkout URL** for that product/variant (shown on the product page in your dashboard, something like `https://YOURSTORE.lemonsqueezy.com/buy/...`). Paste it into `Website/purchase.html`'s `#buy-btn` href (currently `href="#" aria-disabled="true"`, marked with a `GO-LIVE` comment right above it) and delete the `aria-disabled` attribute + the `.buy-soon` "sales open soon" badge right below it.
-5. **Test before going live**: Lemon Squeezy stores support a **test mode** — run a real test purchase, confirm the email actually contains a license key, paste that key into MouseGestures' Settings → License → Activate, and confirm it unlocks Pro. This is the one thing that genuinely can't be verified without your account existing, so it's worth doing once before announcing sales are open.
-6. Once verified, flip the site live (step 4) and this is done — no ongoing maintenance, no webhook, no key inventory to manage.
+**1. Test before announcing sales are open** (if not already done): Lemon
+Squeezy stores support a **test mode** — run a real test purchase, confirm
+the email actually contains a license key, paste that key into MouseGestures'
+Settings → License → Activate, and confirm it unlocks Pro. This is the one
+thing that genuinely can't be verified without your account existing.
+
+**2. Two more dashboard fields worth filling in** (both are pure copy/paste,
+no code) — Lemon Squeezy shows a "confirmation modal" right after a
+successful checkout, and can add a note to the email receipt; both are
+configured per-product in your dashboard, not in this repo:
+
+- **Product settings → Confirmation modal** (shown immediately after payment succeeds):
+  - Title: `Thanks for going Pro!`
+  - Message: `Your license key is in your email receipt — it should land any moment now. Open MouseGestures, go to Preferences → License, paste the key, and click Activate.`
+  - Button text: `See the full guide`
+  - Button link: `https://mousegestures.app/purchase#license-how`
+
+- **Product settings → Receipt emails → thank you note** (shown inside the email receipt itself, alongside the license key):
+  - `Thanks for supporting MouseGestures! Your license key is above — paste it into the app under Preferences → License and click Activate. It works on every Mac you personally use, no account or subscription attached. Questions? Email support@mousegestures.app.`
+  - The receipt email also has its own separate "button content" / "destination link" fields (distinct from the note) — worth pointing that button at the same `https://mousegestures.app/purchase#license-how` link too, if you want a second path back to the activation steps.
+
+No ongoing maintenance after this — no webhook, no key inventory to manage.
