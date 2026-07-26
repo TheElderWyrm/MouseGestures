@@ -223,22 +223,28 @@ final class SpaceSentinelManager {
               let setFrontProcessWithOptions = Self.setFrontProcessWithOptions,
               let postEventRecordTo = Self.postEventRecordTo else { return false }
 
-        var psn = ProcessSerialNumber()
-        guard getProcessForPID(myPid, &psn) == 0 else { return false }
-        guard setFrontProcessWithOptions(&psn, Self.userGeneratedMode) == 0 else { return false }
+        // Resolve our PSN up front — a thread-agnostic process-table lookup; a
+        // failure means we can't switch, so signal the caller to fall back to key
+        // simulation.
+        var resolved = ProcessSerialNumber()
+        guard getProcessForPID(myPid, &resolved) == 0 else { return false }
+        let psn = resolved
 
-        makeKeyWindow(&psn, sentinel.windowID, postEventRecordTo: postEventRecordTo)
-
-        // AXUIElementPerformAction on our own window must run on the main
-        // thread — calling it from a background thread deadlocks (confirmed
-        // live: the call never returns).
-        if Thread.isMainThread {
+        // Run the ENTIRE activation — bring-process-forward, synthetic key-click,
+        // and AX raise — on the main thread as one unit. The AX raise must be on
+        // main (off-main it deadlocks — confirmed live), and AltTab (the reference
+        // implementation this sequence is derived from) performs the whole sequence
+        // on main. Keeping it together on one thread also removes the previous
+        // split's ordering hazard, where the background front-process/synthetic
+        // click and the async main-thread raise could interleave across two quick
+        // consecutive switches.
+        let perform = { [self] in
+            var psn = psn
+            guard setFrontProcessWithOptions(&psn, Self.userGeneratedMode) == 0 else { return }
+            makeKeyWindow(&psn, sentinel.windowID, postEventRecordTo: postEventRecordTo)
             _ = AXUIElementPerformAction(sentinel.axElement, kAXRaiseAction as CFString)
-        } else {
-            DispatchQueue.main.async {
-                _ = AXUIElementPerformAction(sentinel.axElement, kAXRaiseAction as CFString)
-            }
         }
+        if Thread.isMainThread { perform() } else { DispatchQueue.main.async(execute: perform) }
         return true
     }
 

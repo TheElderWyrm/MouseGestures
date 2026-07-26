@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		0E5D47AB895A8A178352C385 /* LicenseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DF54CB5B4E798FC72FBB425 /* LicenseService.swift */; };
+		19304DB7B3B4657FD5AED312 /* WindowSnapToggleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D877427F98AD9C5840A06DC9 /* WindowSnapToggleTests.swift */; };
 		1951437097EA43F68269CAF2 /* TutorialModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E1B4ABD8BDC387CF9C1CFDE /* TutorialModifier.swift */; };
 		212E4EB8A4F446405206B88D /* ActivationComponentService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A7844B6B3BB98B841022947 /* ActivationComponentService.swift */; };
 		231D4D12905AE874B7331D1A /* ActivationMapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08B54313B0ED9B193F3749C6 /* ActivationMapper.swift */; };
@@ -254,6 +255,7 @@
 		8E94445AB3BF094E20E605FC /* UIStyles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UIStyles.swift; path = MouseGesturesCodeBase/UI/UIStyles.swift; sourceTree = SOURCE_ROOT; };
 		984443C1AFEF57DDC1EE4E15 /* UpdateNotificationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UpdateNotificationView.swift; path = MouseGesturesCodeBase/UI/UpdateNotificationView.swift; sourceTree = SOURCE_ROOT; };
 		CE0347CE854263CC12FAA6C3 /* TutorialService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TutorialService.swift; path = MouseGesturesCodeBase/Services/TutorialService.swift; sourceTree = SOURCE_ROOT; };
+		D877427F98AD9C5840A06DC9 /* WindowSnapToggleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WindowSnapToggleTests.swift; path = MouseGesturesTests/WindowSnapToggleTests.swift; sourceTree = SOURCE_ROOT; };
 		DD0000000000000000000001 /* LicenseLogic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LicenseLogic.swift; path = MouseGesturesCodeBase/Services/LicenseLogic.swift; sourceTree = SOURCE_ROOT; };
 		DD0000000000000000000003 /* AnyCodableTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnyCodableTests.swift; sourceTree = "<group>"; };
 		DD0000000000000000000004 /* ScreenZoneTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenZoneTests.swift; sourceTree = "<group>"; };
@@ -607,6 +609,7 @@
 				DD0000000000000000000033 /* UpdateLogicTests.swift */,
 				026841C5897B3A8A29F6A803 /* LemonSqueezyLicenseTests.swift */,
 				5ECE4A47A6EDE4BF17159FEE /* GestureTriggerPersistenceTests.swift */,
+				D877427F98AD9C5840A06DC9 /* WindowSnapToggleTests.swift */,
 			);
 			path = MouseGesturesTests;
 			sourceTree = "<group>";
@@ -831,6 +834,7 @@
 				E4C343F7B7372EEA22DD1D26 /* LemonSqueezyLicense.swift in Sources */,
 				2388401389912DF3A56467A3 /* LemonSqueezyLicenseTests.swift in Sources */,
 				F0444644BAD5AC3385EBEC9E /* GestureTriggerPersistenceTests.swift in Sources */,
+				19304DB7B3B4657FD5AED312 /* WindowSnapToggleTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

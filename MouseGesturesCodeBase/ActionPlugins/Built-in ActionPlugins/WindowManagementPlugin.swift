@@ -130,7 +130,7 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
     /// entry is still current restores the frame instead of re-snapping —
     /// a lightweight "press again to undo" toggle. In-memory only (not
     /// persisted): it's a transient UX nicety, not durable state.
-    private var lastSnapByApp: [String: (position: String, originalFrame: CGRect)] = [:]
+    private var lastSnapByApp: [String: (position: String, originalFrame: CGRect, snappedFrame: CGRect)] = [:]
     /// Guards the three dictionaries above. `execute()` runs on a concurrent
     /// background queue (ActionExecutionManager dispatches there), so two
     /// overlapping gesture firings — or a UI option-provider read
@@ -1183,13 +1183,19 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
             let bundleId = NSRunningApplication(processIdentifier: pid)?.bundleIdentifier ?? "unknown"
             let key = "app:\(bundleId)"
 
-            // Snapping to the same position twice in a row undoes the first
-            // snap instead of re-applying a no-op move.
+            // Snapping to the same position twice IN A ROW undoes the first snap
+            // (restores the pre-snap frame) — but ONLY if the window is still where
+            // that snap actually put it. If the user has since moved or resized the
+            // window away, a repeat snap should re-apply the position, not silently
+            // jump back to the old frame. (Previously the toggle fired on a position
+            // match alone, so snap → move-it-yourself → snap-again wrongly restored
+            // the original frame instead of snapping to the set position.)
             stateLock.lock()
             let previous = lastSnapByApp[key]
             stateLock.unlock()
 
-            if let previous = previous, previous.position == position {
+            if let previous = previous, previous.position == position,
+               framesApproximatelyEqual(currentFrame, previous.snappedFrame) {
                 setWindowFrame(window, frame: previous.originalFrame, context: context)
                 stateLock.lock()
                 lastSnapByApp.removeValue(forKey: key)
@@ -1203,8 +1209,13 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
                 continue
             }
 
+            // Record where the snap actually LANDED (read back, not the requested
+            // frame — setWindowFrame clamps to a minimum size and the app may
+            // constrain it further) so the next repeat can tell whether the window
+            // is still snapped there (→ toggle back) or was moved away (→ re-snap).
+            let landedFrame = getWindowFrame(window, context: context) ?? currentFrame
             stateLock.lock()
-            lastSnapByApp[key] = (position: position, originalFrame: currentFrame)
+            lastSnapByApp[key] = (position: position, originalFrame: currentFrame, snappedFrame: landedFrame)
             stateLock.unlock()
         }
     }
@@ -1251,6 +1262,16 @@ class WindowManagementPlugin: NSObject, GestureActionPlugin {
             return false
         }
         return true
+    }
+
+    /// Two frames are "the same place" (for snap-toggle detection) when every
+    /// edge is within `tolerance` points. Absorbs sub-pixel AX rounding and the
+    /// min-size clamp while still treating any real user move/resize as a change.
+    private func framesApproximatelyEqual(_ a: CGRect, _ b: CGRect, tolerance: CGFloat = 8) -> Bool {
+        return abs(a.origin.x - b.origin.x) <= tolerance &&
+               abs(a.origin.y - b.origin.y) <= tolerance &&
+               abs(a.size.width - b.size.width) <= tolerance &&
+               abs(a.size.height - b.size.height) <= tolerance
     }
 
     // MARK: - Core Window Management Functions

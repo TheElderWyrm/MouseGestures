@@ -173,7 +173,7 @@ class WindowTargeting {
 
         let allWindows = getAllVisibleWindows()
 
-        // Sort by most recent (approximated by window order)
+        // Sort front-to-back by true window z-order (orderIndex 0 = frontmost).
         let sortedWindows = allWindows.sorted { $0.orderIndex < $1.orderIndex }
 
         guard sortedWindows.count >= age else {
@@ -409,9 +409,55 @@ class WindowTargeting {
 
     // MARK: - Helper Methods
 
+    // MARK: Window Z-Order (true front-to-back)
+
+    private typealias AXGetWindowFn = @convention(c) (AXUIElement, UnsafeMutablePointer<CGWindowID>) -> Int32
+    /// `_AXUIElementGetWindow` (private HIServices) maps an AX window element to
+    /// its CoreGraphics window number — the standard bridge (as used by AltTab,
+    /// yabai, etc.) between the AX world and CGWindowList. Loaded lazily; nil if
+    /// unavailable, in which case callers fall back to enumeration order.
+    private static let axGetWindow: AXGetWindowFn? = {
+        let path = "/System/Library/Frameworks/ApplicationServices.framework/Versions/A/Frameworks/HIServices.framework/HIServices"
+        guard let handle = dlopen(path, RTLD_LAZY), let sym = dlsym(handle, "_AXUIElementGetWindow") else { return nil }
+        return unsafeBitCast(sym, to: AXGetWindowFn.self)
+    }()
+
+    /// CGWindowID of an AX window element, or nil if the private bridge is
+    /// unavailable or the element has no backing on-screen window.
+    private static func cgWindowID(of element: AXUIElement) -> CGWindowID? {
+        guard let axGetWindow = axGetWindow else { return nil }
+        var wid: CGWindowID = 0
+        return axGetWindow(element, &wid) == 0 ? wid : nil   // 0 == kAXErrorSuccess
+    }
+
+    /// Maps each on-screen normal-application window to its true front-to-back
+    /// z-rank (0 = frontmost). `CGWindowListCopyWindowInfo` returns windows
+    /// front-to-back; we keep only layer 0 so menu-bar extras, the Dock,
+    /// Notification Center, and our OWN overlay windows (which sit at higher
+    /// layers) don't count as "app windows." Only window number + layer are
+    /// read, so this needs no Screen Recording permission.
+    private static func windowZRank() -> [CGWindowID: Int] {
+        let options: CGWindowListOption = [.optionOnScreenOnly, .excludeDesktopElements]
+        guard let list = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] else { return [:] }
+        var ranks: [CGWindowID: Int] = [:]
+        var rank = 0
+        for entry in list {
+            guard (entry[kCGWindowLayer as String] as? Int) == 0,
+                  let number = entry[kCGWindowNumber as String] as? CGWindowID else { continue }
+            if ranks[number] == nil { ranks[number] = rank; rank += 1 }
+        }
+        return ranks
+    }
+
     internal static func getAllVisibleWindows() -> [WindowInfo] {
         var windowInfos: [WindowInfo] = []
-        var orderIndex = 0
+
+        // True front-to-back z-order for on-screen app windows. Any window we
+        // can't map (no CG entry, private bridge unavailable, or off-screen on
+        // another Space) falls back to enumeration order, ranked AFTER all
+        // z-ranked ones so it never displaces a real frontmost window.
+        let zRanks = windowZRank()
+        var fallbackRank = zRanks.count
 
         // Iterate through all running applications
         for app in NSWorkspace.shared.runningApplications {
@@ -436,6 +482,18 @@ class WindowTargeting {
                         continue
                     }
 
+                    // orderIndex is now the TRUE z-rank (0 = frontmost), not the
+                    // NSWorkspace.runningApplications enumeration order it used to
+                    // be, so "Window by Age (nth most recent)" actually follows
+                    // front-to-back window stacking.
+                    let orderIndex: Int
+                    if let wid = cgWindowID(of: window), let rank = zRanks[wid] {
+                        orderIndex = rank
+                    } else {
+                        orderIndex = fallbackRank
+                        fallbackRank += 1
+                    }
+
                     let info = WindowInfo(
                         window: window,
                         pid: pid,
@@ -447,7 +505,6 @@ class WindowTargeting {
                     )
 
                     windowInfos.append(info)
-                    orderIndex += 1
                 }
             }
         }
