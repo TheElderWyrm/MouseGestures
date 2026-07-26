@@ -199,7 +199,7 @@ class ZoneHighlightManager {
     private var appEventObservers: [Any] = []
     private var isHiding = false
     /// Monotonic generation token for hide animations. Each hideZones() call
-    /// captures the current value and increments it; the animation completion
+    /// increments the counter and captures the new value; the animation completion
     /// only closes windows if its captured generation still matches the
     /// current one. This stops a stale completion (from an earlier, superseded
     /// hide) from closing windows out from under a newer show/hide in progress
@@ -518,8 +518,14 @@ class ZoneHighlightManager {
     private func hideZones() {
         guard !isHiding else { return }
         isHiding = true
-        let generation = hideGeneration
+        // Bump the generation FIRST, then capture the new value, so this hide's
+        // token equals the current counter until a newer hide bumps it again.
+        // Capturing BEFORE the bump made `hideGeneration == generation` in the
+        // completion permanently false — the completion body was unreachable, so
+        // windows faded to alpha 0 but were never closed and `isHiding` was never
+        // reset to false (a leak of the 8 zone windows + a stuck flag).
         hideGeneration &+= 1
+        let generation = hideGeneration
         NSAnimationContext.runAnimationGroup { context in
             context.duration = 0.15
             for (_, window) in zoneWindows {

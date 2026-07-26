@@ -292,8 +292,13 @@ struct ServiceConfigurationSheet: View {
 
     private func loadConfiguration() {
         configOptions = pluginManager.getConfigurationOptions(for: plugin.identifier)
+        // Overlay the plugin's SAVED configuration on top of the defaults so the
+        // sheet reflects the user's current settings. Previously it seeded only
+        // `defaultValue`, so opening the sheet reset every displayed value to the
+        // default and Apply then wrote those defaults back over the real config.
+        let saved = pluginManager.getSavedConfiguration(for: plugin.identifier)
         for option in configOptions {
-            configValues[option.key] = option.defaultValue
+            configValues[option.key] = saved?[option.key] ?? option.defaultValue
         }
     }
 

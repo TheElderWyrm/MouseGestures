@@ -88,6 +88,12 @@ class LogFileService {
                 try FileManager.default.copyItem(at: logInfo.url, to: destination)
             }
 
+            // Remove any pre-existing archive at the destination first. `zip -r`
+            // *updates* an existing archive in place rather than replacing it,
+            // so exporting twice to the same path would otherwise leave stale
+            // entries from the previous export mixed into the new one.
+            try? FileManager.default.removeItem(at: url)
+
             // Create zip archive
             let task = Process()
             task.launchPath = "/usr/bin/zip"

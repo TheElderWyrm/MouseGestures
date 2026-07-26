@@ -522,6 +522,13 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
 
             do {
                 try process.run()
+                // Drain the shared stdout+stderr pipe to EOF BEFORE waiting.
+                // The pipe is otherwise never read, so a shortcut emitting more
+                // than the ~64KB pipe buffer would block on write while
+                // waitUntilExit() blocks on it — a deadlock that hangs this
+                // background thread and orphans the process. readDataToEndOfFile
+                // returns once the child exits and closes the pipe.
+                _ = pipe.fileHandleForReading.readDataToEndOfFile()
                 process.waitUntilExit()
 
                 if process.terminationStatus != 0 {
@@ -621,11 +628,26 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
 
             do {
                 try process.run()
-                process.waitUntilExit()
 
                 if displayOutput {
+                    // Drain stdout and stderr concurrently BEFORE waiting. They
+                    // are separate pipes; a script that writes more than the
+                    // ~64KB pipe buffer to either stream would otherwise block on
+                    // write while we block in waitUntilExit() — a deadlock that
+                    // hangs this background thread and orphans the process.
+                    // Reading stderr on another queue while reading stdout here
+                    // keeps both drained regardless of output volume.
+                    var errorData = Data()
+                    let errGroup = DispatchGroup()
+                    errGroup.enter()
+                    DispatchQueue.global(qos: .userInitiated).async {
+                        errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+                        errGroup.leave()
+                    }
                     let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
-                    let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+                    errGroup.wait()
+                    process.waitUntilExit()
+
                     let output = String(data: outputData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
                     let errorOutput = String(data: errorData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
 
@@ -644,6 +666,8 @@ class AutomationPlugin: NSObject, GestureActionPlugin {
                         message: displayText,
                         style: process.terminationStatus == 0 ? .info : .warning
                     )
+                } else {
+                    process.waitUntilExit()
                 }
             } catch {
                 context.logger.log("Error executing script: \(error)", file: #file, function: #function, line: #line)

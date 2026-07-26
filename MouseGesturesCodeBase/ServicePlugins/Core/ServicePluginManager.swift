@@ -9,13 +9,21 @@ public class ServicePluginManager: ObservableObject {
     public static let shared = ServicePluginManager()
 
     // MARK: - Properties
-    @Published private var loadedPlugins: [String: ServicePlugin] = [:]
-    @Published private var serviceInstances: [String: Any] = [:]
+    // Not @Published: these are private, guarded by `queue` (the real
+    // thread-safety mechanism), and mutated from that background barrier. As
+    // @Published they fired objectWillChange off the main thread on every
+    // register/enable/disable/reload -- the "Publishing changes from background
+    // threads is not allowed" hazard -- and they're never observed (views read
+    // value-type snapshots via getAllPlugins()), so publishing them bought
+    // nothing while risking main-thread UI corruption.
+    private var loadedPlugins: [String: ServicePlugin] = [:]
+    private var serviceInstances: [String: Any] = [:]
     @Published public var isLoading: Bool = false
 
     private let pluginDirectory: URL
     private let externalPluginDirectory: URL
     private var fileWatcher: DispatchSourceFileSystemObject?
+    private var pendingReloadWorkItem: DispatchWorkItem?
     private let queue = DispatchQueue(label: "com.mousegestures.servicepluginmanager", attributes: .concurrent)
 
     // MARK: - Initialization
@@ -38,6 +46,7 @@ public class ServicePluginManager: ObservableObject {
     }
 
     deinit {
+        pendingReloadWorkItem?.cancel()
         fileWatcher?.cancel()
     }
 
@@ -117,6 +126,18 @@ public class ServicePluginManager: ObservableObject {
             return
         }
 
+        // Skip bundles that are already loaded. Foundation caches Bundle
+        // instances per URL, so a second Bundle(url:) for the same plugin file
+        // returns the same (already-loaded) instance. The directory file-watcher
+        // re-runs loadExternalPlugins() on every FS event; without this guard
+        // each event would re-instantiate + re-initialize an already-loaded
+        // plugin and leak the previous instance in registerPlugin. (A Mach-O
+        // image can't be meaningfully unloaded/reloaded in-process anyway, so
+        // there's nothing to gain by reloading a changed bundle here.)
+        if bundle.isLoaded {
+            return
+        }
+
         // Load the bundle
         guard bundle.load() else {
             log.log("ServicePluginManager: Failed to load bundle for plugin at: \(url.path)")
@@ -168,6 +189,14 @@ public class ServicePluginManager: ObservableObject {
 
             // Initialize the plugin
             try plugin.initialize()
+
+            // If a plugin with this identifier was already registered, tear the
+            // old instance down before replacing it -- otherwise its observers /
+            // timers / service instance leak. (registerPlugin previously just
+            // overwrote loadedPlugins[id] on top of a live instance.)
+            if let previous = (queue.sync { loadedPlugins[plugin.identifier] }), previous !== plugin {
+                previous.cleanup()
+            }
 
             // Store the plugin
             queue.async(flags: .barrier) {
@@ -230,9 +259,35 @@ public class ServicePluginManager: ObservableObject {
             return false
         }
 
+        // Already enabled -- nothing to restore, and re-initializing a live
+        // plugin would be wasted work.
+        guard !plugin.isEnabled else { return true }
+
         plugin.isEnabled = true
-        log.log("ServicePluginManager: Enabled plugin \(identifier)")
-        return true
+
+        // Symmetric with disablePlugin(): that method tore the plugin down
+        // (cleanup() + removed its service instance), so re-enabling must
+        // re-run initialize() and restore the instance. Without this, an
+        // enable -> disable -> enable cycle (e.g. the Developer tab's reload
+        // button, which calls disable then enable) left the plugin
+        // uninitialized with no registered service instance -- silently masked
+        // only because ServicePluginAdapter falls back to the raw singleton.
+        do {
+            try plugin.initialize()
+
+            if let instance = plugin.getServiceInstance() {
+                queue.async(flags: .barrier) {
+                    self.serviceInstances[identifier] = instance
+                }
+            }
+
+            log.log("ServicePluginManager: Enabled plugin \(identifier)")
+            return true
+        } catch {
+            plugin.isEnabled = false
+            log.log("ServicePluginManager: Failed to enable plugin \(identifier): \(error)")
+            return false
+        }
     }
 
     /// Disable a plugin
@@ -395,8 +450,18 @@ public class ServicePluginManager: ObservableObject {
     }
 
     private func handleFileSystemChange() {
-        log.log("ServicePluginManager: External plugin directory changed, reloading...")
-        loadExternalPlugins()
+        // Coalesce bursts of FS events into a single reload. Copying/updating a
+        // `.serviceplugin` bundle (itself a directory of files) fires many
+        // write/rename events in quick succession; debouncing avoids running a
+        // full directory rescan for each one. The watcher's event handler runs
+        // on `.main`, so this work item is only ever touched from the main queue.
+        pendingReloadWorkItem?.cancel()
+        let workItem = DispatchWorkItem { [weak self] in
+            log.log("ServicePluginManager: External plugin directory changed, reloading...")
+            self?.loadExternalPlugins()
+        }
+        pendingReloadWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: workItem)
     }
 
     // MARK: - Plugin Installation

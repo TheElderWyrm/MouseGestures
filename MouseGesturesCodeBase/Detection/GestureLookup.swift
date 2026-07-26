@@ -9,6 +9,13 @@ class GestureLookup {
     private var lookupTable: [String: [Gesture]] = [:]
     private var lastConfigurationHash: Int = 0
 
+    // Guards `lookupTable`. rebuild() is driven by a "GestureConfigurationChanged"
+    // observer whose callback runs on whatever thread posted the notification —
+    // that can be the action-execution queue (PluginSandbox.postNotification), NOT
+    // main — while findMatchingGestures() runs on the main event-monitor thread.
+    // A concurrent Dictionary read+mutate corrupts the heap, so serialize both.
+    private let lock = NSLock()
+
     // MARK: - Initialization
 
     init() {
@@ -38,10 +45,15 @@ class GestureLookup {
     /// - Returns: Array of matching gestures (may be empty)
     func findMatchingGestures(zone: ScreenZone, dragModifier: DragModifier, modifiers: NSEvent.ModifierFlags) -> [Gesture] {
         let key = createLookupKey(zone: zone, dragModifier: dragModifier, modifiers: modifiers)
-        var results = lookupTable[key] ?? []
         // When a specific drag is active, also check anyDrag gestures
-        if dragModifier != .none && dragModifier != .anyDrag {
-            let anyDragKey = createLookupKey(zone: zone, dragModifier: .anyDrag, modifiers: modifiers)
+        let anyDragKey = (dragModifier != .none && dragModifier != .anyDrag)
+            ? createLookupKey(zone: zone, dragModifier: .anyDrag, modifiers: modifiers)
+            : nil
+
+        lock.lock()
+        defer { lock.unlock() }
+        var results = lookupTable[key] ?? []
+        if let anyDragKey = anyDragKey {
             results += lookupTable[anyDragKey] ?? []
         }
         return results
@@ -49,9 +61,12 @@ class GestureLookup {
 
     /// Rebuilds the lookup table from current configuration
     func rebuild() {
-        lookupTable.removeAll()
-
+        // Build the new table off-lock (Configuration.shared.gestures does its own
+        // configQueue.sync, and shouldIncludeGesture consults ActivationMapper —
+        // neither needs, and shouldn't be serialized behind, this lock). Only the
+        // final swap touches shared state under the lock.
         let gestures = Configuration.shared.gestures
+        var newTable: [String: [Gesture]] = [:]
         var addedCount = 0
 
         // Build lookup table with composite keys for O(1) access
@@ -63,24 +78,32 @@ class GestureLookup {
                     dragModifier: gesture.dragModifier,
                     modifiers: gesture.modifiers
                 )
-                lookupTable[key, default: []].append(gesture)
+                newTable[key, default: []].append(gesture)
                 addedCount += 1
             }
         }
 
+        lock.lock()
+        lookupTable = newTable
+        lock.unlock()
+
         if log.isDebugEnabled {
-            log.log("GestureLookup: Rebuilt table with \(lookupTable.count) unique combinations, \(addedCount) total gestures")
+            log.log("GestureLookup: Rebuilt table with \(newTable.count) unique combinations, \(addedCount) total gestures")
         }
     }
 
     /// Clears the lookup table
     func clear() {
+        lock.lock()
         lookupTable.removeAll()
+        lock.unlock()
         log.log("GestureLookup: Cleared lookup table")
     }
 
     /// Returns statistics about the lookup table
     func getStatistics() -> (uniqueCombinations: Int, totalGestures: Int) {
+        lock.lock()
+        defer { lock.unlock() }
         let uniqueCombinations = lookupTable.count
         let totalGestures = lookupTable.values.reduce(0) { $0 + $1.count }
         return (uniqueCombinations, totalGestures)
@@ -119,12 +142,16 @@ extension GestureLookup {
 
     /// Returns debug information about the lookup table
     func debugDescription() -> String {
+        lock.lock()
+        let snapshot = lookupTable
+        lock.unlock()
+
         var description = "GestureLookup Debug Info:\n"
-        description += "Total combinations: \(lookupTable.count)\n"
+        description += "Total combinations: \(snapshot.count)\n"
 
         // Show distribution of gestures per combination
         var distribution: [Int: Int] = [:]
-        for gestures in lookupTable.values {
+        for gestures in snapshot.values {
             distribution[gestures.count, default: 0] += 1
         }
 

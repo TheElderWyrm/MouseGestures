@@ -2,6 +2,20 @@ import Foundation
 import Cocoa
 import Carbon
 
+/// Coerce a stored modifier value back to an `NSEvent.ModifierFlags` rawValue.
+/// Modifier flags are persisted inside `AnyCodable`, which round-trips every
+/// JSON number as `Int` — and older builds stored the raw `UInt`, which
+/// AnyCodable's encoder has no case for and silently writes as `null`. Reading
+/// with a bare `as? UInt` therefore returned nil after any save/reload, which
+/// dropped the whole keyboard/mouse-button trigger (and with it the gesture) on
+/// the next launch. Accept Int/UInt/NSNumber so the flags survive the round-trip.
+fileprivate func decodeModifierRaw(_ value: Any?) -> UInt? {
+    if let u = value as? UInt { return u }
+    if let i = value as? Int { return UInt(bitPattern: i) }
+    if let n = value as? NSNumber { return n.uintValue }
+    return nil
+}
+
 // MARK: - Generic Activation System (Plugin-Independent)
 
 /// Generic activation configuration - no hard-coded plugin types
@@ -50,7 +64,7 @@ struct GenericActivation: Codable, Equatable {
     var keyboardTrigger: KeyboardTrigger? {
         guard let config = detectionConfigs["keyboard_detector"],
               let keyCode = config["keyCode"]?.value as? Int,
-              let modifiersRaw = config["modifiers"]?.value as? UInt,
+              let modifiersRaw = decodeModifierRaw(config["modifiers"]?.value),
               let displayString = config["displayString"]?.value as? String else { return nil }
         return KeyboardTrigger(
             keyCode: CGKeyCode(keyCode),
@@ -66,7 +80,9 @@ struct GenericActivation: Codable, Equatable {
         }
         detectionConfigs["keyboard_detector"] = [
             "keyCode": AnyCodable(Int(trigger.keyCode)),
-            "modifiers": AnyCodable(trigger.modifiers.rawValue),
+            // Store the rawValue as Int: AnyCodable can encode Int (it has no
+            // UInt case and would otherwise drop it to null). See decodeModifierRaw.
+            "modifiers": AnyCodable(Int(trigger.modifiers.rawValue)),
             "displayString": AnyCodable(trigger.displayString)
         ]
     }
@@ -77,7 +93,7 @@ struct GenericActivation: Codable, Equatable {
         guard let config = detectionConfigs["mouse_button_detector"],
               let buttonRaw = config["button"]?.value as? String,
               let button = MouseButtonTrigger.MouseButton(rawValue: buttonRaw),
-              let modifiersRaw = config["modifiers"]?.value as? UInt else { return nil }
+              let modifiersRaw = decodeModifierRaw(config["modifiers"]?.value) else { return nil }
         return MouseButtonTrigger(
             button: button,
             modifiers: NSEvent.ModifierFlags(rawValue: modifiersRaw)
@@ -91,7 +107,8 @@ struct GenericActivation: Codable, Equatable {
         }
         detectionConfigs["mouse_button_detector"] = [
             "button": AnyCodable(trigger.button.rawValue),
-            "modifiers": AnyCodable(trigger.modifiers.rawValue),
+            // Store as Int (AnyCodable has no UInt case → null). See decodeModifierRaw.
+            "modifiers": AnyCodable(Int(trigger.modifiers.rawValue)),
             "displayString": AnyCodable(trigger.displayString)
         ]
     }
@@ -109,14 +126,14 @@ extension KeyboardTrigger: DetectionPluginConfig {
     func toGenericConfig() -> [String: AnyCodable] {
         return [
             "keyCode": AnyCodable(Int(keyCode)),
-            "modifiers": AnyCodable(modifiers.rawValue),
+            "modifiers": AnyCodable(Int(modifiers.rawValue)),
             "displayString": AnyCodable(displayString)
         ]
     }
 
     static func fromGenericConfig(_ config: [String: AnyCodable]) -> KeyboardTrigger? {
         guard let keyCode = config["keyCode"]?.value as? Int,
-              let modifiersRaw = config["modifiers"]?.value as? UInt,
+              let modifiersRaw = decodeModifierRaw(config["modifiers"]?.value),
               let displayString = config["displayString"]?.value as? String else { return nil }
         return KeyboardTrigger(
             keyCode: CGKeyCode(keyCode),
@@ -130,7 +147,7 @@ extension MouseButtonTrigger: DetectionPluginConfig {
     func toGenericConfig() -> [String: AnyCodable] {
         return [
             "button": AnyCodable(button.rawValue),
-            "modifiers": AnyCodable(modifiers.rawValue),
+            "modifiers": AnyCodable(Int(modifiers.rawValue)),
             "displayString": AnyCodable(displayString)
         ]
     }
@@ -138,7 +155,7 @@ extension MouseButtonTrigger: DetectionPluginConfig {
     static func fromGenericConfig(_ config: [String: AnyCodable]) -> MouseButtonTrigger? {
         guard let buttonRaw = config["button"]?.value as? String,
               let button = MouseButton(rawValue: buttonRaw),
-              let modifiersRaw = config["modifiers"]?.value as? UInt else { return nil }
+              let modifiersRaw = decodeModifierRaw(config["modifiers"]?.value) else { return nil }
         return MouseButtonTrigger(
             button: button,
             modifiers: NSEvent.ModifierFlags(rawValue: modifiersRaw)

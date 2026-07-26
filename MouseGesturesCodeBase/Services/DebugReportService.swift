@@ -13,6 +13,17 @@ class DebugReportService {
     private init() {}
 
     func generateReport() -> String {
+        // Read one coherent, synchronized snapshot of the profile/gesture state
+        // up front. `configuration.profiles` and `activeProfileId` are plain
+        // stored properties mutated under the configQueue barrier (e.g. by the
+        // off-main switch_profile action and by the save encoder); reading them
+        // directly races that barrier and can crash or read a half-reallocated
+        // array. `profilesState` reads both together through the queue, and the
+        // `gestures` accessor is already synchronized.
+        let (allProfiles, activeId) = configuration.profilesState
+        let activeGestures = configuration.gestures
+        let activeProfileName = allProfiles.first { $0.id == activeId }?.name
+
         var report = "MouseGestures Debug Report\n"
         report += "Generated: \(Date())\n"
         report += String(repeating: "=", count: 60) + "\n\n"
@@ -28,9 +39,9 @@ class DebugReportService {
         // Configuration
         report += "=== Configuration ===\n"
         report += "Gestures Enabled: \(configuration.isEnabled)\n"
-        report += "Profiles Count: \(configuration.profiles.count)\n"
-        report += "Active Profile: \(configuration.activeProfile?.name ?? "None")\n"
-        report += "Gestures Count: \(configuration.gestures.count)\n"
+        report += "Profiles Count: \(allProfiles.count)\n"
+        report += "Active Profile: \(activeProfileName ?? "None")\n"
+        report += "Gestures Count: \(activeGestures.count)\n"
         report += "App Mappings: \(configuration.appProfileMappings.count)\n"
         report += "Disabled Apps: \(configuration.disabledApps.count)\n"
         report += "Haptic Feedback: \(configuration.hapticFeedbackEnabled)\n"
@@ -70,19 +81,19 @@ class DebugReportService {
         report += "\n"
 
         // Active Profiles
-        if !configuration.profiles.isEmpty {
+        if !allProfiles.isEmpty {
             report += "=== Profiles ===\n"
-            for profile in configuration.profiles {
-                let isActive = profile.id == configuration.activeProfileId
+            for profile in allProfiles {
+                let isActive = profile.id == activeId
                 report += "- \(profile.name)\(isActive ? " (Active)" : "")\n"
             }
             report += "\n"
         }
 
         // Recent Gestures (if available)
-        if !configuration.gestures.isEmpty {
+        if !activeGestures.isEmpty {
             report += "=== Recent Gestures (First 10) ===\n"
-            for (index, gesture) in configuration.gestures.prefix(10).enumerated() {
+            for (index, gesture) in activeGestures.prefix(10).enumerated() {
                 report += "\(index + 1). Zone: \(gesture.zone), "
                 report += "Action: \(gesture.actionIdentifier)\n"
             }

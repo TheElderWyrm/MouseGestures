@@ -83,6 +83,20 @@ public class PluginSandbox {
         sandboxedContext.cleanup()
         resourceMonitor.cleanup()
     }
+
+    /// Retire ONLY this sandbox's context (its block-based NotificationCenter
+    /// observers) and resource monitor, WITHOUT tearing down the plugin.
+    ///
+    /// Used when a still-loaded plugin's sandbox is being *replaced* (e.g. a
+    /// permission change): the plugin instance stays alive and registered, but
+    /// the old context's observers must be removed or they leak in
+    /// NotificationCenter and keep firing under the now-stale permissions.
+    /// Calling the full `cleanup()` here would wrongly invoke `plugin.cleanup()`
+    /// on a live plugin, tearing down state it still needs.
+    func discardContext() {
+        sandboxedContext.cleanup()
+        resourceMonitor.cleanup()
+    }
 }
 
 // MARK: - Sandboxed Plugin Context

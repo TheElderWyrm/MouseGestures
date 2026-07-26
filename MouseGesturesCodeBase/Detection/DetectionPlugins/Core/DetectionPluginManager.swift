@@ -300,13 +300,30 @@ class DetectionPluginManager: NSObject {
     @objc private func configurationChanged() {
         log.log("Detection plugins received configuration change")
 
-        // Notify all plugins of configuration change
-        for plugin in plugins.values {
-            plugin.configurationChanged()
+        // "GestureConfigurationChanged" is not always posted on the main thread:
+        // an action plugin can post it from the action-execution queue
+        // (PluginSandbox.postNotification posts on the calling thread, and actions
+        // run on DispatchQueue.global). Several plugins rebuild main-thread-affine
+        // state in configurationChanged() — notably ScreenZoneDetectorPlugin, which
+        // rebuilds its zone-bounds cache and installs/removes NSEvent monitors — and
+        // that races the main-thread event handlers reading those same structures
+        // (a concurrent Array/Dictionary mutation = heap corruption / crash). Marshal
+        // the fan-out onto main so all cache/monitor mutation stays single-threaded.
+        // Synchronous when already on main (the normal Configuration.save() path,
+        // which posts via DispatchQueue.main.async), so ordering there is unchanged.
+        let notify = { [weak self] in
+            guard let self = self else { return }
+
+            // Notify all plugins of configuration change
+            for plugin in self.plugins.values {
+                plugin.configurationChanged()
+            }
+
+            // Coordinator also listens for this, but ensure dependencies are rebuilt
+            ActivationCoordinator.shared.rebuildDependencies()
         }
 
-        // Coordinator also listens for this, but ensure dependencies are rebuilt
-        ActivationCoordinator.shared.rebuildDependencies()
+        if Thread.isMainThread { notify() } else { DispatchQueue.main.async(execute: notify) }
     }
 
     // MARK: - Settings Management

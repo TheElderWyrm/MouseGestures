@@ -330,7 +330,10 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
                 let targetPct = parameters.number(for: "value") ?? 50
                 setDisplayBrightness(Float(targetPct) / 100.0)
             } else {
-                let steps = max(1, Int(parameters.number(for: "amount") ?? 1))
+                // Clamp to the declared 1...16 range: execute() never runs
+                // validate(), so a hand-edited/bundle-supplied amount could
+                // otherwise spin this loop far beyond a single brightness sweep.
+                let steps = min(16, max(1, Int(parameters.number(for: "amount") ?? 1)))
                 for _ in 0..<steps { adjustBrightness(increase: direction == "up") }
             }
 
@@ -341,7 +344,7 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
                 let targetPct = parameters.number(for: "value") ?? 50
                 setKeyboardBrightness(Float(targetPct) / 100.0)
             } else {
-                let steps = max(1, Int(parameters.number(for: "amount") ?? 1))
+                let steps = min(16, max(1, Int(parameters.number(for: "amount") ?? 1)))
                 for _ in 0..<steps { adjustKeyboardBrightness(increase: direction == "up") }
             }
 

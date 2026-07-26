@@ -372,14 +372,17 @@ public class Configuration: Codable {
                 pendingSave = false
             }
 
-            log.log("Saving configuration to disk. Mappings count: \(self.appProfileMappings.count)")
-
             do {
                 // Snapshot under a barrier so concurrent mutators can't tear the
-                // arrays while the encoder walks them.
-                let data = try self.configQueue.sync(flags: .barrier) {
-                    try JSONEncoder().encode(self)
+                // arrays while the encoder walks them. The mapping count is read
+                // inside the same barrier — a bare `self.appProfileMappings.count`
+                // here (off configQueue) would race a concurrent barrier writer
+                // such as addAppProfileMapping.
+                let (data, mappingCount) = try self.configQueue.sync(flags: .barrier) { () -> (Data, Int) in
+                    (try JSONEncoder().encode(self), self.appProfileMappings.count)
                 }
+
+                log.log("Saving configuration to disk. Mappings count: \(mappingCount)")
 
                 // Atomic write: writes to a temp file then renames, so a
                 // crash mid-write can't leave a truncated gestures.json.
@@ -568,7 +571,10 @@ public class Configuration: Codable {
     func switchToAppProfile(bundleId: String) {
         // If the app has a specific profile mapping, use it
         // Otherwise, stay with the current profile (don't switch to default)
-        let currentActive = activeProfileId
+        // Read the active id through the synchronized accessor — this runs off
+        // the main thread (AppConfigurationDetector fires on app switch), so a
+        // bare `activeProfileId` read would race a concurrent barrier writer.
+        let currentActive = activeProfileIdSnapshot
         guard let targetProfile = getProfileForApp(bundleId: bundleId),
               targetProfile.id != currentActive else {
             // App doesn't have a mapping - keep current profile
@@ -715,33 +721,46 @@ public class Configuration: Codable {
 
     // Reset entire configuration to defaults
     func resetToDefaults() {
+        // Build the default profile outside the barrier (pure construction, no
+        // configQueue access), then apply every mutation under a single barrier
+        // so the array/dictionary reassignments serialize with the save encoder
+        // instead of racing it (a bare `self.profiles = ...` here concurrent
+        // with `JSONEncoder().encode(self)` can tear the backing buffers).
         let defaultProfile = ConfigurationProfile(name: "Default", gestures: Configuration.defaultGestures, isDefault: true)
-        self.profiles = [defaultProfile]
-        self.activeProfileId = defaultProfile.id
-        self.appProfileMappings = []
-        self.disabledApps = []
-        self.isEnabled = true
-        self.showZoneHighlights = true
-        self.showZoneLabels = false
-        self.hideFromMenuBar = false
-        self.menuBarIconOption = .cursor
-        self.customMenuBarIconData = nil
-        self.customMenuBarIconIsTemplate = false
-        self.debugModeEnabled = false
-        self.developerModeEnabled = false
-        self.notificationOnActivation = false
-        self.pluginConfigurations = [:]
+        configQueue.sync(flags: .barrier) {
+            self.profiles = [defaultProfile]
+            self.activeProfileId = defaultProfile.id
+            self.appProfileMappings = []
+            self.disabledApps = []
+            self.isEnabled = true
+            self.showZoneHighlights = true
+            self.showZoneLabels = false
+            self.hideFromMenuBar = false
+            self.menuBarIconOption = .cursor
+            self.customMenuBarIconData = nil
+            self.customMenuBarIconIsTemplate = false
+            self.debugModeEnabled = false
+            self.developerModeEnabled = false
+            self.notificationOnActivation = false
+            self.pluginConfigurations = [:]
 
-        // Reset global zone/haptic settings
-        self.hapticFeedbackEnabled = true
-        self.edgeThreshold = 30
-        self.cornerSize = 100
-        self.cornerBuffer = 50
+            // Reset global zone/haptic settings
+            self.hapticFeedbackEnabled = true
+            self.edgeThreshold = 30
+            self.cornerSize = 100
+            self.cornerBuffer = 50
 
-        // Point Free mode at the freshly created profile so a non-Pro user
-        // can actually switch to it. Leaving a stale UUID here would lock
-        // Free users out of every profile (the new default has a new UUID).
-        self.freeModeProfileId = defaultProfile.id
+            // Point Free mode at the freshly created profile so a non-Pro user
+            // can actually switch to it. Leaving a stale UUID here would lock
+            // Free users out of every profile (the new default has a new UUID).
+            self.freeModeProfileId = defaultProfile.id
+        }
+
+        // Persist the reset. Without this the change lives only in memory until
+        // the next unrelated save or clean-quit saveImmediate(), so a crash /
+        // force-kill in between silently loses it. Matches the other reset paths
+        // (ProfileManagementService / ProfileTemplateService) which both save().
+        save()
     }
 
     // --- Global Settings Export/Import ---
@@ -792,7 +811,12 @@ public class Configuration: Codable {
     }
 
     func exportGlobalSettings() -> Data? {
-        let exportData = GlobalSettingsExportData(config: self)
+        // Build the snapshot under the configQueue (a concurrent read that
+        // serializes against barrier writers) so `GlobalSettingsExportData`'s
+        // direct reads of `profiles`/`appProfileMappings`/`disabledApps`/
+        // `pluginConfigurations` can't be torn by a concurrent profile switch,
+        // import, or reset running its own barrier.
+        let exportData = configQueue.sync { GlobalSettingsExportData(config: self) }
 
         do {
             let encoder = JSONEncoder()
@@ -811,92 +835,100 @@ public class Configuration: Codable {
             let decoder = JSONDecoder()
             let importData = try decoder.decode(GlobalSettingsExportData.self, from: data)
 
-            // Store current profiles if merging
-            let existingProfiles = mergeProfiles ? self.profiles : []
+            // Apply the whole import under a single barrier so the array/dict
+            // reassignments and appends (profiles / appProfileMappings /
+            // disabledApps / pluginConfigurations) serialize with the save
+            // encoder instead of racing it. This runs from the Settings import
+            // UI on the main thread, concurrent with background/batched saves.
+            configQueue.sync(flags: .barrier) {
+                // Store current profiles if merging
+                let existingProfiles = mergeProfiles ? self.profiles : []
 
-            // Import all settings
-            self.isEnabled = importData.isEnabled
-            self.hapticFeedbackEnabled = importData.hapticFeedbackEnabled
-            self.edgeThreshold = importData.edgeThreshold
-            self.cornerSize = importData.cornerSize
-            self.cornerBuffer = importData.cornerBuffer
-            self.showZoneHighlights = importData.showZoneHighlights
-            self.showZoneLabels = importData.showZoneLabels
-            self.hideFromMenuBar = importData.hideFromMenuBar
-            self.menuBarIconOption = importData.menuBarIconOption
-            self.customMenuBarIconData = importData.customMenuBarIconData
-            self.customMenuBarIconIsTemplate = importData.customMenuBarIconIsTemplate
-            self.debugModeEnabled = importData.debugModeEnabled
-            self.pluginConfigurations = importData.pluginConfigurations
+                // Import all settings
+                self.isEnabled = importData.isEnabled
+                self.hapticFeedbackEnabled = importData.hapticFeedbackEnabled
+                self.edgeThreshold = importData.edgeThreshold
+                self.cornerSize = importData.cornerSize
+                self.cornerBuffer = importData.cornerBuffer
+                self.showZoneHighlights = importData.showZoneHighlights
+                self.showZoneLabels = importData.showZoneLabels
+                self.hideFromMenuBar = importData.hideFromMenuBar
+                self.menuBarIconOption = importData.menuBarIconOption
+                self.customMenuBarIconData = importData.customMenuBarIconData
+                self.customMenuBarIconIsTemplate = importData.customMenuBarIconIsTemplate
+                self.debugModeEnabled = importData.debugModeEnabled
+                self.pluginConfigurations = importData.pluginConfigurations
 
-            if mergeProfiles {
-                // Merge profiles - assign new IDs to avoid conflicts
-                var profileIdMap: [UUID: UUID] = [:]
+                if mergeProfiles {
+                    // Merge profiles - assign new IDs to avoid conflicts
+                    var profileIdMap: [UUID: UUID] = [:]
 
-                for var profile in importData.profiles {
-                    let oldId = profile.id
-                    profile.id = UUID()
-                    profileIdMap[oldId] = profile.id
+                    for var profile in importData.profiles {
+                        let oldId = profile.id
+                        profile.id = UUID()
+                        profileIdMap[oldId] = profile.id
 
-                    // Check for name conflicts
-                    let baseName = profile.name
-                    var suffix = 1
-                    while existingProfiles.contains(where: { $0.name == profile.name }) ||
-                          self.profiles.contains(where: { $0.name == profile.name }) {
-                        profile.name = "\(baseName) (\(suffix))"
-                        suffix += 1
+                        // Check for name conflicts
+                        let baseName = profile.name
+                        var suffix = 1
+                        while existingProfiles.contains(where: { $0.name == profile.name }) ||
+                              self.profiles.contains(where: { $0.name == profile.name }) {
+                            profile.name = "\(baseName) (\(suffix))"
+                            suffix += 1
+                        }
+
+                        profile.isDefault = false
+                        self.profiles.append(profile)
                     }
 
-                    profile.isDefault = false
-                    self.profiles.append(profile)
-                }
+                    // Update mappings with new profile IDs
+                    for var mapping in importData.appProfileMappings {
+                        if let newProfileId = profileIdMap[mapping.profileId] {
+                            mapping.id = UUID()
+                            mapping.profileId = newProfileId
 
-                // Update mappings with new profile IDs
-                for var mapping in importData.appProfileMappings {
-                    if let newProfileId = profileIdMap[mapping.profileId] {
-                        mapping.id = UUID()
-                        mapping.profileId = newProfileId
-
-                        // Only add if not already mapped
-                        if !self.appProfileMappings.contains(where: { $0.appBundleIdentifier == mapping.appBundleIdentifier }) {
-                            self.appProfileMappings.append(mapping)
+                            // Only add if not already mapped
+                            if !self.appProfileMappings.contains(where: { $0.appBundleIdentifier == mapping.appBundleIdentifier }) {
+                                self.appProfileMappings.append(mapping)
+                            }
                         }
                     }
-                }
 
-                // Merge disabled apps
-                for disabledApp in importData.disabledApps {
-                    if !self.disabledApps.contains(where: { $0.appBundleIdentifier == disabledApp.appBundleIdentifier }) {
-                        self.disabledApps.append(disabledApp)
+                    // Merge disabled apps
+                    for disabledApp in importData.disabledApps {
+                        if !self.disabledApps.contains(where: { $0.appBundleIdentifier == disabledApp.appBundleIdentifier }) {
+                            self.disabledApps.append(disabledApp)
+                        }
                     }
-                }
 
-            } else {
-                // Replace everything
-                self.profiles = importData.profiles
-                self.activeProfileId = importData.activeProfileId
-                self.appProfileMappings = importData.appProfileMappings
-                self.disabledApps = importData.disabledApps
+                } else {
+                    // Replace everything
+                    self.profiles = importData.profiles
+                    self.activeProfileId = importData.activeProfileId
+                    self.appProfileMappings = importData.appProfileMappings
+                    self.disabledApps = importData.disabledApps
 
-                // Ensure we have at least one profile
-                if self.profiles.isEmpty {
-                    let defaultProfile = ConfigurationProfile(name: "Default", isDefault: true)
-                    self.profiles = [defaultProfile]
-                    self.activeProfileId = defaultProfile.id
-                }
+                    // Ensure we have at least one profile
+                    if self.profiles.isEmpty {
+                        let defaultProfile = ConfigurationProfile(name: "Default", isDefault: true)
+                        self.profiles = [defaultProfile]
+                        self.activeProfileId = defaultProfile.id
+                    }
 
-                // Ensure active profile exists
-                if let activeId = self.activeProfileId {
-                    if !self.profiles.contains(where: { $0.id == activeId }) {
+                    // Ensure active profile exists
+                    if let activeId = self.activeProfileId {
+                        if !self.profiles.contains(where: { $0.id == activeId }) {
+                            self.activeProfileId = self.profiles.first?.id
+                        }
+                    } else {
                         self.activeProfileId = self.profiles.first?.id
                     }
-                } else {
-                    self.activeProfileId = self.profiles.first?.id
                 }
             }
 
-            // Apply debug mode setting to logger
-            log.isDebugEnabled = self.debugModeEnabled
+            // Apply debug mode setting to logger (outside the barrier; reads the
+            // decoded source value rather than re-reading self off-queue).
+            log.isDebugEnabled = importData.debugModeEnabled
 
             // Save configuration
             save()
@@ -913,7 +945,7 @@ public class Configuration: Codable {
     // --- Profile Import/Export Methods ---
 
     func exportProfile(id: UUID) -> Data? {
-        guard let profile = profiles.first(where: { $0.id == id }) else {
+        guard let profile = profileSnapshot(withId: id) else {
             log.log("Profile not found for export: \(id)")
             return nil
         }
@@ -933,13 +965,14 @@ public class Configuration: Codable {
     }
 
     func exportAllProfiles() -> Data? {
-        let exportData = ProfileBundleExportData(profiles: profiles)
+        let snapshot = profilesSnapshot
+        let exportData = ProfileBundleExportData(profiles: snapshot)
 
         do {
             let encoder = JSONEncoder()
             encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
             let data = try encoder.encode(exportData)
-            log.log("Successfully exported \(profiles.count) profiles")
+            log.log("Successfully exported \(snapshot.count) profiles")
             return data
         } catch {
             log.log("Error encoding profiles for export: \(error)")
@@ -956,19 +989,21 @@ public class Configuration: Codable {
             // Generate new ID for imported profile
             importedProfile.id = UUID()
 
-            // Check for name conflicts and rename if necessary
-            let baseName = importedProfile.name
-            var suffix = 1
-            while profiles.contains(where: { $0.name == importedProfile.name }) {
-                importedProfile.name = "\(baseName) (\(suffix))"
-                suffix += 1
-            }
-
             // Mark as non-default
             importedProfile.isDefault = false
 
-            // Add to profiles
-            profiles.append(importedProfile)
+            // De-dupe the name against the live list and append, both inside the
+            // same barrier so the check-then-append is atomic and serialized with
+            // the save encoder (a bare `profiles.append` here would race it).
+            mutateProfiles { profiles in
+                let baseName = importedProfile.name
+                var suffix = 1
+                while profiles.contains(where: { $0.name == importedProfile.name }) {
+                    importedProfile.name = "\(baseName) (\(suffix))"
+                    suffix += 1
+                }
+                profiles.append(importedProfile)
+            }
 
             // Save configuration
             save()
@@ -987,26 +1022,31 @@ public class Configuration: Codable {
             let decoder = JSONDecoder()
             let exportData = try decoder.decode(ProfileBundleExportData.self, from: data)
 
-            var importedCount = 0
+            // Do the whole batch (per-profile de-dupe + append) inside one
+            // barrier so it is atomic and serialized with the save encoder; the
+            // name check also sees profiles appended earlier in this same loop.
+            let importedCount = mutateProfiles { profiles -> Int in
+                var count = 0
+                for var profile in exportData.profiles {
+                    // Generate new ID for each imported profile
+                    profile.id = UUID()
 
-            for var profile in exportData.profiles {
-                // Generate new ID for each imported profile
-                profile.id = UUID()
+                    // Check for name conflicts and rename if necessary
+                    let baseName = profile.name
+                    var suffix = 1
+                    while profiles.contains(where: { $0.name == profile.name }) {
+                        profile.name = "\(baseName) (\(suffix))"
+                        suffix += 1
+                    }
 
-                // Check for name conflicts and rename if necessary
-                let baseName = profile.name
-                var suffix = 1
-                while profiles.contains(where: { $0.name == profile.name }) {
-                    profile.name = "\(baseName) (\(suffix))"
-                    suffix += 1
+                    // Mark as non-default
+                    profile.isDefault = false
+
+                    // Add to profiles
+                    profiles.append(profile)
+                    count += 1
                 }
-
-                // Mark as non-default
-                profile.isDefault = false
-
-                // Add to profiles
-                profiles.append(profile)
-                importedCount += 1
+                return count
             }
 
             // Save configuration

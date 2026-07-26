@@ -336,7 +336,7 @@ class MouseButtonDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         for gesture in candidates {
             // --- Case A: regular click gesture ---
             if let trigger = gesture.mouseButtonTrigger {
-                let requiredMods = gesture.modifiers
+                let requiredMods = gesture.modifiers.normalized
                 guard (trigger.button == .any || trigger.button == button) && requiredMods == modifiers else { continue }
                 if gesture.hasZoneTrigger {
                     guard let sf = screenFrame else { continue }
@@ -361,7 +361,7 @@ class MouseButtonDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
             if let dragConfig = gesture.components.dragType, dragConfig.isEnabled, dragConfig.allowClick {
                 let buttonMatches = dragConfig.dragType == .anyDrag ||
                     DragModifier.from(mouseButton: button) == dragConfig.dragType
-                let requiredMods = gesture.modifiers
+                let requiredMods = gesture.modifiers.normalized
                 guard buttonMatches && requiredMods == modifiers && gesture.hasZoneTrigger else { continue }
                 guard let sf = screenFrame else { continue }
                 guard gesture.zone.contains(
@@ -403,7 +403,7 @@ class MouseButtonDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
             g.hasZoneTrigger &&
             g.dragModifier == .none &&
             g.mouseButtonTrigger == nil &&
-            g.modifiers == modifiers &&
+            g.modifiers.normalized == modifiers &&
             g.zone.contains(
                 point: mouseLocation, screenFrame: sf,
                 threshold: Configuration.shared.edgeThreshold,

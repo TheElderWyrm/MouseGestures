@@ -135,6 +135,7 @@
 		DD0000000000000000000032 /* UpdateLogic.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD0000000000000000000030 /* UpdateLogic.swift */; };
 		DD0000000000000000000034 /* UpdateLogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD0000000000000000000033 /* UpdateLogicTests.swift */; };
 		E4C343F7B7372EEA22DD1D26 /* LemonSqueezyLicense.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33DB4B569DDBAAC387A23323 /* LemonSqueezyLicense.swift */; };
+		F0444644BAD5AC3385EBEC9E /* GestureTriggerPersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5ECE4A47A6EDE4BF17159FEE /* GestureTriggerPersistenceTests.swift */; };
 		F64847768F1F2D8E06D72CBC /* UIStyles.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E94445AB3BF094E20E605FC /* UIStyles.swift */; };
 /* End PBXBuildFile section */
 
@@ -149,6 +150,7 @@
 		2DF54CB5B4E798FC72FBB425 /* LicenseService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LicenseService.swift; path = MouseGesturesCodeBase/Services/LicenseService.swift; sourceTree = SOURCE_ROOT; };
 		33DB4B569DDBAAC387A23323 /* LemonSqueezyLicense.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LemonSqueezyLicense.swift; path = MouseGesturesCodeBase/Services/LemonSqueezyLicense.swift; sourceTree = SOURCE_ROOT; };
 		43752886C53B432383537A9E /* SelfUpdateService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SelfUpdateService.swift; path = MouseGesturesCodeBase/Services/SelfUpdateService.swift; sourceTree = SOURCE_ROOT; };
+		5ECE4A47A6EDE4BF17159FEE /* GestureTriggerPersistenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GestureTriggerPersistenceTests.swift; path = MouseGesturesTests/GestureTriggerPersistenceTests.swift; sourceTree = SOURCE_ROOT; };
 		696D440FBC79DD976FDA7EF2 /* DevActionRunnerHook.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DevActionRunnerHook.swift; path = MouseGesturesCodeBase/Services/DevActionRunnerHook.swift; sourceTree = SOURCE_ROOT; };
 		6FCB488CA68065730DE07C36 /* LicenseSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LicenseSettingsView.swift; path = MouseGesturesCodeBase/UI/Settings/LicenseSettingsView.swift; sourceTree = SOURCE_ROOT; };
 		773428682E6E20FD003AB7F1 /* MouseGestures.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MouseGestures.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -604,6 +606,7 @@
 				DD0000000000000000000025 /* ActionParametersTests.swift */,
 				DD0000000000000000000033 /* UpdateLogicTests.swift */,
 				026841C5897B3A8A29F6A803 /* LemonSqueezyLicenseTests.swift */,
+				5ECE4A47A6EDE4BF17159FEE /* GestureTriggerPersistenceTests.swift */,
 			);
 			path = MouseGesturesTests;
 			sourceTree = "<group>";
@@ -827,6 +830,7 @@
 				DD0000000000000000000034 /* UpdateLogicTests.swift in Sources */,
 				E4C343F7B7372EEA22DD1D26 /* LemonSqueezyLicense.swift in Sources */,
 				2388401389912DF3A56467A3 /* LemonSqueezyLicenseTests.swift in Sources */,
+				F0444644BAD5AC3385EBEC9E /* GestureTriggerPersistenceTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

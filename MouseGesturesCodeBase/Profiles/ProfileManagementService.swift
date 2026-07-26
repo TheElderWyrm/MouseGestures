@@ -223,7 +223,9 @@ class ProfileManagementService: ObservableObject {
     /// - Returns: True if export was successful
     @discardableResult
     func exportProfile(profileId: UUID, to url: URL) -> Bool {
-        guard let profile = profiles.first(where: { $0.id == profileId }) else {
+        // Look up against LIVE state, not the @Published cache (which can lag an
+        // in-flight mutation and export a stale/just-deleted profile).
+        guard let profile = configuration.profileSnapshot(withId: profileId) else {
             log.log("Profile not found for export: \(profileId)")
             return false
         }
@@ -242,7 +244,8 @@ class ProfileManagementService: ObservableObject {
     /// - Returns: Number of successfully exported profiles
     @discardableResult
     func exportProfiles(profileIds: [UUID], to url: URL) -> Int {
-        let profilesToExport = profiles.filter { profileIds.contains($0.id) }
+        // Filter LIVE state, not the @Published cache (see exportProfile).
+        let profilesToExport = configuration.profilesSnapshot.filter { profileIds.contains($0.id) }
         do {
             try importExportService.exportProfiles(profilesToExport, to: url)
             return profilesToExport.count

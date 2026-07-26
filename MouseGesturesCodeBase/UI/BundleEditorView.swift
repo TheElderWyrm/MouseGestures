@@ -135,8 +135,15 @@ struct BundleEditorView: View {
 
     private var actionList: some View {
         List(selection: $selection) {
-            ForEach(bundledActions.indices, id: \.self) { index in
-                let action = bundledActions[index]
+            // Iterate (index, element) keyed on the element's stable UUID.
+            // `ForEach(bundledActions.indices, id: \.self)` + `bundledActions[index]`
+            // crashes with "index out of range" when the list shrinks
+            // (remove/reorder): SwiftUI can re-evaluate a departing row's body with
+            // its old index against the already-shortened array. Keying on the UUID
+            // makes diffing identity-stable and removes the stale-index subscript.
+            ForEach(Array(bundledActions.enumerated()), id: \.element.id) { pair in
+                let index = pair.offset
+                let action = pair.element
                 BundleActionRow(
                     action: action,
                     index: index,

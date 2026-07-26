@@ -160,7 +160,14 @@ struct Gesture: Codable, Equatable {
     var keyboardTrigger: KeyboardTrigger? {
         get {
             guard components.keyboardShortcut?.isEnabled == true else { return nil }
-            return genericActivation.keyboardTrigger
+            // Prefer the trigger persisted in `components` — KeyboardTrigger's own
+            // Codable round-trips its `modifiers` correctly, whereas
+            // genericActivation historically lost `modifiers` on save/reload
+            // (AnyCodable has no UInt case → wrote null), which nulled the whole
+            // trigger and dropped keyboard gestures after a restart. Falling back
+            // to genericActivation keeps freshly-set triggers working before
+            // components is populated.
+            return components.keyboardShortcut?.keyboardTrigger ?? genericActivation.keyboardTrigger
         }
         set { genericActivation.setKeyboardTrigger(newValue) }
     }
@@ -168,7 +175,14 @@ struct Gesture: Codable, Equatable {
     var mouseButtonTrigger: MouseButtonTrigger? {
         get {
             guard components.mouseButton?.isEnabled == true else { return nil }
-            return genericActivation.mouseButtonTrigger
+            // Prefer genericActivation; but when it can't reconstruct the trigger
+            // (older configs lost `modifiers` to the AnyCodable/UInt bug, nulling
+            // the whole trigger), rebuild from the button persisted in
+            // `components`. Mouse-button modifiers live in components.modifierKey
+            // (read via `gesture.modifiers`), so an empty set here is correct.
+            if let trigger = genericActivation.mouseButtonTrigger { return trigger }
+            guard let button = components.mouseButton?.button, button != .none else { return nil }
+            return MouseButtonTrigger(button: button, modifiers: [])
         }
         set { genericActivation.setMouseButtonTrigger(newValue) }
     }

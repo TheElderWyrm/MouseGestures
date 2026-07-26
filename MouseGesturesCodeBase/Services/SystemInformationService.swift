@@ -111,14 +111,29 @@ class SystemInformationService {
     // MARK: - Disk Usage
 
     func getAppDiskUsage() -> Int64? {
-        guard let appURL = Bundle.main.bundleURL as URL? else { return nil }
+        let appURL = Bundle.main.bundleURL
 
-        do {
-            let resourceValues = try appURL.resourceValues(forKeys: [.totalFileAllocatedSizeKey])
-            return resourceValues.totalFileAllocatedSize.map { Int64($0) }
-        } catch {
-            return nil
+        // `.totalFileAllocatedSize` on the bundle *directory* only describes the
+        // directory entry itself (a few KB), not its contents, so the old code
+        // reported an essentially meaningless size for the app. Sum the
+        // allocated size of every regular file inside the bundle instead. Do
+        // NOT pass `.skipsPackageDescendants`: the app bundle is itself a
+        // package and we want to descend into it (and any nested packages).
+        let keys: [URLResourceKey] = [.isRegularFileKey, .totalFileAllocatedSizeKey, .fileAllocatedSizeKey]
+        guard let enumerator = FileManager.default.enumerator(
+            at: appURL,
+            includingPropertiesForKeys: keys,
+            options: []
+        ) else { return nil }
+
+        var total: Int64 = 0
+        for case let fileURL as URL in enumerator {
+            guard let values = try? fileURL.resourceValues(forKeys: Set(keys)),
+                  values.isRegularFile == true else { continue }
+            // Prefer allocated-on-disk size; fall back to the logical file size.
+            total += Int64(values.totalFileAllocatedSize ?? values.fileAllocatedSize ?? 0)
         }
+        return total
     }
 }
 

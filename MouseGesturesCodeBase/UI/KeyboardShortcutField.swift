@@ -81,6 +81,13 @@ class KeyboardShortcutField: NSTextField {
             // Disable Mission Control and Spaces temporarily while capturing
             disableSystemShortcutsTemporarily()
 
+            // Defensively remove any existing monitors before re-adding. A second
+            // becomeFirstResponder without an intervening resignFirstResponder would
+            // otherwise overwrite these references with fresh monitors, orphaning the
+            // old ones (they can never be passed to removeMonitor and keep firing).
+            if let monitor = localEventMonitor { NSEvent.removeMonitor(monitor); localEventMonitor = nil }
+            if let monitor = globalEventMonitor { NSEvent.removeMonitor(monitor); globalEventMonitor = nil }
+
             // Add both local and global event monitors to ensure we capture the event
             // Local monitor captures events in our app
             localEventMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .flagsChanged]) { [weak self] event in

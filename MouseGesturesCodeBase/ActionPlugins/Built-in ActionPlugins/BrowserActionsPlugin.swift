@@ -223,12 +223,15 @@ class BrowserActionsPlugin: NSObject, GestureActionPlugin {
             let tabNumber = max(1, min(9, Int(parameters.number(for: "tab_number") ?? 1)))
             context.sendKeyboardShortcut(keyCode: keyCodeForDigit(tabNumber), modifiers: .maskCommand) // Cmd + 1...9
         case "previous":
-            let count = max(1, Int(parameters.number(for: "count") ?? 1))
+            // Clamp to the declared 1...20 range: execute() never runs validate(),
+            // so a hand-edited/bundle-supplied count could otherwise spin this
+            // loop arbitrarily, spamming synthetic keystrokes on the exec thread.
+            let count = min(20, max(1, Int(parameters.number(for: "count") ?? 1)))
             for _ in 0..<count {
                 context.sendKeyboardShortcut(keyCode: 0x30, modifiers: [.maskControl, .maskShift]) // Ctrl + Shift + Tab
             }
         default: // "next"
-            let count = max(1, Int(parameters.number(for: "count") ?? 1))
+            let count = min(20, max(1, Int(parameters.number(for: "count") ?? 1)))
             for _ in 0..<count {
                 context.sendKeyboardShortcut(keyCode: 0x30, modifiers: .maskControl) // Ctrl + Tab
             }

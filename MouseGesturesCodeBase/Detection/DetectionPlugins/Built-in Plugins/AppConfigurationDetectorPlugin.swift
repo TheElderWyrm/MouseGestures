@@ -296,6 +296,15 @@ class AppConfigurationDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
            let profileId = appConfig.profileId,
            let profile = config.profiles.first(where: { $0.id == profileId }) {
 
+            // Do nothing if that profile is already active. checkForAppProfile
+            // is also called from configurationChanged(), and an unconditional
+            // switch there re-enters itself: triggerProfileSwitch → ProfileManager
+            // save() → posts "GestureConfigurationChanged" → configurationChanged()
+            // → checkForAppProfile → switch again … an unbounded auto-switch /
+            // save-to-disk / haptic-feedback loop for any app that has a profile
+            // mapping. (config.activeProfileId is the profile UUID as a string.)
+            guard profile.id.uuidString != config.activeProfileId else { return }
+
             // Switch to app-specific profile
             profileAutoSwitchCount += 1
             context?.logger.log("Auto-switching to profile '\(profile.name)' for app '\(appName)'", file: #file, function: #function, line: #line)

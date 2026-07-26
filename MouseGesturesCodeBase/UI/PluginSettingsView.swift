@@ -337,7 +337,7 @@ private struct SliderSettingControl: View {
                     .foregroundColor(.secondary)
             }
 
-            Slider(value: $localValue, in: min...max, step: step)
+            Slider(value: $localValue, in: min...Swift.max(min, max), step: step)
                 .onChange(of: localValue) { newValue in
                     guard isInitialized else { return }
                     DetectionPluginManager.shared.updatePluginSetting(
@@ -425,7 +425,7 @@ private struct StepperSettingControl: View {
         HStack {
             PluginSettingLabel(plugin: plugin, definition: definition)
             Spacer()
-            Stepper(value: $localValue, in: min...max, step: step) {
+            Stepper(value: $localValue, in: min...Swift.max(min, max), step: step) {
                 Text("\(localValue)")
                     .font(.system(size: MGStyle.FontSize.body, design: .monospaced))
             }

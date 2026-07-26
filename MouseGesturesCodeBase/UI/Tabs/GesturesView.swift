@@ -332,7 +332,6 @@ struct GestureCardView: View {
     let onToggleEnabled: (Bool) -> Void
 
     @State private var isHovered = false
-    @State private var isEnabled: Bool
     @State private var showDeleteConfirm = false
 
     init(gesture: Gesture, isExpanded: Bool,
@@ -344,7 +343,6 @@ struct GestureCardView: View {
         self.onEdit = onEdit
         self.onDelete = onDelete
         self.onToggleEnabled = onToggleEnabled
-        self._isEnabled = State(initialValue: gesture.isEnabled)
     }
 
     private var actionDef: PluginAction? {
@@ -368,20 +366,19 @@ struct GestureCardView: View {
                 // Action icon
                 ZStack {
                     RoundedRectangle(cornerRadius: MGStyle.Corner.md)
-                        .fill(isEnabled && !isLocked ? Color.accentColor.opacity(0.1) : Color.secondary.opacity(0.06))
+                        .fill(gesture.isEnabled && !isLocked ? Color.accentColor.opacity(0.1) : Color.secondary.opacity(0.06))
                         .frame(width: 32, height: 32)
 
                     Image(systemName: isLocked ? "lock.fill" : (actionDef?.icon ?? "bolt"))
                         .font(.system(size: 14))
-                        .foregroundColor(isEnabled && !isLocked ? .accentColor : .secondary)
+                        .foregroundColor(gesture.isEnabled && !isLocked ? .accentColor : .secondary)
                 }
 
                 // Enable toggle
                 Toggle("", isOn: Binding(
-                    get: { isEnabled && !isLocked },
+                    get: { gesture.isEnabled && !isLocked },
                     set: { v in
                         if !isLocked {
-                            isEnabled = v
                             onToggleEnabled(v)
                         }
                     }
@@ -398,7 +395,7 @@ struct GestureCardView: View {
                     Text(displayName)
                         .font(.system(size: MGStyle.FontSize.body, weight: .medium))
                         .lineLimit(1)
-                        .opacity(isEnabled && !isLocked ? 1 : 0.5)
+                        .opacity(gesture.isEnabled && !isLocked ? 1 : 0.5)
                     // Subtitle: action name (if custom name) + separator + trigger
                     let subtitleParts: [String] = [
                         hasName ? (actionDef?.name ?? gesture.actionIdentifier) : nil,
@@ -409,7 +406,7 @@ struct GestureCardView: View {
                             .font(.system(size: MGStyle.FontSize.caption))
                             .foregroundColor(.secondary)
                             .lineLimit(1)
-                            .opacity(isEnabled && !isLocked ? 0.8 : 0.4)
+                            .opacity(gesture.isEnabled && !isLocked ? 0.8 : 0.4)
                     }
                 }
 
@@ -476,8 +473,8 @@ struct GestureCardView: View {
         .contextMenu {
             Button(action: onEdit) { Label("Edit", systemImage: "pencil") }
             Divider()
-            Button(action: { isEnabled.toggle(); onToggleEnabled(isEnabled) }) {
-                Label(isEnabled ? "Disable" : "Enable", systemImage: isEnabled ? "pause.circle" : "play.circle")
+            Button(action: { onToggleEnabled(!gesture.isEnabled) }) {
+                Label(gesture.isEnabled ? "Disable" : "Enable", systemImage: gesture.isEnabled ? "pause.circle" : "play.circle")
             }
             Divider()
             Button(role: .destructive, action: onDelete) { Label("Delete", systemImage: "trash") }

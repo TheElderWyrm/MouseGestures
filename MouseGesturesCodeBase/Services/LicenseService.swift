@@ -139,9 +139,19 @@ public class LicenseService: ObservableObject {
         self.status = newStatus
         self.trialDaysRemaining = remaining
 
-        // Automatically disable developer mode if in free mode
-        if newStatus == .free || newStatus == .expired {
-            UserDefaults.standard.set(false, forKey: "MGDeveloperModeEnabled")
+        // Developer tools are Pro-only (see canUseDeveloperTools), so force
+        // developer mode off when the license drops to free/expired. The flag
+        // actually lives in Configuration (persisted to gestures.json) and is
+        // read by DevActionRunnerHook et al.; the previous code wrote a
+        // UserDefaults key ("MGDeveloperModeEnabled") that nothing ever reads,
+        // so developer mode stayed enabled after a trial expired — leaving the
+        // Pro-only dev hook active for a free user. Route through the canonical
+        // setter so the change is persisted and the "developerModeChanged"
+        // observers (tab visibility) update live. Guarded to fire only on a
+        // real on→off transition rather than on every refresh.
+        if (newStatus == .free || newStatus == .expired),
+           DeveloperModeToggleService.shared.isEnabled() {
+            DeveloperModeToggleService.shared.setEnabled(false)
         }
 
         if oldStatus != newStatus || remaining != oldRemaining {

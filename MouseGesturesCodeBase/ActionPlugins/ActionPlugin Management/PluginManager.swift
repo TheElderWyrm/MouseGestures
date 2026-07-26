@@ -418,14 +418,49 @@ public class PluginManager: NSObject {
 
     /// Update permissions for a specific plugin
     public func updatePermissions(for pluginId: String, permissions: PluginPermissions) {
-        pluginQueue.async(flags: .barrier) {
-            self.pluginPermissions[pluginId] = permissions
+        // Snapshot the current plugin + its old sandbox under the reader lock.
+        let (plugin, oldSandbox): (GestureActionPlugin?, PluginSandbox?) = pluginQueue.sync {
+            (loadedPlugins[pluginId], sandboxedPlugins[pluginId])
+        }
 
-            // If plugin is loaded, update its sandbox
-            if let plugin = self.loadedPlugins[pluginId] {
-                // Recreate sandbox with new permissions
-                self.sandboxedPlugins[pluginId] = PluginSandbox(plugin: plugin, permissions: permissions)
+        // Build + initialize the replacement sandbox OUTSIDE the barrier. Two
+        // reasons: (1) initialize() re-runs plugin.initialize(context:) so the
+        // plugin re-binds to the new context and re-registers any notification
+        // observers under the NEW permissions — without this the permission
+        // change never takes effect for anything the plugin captured at load
+        // time; (2) plugin.initialize can re-enter PluginManager, so running it
+        // inside a pluginQueue barrier could deadlock.
+        var newSandbox: PluginSandbox?
+        if let plugin = plugin {
+            let sandbox = PluginSandbox(plugin: plugin, permissions: permissions)
+            do {
+                try sandbox.initialize()
+                newSandbox = sandbox
+            } catch {
+                // Keep the old sandbox in place on failure rather than leaving
+                // the plugin with no working sandbox.
+                log.log("updatePermissions: failed to initialize new sandbox for '\(pluginId)': \(error)")
             }
+        }
+
+        // Publish the new permissions (and sandbox, if one was built) under a
+        // synchronous barrier so the replacement is guaranteed in place before
+        // we retire the old context below (and so concurrent readers can't see
+        // a torn state). Safe from a sync barrier here: updatePermissions is
+        // never called from within pluginQueue.
+        pluginQueue.sync(flags: .barrier) {
+            self.pluginPermissions[pluginId] = permissions
+            if let newSandbox = newSandbox {
+                self.sandboxedPlugins[pluginId] = newSandbox
+            }
+        }
+
+        // Only once the replacement is in place: retire the OLD sandbox's
+        // context so its NotificationCenter observers are removed (otherwise
+        // they leak and keep reacting under the stale permissions). This does
+        // NOT call plugin.cleanup() — the plugin instance stays loaded.
+        if newSandbox != nil {
+            oldSandbox?.discardContext()
         }
 
         log.log("Updated permissions for plugin '\(pluginId)'")

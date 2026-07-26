@@ -246,10 +246,10 @@ class ZoneVisualizationServicePlugin: BaseServicePlugin {
                 customColors = colors
                 log.log("ZoneVisualizationServicePlugin: Loaded \(colors.count) custom colors")
             }
-            if let duration = savedConfig["animationDuration"] as? Double {
+            if let duration = (savedConfig["animationDuration"] as? NSNumber)?.doubleValue {
                 animationDuration = duration
             }
-            if let delay = savedConfig["fadeOutDelay"] as? Double {
+            if let delay = (savedConfig["fadeOutDelay"] as? NSNumber)?.doubleValue {
                 fadeOutDelay = delay
             }
             applyConfiguration(savedConfig)
@@ -282,12 +282,18 @@ class ZoneVisualizationServicePlugin: BaseServicePlugin {
     override func applyConfiguration(_ config: [String: Any]) {
         guard let service = service else { return }
 
+        // Numeric config values arrive as Swift Double/Int (from the config UI)
+        // or round-trip through JSON (an integral Double is decoded back as
+        // Int). A direct `as? CGFloat` fails for a boxed Double, and `as? Double`
+        // fails for a boxed Int -- so both edge threshold and corner size were
+        // silently never applied. Coerce via NSNumber, which bridges Int, Double
+        // and CGFloat uniformly.
         if let showHighlights = config["showHighlights"] as? Bool { service.setShowZoneHighlights(showHighlights) }
         if let showLabels = config["showLabels"] as? Bool { service.setShowZoneLabels(showLabels) }
-        if let edgeThreshold = config["edgeThreshold"] as? CGFloat { service.setEdgeThreshold(edgeThreshold) }
-        if let cornerSize = config["cornerSize"] as? CGFloat { service.setCornerSize(cornerSize) }
-        if let duration = config["animationDuration"] as? Double { animationDuration = duration }
-        if let delay = config["fadeOutDelay"] as? Double { fadeOutDelay = delay }
+        if let edgeThreshold = (config["edgeThreshold"] as? NSNumber)?.doubleValue { service.setEdgeThreshold(CGFloat(edgeThreshold)) }
+        if let cornerSize = (config["cornerSize"] as? NSNumber)?.doubleValue { service.setCornerSize(CGFloat(cornerSize)) }
+        if let duration = (config["animationDuration"] as? NSNumber)?.doubleValue { animationDuration = duration }
+        if let delay = (config["fadeOutDelay"] as? NSNumber)?.doubleValue { fadeOutDelay = delay }
         if let colors = config["customColors"] as? [String: String] { customColors = colors }
 
         saveConfiguration(config)
