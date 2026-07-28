@@ -58,8 +58,19 @@ public struct GitHubRelease: Codable, Equatable {
 public enum UpdateLogic {
 
     /// Compares two dotted numeric version strings (e.g. "1.0.0" vs "1.1.0").
+    ///
+    /// Component-count tolerant: shorter version strings are zero-padded to
+    /// match the longer one before comparing, so "1.0" and "1.0.0" compare
+    /// as equal instead of "1.0" < "1.0.0" (which `.numeric` string
+    /// comparison would otherwise report, since it compares lexically once
+    /// the shared prefix is exhausted).
     public static func compareVersions(_ v1: String, _ v2: String) -> ComparisonResult {
-        return v1.compare(v2, options: .numeric)
+        let parts1 = v1.split(separator: ".", omittingEmptySubsequences: false)
+        let parts2 = v2.split(separator: ".", omittingEmptySubsequences: false)
+        let count = max(parts1.count, parts2.count)
+        let padded1 = (parts1 + Array(repeating: Substring("0"), count: count - parts1.count)).joined(separator: ".")
+        let padded2 = (parts2 + Array(repeating: Substring("0"), count: count - parts2.count)).joined(separator: ".")
+        return padded1.compare(padded2, options: .numeric)
     }
 
     /// True when `remote` is strictly newer than `current`.

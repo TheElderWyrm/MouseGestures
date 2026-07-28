@@ -24,6 +24,28 @@ final class UpdateLogicTests: XCTestCase {
         XCTAssertTrue(UpdateLogic.isUpdateAvailable(current: "1.9.0", remote: "1.10.0"))
     }
 
+    // MARK: - Component-count-tolerant comparison (shipped false-self-update regression)
+    //
+    // The v1.0.0 build shipped with CFBundleShortVersionString "1.0" (2
+    // components) while the GitHub release tag was "v1.0.0" -> "1.0.0" (3
+    // components). A naive numeric string compare treats "1.0" as older
+    // than "1.0.0" once it runs out of shared components, so the app
+    // falsely offered a self-update in an infinite loop. These pin the
+    // fix: mismatched component counts must still compare as equal when
+    // the numeric value is the same.
+
+    func testShortCurrentVersionMatchesLongerRemoteEquivalent() {
+        XCTAssertFalse(UpdateLogic.isUpdateAvailable(current: "1.0", remote: "1.0.0"))
+    }
+
+    func testLongCurrentVersionMatchesShorterRemoteEquivalent() {
+        XCTAssertFalse(UpdateLogic.isUpdateAvailable(current: "1.0.0", remote: "1.0"))
+    }
+
+    func testShortCurrentVersionDetectsRealUpgrade() {
+        XCTAssertTrue(UpdateLogic.isUpdateAvailable(current: "1.0", remote: "1.1"))
+    }
+
     func testParseGitHubReleaseDecodesValidResponse() throws {
         let json = """
             {

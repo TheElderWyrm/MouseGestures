@@ -1,3 +1,15 @@
+## 2026-07-27 (v1.0.1)
+
+### Fix: False Self-Update Loop
+**UpdateLogic.swift**
+- `compareVersions` treated the shipped bundle version "1.0" as older than the release tag "1.0.0" (a numeric string compare falls back to lexical once one side runs out of components), so the app permanently believed an update was available and, with auto-update on, re-downloaded and reinstalled the same DMG in a loop.
+- Fixed by zero-padding both version strings to equal component count before comparing, so "1.0" and "1.0.0" compare equal while real upgrades ("1.0" vs "1.1") still compare correctly.
+- Added regression tests pinning the exact shipped scenario (`UpdateLogicTests.swift`).
+
+**Info.plist / project.pbxproj**
+- `CFBundleShortVersionString` now reads `$(MARKETING_VERSION)` instead of a hardcoded literal, so the plist can no longer drift from the build setting.
+- Bumped `MARKETING_VERSION` to 1.0.1 (all configs) to ship the fix and let existing installs self-heal via the (now-correct) updater.
+
 ## 2026-04-19 (6)
 
 ### Free Mode & Trial Enforcement
