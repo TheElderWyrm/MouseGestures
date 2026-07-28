@@ -81,6 +81,30 @@ xcodebuild build \
   -destination 'platform=macOS'
 ```
 
+## Linting
+
+CI runs SwiftLint against `.swiftlint-baseline.json`, which grandfathers
+pre-existing violations so a run only fails on *new* ones introduced by a
+change:
+
+```sh
+swiftlint lint --strict --baseline .swiftlint-baseline.json
+```
+
+When legitimate code growth (new features, new tests) accumulates enough
+violations that the baseline no longer reflects reality, refresh it from a
+clean working tree:
+
+```sh
+swiftlint lint --write-baseline .swiftlint-baseline.json
+```
+
+Before committing the refreshed baseline, diff it against `git diff` and
+confirm every added entry traces back to a real prior commit (`git log
+--since=<baseline capture date> -- <file>`) rather than to an unrelated or
+unreviewed change — the baseline should absorb known debt, not mask a
+regression.
+
 ## Free vs. Pro
 
 MouseGestures is free to use with a single active profile. Pro removes that
