@@ -1,8 +1,11 @@
 # Deployment Runbook — MouseGestures
 
-This document explains how MouseGestures is built in CI and what is required to
-cut a real, distributable release. **The project is not yet shippable as-is** —
-see [Blockers](#blockers) below.
+This document explains how MouseGestures is built in CI and how a
+distributable release is cut. **The pipeline is proven end-to-end**: the
+`v1.0.0` tag ran through it and published a signed, notarized, stapled DMG.
+The historical blockers are all resolved — see [Blockers](#blockers) below
+for the record. The only gate on the next release (`v1.0.1`) is a human
+go/no-go on scope (see [Cutting a release](#cutting-a-release)).
 
 For local development build/run instructions, see [README.md](README.md).
 
@@ -25,8 +28,9 @@ stage. `verify` requires no secrets; only the tag-triggered `release` job does.
 
 ## Blockers
 
-The `release` job is wired up but **will fail today**. The remaining work is
-signing configuration + credentials.
+Historical record — every item below is now **✅ RESOLVED** and was proven
+by the successful `v1.0.0` tagged run (signed → notarized → stapled →
+published). Kept here for provenance.
 
 ### 1. Deploy-target fork — ✅ RESOLVED: (B) Direct DMG
 
@@ -169,17 +173,28 @@ That DMG passes `codesign --verify --deep --strict` but `spctl` still reports
 notarize + staple it, or let CI cut the canonical signed + notarized release on a
 tag (below).
 
-## Cutting a release (once unblocked)
+## Cutting a release
 
 ```bash
 # 1. Ensure ci.yml is green on the commit you want to ship.
-# 2. Tag and push:
+# 2. Push the commits, then tag and push the tag:
+git push origin main
 git tag v1.2.3
 git push origin v1.2.3
 ```
 
 The tag push triggers the `release` job: `verify` runs first, then sign →
 archive → export → DMG → notarize/staple → GitHub Release with the DMG attached.
+
+> **v1.0.1 scope gate (human go/no-go).** As of 2026-07-27 local `main` is 13
+> commits ahead of `origin/main`. Tagging HEAD ships *all* of them publicly —
+> not just the updater self-heal fix, but also the live Lemon Squeezy
+> paid-licensing/checkout and ~35 audit bug fixes. The 14 existing v1.0.0
+> installs will auto-update to whatever is published. Two clean paths:
+> **(A) full** — push all 13, tag `v1.0.1` (requires monetization go-live sign-off);
+> **(B) narrow self-heal** — cherry-pick the updater fix (`a60b2eb`, optionally
+> the baseline refresh `b09c97f`+`4c765b3`) onto `origin/main`, tag `v1.0.1`,
+> defer Lemon Squeezy. Build/tests/lint are green on both paths.
 
 ## Post-release
 
