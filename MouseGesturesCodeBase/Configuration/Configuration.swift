@@ -228,7 +228,7 @@ public class Configuration: Codable {
 
         guard FileManager.default.fileExists(atPath: url.path) else {
             log.log("No configuration file found. Creating and saving a default configuration.")
-            let defaultProfile = ConfigurationProfile(name: "Default", gestures: [], isDefault: true) // No default gestures initially
+            let defaultProfile = Configuration.defaultProfile
             self.profiles = [defaultProfile]
             self.activeProfileId = defaultProfile.id
             self.save()
@@ -275,8 +275,8 @@ public class Configuration: Codable {
             log.log("Successfully loaded configuration from disk.")
 
             if self.profiles.isEmpty {
-                log.log("No profiles found. Creating a default profile.")
-                let defaultProfile = ConfigurationProfile(name: "Default", isDefault: true)
+                log.log("No profiles found. Creating the default Window Management profile.")
+                let defaultProfile = Configuration.defaultProfile
                 self.profiles = [defaultProfile]
                 self.activeProfileId = defaultProfile.id
                 self.save()
@@ -298,7 +298,7 @@ public class Configuration: Codable {
 
         } catch {
             log.log("FATAL: Error loading configuration: \(error). Reverting to default settings.")
-            let defaultProfile = ConfigurationProfile(name: "Default", isDefault: true)
+            let defaultProfile = Configuration.defaultProfile
             self.profiles = [defaultProfile]
             self.activeProfileId = defaultProfile.id
         }
@@ -726,7 +726,7 @@ public class Configuration: Codable {
         // so the array/dictionary reassignments serialize with the save encoder
         // instead of racing it (a bare `self.profiles = ...` here concurrent
         // with `JSONEncoder().encode(self)` can tear the backing buffers).
-        let defaultProfile = ConfigurationProfile(name: "Default", gestures: Configuration.defaultGestures, isDefault: true)
+        let defaultProfile = Configuration.defaultProfile // matches ProfileTemplateService.resetToDefaults()
         configQueue.sync(flags: .barrier) {
             self.profiles = [defaultProfile]
             self.activeProfileId = defaultProfile.id
@@ -910,7 +910,7 @@ public class Configuration: Codable {
 
                     // Ensure we have at least one profile
                     if self.profiles.isEmpty {
-                        let defaultProfile = ConfigurationProfile(name: "Default", isDefault: true)
+                        let defaultProfile = Configuration.defaultProfile
                         self.profiles = [defaultProfile]
                         self.activeProfileId = defaultProfile.id
                     }

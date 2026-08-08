@@ -266,4 +266,15 @@ extension Configuration {
     static var defaultGestures: [Gesture] {
         return DefaultProfiles.createWindowManagementProfile().gestures
     }
+
+    /// The profile a fresh install (or a "reset to defaults") lands on: the
+    /// Window Management profile marked as the default. The app ships usable
+    /// out of the box — 16 working gestures across the Main (⌘⌃) and
+    /// Secondary (⌘⌥) layers — instead of an empty profile the user would
+    /// have to populate by hand. Matches `ProfileTemplateService.resetToDefaults()`.
+    static var defaultProfile: ConfigurationProfile {
+        var profile = DefaultProfiles.createWindowManagementProfile()
+        profile.isDefault = true
+        return profile
+    }
 }
