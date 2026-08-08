@@ -10,7 +10,18 @@ root — this file is the curated, user-facing subset of that log.
 
 ## [Unreleased]
 
-Nothing queued yet.
+### Added
+
+- **Report an Issue** — a built-in way to file a bug without a GitHub account,
+  from the menu bar (*Report an Issue...*) or Settings ▸ About ▸ Support & Help.
+  Describe the problem, review the *exact* text that will be sent, then open a
+  prefilled email to support@mousegestures.app, copy it, or save it to a file.
+  The attached diagnostics cover app version and build, macOS version, Mac model
+  and architecture, Accessibility permission, license state (Free/Trial/Pro —
+  never the key itself), the active profile, gesture and profile counts, enabled
+  plugins, and a bounded tail of the app's own log. Your home folder path, user
+  name, license keys, email addresses and anything key-shaped are stripped out
+  before you ever see the report.
 
 ## [1.0.0] — 2026-07-20
 

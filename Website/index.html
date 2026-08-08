@@ -549,7 +549,13 @@
     </div>
     <nav class="footer-links" aria-label="Footer">
       <a href="https://github.com/TheElderWyrm/MouseGestures" rel="noopener">GitHub</a>
-      <a href="https://github.com/TheElderWyrm/MouseGestures/issues" rel="noopener">Report an issue</a>
+      <!-- "Report an issue" is the email route, not the GitHub tracker: filing
+           there requires a GitHub account, which most Mac users don't have.
+           The tracker is still linked beside it for people who prefer it, and
+           the app has a "Report an Issue..." item in its menu bar that attaches
+           a redacted diagnostic report to the same address. -->
+      <a href="mailto:support@mousegestures.app?subject=MouseGestures%20issue%20report">Report an issue</a>
+      <a href="https://github.com/TheElderWyrm/MouseGestures/issues" rel="noopener">Issue tracker</a>
       <a href="https://github.com/TheElderWyrm/MouseGestures/blob/main/docs/CHANGELOG.md" rel="noopener">Changelog</a>
       <a href="mailto:support@mousegestures.app">Support</a>
       <a href="#trust">Privacy</a>

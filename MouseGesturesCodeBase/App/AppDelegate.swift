@@ -344,6 +344,10 @@ extension AppDelegate: MenuIconDelegate {
         accessibilityManager.handleCheckPermissionsAction()
     }
 
+    func menuIconDidSelectReportIssue() {
+        ReportIssueWindowController.shared.present()
+    }
+
     func menuIconRequestsAccessibilityStatus() -> Bool {
         return accessibilityManager.checkPermission(prompt: false)
     }

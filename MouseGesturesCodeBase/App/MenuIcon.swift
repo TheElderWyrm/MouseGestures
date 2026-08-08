@@ -112,6 +112,14 @@ class MenuIcon: NSObject {
         checkPermissionsItem.target = self
         menu.addItem(checkPermissionsItem)
 
+        // Report an Issue menu item. This is the only support route that
+        // doesn't require a GitHub account, so it lives in the menu bar rather
+        // than only in Settings -- it has to be reachable when the app is
+        // misbehaving badly enough that the user can't get to Preferences.
+        let reportIssueItem = NSMenuItem(title: "Report an Issue...", action: #selector(reportIssue), keyEquivalent: "")
+        reportIssueItem.target = self
+        menu.addItem(reportIssueItem)
+
         menu.addItem(NSMenuItem.separator())
 
         // Quit menu item
@@ -242,6 +250,10 @@ class MenuIcon: NSObject {
 
     @objc private func checkPermissions() {
         delegate?.menuIconDidSelectCheckPermissions()
+    }
+
+    @objc private func reportIssue() {
+        delegate?.menuIconDidSelectReportIssue()
     }
 
     private func updateLicenseMenu() {
@@ -405,6 +417,9 @@ protocol MenuIconDelegate: AnyObject {
 
     /// Called when the user selects "Check Accessibility Permissions"
     func menuIconDidSelectCheckPermissions()
+
+    /// Called when the user selects "Report an Issue..."
+    func menuIconDidSelectReportIssue()
 
     /// Requests the current accessibility permission status
     func menuIconRequestsAccessibilityStatus() -> Bool

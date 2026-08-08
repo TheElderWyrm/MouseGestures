@@ -77,7 +77,8 @@ struct BuiltInSettingsProvider: SettingsProvider {
                 order: 0,
                 searchableItems: [
                     SearchableSettingItem(title: "Version Information", description: "Current app version and build number", keywords: ["version", "build", "number", "about"]),
-                    SearchableSettingItem(title: "Check for Updates", description: "Check for the latest version of MouseGestures", keywords: ["update", "check", "latest", "new", "version"])
+                    SearchableSettingItem(title: "Check for Updates", description: "Check for the latest version of MouseGestures", keywords: ["update", "check", "latest", "new", "version"]),
+                    SearchableSettingItem(title: "Report an Issue", description: "Email a diagnostic report to support, no account needed", keywords: ["report", "issue", "bug", "problem", "support", "help", "email", "contact", "feedback", "crash", "diagnostic"])
                 ],
                 viewBuilder: { _ in AnyView(AboutSettingsView()) }
             )
@@ -572,6 +573,17 @@ struct AboutSettingsView: View {
                 }) {
                     Label("Restart Onboarding", systemImage: "book")
                 }
+
+                Button(action: {
+                    ReportIssueWindowController.shared.present()
+                }) {
+                    Label("Report an Issue...", systemImage: "exclamationmark.bubble")
+                }
+
+                Text("Emails a report to \(IssueReportLogic.supportEmail). You'll see exactly what it contains — and can copy or save it instead — before anything is sent. No GitHub account needed.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
     }
