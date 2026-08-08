@@ -10,13 +10,7 @@ root — this file is the curated, user-facing subset of that log.
 
 ## [Unreleased]
 
-### Changed
-
-- A **fresh install** now ships with the **Window Management** profile ready to
-  use — 16 working gestures across the Main (⌘⌃) and Secondary (⌘⌥) layers —
-  instead of a single empty profile. The built-in profile templates are still
-  available to add from the Profiles tab. "Reset to defaults" now converges on
-  this same profile from every entry point.
+_Nothing yet._
 
 ## [1.0.1] — 2026-08-08
 
@@ -46,6 +40,12 @@ correctly recognize that it's already on the latest version.
 
 ### Changed
 
+- A **fresh install** now ships with the **Window Management** profile ready to
+  use — 16 working gestures across the Main (⌘⌃) and Secondary (⌘⌥) layers —
+  instead of a single empty profile, so the app works the moment you install it.
+  The built-in profile templates are still available to add from the Profiles
+  tab, and "Reset to defaults" now converges on this same profile from every
+  entry point.
 - **New app icon**, built from the same swoosh-and-cursor mark the website uses,
   so the app, the site and the installer now share one identity.
 - The in-app **auto-update check** now polls GitHub's live release API directly
