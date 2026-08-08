@@ -23,6 +23,25 @@ root — this file is the curated, user-facing subset of that log.
   name, license keys, email addresses and anything key-shaped are stripped out
   before you ever see the report.
 
+### Changed
+
+- **New app icon**, built from the same swoosh-and-cursor mark the website uses,
+  so the app, the site and the installer now share one identity.
+
+### Fixed
+
+- MouseGestures no longer leaves empty placeholder windows in **Mission
+  Control**. The app parks one hidden window on each desktop Space so it can
+  switch to any Space instantly; those windows were being laid out as blank
+  tiles alongside your real ones. They are now hidden from Mission Control and
+  Exposé except for the moment a Space switch actually needs them.
+- Those hidden windows also accumulated over time — entering and leaving
+  full screen created a new Space each time, and the old ones were never
+  cleaned up. They are now cleared whenever a Space goes away. As a side
+  effect, "switch to Space N" could occasionally jump to the *wrong* Space
+  after a Space had been closed; it now falls back to the standard switch
+  instead.
+
 ## [1.0.0] — 2026-07-20
 
 Initial release. MouseGestures is a macOS menu-bar utility that maps mouse
