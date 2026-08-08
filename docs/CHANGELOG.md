@@ -10,8 +10,23 @@ root — this file is the curated, user-facing subset of that log.
 
 ## [Unreleased]
 
+_Nothing yet._
+
+## [1.0.1] — 2026-08-08
+
+The first update after launch. Existing v1.0.0 installs auto-update to this
+build (see *Auto-update* below); the headline fix also lets the updater
+correctly recognize that it's already on the latest version.
+
 ### Added
 
+- **Paid Pro licenses via Lemon Squeezy.** Pro can now be unlocked with a key
+  from a real purchase at
+  [mousegestures.app/purchase](https://mousegestures.app/purchase). A purchased
+  key verifies once online at activation, then MouseGestures works fully
+  offline — no account, no subscription, no ongoing dependency. The same key
+  works on every Mac you personally use, up to Lemon Squeezy's per-key
+  activation limit. Manually-issued support/comp keys keep working unchanged.
 - **Report an Issue** — a built-in way to file a bug without a GitHub account,
   from the menu bar (*Report an Issue...*) or Settings ▸ About ▸ Support & Help.
   Describe the problem, review the *exact* text that will be sent, then open a
@@ -27,9 +42,19 @@ root — this file is the curated, user-facing subset of that log.
 
 - **New app icon**, built from the same swoosh-and-cursor mark the website uses,
   so the app, the site and the installer now share one identity.
+- The in-app **auto-update check** now polls GitHub's live release API directly
+  (reading the DMG URL from the actual published release assets) instead of a
+  hand-maintained `version.json` feed.
 
 ### Fixed
 
+- **Auto-update no longer false-fires on the current version.** Version
+  comparison treated the shipped bundle version `1.0` as older than the release
+  tag `1.0.0`, so the app permanently believed an update was available and, with
+  auto-update on, re-downloaded and reinstalled the same DMG in a loop. Both
+  sides are now zero-padded to equal component count before comparing, so
+  `1.0` and `1.0.0` compare equal while real upgrades (`1.0` vs `1.1`) still
+  compare correctly.
 - MouseGestures no longer leaves empty placeholder windows in **Mission
   Control**. The app parks one hidden window on each desktop Space so it can
   switch to any Space instantly; those windows were being laid out as blank
@@ -41,6 +66,11 @@ root — this file is the curated, user-facing subset of that log.
   effect, "switch to Space N" could occasionally jump to the *wrong* Space
   after a Space had been closed; it now falls back to the standard switch
   instead.
+- Numerous reliability fixes from internal audits: data races on
+  configuration/profile state, leaked observers and timers, unsafe casts on
+  OS-provided values, modifier-key feedback loops that could re-fire an action,
+  and a configuration-save deadlock that could crash shortly after changing
+  settings. No user-visible behavior change beyond greater stability.
 
 ## [1.0.0] — 2026-07-20
 
@@ -73,15 +103,12 @@ and automation actions.
 - **Licensing** — a 30-day full-feature trial, then Free (single profile, core
   actions) or Pro (multi-profile, advanced actions), unlocked with an offline,
   HMAC-validated license key. No account, no StoreKit/App Store dependency.
-- **Auto-update check** — polls a public `version.json` for new releases.
+- **Auto-update check** — polls the latest GitHub release for new versions.
 
 ### Distribution notes
 
 - Built for **macOS 13.0+**, Apple silicon (arm64).
-- Signed with a **Developer ID Application** certificate (team `2RZ7SBH74J`)
-  and hardened-runtime enabled. **Notarization is pending** a credential — see
-  `README.md` → Deployment and `DEPLOYMENT.md` for current status and the
-  release runbook. Until a notarized build is posted, installers must
-  right-click → Open (or clear the quarantine attribute) on first launch.
+- Signed with a **Developer ID Application** certificate (team `2RZ7SBH74J`),
+  hardened-runtime enabled, and notarized + stapled via the release pipeline.
 - Requires the **Accessibility** and **Automation/Apple Events** permissions
   at first run for gesture detection and system actions to work.
