@@ -1,0 +1,64 @@
+name: Deploy Website
+
+# Publishes Website/ to Cloudflare Pages (project `mousegestures`, custom domain
+# mousegestures.app) on every push to main that actually touches the site.
+#
+# Why this file exists: the Pages project has NO Cloudflare Git integration
+# (verified via the API — `source` is null), so pushing to GitHub did not deploy
+# anything. Until now the live site only changed when someone ran
+# `wrangler pages deploy` by hand from a laptop, which is how the site once
+# drifted behind the repo.
+#
+# The app workflows are unaffected: ci.yml builds/tests the macOS app on every
+# push and release.yml cuts signed DMGs on v* tags. The paths filter below keeps
+# a Swift-only commit from redeploying the website and vice versa.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "Website/**"
+      - ".github/workflows/deploy-website.yml"
+  workflow_dispatch:        # manual re-deploy without an empty commit
+
+concurrency:
+  group: deploy-website
+  cancel-in-progress: false   # never kill a deploy mid-upload
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://mousegestures.app
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Cheap guard: _headers carries the CSP that the Lemon Squeezy checkout and
+      # the Google Ads tag both depend on. If it goes missing, the site still
+      # "works" but checkout and conversion tracking silently break, so fail loud
+      # here rather than discover it from an empty Ads dashboard weeks later.
+      - name: Sanity-check deployable files
+        run: |
+          set -euo pipefail
+          for f in Website/index.html Website/purchase.html Website/_headers; do
+            test -s "$f" || { echo "::error::missing or empty $f"; exit 1; }
+          done
+          grep -q "Content-Security-Policy" Website/_headers \
+            || { echo "::error::_headers lost its CSP"; exit 1; }
+          echo "ok: $(find Website -type f | wc -l) files to publish"
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: "4.123.0"   # pinned, like SWIFTLINT_VERSION in ci.yml
+          # `--branch=main` is REQUIRED. Without it wrangler publishes a PREVIEW
+          # deployment to a *.pages.dev branch subdomain and mousegestures.app is
+          # left untouched — a past manual deploy was lost exactly this way.
+          command: pages deploy Website --project-name=mousegestures --branch=main

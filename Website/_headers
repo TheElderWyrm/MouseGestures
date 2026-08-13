@@ -28,8 +28,24 @@
 # strict default CSP above untouched. Wildcarded to *.lemonsqueezy.com since
 # their own docs and the actual embed snippet disagree on the exact subdomain
 # (app.lemonsqueezy.com vs assets.lemonsqueezy.com).
+#
+# `! Content-Security-Policy` IS LOAD-BEARING — do not remove it.
+# Cloudflare Pages APPENDS a specific rule's headers to those from a broader
+# rule; it does not replace them. Without the unset, /purchase was served TWO
+# CSP headers (the /* one and this one), and browsers enforce the INTERSECTION
+# of every CSP header — so *.lemonsqueezy.com, absent from /*, stayed blocked
+# and lemon.js never executed (the checkout overlay silently degraded to a
+# plain redirect). Net rule: per-path blocks here can only ADD restrictions;
+# relaxing one path REQUIRES unsetting the inherited header first.
+# Verified on a real Pages preview deploy: with the unset, /purchase gets
+# exactly 1 CSP header and createLemonSqueezy is defined, while / still gets 1
+# and still excludes lemonsqueezy. A local static server does NOT reproduce
+# this (it sends only the most specific header) — test header changes on a
+# preview deployment, not localhost.
 /purchase
+  ! Content-Security-Policy
   Content-Security-Policy: default-src 'self'; script-src 'self' https://*.doubleclick.net https://www.googleadservices.com https://*.lemonsqueezy.com https://*.googletagmanager.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://www.googleadservices.com https://*.lemonsqueezy.com https://*.googletagmanager.com https://*.google-analytics.com https://*.doubleclick.net https://www.google.com; connect-src https://api.github.com https://www.googleadservices.com https://*.lemonsqueezy.com https://*.googletagmanager.com https://*.google-analytics.com https://*.analytics.google.com https://*.doubleclick.net https://www.google.com; frame-src https://*.lemonsqueezy.com https://*.doubleclick.net https://www.googletagmanager.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none';
 
 /purchase.html
+  ! Content-Security-Policy
   Content-Security-Policy: default-src 'self'; script-src 'self' https://*.doubleclick.net https://www.googleadservices.com https://*.lemonsqueezy.com https://*.googletagmanager.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://www.googleadservices.com https://*.lemonsqueezy.com https://*.googletagmanager.com https://*.google-analytics.com https://*.doubleclick.net https://www.google.com; connect-src https://api.github.com https://www.googleadservices.com https://*.lemonsqueezy.com https://*.googletagmanager.com https://*.google-analytics.com https://*.analytics.google.com https://*.doubleclick.net https://www.google.com; frame-src https://*.lemonsqueezy.com https://*.doubleclick.net https://www.googletagmanager.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none';
