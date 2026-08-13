@@ -1,9 +1,18 @@
+# The Google tag (gtag.js, Google Ads AW-18386624012) needs googletagmanager in
+# script-src plus doubleclick/google-analytics in img-src + connect-src for its
+# conversion beacons. It is deliberately NOT given 'unsafe-inline': Google's
+# copy-paste snippet puts config in an inline <script>, which we serve from
+# js/gtag-init.js instead so this policy stays strict for every other script.
+# *.doubleclick.net is wildcarded because the observed beacon (ad.doubleclick.net)
+# is only the first hop; later hops use googleads.g.doubleclick.net.
+# NOTE: remarketing audiences also beacon country domains (google.co.uk, .de …)
+# which CSP cannot wildcard in the TLD position — add them here if that's enabled.
 /*
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=(), interest-cohort=()
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src https://api.github.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://*.doubleclick.net https://www.googleadservices.com https://*.googletagmanager.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://www.googleadservices.com https://*.googletagmanager.com https://*.google-analytics.com https://*.doubleclick.net https://www.google.com; connect-src https://api.github.com https://www.googleadservices.com https://*.googletagmanager.com https://*.google-analytics.com https://*.analytics.google.com https://*.doubleclick.net https://www.google.com; frame-src 'self' https://*.doubleclick.net https://www.googletagmanager.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none';
 
 /css/*
   Cache-Control: public, max-age=86400
@@ -20,7 +29,7 @@
 # their own docs and the actual embed snippet disagree on the exact subdomain
 # (app.lemonsqueezy.com vs assets.lemonsqueezy.com).
 /purchase
-  Content-Security-Policy: default-src 'self'; script-src 'self' https://*.lemonsqueezy.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.lemonsqueezy.com; connect-src https://api.github.com https://*.lemonsqueezy.com; frame-src https://*.lemonsqueezy.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://*.doubleclick.net https://www.googleadservices.com https://*.lemonsqueezy.com https://*.googletagmanager.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://www.googleadservices.com https://*.lemonsqueezy.com https://*.googletagmanager.com https://*.google-analytics.com https://*.doubleclick.net https://www.google.com; connect-src https://api.github.com https://www.googleadservices.com https://*.lemonsqueezy.com https://*.googletagmanager.com https://*.google-analytics.com https://*.analytics.google.com https://*.doubleclick.net https://www.google.com; frame-src https://*.lemonsqueezy.com https://*.doubleclick.net https://www.googletagmanager.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none';
 
 /purchase.html
-  Content-Security-Policy: default-src 'self'; script-src 'self' https://*.lemonsqueezy.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.lemonsqueezy.com; connect-src https://api.github.com https://*.lemonsqueezy.com; frame-src https://*.lemonsqueezy.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://*.doubleclick.net https://www.googleadservices.com https://*.lemonsqueezy.com https://*.googletagmanager.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://www.googleadservices.com https://*.lemonsqueezy.com https://*.googletagmanager.com https://*.google-analytics.com https://*.doubleclick.net https://www.google.com; connect-src https://api.github.com https://www.googleadservices.com https://*.lemonsqueezy.com https://*.googletagmanager.com https://*.google-analytics.com https://*.analytics.google.com https://*.doubleclick.net https://www.google.com; frame-src https://*.lemonsqueezy.com https://*.doubleclick.net https://www.googletagmanager.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none';
