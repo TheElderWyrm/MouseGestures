@@ -1,0 +1,445 @@
+<!doctype html>
+<!--
+  MouseGestures promotional banners — source of truth for Branding/banners/*.png.
+  Render:  python3 ~/Archive/Claude/python-tools/html_to_png.py Branding/banners.html \
+             --out-dir Branding/banners --selector .banner
+  Each .banner's own width/height IS the output size; data-name is the filename.
+  Palette/type stack are copied from Website/css/style.css so these stay on-brand.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MouseGestures banners</title>
+<style>
+  /* ---- tokens lifted from Website/css/style.css ---- */
+  .dark  { --bg:#0a0e1a; --bg-2:#111a2e; --a:#4c8dff; --b:#9b6bff;
+           --text:#f3f7ff; --dim:rgba(219,230,255,.60); --line:rgba(255,255,255,.10);
+           --wall-1:#16203a; --wall-2:#0d1424; --win:rgba(255,255,255,.07);
+           --chip:rgba(255,255,255,.06); --glow:.30; }
+  /* light mode needs a MUCH stronger zone tint: on a pale wallpaper the same
+     26% wash that reads clearly on navy disappears entirely. */
+  .light { --bg:#f7f9fc; --bg-2:#ffffff; --a:#2f6fe4; --b:#7c4ddb;
+           --text:#0e1729; --dim:rgba(24,38,66,.62); --line:rgba(14,23,41,.12);
+           --wall-1:#ccd9f0; --wall-2:#e6edf9; --win:rgba(255,255,255,.55);
+           --chip:rgba(14,23,41,.04); --glow:.16;
+           --zone-tint:52%; --zone-edge:75%; }
+  .dark  { --zone-tint:26%; --zone-edge:45%; }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background:#3a3a46; padding:40px; display:flex; flex-direction:column; gap:40px;
+    font-family:-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+                Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .banner {
+    position:relative; overflow:hidden; flex:none;
+    background:var(--bg); color:var(--text);
+  }
+  /* corner glows — the site's own `.hero::before/::after` treatment */
+  .banner::before, .banner::after {
+    content:""; position:absolute; border-radius:50%; filter:blur(110px);
+    opacity:var(--glow); pointer-events:none;
+  }
+  .banner::before { width:52%; aspect-ratio:1; left:-14%; top:-30%; background:var(--a); }
+  .banner::after  { width:56%; aspect-ratio:1; right:-16%; bottom:-34%; background:var(--b); }
+
+  .grad {
+    background:linear-gradient(135deg,var(--a) 8%,var(--b) 92%);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+
+  /* ---- brand lockup ---- */
+  .brand { display:flex; align-items:center; gap:12px; position:relative; }
+  .brand svg { flex:none; }
+  .brand-name { font-weight:640; letter-spacing:-.4px; }
+
+  /* ---- meta pills ---- */
+  .pills { display:flex; gap:10px; flex-wrap:wrap; position:relative; }
+  .pill {
+    border:1px solid var(--line); background:var(--chip); border-radius:999px;
+    padding:8px 16px; font-size:16px; font-weight:520; color:var(--dim);
+    white-space:nowrap;
+  }
+  .pill b { color:var(--text); font-weight:620; }
+
+  .url { color:var(--dim); font-weight:560; letter-spacing:.2px; position:relative; }
+
+  /* ---- miniature macOS desktop ---- */
+  .mock {
+    position:relative; border-radius:18px; overflow:hidden;
+    border:1px solid var(--line);
+    background:linear-gradient(160deg,var(--wall-1),var(--wall-2));
+    box-shadow:0 30px 70px -20px rgba(0,0,0,.55);
+  }
+  .mbar {
+    position:absolute; inset:0 0 auto 0; height:7.5%;
+    display:flex; align-items:center; gap:2.2em; padding:0 3%;
+    background:rgba(255,255,255,.07); border-bottom:1px solid var(--line);
+    font-size:1.05em; color:var(--dim); backdrop-filter:blur(6px);
+  }
+  .light .mbar { background:rgba(255,255,255,.55); }
+  .mbar .logo { width:.9em; height:.9em; border-radius:50%; background:var(--dim); }
+  .mbar .app { color:var(--text); font-weight:620; }
+  .mbar .right { margin-left:auto; }
+
+  .win {
+    position:absolute; border-radius:10px; background:var(--win);
+    border:1px solid var(--line);
+  }
+
+  /* zone hotspots: the 8 edge/corner targets */
+  .zone {
+    position:absolute; border-radius:8px;
+    background:linear-gradient(135deg,
+      color-mix(in srgb,var(--a) var(--zone-tint),transparent),
+      color-mix(in srgb,var(--b) var(--zone-tint),transparent));
+    border:1px solid color-mix(in srgb,var(--a) var(--zone-edge),transparent);
+    display:flex; align-items:center; justify-content:center;
+    font-size:1.15em; font-weight:600; color:var(--text);
+    text-align:center; line-height:1.15; padding:2px 6px;
+  }
+  .zone.hot {
+    background:linear-gradient(135deg,var(--a),var(--b));
+    border-color:transparent;
+    box-shadow:0 0 0 6px color-mix(in srgb,var(--a) 22%,transparent),
+               0 12px 30px -6px color-mix(in srgb,var(--b) 70%,transparent);
+  }
+
+  /* the HUD the app flashes when an action fires */
+  .hud {
+    position:absolute; display:flex; align-items:center; gap:.7em;
+    padding:.55em 1.1em; border-radius:999px;
+    background:rgba(8,12,22,.82); border:1px solid rgba(255,255,255,.14);
+    color:#fff; font-size:1.15em; font-weight:600; white-space:nowrap;
+    backdrop-filter:blur(8px); box-shadow:0 14px 34px -8px rgba(0,0,0,.7);
+  }
+  .hud kbd {
+    font:inherit; font-size:.92em; padding:.1em .45em; border-radius:6px;
+    background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.16);
+  }
+  .trail { position:absolute; inset:0; width:100%; height:100%; }
+</style>
+</head>
+<body>
+
+<!-- ============================================================ 1
+     LANDSCAPE 1200x628 (dark) — the OG/Twitter card + general use
+     ============================================================ -->
+<div class="banner dark" data-name="mg-landscape-1200x628-dark"
+     style="width:1200px;height:628px;display:grid;
+            grid-template-columns:1.02fr .98fr;gap:44px;
+            align-items:center;padding:56px 60px;">
+  <div style="display:flex;flex-direction:column;gap:22px;">
+    <div class="brand" style="font-size:27px;">
+      <svg width="48" height="36" viewBox="6 12 54 40">
+        <defs><linearGradient id="g1" x1="0" y1="1" x2="1" y2="0">
+          <stop offset="0" stop-color="#4c8dff"/><stop offset="1" stop-color="#9b6bff"/></linearGradient></defs>
+        <path d="M10 48 Q20 14 28 32 T46 26" fill="none" stroke="url(#g1)"
+              stroke-width="5" stroke-linecap="round"/>
+        <path d="M44 16 L58 23 L49 26.5 L52.5 36 L47.5 37.5 L44 28 L37 32 Z" fill="#f3f7ff"/>
+      </svg>
+      <span class="brand-name">MouseGestures</span>
+    </div>
+
+    <h1 style="font-size:53px;line-height:1.05;font-weight:700;letter-spacing:-1.7px;position:relative;">
+      Every corner of your screen is a <span class="grad">shortcut.</span>
+    </h1>
+
+    <p style="font-size:19.5px;line-height:1.5;color:var(--dim);max-width:31ch;position:relative;">
+      Flick to an edge or corner to snap windows, control media, or run
+      scripts. Your hand never leaves the mouse.
+    </p>
+
+    <div class="pills" style="margin-top:2px;">
+      <span class="pill"><b>54</b> built-in actions</span>
+      <span class="pill">macOS 13+</span>
+      <span class="pill">No account</span>
+    </div>
+    <div class="url" style="font-size:17.5px;margin-top:4px;">mousegestures.app</div>
+  </div>
+
+  <!-- desktop, 16:10, mid-gesture into the top-right corner -->
+  <div class="mock" style="aspect-ratio:16/10;font-size:11px;">
+    <div class="mbar"><span class="logo"></span><span class="app">Finder</span>
+      <span>File</span><span>Edit</span><span class="right">9:41</span></div>
+    <div class="win" style="left:9%;top:26%;width:40%;height:46%;"></div>
+    <div class="win" style="left:31%;top:40%;width:42%;height:47%;"></div>
+
+    <!-- 8 zones, dim; top-right is firing -->
+    <div class="zone" style="left:3.2%;top:12%;width:12%;height:15%;"></div>
+    <div class="zone" style="left:44%;top:12%;width:12%;height:8%;"></div>
+    <div class="zone hot" style="right:3.2%;top:12%;width:12%;height:15%;"></div>
+    <div class="zone" style="left:3.2%;top:44%;width:6%;height:16%;"></div>
+    <div class="zone" style="right:3.2%;top:44%;width:6%;height:16%;"></div>
+    <div class="zone" style="left:3.2%;bottom:5%;width:12%;height:15%;"></div>
+    <div class="zone" style="left:44%;bottom:5%;width:12%;height:8%;"></div>
+    <div class="zone" style="right:3.2%;bottom:5%;width:12%;height:15%;"></div>
+
+    <svg class="trail" viewBox="0 0 160 100" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="t1" x1="0" y1="1" x2="1" y2="0">
+          <stop offset="0" stop-color="#4c8dff" stop-opacity="0"/>
+          <stop offset=".45" stop-color="#4c8dff" stop-opacity=".85"/>
+          <stop offset="1" stop-color="#9b6bff"/></linearGradient>
+      </defs>
+      <path d="M56 78 C86 74 108 56 132 26" fill="none" stroke="url(#t1)"
+            stroke-width="2.6" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+    </svg>
+    <svg style="position:absolute;right:8.5%;top:14.5%;width:5.5%;" viewBox="0 0 24 24">
+      <path d="M5 2l14 12.5-6.8.6 3.9 6.9-2.7 1.4-3.8-7L5 21z"
+            fill="#fff" stroke="#1e293b" stroke-width="1.1"/>
+    </svg>
+    <div class="hud" style="right:6%;top:32%;">
+      <kbd>⌃⌥</kbd> Mission Control
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ 2
+     SQUARE 1200x1200 (dark) — all eight zones, self-explaining
+     ============================================================ -->
+<div class="banner dark" data-name="mg-square-1200x1200-zones-dark"
+     style="width:1200px;height:1200px;display:flex;flex-direction:column;
+            align-items:center;padding:64px 64px 58px;">
+  <div class="brand" style="font-size:31px;">
+    <svg width="54" height="40" viewBox="6 12 54 40">
+      <defs><linearGradient id="g2" x1="0" y1="1" x2="1" y2="0">
+        <stop offset="0" stop-color="#4c8dff"/><stop offset="1" stop-color="#9b6bff"/></linearGradient></defs>
+      <path d="M10 48 Q20 14 28 32 T46 26" fill="none" stroke="url(#g2)"
+            stroke-width="5" stroke-linecap="round"/>
+      <path d="M44 16 L58 23 L49 26.5 L52.5 36 L47.5 37.5 L44 28 L37 32 Z" fill="#f3f7ff"/>
+    </svg>
+    <span class="brand-name">MouseGestures</span>
+  </div>
+
+  <h1 style="font-size:64px;line-height:1.04;font-weight:700;letter-spacing:-2.2px;
+             text-align:center;margin-top:38px;position:relative;">
+    Every corner of your screen<br>is a <span class="grad">shortcut.</span>
+  </h1>
+  <p style="font-size:23px;line-height:1.45;color:var(--dim);text-align:center;
+            max-width:34ch;margin-top:20px;position:relative;">
+    Eight edges and corners, layered with modifiers and mouse buttons.
+  </p>
+
+  <!-- every zone labelled with a real built-in action -->
+  <div class="mock" style="width:100%;aspect-ratio:16/10;margin-top:40px;font-size:13px;">
+    <div class="mbar"><span class="logo"></span><span class="app">Finder</span>
+      <span>File</span><span>Edit</span><span>View</span><span class="right">9:41</span></div>
+    <div class="win" style="left:22%;top:30%;width:34%;height:40%;"></div>
+    <div class="win" style="left:41%;top:42%;width:36%;height:40%;"></div>
+
+    <div class="zone" style="left:2.6%;top:11%;width:16%;height:15%;">Mission<br>Control</div>
+    <div class="zone" style="left:40%;top:11%;width:20%;height:9.5%;">Snap Full</div>
+    <div class="zone hot" style="right:2.6%;top:11%;width:16%;height:15%;">App<br>Exposé</div>
+    <div class="zone" style="left:2.6%;top:42%;width:11%;height:16%;">Snap<br>Left</div>
+    <div class="zone" style="right:2.6%;top:42%;width:11%;height:16%;">Snap<br>Right</div>
+    <div class="zone" style="left:2.6%;bottom:4.5%;width:16%;height:15%;">Dark<br>Mode</div>
+    <div class="zone" style="left:40%;bottom:4.5%;width:20%;height:9.5%;">Play / Pause</div>
+    <div class="zone" style="right:2.6%;bottom:4.5%;width:16%;height:15%;">Lock<br>Screen</div>
+
+    <svg class="trail" viewBox="0 0 160 100" preserveAspectRatio="none">
+      <defs><linearGradient id="t2" x1="0" y1="1" x2="1" y2="0">
+        <stop offset="0" stop-color="#4c8dff" stop-opacity="0"/>
+        <stop offset=".45" stop-color="#4c8dff" stop-opacity=".85"/>
+        <stop offset="1" stop-color="#9b6bff"/></linearGradient></defs>
+      <path d="M64 74 C94 70 112 52 130 26" fill="none" stroke="url(#t2)"
+            stroke-width="3" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+    </svg>
+    <svg style="position:absolute;left:80.3%;top:25.3%;width:5.2%;" viewBox="0 0 24 24">
+      <path d="M5 2l14 12.5-6.8.6 3.9 6.9-2.7 1.4-3.8-7L5 21z"
+            fill="#fff" stroke="#1e293b" stroke-width="1.1"/>
+    </svg>
+  </div>
+
+  <div class="pills" style="margin-top:auto;padding-top:34px;align-items:center;">
+    <span class="pill"><b>54</b> built-in actions</span>
+    <span class="pill">30-day trial</span>
+    <span class="pill">mousegestures.app</span>
+  </div>
+</div>
+
+<!-- ============================================================ 3
+     SQUARE 1200x1200 (dark) — mark-forward, for avatars / tiles
+     ============================================================ -->
+<div class="banner dark" data-name="mg-square-1200x1200-mark-dark"
+     style="width:1200px;height:1200px;display:flex;flex-direction:column;
+            align-items:center;justify-content:center;gap:0;padding:80px;">
+  <svg width="640" height="474" viewBox="6 12 54 40"
+       style="position:relative;filter:drop-shadow(0 24px 60px rgba(76,141,255,.40));">
+    <defs><linearGradient id="g3" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#4c8dff"/><stop offset="1" stop-color="#9b6bff"/></linearGradient></defs>
+    <path d="M10 48 Q20 14 28 32 T46 26" fill="none" stroke="url(#g3)"
+          stroke-width="5" stroke-linecap="round"/>
+    <path d="M44 16 L58 23 L49 26.5 L52.5 36 L47.5 37.5 L44 28 L37 32 Z" fill="#f3f7ff"/>
+  </svg>
+  <div style="font-size:80px;font-weight:660;letter-spacing:-2.6px;position:relative;
+              margin-top:54px;">MouseGestures</div>
+  <p style="font-size:30px;line-height:1.4;color:var(--dim);text-align:center;
+            margin-top:26px;position:relative;">
+    Every corner of your screen is a shortcut.
+  </p>
+  <div class="pills" style="margin-top:44px;">
+    <span class="pill" style="font-size:19px;padding:10px 20px;">macOS 13+</span>
+    <span class="pill" style="font-size:19px;padding:10px 20px;"><b>54</b> actions</span>
+    <span class="pill" style="font-size:19px;padding:10px 20px;">No account</span>
+  </div>
+</div>
+
+<!-- ============================================================ 4
+     LANDSCAPE 1200x628 (light) — same layout, light palette
+     ============================================================ -->
+<div class="banner light" data-name="mg-landscape-1200x628-light"
+     style="width:1200px;height:628px;display:grid;
+            grid-template-columns:1.02fr .98fr;gap:44px;
+            align-items:center;padding:56px 60px;">
+  <div style="display:flex;flex-direction:column;gap:22px;">
+    <div class="brand" style="font-size:27px;">
+      <svg width="48" height="36" viewBox="6 12 54 40">
+        <defs><linearGradient id="g4" x1="0" y1="1" x2="1" y2="0">
+          <stop offset="0" stop-color="#2f6fe4"/><stop offset="1" stop-color="#7c4ddb"/></linearGradient></defs>
+        <path d="M10 48 Q20 14 28 32 T46 26" fill="none" stroke="url(#g4)"
+              stroke-width="5" stroke-linecap="round"/>
+        <path d="M44 16 L58 23 L49 26.5 L52.5 36 L47.5 37.5 L44 28 L37 32 Z" fill="#0e1729"/>
+      </svg>
+      <span class="brand-name">MouseGestures</span>
+    </div>
+
+    <h1 style="font-size:53px;line-height:1.05;font-weight:700;letter-spacing:-1.7px;position:relative;">
+      Every corner of your screen is a <span class="grad">shortcut.</span>
+    </h1>
+
+    <p style="font-size:19.5px;line-height:1.5;color:var(--dim);max-width:31ch;position:relative;">
+      Flick to an edge or corner to snap windows, control media, or run
+      scripts. Your hand never leaves the mouse.
+    </p>
+
+    <div class="pills" style="margin-top:2px;">
+      <span class="pill"><b>54</b> built-in actions</span>
+      <span class="pill">macOS 13+</span>
+      <span class="pill">No account</span>
+    </div>
+    <div class="url" style="font-size:17.5px;margin-top:4px;">mousegestures.app</div>
+  </div>
+
+  <div class="mock" style="aspect-ratio:16/10;font-size:11px;
+                           box-shadow:0 30px 60px -24px rgba(14,23,41,.35);">
+    <div class="mbar"><span class="logo"></span><span class="app">Finder</span>
+      <span>File</span><span>Edit</span><span class="right">9:41</span></div>
+    <div class="win" style="left:9%;top:26%;width:40%;height:46%;"></div>
+    <div class="win" style="left:31%;top:40%;width:42%;height:47%;"></div>
+
+    <div class="zone" style="left:3.2%;top:12%;width:12%;height:15%;"></div>
+    <div class="zone" style="left:44%;top:12%;width:12%;height:8%;"></div>
+    <div class="zone hot" style="right:3.2%;top:12%;width:12%;height:15%;"></div>
+    <div class="zone" style="left:3.2%;top:44%;width:6%;height:16%;"></div>
+    <div class="zone" style="right:3.2%;top:44%;width:6%;height:16%;"></div>
+    <div class="zone" style="left:3.2%;bottom:5%;width:12%;height:15%;"></div>
+    <div class="zone" style="left:44%;bottom:5%;width:12%;height:8%;"></div>
+    <div class="zone" style="right:3.2%;bottom:5%;width:12%;height:15%;"></div>
+
+    <svg class="trail" viewBox="0 0 160 100" preserveAspectRatio="none">
+      <defs><linearGradient id="t4" x1="0" y1="1" x2="1" y2="0">
+        <stop offset="0" stop-color="#2f6fe4" stop-opacity="0"/>
+        <stop offset=".45" stop-color="#2f6fe4" stop-opacity=".85"/>
+        <stop offset="1" stop-color="#7c4ddb"/></linearGradient></defs>
+      <path d="M56 78 C86 74 108 56 132 26" fill="none" stroke="url(#t4)"
+            stroke-width="2.6" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+    </svg>
+    <svg style="position:absolute;right:8.5%;top:14.5%;width:5.5%;" viewBox="0 0 24 24">
+      <path d="M5 2l14 12.5-6.8.6 3.9 6.9-2.7 1.4-3.8-7L5 21z"
+            fill="#fff" stroke="#1e293b" stroke-width="1.1"/>
+    </svg>
+    <div class="hud" style="right:6%;top:32%;">
+      <kbd>⌃⌥</kbd> Mission Control
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ 5
+     SQUARE 1200x1200 (dark) — typographic, gesture-as-punctuation
+     ============================================================ -->
+<div class="banner dark" data-name="mg-square-1200x1200-flick-dark"
+     style="width:1200px;height:1200px;display:flex;flex-direction:column;
+            justify-content:center;padding:96px 90px;">
+  <div class="brand" style="font-size:28px;">
+    <svg width="50" height="37" viewBox="6 12 54 40">
+      <defs><linearGradient id="g5" x1="0" y1="1" x2="1" y2="0">
+        <stop offset="0" stop-color="#4c8dff"/><stop offset="1" stop-color="#9b6bff"/></linearGradient></defs>
+      <path d="M10 48 Q20 14 28 32 T46 26" fill="none" stroke="url(#g5)"
+            stroke-width="5" stroke-linecap="round"/>
+      <path d="M44 16 L58 23 L49 26.5 L52.5 36 L47.5 37.5 L44 28 L37 32 Z" fill="#f3f7ff"/>
+    </svg>
+    <span class="brand-name">MouseGestures</span>
+  </div>
+
+  <div style="font-size:158px;line-height:.98;font-weight:700;letter-spacing:-7px;
+              margin-top:64px;position:relative;">
+    Flick.<br><span class="grad">Done.</span>
+  </div>
+
+  <!-- the site's own finale swoosh, full width -->
+  <svg viewBox="0 0 640 120" style="width:100%;margin-top:44px;position:relative;">
+    <defs><linearGradient id="g5b" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#4c8dff"/><stop offset="1" stop-color="#9b6bff"/></linearGradient></defs>
+    <path d="M20 95 Q140 20 260 70 T500 45" fill="none" stroke="url(#g5b)"
+          stroke-width="6" stroke-linecap="round"/>
+    <path d="M492 24 L560 44 L516 56 L530 96 L508 102 L494 62 L462 80 Z" fill="#f3f7ff"/>
+  </svg>
+
+  <p style="font-size:31px;line-height:1.42;color:var(--dim);margin-top:44px;
+            max-width:26ch;position:relative;">
+    Screen-edge gestures for macOS. <span style="color:var(--text);font-weight:600;">54
+    actions</span>, zero keyboard.
+  </p>
+  <div class="url" style="font-size:24px;margin-top:58px;">mousegestures.app</div>
+</div>
+
+<!-- ============================================================ 6
+     WIDE 1500x500 (dark) — social header / cover
+     ============================================================ -->
+<div class="banner dark" data-name="mg-wide-1500x500-dark"
+     style="width:1500px;height:500px;display:flex;align-items:center;
+            justify-content:center;gap:60px;padding:0 80px;">
+  <svg width="204" height="151" viewBox="6 12 54 40" style="flex:none;position:relative;
+       filter:drop-shadow(0 14px 34px rgba(76,141,255,.38));">
+    <defs><linearGradient id="g6" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#4c8dff"/><stop offset="1" stop-color="#9b6bff"/></linearGradient></defs>
+    <path d="M10 48 Q20 14 28 32 T46 26" fill="none" stroke="url(#g6)"
+          stroke-width="5" stroke-linecap="round"/>
+    <path d="M44 16 L58 23 L49 26.5 L52.5 36 L47.5 37.5 L44 28 L37 32 Z" fill="#f3f7ff"/>
+  </svg>
+  <div style="display:flex;flex-direction:column;gap:16px;">
+    <div style="font-size:62px;font-weight:670;letter-spacing:-2.2px;position:relative;">
+      MouseGestures
+    </div>
+    <div style="font-size:33px;line-height:1.32;font-weight:500;letter-spacing:-.6px;position:relative;">
+      Every corner of your screen is a <span class="grad">shortcut.</span>
+    </div>
+    <div class="pills" style="margin-top:8px;">
+      <span class="pill" style="font-size:18px;"><b>54</b> built-in actions</span>
+      <span class="pill" style="font-size:18px;">macOS 13+</span>
+      <span class="pill" style="font-size:18px;">30-day trial, no account</span>
+      <span class="pill" style="font-size:18px;">mousegestures.app</span>
+    </div>
+  </div>
+</div>
+
+<script>
+  /* The site's og:image / twitter:image wants the canonical 1200x630. That's the
+     landscape design at a 2px-taller box, so clone it instead of maintaining a
+     second copy of the same 60 lines of markup.
+     SVG gradient ids must be re-scoped: duplicate ids in one document make the
+     clone's url(#g1) resolve against the ORIGINAL node. */
+  const src = document.querySelector('[data-name="mg-landscape-1200x628-dark"]');
+  const og = src.cloneNode(true);
+  og.dataset.name = "og";
+  og.style.height = "630px";
+  og.innerHTML = og.innerHTML
+    .replaceAll('"g1"', '"og1"').replaceAll("#g1)", "#og1)")
+    .replaceAll('"t1"', '"ogt1"').replaceAll("#t1)", "#ogt1)");
+  document.body.appendChild(og);
+</script>
+</body>
+</html>
