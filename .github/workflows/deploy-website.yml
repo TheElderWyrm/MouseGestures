@@ -52,13 +52,22 @@ jobs:
             || { echo "::error::_headers lost its CSP"; exit 1; }
           echo "ok: $(find Website -type f | wc -l) files to publish"
 
+      # Deliberately NOT cloudflare/wrangler-action: given wranglerVersion it ran
+      # `npx wrangler@<ver>` without --yes, which fails non-interactively
+      # ("npx canceled due to missing packages and no YES option"), and it then
+      # silently fell back to an UNPINNED `npx wrangler` while still reporting
+      # success. Invoking wrangler directly makes the pin real and is the exact
+      # command verified by hand against a preview deployment.
+      #
+      # `--branch=main` is REQUIRED. Without it wrangler publishes a PREVIEW
+      # deployment to a *.pages.dev branch subdomain and mousegestures.app is
+      # left untouched — a past manual deploy was lost exactly this way.
       - name: Deploy to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          wranglerVersion: "4.123.0"   # pinned, like SWIFTLINT_VERSION in ci.yml
-          # `--branch=main` is REQUIRED. Without it wrangler publishes a PREVIEW
-          # deployment to a *.pages.dev branch subdomain and mousegestures.app is
-          # left untouched — a past manual deploy was lost exactly this way.
-          command: pages deploy Website --project-name=mousegestures --branch=main
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4.123.0 --version
+          npx --yes wrangler@4.123.0 pages deploy Website \
+            --project-name=mousegestures --branch=main

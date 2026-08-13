@@ -20,8 +20,11 @@
 /js/*
   Cache-Control: public, max-age=86400
 
+# 1 day, not 7: a Pages deploy does NOT purge the edge cache, so a long TTL
+# means a replaced card keeps being served. Bump the ?v= in the og:image
+# meta tags for an immediate swap.
 /og.png
-  Cache-Control: public, max-age=604800
+  Cache-Control: public, max-age=86400
 
 # Lemon Squeezy's checkout overlay (lemon.js) needs its own script/frame/connect
 # allowances — scoped to just this page so the rest of the site keeps the
