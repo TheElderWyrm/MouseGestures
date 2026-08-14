@@ -219,3 +219,28 @@ jobs:
           files: ${{ runner.temp }}/MouseGestures.dmg
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── Nudge the Homebrew tap to bump its cask now. ─────────────────────────
+      # TheElderWyrm/homebrew-tap re-checks this repo's latest release hourly on
+      # its own schedule, so this step is a latency optimisation, not the
+      # mechanism — everything still works with no token set. GITHUB_TOKEN is
+      # scoped to THIS repo and cannot dispatch to another one, hence a separate
+      # PAT (fine-grained, repo homebrew-tap, Contents: read/write) as
+      # TAP_DISPATCH_TOKEN. Never fails the job: the release is already
+      # published by this point, so a failure here must not read as a bad
+      # release.
+      - name: Notify Homebrew tap
+        env:
+          TAP_TOKEN: ${{ secrets.TAP_DISPATCH_TOKEN }}
+        run: |
+          if [ -z "${TAP_TOKEN:-}" ]; then
+            echo "::notice::TAP_DISPATCH_TOKEN not set — the tap's hourly schedule will pick this release up within the hour."
+            exit 0
+          fi
+          curl -fsS -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $TAP_TOKEN" \
+            https://api.github.com/repos/TheElderWyrm/homebrew-tap/dispatches \
+            -d '{"event_type":"new-release"}' \
+            && echo "::notice::Homebrew tap notified." \
+            || echo "::warning::Could not notify the Homebrew tap; its hourly schedule will still bump the cask."

@@ -61,10 +61,29 @@ automatically while the gesture is held.
 
 - macOS 13.0 or later, Apple silicon.
 
-## Installing / building
+## Installing
 
-A signed release isn't published yet — for now, build MouseGestures from
-source in Xcode:
+With [Homebrew](https://brew.sh):
+
+```sh
+brew install --cask theelderwyrm/tap/mousegestures
+```
+
+The cask lives in [TheElderWyrm/homebrew-tap][tap] and tracks each GitHub
+release automatically, so `brew upgrade --cask --greedy mousegestures` always
+pulls the current build. (The `--greedy` is because the cask declares
+`auto_updates true` — MouseGestures also updates itself from **Settings ▸
+Updates**, and Homebrew steps aside for apps that do.) If you already have
+MouseGestures in `/Applications` from a manual download, add `--adopt` so
+Homebrew takes over that copy rather than refusing to overwrite it.
+
+Or download `MouseGestures.dmg` straight from the [latest release][latest] —
+the same signed, notarized, stapled build the cask installs.
+
+[tap]: https://github.com/TheElderWyrm/homebrew-tap
+[latest]: https://github.com/TheElderWyrm/MouseGestures/releases/latest
+
+## Building from source
 
 1. Open `MouseGestures.xcodeproj` in Xcode 16+.
 2. Select the **MouseGestures** scheme and a **My Mac** destination.
