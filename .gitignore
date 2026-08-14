@@ -18,3 +18,8 @@ portable_swiftlint.zip
 
 # Cloudflare Wrangler (local cache/state from Website deploys)
 .wrangler/
+
+# Homebrew tap — its own repo (TheElderWyrm/homebrew-tap) nested here for
+# convenience. Homebrew requires the `homebrew-*` repo name, so it can't fold
+# into this repo; ignored so the two git histories stay separate.
+homebrew-tap/
