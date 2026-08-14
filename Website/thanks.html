@@ -30,6 +30,25 @@
 
 <script src="js/theme-init.js?v=3"></script>
 <link rel="stylesheet" href="css/style.css?v=3">
+<style>
+  /* This is a confirmation page: everything reads centred.
+     Two shared rules fight that and are corrected here, page-scoped:
+     - .fineprint has max-width:40em but no auto margin, so the BOX hugs the
+       left and its centred text still lands off-centre.
+     - .trustgrid is hardcoded repeat(4,1fr) for the homepage's four cards;
+       with three it leaves an empty fourth column and shifts the row left. */
+  .thanks .fineprint { margin-inline: auto; }
+  .thanks .trustgrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    max-width: 920px;
+    margin-inline: auto;
+  }
+  .thanks .trust { text-align: center; }
+  .thanks .trust h3::before { margin-inline: auto; }  /* the gradient rule above each heading */
+  @media (max-width: 760px) {
+    .thanks .trustgrid { grid-template-columns: 1fr; max-width: 30em; }
+  }
+</style>
 </head>
 <body>
 
@@ -73,7 +92,7 @@
 </header>
 
 <main id="top">
-  <section class="section shell" style="text-align:center;">
+  <section class="section shell thanks" style="text-align:center;">
     <div class="section-head">
       <h2>Thank you — you're <span class="grad">Pro.</span></h2>
       <p>Your license key is on its way by email. It usually lands within a minute.</p>
@@ -81,7 +100,7 @@
 
     <p class="fineprint" id="orderRef" hidden></p>
 
-    <div class="trustgrid" style="margin-top:34px;text-align:left;">
+    <div class="trustgrid" style="margin-top:34px;">
       <div class="trust">
         <h3>1. Check your email</h3>
         <p>Lemon Squeezy sends the receipt and your license key. If it hasn't
