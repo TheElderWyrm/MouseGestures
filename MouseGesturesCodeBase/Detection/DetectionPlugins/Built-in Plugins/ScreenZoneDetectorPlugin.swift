@@ -174,7 +174,15 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         let zone: ScreenZone
     }
     private var zoneBoundsCache: [ZoneBounds] = []
-    private var lastScreenFrame: CGRect = .zero
+    // One entry per connected screen (NSScreen.screens, in its stable order) —
+    // NOT just NSScreen.main. AppKit's "main screen" is whichever screen holds
+    // the currently key/focused window, not the screen the mouse is over, so
+    // caching only its frame made every edge/corner zone live-and-die with
+    // window focus: on a 2-monitor setup, a Screen Edge gesture would only
+    // fire on whichever display last had a focused app, silently going dead
+    // on every OTHER display (reported as "the same gesture works on one
+    // monitor but not the other").
+    private var lastScreenFrames: [CGRect] = []
 
     // Repeat timer for gestures
     private var repeatTimer: Timer?
@@ -285,14 +293,14 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         zoneBoundsCache.removeAll()
         // Reset the screen-frame watermark alongside clearing the cache.
         // rebuildZoneBoundsCache() and detectZoneFromCache() both short-circuit
-        // when `screen.frame == lastScreenFrame`, so leaving the old frame here
-        // means that after a stop()/start() cycle with an UNCHANGED display
-        // (e.g. the menu-bar "Enable Gestures" toggle off→on — see
-        // AppDelegate.menuIconDidToggleGestures), the emptied cache would never
-        // be rebuilt and zone detection would silently stay dead until a screen
-        // change or a zone-size setting edit. Zeroing it forces the next
-        // detectZoneFromCache() to rebuild.
-        lastScreenFrame = .zero
+        // when the current screens' frames == lastScreenFrames, so leaving the
+        // old frames here means that after a stop()/start() cycle with an
+        // UNCHANGED display arrangement (e.g. the menu-bar "Enable Gestures"
+        // toggle off→on — see AppDelegate.menuIconDidToggleGestures), the
+        // emptied cache would never be rebuilt and zone detection would
+        // silently stay dead until a screen change or a zone-size setting
+        // edit. Clearing it forces the next detectZoneFromCache() to rebuild.
+        lastScreenFrames = []
         super.stop()
     }
 
@@ -695,7 +703,7 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     // MARK: - Zone Detection
 
     private func detectZoneFromCache(point: CGPoint) -> ScreenZone? {
-        if let screen = NSScreen.main, screen.frame != lastScreenFrame {
+        if NSScreen.screens.map({ $0.frame }) != lastScreenFrames {
             rebuildZoneBoundsCache()
         }
         for zb in zoneBoundsCache {
@@ -710,18 +718,25 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     }
 
     private func rebuildZoneBoundsCache() {
-        guard let screen = NSScreen.main else { return }
-        let sf = screen.frame
-        if sf == lastScreenFrame && !zoneBoundsCache.isEmpty { return }
+        let screens = NSScreen.screens
+        let frames = screens.map { $0.frame }
+        if frames == lastScreenFrames && !zoneBoundsCache.isEmpty { return }
 
-        lastScreenFrame = sf
+        lastScreenFrames = frames
         zoneBoundsCache.removeAll()
 
         let t = edgeThreshold, cs = cornerSize, cb = cornerBuffer
 
-        for zone in ScreenZone.allCases {
-            if let bounds = calculateZoneBounds(zone: zone, sf: sf, t: t, cs: cs, cb: cb) {
-                zoneBoundsCache.append(ZoneBounds(rect: bounds, zone: zone))
+        // Every connected screen gets its own full set of edge/corner zones —
+        // arranged (non-mirrored) displays never overlap in this global
+        // coordinate space, so a point falls inside at most one screen's
+        // zones and a plain linear scan below still resolves unambiguously.
+        for screen in screens {
+            let sf = screen.frame
+            for zone in ScreenZone.allCases {
+                if let bounds = calculateZoneBounds(zone: zone, sf: sf, t: t, cs: cs, cb: cb) {
+                    zoneBoundsCache.append(ZoneBounds(rect: bounds, zone: zone))
+                }
             }
         }
     }
@@ -762,19 +777,19 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
 
         switch key {
         case SettingKeys.edgeThreshold:
-            lastScreenFrame = .zero; rebuildZoneBoundsCache()
+            lastScreenFrames = []; rebuildZoneBoundsCache()
             if let v = value as? Double { Configuration.shared.edgeThreshold = CGFloat(v) } else if let v = value as? CGFloat { Configuration.shared.edgeThreshold = v }
             Configuration.shared.save()
             NotificationCenter.default.post(name: Notification.Name("zoneDimensionsChanged"), object: nil)
 
         case SettingKeys.cornerSize:
-            lastScreenFrame = .zero; rebuildZoneBoundsCache()
+            lastScreenFrames = []; rebuildZoneBoundsCache()
             if let v = value as? Double { Configuration.shared.cornerSize = CGFloat(v) } else if let v = value as? CGFloat { Configuration.shared.cornerSize = v }
             Configuration.shared.save()
             NotificationCenter.default.post(name: Notification.Name("zoneDimensionsChanged"), object: nil)
 
         case SettingKeys.cornerBuffer:
-            lastScreenFrame = .zero; rebuildZoneBoundsCache()
+            lastScreenFrames = []; rebuildZoneBoundsCache()
             if let v = value as? Double { Configuration.shared.cornerBuffer = CGFloat(v) } else if let v = value as? CGFloat { Configuration.shared.cornerBuffer = v }
             Configuration.shared.save()
             NotificationCenter.default.post(name: Notification.Name("zoneDimensionsChanged"), object: nil)

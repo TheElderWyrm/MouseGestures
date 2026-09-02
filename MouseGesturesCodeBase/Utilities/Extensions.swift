@@ -352,3 +352,19 @@ extension DragModifier {
         return .none
     }
 }
+
+// MARK: - Shared Multi-Monitor Utilities
+
+extension NSScreen {
+    /// The screen currently under the mouse pointer, falling back to `.main`
+    /// (whichever screen holds the key/focused window) if the pointer is
+    /// between/outside every screen's frame for an instant during a display
+    /// change. `.main` alone is the wrong default for anything gesture/mouse
+    /// driven — on a multi-monitor setup it tracks focused-app placement, not
+    /// pointer placement, so UI anchored to it silently follows the wrong
+    /// screen whenever the two disagree.
+    static var containingMouse: NSScreen? {
+        let location = NSEvent.mouseLocation
+        return NSScreen.screens.first { $0.frame.contains(location) } ?? .main
+    }
+}

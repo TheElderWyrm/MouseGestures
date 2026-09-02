@@ -297,7 +297,7 @@ class ZoneHighlightManager {
 
     /// Show zone highlights in preview mode (all zones visible regardless of gestures)
     func showPreview(duration: TimeInterval = 5.0) {
-        guard let screen = NSScreen.main else { return }
+        guard let screen = NSScreen.containingMouse else { return }
 
         // Cancel any pending hide
         hideTimer?.invalidate()
@@ -453,7 +453,7 @@ class ZoneHighlightManager {
     // MARK: - Window Management
 
     private func showZones(modifiers: NSEvent.ModifierFlags) {
-        guard let screen = NSScreen.main else { return }
+        guard let screen = NSScreen.containingMouse else { return }
         let config = Configuration.shared
 
         // Cancel any pending hide
