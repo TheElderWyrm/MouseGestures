@@ -293,6 +293,25 @@ class ZoneHighlightManager {
         zoneWindows.removeAll()
     }
 
+    /// Removes windows from the screen WITHOUT destroying them — unlike
+    /// closeAllWindows(), the (small, `defer: true`, at most 8-of-them) window
+    /// objects stay alive in zoneWindows for showZones()/showPreview() to reuse
+    /// on the next trigger. Ending a normal debounced hide with a real close()
+    /// meant every single hide->show cycle paid full NSWindow
+    /// creation/backing-store materialization again, which on top of the
+    /// alpha-fade timing was its own source of visible stutter on rapid
+    /// modifier switching (e.g. an unrelated combo used for something else,
+    /// or releasing to no modifiers, then straight back to a real trigger).
+    /// Real destruction is still correct — and still used — when the windows'
+    /// frames themselves are no longer valid: screenDidChange() and
+    /// rebuildZoneWindows() call closeAllWindows() directly, unaffected by
+    /// this.
+    private func orderOutAllWindows() {
+        for (_, window) in zoneWindows {
+            window.orderOut(nil)
+        }
+    }
+
     // MARK: - Public Interface
 
     /// Show zone highlights in preview mode (all zones visible regardless of gestures)
@@ -550,13 +569,18 @@ class ZoneHighlightManager {
             }
         } completionHandler: { [weak self] in
             guard let self = self else { return }
-            // Only close if this hide wasn't superseded (by a new show that set
-            // isHiding=false, or by a newer hide with a different generation).
-            // The generation check supersedes the old isHiding-only check: a
-            // second hide sets isHiding=true again, which would have let the
-            // FIRST completion close windows mid-second-fade.
+            // Only order out if this hide wasn't superseded (by a new show that
+            // set isHiding=false, or by a newer hide with a different
+            // generation). The generation check supersedes the old
+            // isHiding-only check: a second hide sets isHiding=true again,
+            // which would have let the FIRST completion act mid-second-fade.
             guard self.isHiding, self.hideGeneration == generation else { return }
-            self.closeAllWindows()
+            // orderOutAllWindows(), not closeAllWindows(): keep the (small,
+            // at most 8) window objects alive for the next showZones() to
+            // reuse instantly, rather than paying full NSWindow
+            // recreation/materialization cost on every single hide->show
+            // cycle — see orderOutAllWindows()'s doc comment.
+            self.orderOutAllWindows()
             self.isHiding = false
         }
     }
