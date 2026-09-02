@@ -516,7 +516,7 @@ class ZoneHighlightManager {
     }
 
     /// Debounced settle check that decides whether to show or hide, run
-    /// ~0.15s after the LAST modifier event rather than reacting to each one
+    /// ~0.05s after the LAST modifier event rather than reacting to each one
     /// synchronously. This covers every transition — releasing to no
     /// modifiers, landing on an unmatched combo, AND landing on a matching
     /// one — because a combo is indistinguishable, in the instant it's
@@ -532,7 +532,10 @@ class ZoneHighlightManager {
     /// whole delay — whether that state shows something or shows nothing.
     private func scheduleZonePreviewUpdate() {
         hideTimer?.invalidate()
-        hideTimer = Timer.scheduledTimer(withTimeInterval: 0.15, repeats: false) { [weak self] _ in
+        // 0.05s: short enough that the show side doesn't read as laggy, still
+        // long enough to swallow the few-ms gap between physically-chorded
+        // key presses landing (the actual case this debounce exists for).
+        hideTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: false) { [weak self] _ in
             guard let self = self else { return }
             let realMods = NSEvent.ModifierFlags.currentHardware
             self.currentModifiers = realMods
