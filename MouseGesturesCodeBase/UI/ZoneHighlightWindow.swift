@@ -227,9 +227,9 @@ class ZoneHighlightManager {
                 let flags = NSEvent.ModifierFlags(rawValue: modifiers)
                 let normalized = flags.normalized
                 if normalized.isEmpty {
-                    // Debounce: schedule hide instead of immediate, lets rapid key
-                    // transitions settle before deciding to hide
-                    self?.scheduleHide()
+                    // Debounce: schedule a settle check instead of hiding
+                    // immediately, lets rapid key transitions settle first
+                    self?.scheduleZonePreviewUpdate()
                 }
             }
         }
@@ -515,16 +515,22 @@ class ZoneHighlightManager {
         }
     }
 
-    /// Schedule a debounced hide that verifies real modifier state before hiding.
-    /// Used both when all modifiers are released and when the held combo
-    /// doesn't match any gesture — in both cases a rapid modifier change
-    /// (releasing/re-pressing, or chording through an unmatched combo) may
-    /// resolve to something else before this fires, so hiding synchronously
-    /// would flash the preview off and immediately back on. Any subsequent
-    /// real modifier event cancels this timer before it runs (see
-    /// handleModifierChange), so it only ever fires once the state it was
-    /// scheduled for has held steady for the whole delay.
-    private func scheduleHide() {
+    /// Debounced settle check that decides whether to show or hide, run
+    /// ~0.15s after the LAST modifier event rather than reacting to each one
+    /// synchronously. This covers every transition — releasing to no
+    /// modifiers, landing on an unmatched combo, AND landing on a matching
+    /// one — because a combo is indistinguishable, in the instant it's
+    /// reached, from a transient state passed through while chording toward
+    /// some OTHER combo (e.g. physically pressing Cmd, then Cmd+Ctrl, then
+    /// Cmd+Ctrl+Option: if neither the empty set nor the full triple is
+    /// bound to anything but Cmd alone or Cmd+Ctrl IS, reacting to each key
+    /// as it goes down would flash the preview on for combos the user never
+    /// meant to land on, purely because physical key presses don't arrive
+    /// perfectly simultaneously). Any subsequent real modifier event cancels
+    /// this timer before it runs (see handleModifierChange), so it only ever
+    /// fires once the state it was scheduled for has held steady for the
+    /// whole delay — whether that state shows something or shows nothing.
+    private func scheduleZonePreviewUpdate() {
         hideTimer?.invalidate()
         hideTimer = Timer.scheduledTimer(withTimeInterval: 0.15, repeats: false) { [weak self] _ in
             guard let self = self else { return }
@@ -645,7 +651,7 @@ class ZoneHighlightManager {
             let realModifiers = NSEvent.ModifierFlags.currentHardware
             if realModifiers.isEmpty && !self.currentModifiers.isEmpty {
                 self.currentModifiers = []
-                self.scheduleHide()
+                self.scheduleZonePreviewUpdate()
             }
         }
     }
@@ -696,46 +702,15 @@ class ZoneHighlightManager {
     private func handleModifierChange() {
         guard Configuration.shared.showZoneHighlights else { return }
 
-        // Re-query true hardware state rather than trusting the flagsChanged
-        // event's own flags — see NSEvent.ModifierFlags.currentHardware. An
-        // action's own synthetic keyboard shortcut (sendKeyboardShortcut)
-        // wakes this monitor with a transient, wrong combo; reading it
-        // directly was why the zone-highlight label could flicker to a
-        // different gesture mid-action.
-        let modifiers = NSEvent.ModifierFlags.currentHardware
-        currentModifiers = modifiers
-
-        if !modifiers.isEmpty {
-            // Cancel any pending hide since modifiers are held
-            hideTimer?.invalidate()
-            hideTimer = nil
-
-            let hasMatchingGestures = Configuration.shared.gestures.contains { g in
-                g.modifiers == modifiers &&
-                g.isEnabled &&
-                g.hasZoneTrigger
-            }
-
-            if hasMatchingGestures {
-                showZones(modifiers: modifiers)
-            } else if !zoneWindows.isEmpty {
-                // No gesture matches this exact modifier combination (e.g. an
-                // extra modifier was added on top of a combo that DID match).
-                // Debounce rather than hiding immediately: a fast chord change
-                // (e.g. Cmd+Ctrl -> Cmd+Ctrl+Option -> Cmd+Ctrl within a few
-                // key-repeat ticks) passes through an unmatched combo like
-                // this one for only a few ms, and hiding synchronously here
-                // would fade the preview out only to immediately fade it back
-                // in on the very next event — visible flicker. scheduleHide()
-                // waits, then re-checks: the very next real flagsChanged event
-                // (if the combo resolves back to a match) cancels this timer
-                // before it ever fires, so nothing visibly happens; only a
-                // combo that's STILL unmatched once the delay elapses hides.
-                scheduleHide()
-            }
-        } else {
-            scheduleHide()
-        }
+        // Deliberately does NOT read/act on modifiers synchronously here, on
+        // EITHER the show or the hide side — see scheduleZonePreviewUpdate().
+        // Reacting immediately to a match (the previous behaviour) meant that
+        // physically chording toward an unmatched combo through a matched
+        // intermediate one (keys never land perfectly simultaneously) flashed
+        // the preview on for a combo the user never meant to hold. Every
+        // event just restarts the same settle timer; whichever combo is
+        // actually being held once it fires is what gets shown or hidden.
+        scheduleZonePreviewUpdate()
     }
 
     // Modifier normalization uses shared NSEvent.ModifierFlags.normalized
