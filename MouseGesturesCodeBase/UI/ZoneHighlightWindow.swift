@@ -497,21 +497,38 @@ class ZoneHighlightManager {
     }
 
     /// Schedule a debounced hide that verifies real modifier state before hiding.
-    /// This prevents flashing when modifiers are pressed in rapid succession.
+    /// Used both when all modifiers are released and when the held combo
+    /// doesn't match any gesture — in both cases a rapid modifier change
+    /// (releasing/re-pressing, or chording through an unmatched combo) may
+    /// resolve to something else before this fires, so hiding synchronously
+    /// would flash the preview off and immediately back on. Any subsequent
+    /// real modifier event cancels this timer before it runs (see
+    /// handleModifierChange), so it only ever fires once the state it was
+    /// scheduled for has held steady for the whole delay.
     private func scheduleHide() {
         hideTimer?.invalidate()
         hideTimer = Timer.scheduledTimer(withTimeInterval: 0.15, repeats: false) { [weak self] _ in
             guard let self = self else { return }
-            // Re-check actual system modifier state before hiding - rapid key
-            // transitions may have restored modifiers since the hide was scheduled
             let realMods = NSEvent.ModifierFlags.currentHardware
-            guard realMods.isEmpty else {
-                // Modifiers are held again; update state and keep zones visible
-                self.currentModifiers = realMods
+            self.currentModifiers = realMods
+
+            guard !realMods.isEmpty else {
+                self.hideZones()
                 return
             }
-            self.currentModifiers = []
-            self.hideZones()
+
+            // Modifiers are held again by the time this fired — only reachable
+            // if the flagsChanged event that would normally have cancelled
+            // this timer was itself missed. Resolve to the CURRENT combo
+            // instead of leaving whatever was on screen stale.
+            let hasMatchingGestures = Configuration.shared.gestures.contains { g in
+                g.modifiers == realMods && g.isEnabled && g.hasZoneTrigger
+            }
+            if hasMatchingGestures {
+                self.showZones(modifiers: realMods)
+            } else {
+                self.hideZones()
+            }
         }
     }
 
@@ -679,13 +696,18 @@ class ZoneHighlightManager {
                 showZones(modifiers: modifiers)
             } else if !zoneWindows.isEmpty {
                 // No gesture matches this exact modifier combination (e.g. an
-                // extra modifier was added on top of a combo that DID match) —
-                // hide immediately rather than leaving the previous combo's
-                // stale highlight on screen. scheduleHide() would wrongly
-                // no-op here: it only hides once currentHardware reads empty,
-                // which isn't true while still holding this (non-matching)
-                // combo.
-                hideZones()
+                // extra modifier was added on top of a combo that DID match).
+                // Debounce rather than hiding immediately: a fast chord change
+                // (e.g. Cmd+Ctrl -> Cmd+Ctrl+Option -> Cmd+Ctrl within a few
+                // key-repeat ticks) passes through an unmatched combo like
+                // this one for only a few ms, and hiding synchronously here
+                // would fade the preview out only to immediately fade it back
+                // in on the very next event — visible flicker. scheduleHide()
+                // waits, then re-checks: the very next real flagsChanged event
+                // (if the combo resolves back to a match) cancels this timer
+                // before it ever fires, so nothing visibly happens; only a
+                // combo that's STILL unmatched once the delay elapses hides.
+                scheduleHide()
             }
         } else {
             scheduleHide()
