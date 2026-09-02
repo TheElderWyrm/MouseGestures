@@ -677,6 +677,15 @@ class ZoneHighlightManager {
 
             if hasMatchingGestures {
                 showZones(modifiers: modifiers)
+            } else if !zoneWindows.isEmpty {
+                // No gesture matches this exact modifier combination (e.g. an
+                // extra modifier was added on top of a combo that DID match) —
+                // hide immediately rather than leaving the previous combo's
+                // stale highlight on screen. scheduleHide() would wrongly
+                // no-op here: it only hides once currentHardware reads empty,
+                // which isn't true while still holding this (non-matching)
+                // combo.
+                hideZones()
             }
         } else {
             scheduleHide()
