@@ -1,14 +1,13 @@
 import XCTest
-@testable import MouseGestures
 
 final class PluginLibraryLogicTests: XCTestCase {
 
-    private let hash = String(repeating: "ab", count: 32)
+    private let goodSHA = String(repeating: "ab", count: 32)
 
     private func entry(id: String = "com.example.foo", version: String = "1.0.0", min: String? = nil,
                        download: String = "dist/foo.zip", sha: String? = nil) -> LibraryPluginEntry {
         LibraryPluginEntry(id: id, name: "Foo", kind: .action, version: version, minAppVersion: min,
-                           download: download, sha256: sha ?? hash)
+                           download: download, sha256: sha ?? goodSHA)
     }
 
     // MARK: repo parsing
@@ -59,7 +58,7 @@ final class PluginLibraryLogicTests: XCTestCase {
     func testParseManifestRoundTrip() throws {
         let json = """
         {"schemaVersion":1,"name":"Lib","plugins":[{"id":"com.example.foo","name":"Foo","kind":"detection",
-        "version":"1.2","download":"foo.zip","sha256":"\(hash)"}]}
+        "version":"1.2","download":"foo.zip","sha256":"\(goodSHA)"}]}
         """
         let m = try PluginLibraryLogic.parseManifest(Data(json.utf8))
         XCTAssertEqual(m.plugins.first?.kind, .detection)
