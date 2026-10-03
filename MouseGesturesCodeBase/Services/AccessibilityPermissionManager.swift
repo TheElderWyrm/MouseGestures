@@ -98,6 +98,8 @@ class AccessibilityPermissionManager {
         • Trigger system actions
 
         Please grant permission in System Settings.
+
+        If MouseGestures is already listed but still doesn't work (this can happen after an update), select it, click "–" to remove it, then re-add it with "+".
         """
         alert.alertStyle = .warning
         alert.addButton(withTitle: "Open System Settings")
@@ -134,14 +136,19 @@ class AccessibilityPermissionManager {
 
     /// Handles the "Check Permissions" menu action
     func handleCheckPermissionsAction() {
-        // Force re-check with fresh state
-        let trusted = checkPermission(prompt: true)
+        // Menu-bar (accessory) apps must activate or modal alerts can stay hidden behind other windows
+        NSApp.activate(ignoringOtherApps: true)
+
+        // Check without the system prompt: it's a silent no-op when the app already has a
+        // (possibly stale) entry in the Accessibility list, which made this button look dead.
+        let trusted = checkPermission(prompt: false)
 
         if trusted {
             showPermissionGrantedAlert()
             delegate?.accessibilityPermissionGranted()
         } else {
-            // Start checking for permissions if not already checking
+            // Always give visible feedback, then keep watching for the grant
+            showPermissionAlert()
             startMonitoring()
         }
     }
