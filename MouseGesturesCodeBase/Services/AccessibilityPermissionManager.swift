@@ -10,8 +10,6 @@ class AccessibilityPermissionManager {
     private weak var delegate: AccessibilityPermissionManagerDelegate?
     private var isCheckingPermissions = false
     private var lastPermissionStatus = false
-    /// Shows / hides the setup steps (rendered in the menu bar menu by MenuIcon)
-    var onShowHelp: (() -> Void)?
 
     // MARK: - Initialization
 
@@ -49,8 +47,7 @@ class AccessibilityPermissionManager {
 
     /// Requests accessibility permissions with system prompt
     func requestPermissions() {
-        let trusted = checkPermission(prompt: true)
-        if !trusted { showHelpPanel() }
+        _ = checkPermission(prompt: true)
     }
 
     /// Starts periodic checking for permission changes
@@ -61,7 +58,6 @@ class AccessibilityPermissionManager {
         if hasPermission {
             log.log("Accessibility permissions already granted - not starting monitor")
             stopPermissionCheckTimer()
-            hideHelpPanel()
             delegate?.accessibilityPermissionGranted()
             return
         }
@@ -102,8 +98,6 @@ class AccessibilityPermissionManager {
         • Trigger system actions
 
         Please grant permission in System Settings.
-
-        If MouseGestures is already listed but still doesn't work (this can happen after an update), select it, click "–" to remove it, then re-add it with "+".
         """
         alert.alertStyle = .warning
         alert.addButton(withTitle: "Open System Settings")
@@ -140,29 +134,17 @@ class AccessibilityPermissionManager {
 
     /// Handles the "Check Permissions" menu action
     func handleCheckPermissionsAction() {
-        // Menu-bar (accessory) apps must activate or windows can stay hidden behind others
-        NSApp.activate(ignoringOtherApps: true)
-
-        // Keep the system request; it is a silent no-op if the app already has a (possibly
-        // stale) Accessibility entry, so also always show the help panel as visible feedback.
+        // Force re-check with fresh state
         let trusted = checkPermission(prompt: true)
 
         if trusted {
-            hideHelpPanel()
             showPermissionGrantedAlert()
             delegate?.accessibilityPermissionGranted()
         } else {
-            showHelpPanel()
+            // Start checking for permissions if not already checking
             startMonitoring()
         }
     }
-
-    // MARK: - Help
-
-    func showHelpPanel() { onShowHelp?() }
-
-    /// The menu rebuilds its help section from live permission state each time it opens
-    func hideHelpPanel() {}
 
     // MARK: - Private Methods
 
@@ -173,7 +155,6 @@ class AccessibilityPermissionManager {
         // If we have permission, stop the timer and notify delegate
         if hasPermission {
             stopPermissionCheckTimer()
-            hideHelpPanel()
             log.log("Accessibility permissions granted - stopping permission monitor")
 
             // Notify delegate that permissions were granted

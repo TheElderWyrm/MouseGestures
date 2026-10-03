@@ -3,7 +3,7 @@ import Carbon
 import UserNotifications
 
 /// Manages the menu bar icon and its associated menu
-class MenuIcon: NSObject, NSMenuDelegate {
+class MenuIcon: NSObject {
 
     // MARK: - Properties
 
@@ -127,7 +127,6 @@ class MenuIcon: NSObject, NSMenuDelegate {
         quitItem.target = NSApp
         menu.addItem(quitItem)
 
-        menu.delegate = self
         statusItem?.menu = menu
 
         // Update initial states
@@ -226,50 +225,6 @@ class MenuIcon: NSObject, NSMenuDelegate {
             hide()
         } else {
             show()
-        }
-    }
-
-    // MARK: - Accessibility help section
-
-    private static let helpItemTag = 9001
-
-    /// Adds (or removes) the setup steps at the top of the menu to match live permission state
-    func menuNeedsUpdate(_ menu: NSMenu) {
-        for item in menu.items.reversed() where item.tag == Self.helpItemTag { menu.removeItem(item) }
-        guard !(delegate?.menuIconRequestsAccessibilityStatus() ?? true) else { return }
-
-        let lines = [
-            "Accessibility access needed",
-            "1. Click “Open System Settings” below",
-            "2. Find MouseGestures in the list",
-            "3. Turn its switch on",
-            "If already on but not working: remove it with “–”, re-add with “+”"
-        ]
-        var items: [NSMenuItem] = []
-        for (i, line) in lines.enumerated() {
-            let item = NSMenuItem(title: line, action: nil, keyEquivalent: "")
-            item.isEnabled = false
-            if i == 0 { item.attributedTitle = NSAttributedString(string: line, attributes: [.font: NSFont.boldSystemFont(ofSize: 13)]) }
-            items.append(item)
-        }
-        let open = NSMenuItem(title: "Open System Settings", action: #selector(openAccessibilitySettings), keyEquivalent: "")
-        open.target = self
-        items.append(open)
-        items.append(NSMenuItem.separator())
-        for (i, item) in items.enumerated() {
-            item.tag = Self.helpItemTag
-            menu.insertItem(item, at: i)
-        }
-    }
-
-    /// Pops the menu open so the setup steps are visible
-    func showAccessibilityHelp() {
-        DispatchQueue.main.async { [weak self] in self?.statusItem?.button?.performClick(nil) }
-    }
-
-    @objc private func openAccessibilitySettings() {
-        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
-            NSWorkspace.shared.open(url)
         }
     }
 
