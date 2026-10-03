@@ -143,6 +143,11 @@
 		E4C343F7B7372EEA22DD1D26 /* LemonSqueezyLicense.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33DB4B569DDBAAC387A23323 /* LemonSqueezyLicense.swift */; };
 		F0444644BAD5AC3385EBEC9E /* GestureTriggerPersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5ECE4A47A6EDE4BF17159FEE /* GestureTriggerPersistenceTests.swift */; };
 		F64847768F1F2D8E06D72CBC /* UIStyles.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E94445AB3BF094E20E605FC /* UIStyles.swift */; };
+		DD0000000000000000000044 /* PluginLibraryLogic.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD0000000000000000000040 /* PluginLibraryLogic.swift */; };
+		DD0000000000000000000045 /* PluginLibraryLogic.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD0000000000000000000040 /* PluginLibraryLogic.swift */; };
+		DD0000000000000000000046 /* PluginLibraryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD0000000000000000000041 /* PluginLibraryService.swift */; };
+		DD0000000000000000000047 /* PluginLibrariesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD0000000000000000000042 /* PluginLibrariesView.swift */; };
+		DD0000000000000000000048 /* PluginLibraryLogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD0000000000000000000043 /* PluginLibraryLogicTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -278,6 +283,10 @@
 		F1D3401DA8E9283C5710D113 /* GenericActivation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GenericActivation.swift; path = MouseGesturesCodeBase/Core/GenericActivation.swift; sourceTree = SOURCE_ROOT; };
 		F40B4B2C90F7A03C4CEE2B6A /* VariableStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = VariableStore.swift; path = MouseGesturesCodeBase/Services/VariableStore.swift; sourceTree = SOURCE_ROOT; };
 		F50141A48E3DD816B8942DA8 /* BuiltInSettingsCategories.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BuiltInSettingsCategories.swift; path = MouseGesturesCodeBase/UI/Settings/BuiltInSettingsCategories.swift; sourceTree = SOURCE_ROOT; };
+		DD0000000000000000000040 /* PluginLibraryLogic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PluginLibraryLogic.swift; path = MouseGesturesCodeBase/Services/PluginLibraryLogic.swift; sourceTree = SOURCE_ROOT; };
+		DD0000000000000000000041 /* PluginLibraryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PluginLibraryService.swift; path = MouseGesturesCodeBase/Services/PluginLibraryService.swift; sourceTree = SOURCE_ROOT; };
+		DD0000000000000000000042 /* PluginLibrariesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PluginLibrariesView.swift; path = MouseGesturesCodeBase/UI/PluginLibrariesView.swift; sourceTree = SOURCE_ROOT; };
+		DD0000000000000000000043 /* PluginLibraryLogicTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PluginLibraryLogicTests.swift; path = MouseGesturesTests/PluginLibraryLogicTests.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -479,6 +488,8 @@
 				06BE4D14ACFDD34E9DF4B651 /* UpdateService.swift */,
 				43752886C53B432383537A9E /* SelfUpdateService.swift */,
 				DD0000000000000000000030 /* UpdateLogic.swift */,
+				DD0000000000000000000040 /* PluginLibraryLogic.swift */,
+				DD0000000000000000000041 /* PluginLibraryService.swift */,
 				CE0347CE854263CC12FAA6C3 /* TutorialService.swift */,
 				696D440FBC79DD976FDA7EF2 /* DevActionRunnerHook.swift */,
 				33DB4B569DDBAAC387A23323 /* LemonSqueezyLicense.swift */,
@@ -512,6 +523,7 @@
 				77BC7E322FA5899100E631AF /* TrialExpiredProfileSelectionView.swift */,
 				77A1C4702F368ED800D1FE6A /* KeyboardShortcutField.swift */,
 				77A1C4712F368ED800D1FE6A /* PluginSettingsView.swift */,
+				DD0000000000000000000042 /* PluginLibrariesView.swift */,
 				77A1C4722F368ED800D1FE6A /* SavedActionConfigurationSheet.swift */,
 				77A1C4732F368ED800D1FE6A /* TabManager.swift */,
 				77A1C4742F368ED800D1FE6A /* UIServices.swift */,
@@ -619,6 +631,7 @@
 				DD0000000000000000000023 /* LicenseKeyTests.swift */,
 				DD0000000000000000000025 /* ActionParametersTests.swift */,
 				DD0000000000000000000033 /* UpdateLogicTests.swift */,
+				DD0000000000000000000043 /* PluginLibraryLogicTests.swift */,
 				026841C5897B3A8A29F6A803 /* LemonSqueezyLicenseTests.swift */,
 				5ECE4A47A6EDE4BF17159FEE /* GestureTriggerPersistenceTests.swift */,
 				D877427F98AD9C5840A06DC9 /* WindowSnapToggleTests.swift */,
@@ -718,6 +731,9 @@
 				77A1C48E2F368ED800D1FE6A /* WindowManagementPlugin.swift in Sources */,
 				77A1C48F2F368ED800D1FE6A /* MenuIcon.swift in Sources */,
 				77A1C4902F368ED800D1FE6A /* PluginSettingsView.swift in Sources */,
+				DD0000000000000000000044 /* PluginLibraryLogic.swift in Sources */,
+				DD0000000000000000000046 /* PluginLibraryService.swift in Sources */,
+				DD0000000000000000000047 /* PluginLibrariesView.swift in Sources */,
 				77A1C4912F368ED800D1FE6A /* PluginSandbox.swift in Sources */,
 				77A1C4922F368ED800D1FE6A /* DragModifier.swift in Sources */,
 				77A1C4932F368ED800D1FE6A /* GestureConfigurationSheet.swift in Sources */,
@@ -847,6 +863,8 @@
 				DD0000000000000000000009 /* ScreenZone.swift in Sources */,
 				DD0000000000000000000032 /* UpdateLogic.swift in Sources */,
 				DD0000000000000000000034 /* UpdateLogicTests.swift in Sources */,
+				DD0000000000000000000045 /* PluginLibraryLogic.swift in Sources */,
+				DD0000000000000000000048 /* PluginLibraryLogicTests.swift in Sources */,
 				E4C343F7B7372EEA22DD1D26 /* LemonSqueezyLicense.swift in Sources */,
 				2388401389912DF3A56467A3 /* LemonSqueezyLicenseTests.swift in Sources */,
 				F0444644BAD5AC3385EBEC9E /* GestureTriggerPersistenceTests.swift in Sources */,

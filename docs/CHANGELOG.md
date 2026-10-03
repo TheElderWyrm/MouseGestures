@@ -10,6 +10,10 @@ root — this file is the curated, user-facing subset of that log.
 
 ## [Unreleased]
 
+### Added
+- **Plugin libraries**: add any GitHub repository that publishes a `library.json` (Developer ▸ Plugin Management ▸ Browse Libraries) to browse, install, update and remove additional action and detection plugins. Downloads are checksum-verified, signature-checked and require confirmation. See `docs/PLUGIN_LIBRARIES.md`.
+- Detection plugins can now be installed and uninstalled (previously only action plugins could).
+
 ### Fixed
 - License activation failed on Macs whose computer name is shorter than 3 characters (e.g. "CS"): the license server rejects such names, and the app reported it as a connection problem. Short names are now padded automatically.
 - Activation errors now say what actually went wrong (no connection vs. an unexpected server reply, with details) instead of always blaming the internet connection.

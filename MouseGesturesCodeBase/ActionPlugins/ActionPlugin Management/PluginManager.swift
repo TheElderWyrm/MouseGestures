@@ -520,7 +520,13 @@ public class PluginManager: NSObject {
 
     // MARK: - Plugin Installation
 
-    public func installPlugin(from url: URL) throws {
+    /// Where external action-plugin bundles are installed.
+    public var userPluginsDirectoryURL: URL { userPluginsDirectory }
+
+    /// Copies the bundle into the user plugins directory. With `loadNow: false`
+    /// the files are only staged (used for updates: an already-loaded bundle's
+    /// classes can't be replaced in-process, so the new version loads on relaunch).
+    public func installPlugin(from url: URL, loadNow: Bool = true) throws {
         let pluginName = url.lastPathComponent
         let destination = userPluginsDirectory.appendingPathComponent(pluginName)
 
@@ -532,7 +538,7 @@ public class PluginManager: NSObject {
         try fileManager.copyItem(at: url, to: destination)
 
         // Load the plugin
-        loadPlugin(at: destination, isSystem: false)
+        if loadNow { loadPlugin(at: destination, isSystem: false) }
     }
 
     public func uninstallPlugin(identifier: String) throws {

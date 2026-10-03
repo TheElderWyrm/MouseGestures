@@ -32,6 +32,9 @@ class DetectionPluginManager: NSObject {
     // Statistics
     private var startTime: Date?
 
+    // Bundle location of each externally loaded plugin (identifier -> .plugin URL)
+    private var externalBundleURLs: [String: URL] = [:]
+
     // MARK: - Initialization
 
     private override init() {
@@ -93,30 +96,62 @@ class DetectionPluginManager: NSObject {
 
     /// Scan the user DetectionPlugins directory for external .plugin/.bundle files
     private func discoverExternalPlugins() {
-        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let pluginDir = appSupport
-            .appendingPathComponent("MouseGestures", isDirectory: true)
-            .appendingPathComponent("DetectionPlugins", isDirectory: true)
-        try? FileManager.default.createDirectory(at: pluginDir, withIntermediateDirectories: true)
-        guard let contents = try? FileManager.default.contentsOfDirectory(at: pluginDir, includingPropertiesForKeys: nil) else { return }
+        try? FileManager.default.createDirectory(at: storageDirectory.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try? FileManager.default.createDirectory(at: storageDirectory, withIntermediateDirectories: true)
+        guard let contents = try? FileManager.default.contentsOfDirectory(at: externalPluginsDirectory, includingPropertiesForKeys: nil) else { return }
         for item in contents where item.pathExtension == "plugin" || item.pathExtension == "bundle" {
             loadExternalPlugin(at: item)
         }
     }
 
-    private func loadExternalPlugin(at url: URL) {
+    /// Where external detection bundles live. (`storageDirectory` is the same
+    /// folder: per-plugin storage subfolders sit beside the bundles.)
+    var externalPluginsDirectory: URL { storageDirectory }
+
+    @discardableResult
+    private func loadExternalPlugin(at url: URL) -> String? {
         guard let bundle = Bundle(url: url), bundle.load() else {
             log.log("DetectionPluginManager: failed to load bundle at \(url.lastPathComponent)")
-            return
+            return nil
         }
         guard let cls = bundle.principalClass as? NSObject.Type,
               let plugin = cls.init() as? DetectionPlugin else {
             log.log("DetectionPluginManager: principal class in \(url.lastPathComponent) does not conform to DetectionPlugin")
             bundle.unload()
-            return
+            return nil
         }
         registerPlugin(plugin)
+        guard plugins[plugin.identifier] != nil else { return nil }
+        externalBundleURLs[plugin.identifier] = url
+        // A plugin added while detection is live must start too, or it would sit idle until relaunch.
+        if isRunning, plugin.isEnabled { try? plugin.start() }
         log.log("DetectionPluginManager: loaded external plugin \(plugin.name) v\(plugin.version)")
+        return plugin.identifier
+    }
+
+    func isExternalPlugin(identifier: String) -> Bool { externalBundleURLs[identifier] != nil }
+
+    /// Copies a bundle into the external directory. `loadNow: false` stages only
+    /// (updates: loaded classes can't be swapped in-process, so it loads on relaunch).
+    /// Returns the loaded plugin's identifier when loaded.
+    @discardableResult
+    func installExternalPlugin(from url: URL, loadNow: Bool = true) throws -> String? {
+        let fm = FileManager.default
+        try fm.createDirectory(at: externalPluginsDirectory, withIntermediateDirectories: true)
+        let destination = externalPluginsDirectory.appendingPathComponent(url.lastPathComponent)
+        if fm.fileExists(atPath: destination.path) { try fm.removeItem(at: destination) }
+        try fm.copyItem(at: url, to: destination)
+        return loadNow ? loadExternalPlugin(at: destination) : nil
+    }
+
+    /// Unregisters and deletes an external plugin's bundle. Built-ins are refused.
+    func uninstallExternalPlugin(identifier: String) throws {
+        guard let url = externalBundleURLs[identifier] else {
+            throw PluginError.actionNotFound(identifier)
+        }
+        unregisterPlugin(identifier: identifier)
+        externalBundleURLs.removeValue(forKey: identifier)
+        try FileManager.default.removeItem(at: url)
     }
 
     /// Register a detection plugin

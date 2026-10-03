@@ -1,0 +1,103 @@
+import XCTest
+@testable import MouseGestures
+
+final class PluginLibraryLogicTests: XCTestCase {
+
+    private let hash = String(repeating: "ab", count: 32)
+
+    private func entry(id: String = "com.example.foo", version: String = "1.0.0", min: String? = nil,
+                       download: String = "dist/foo.zip", sha: String? = nil) -> LibraryPluginEntry {
+        LibraryPluginEntry(id: id, name: "Foo", kind: .action, version: version, minAppVersion: min,
+                           download: download, sha256: sha ?? hash)
+    }
+
+    // MARK: repo parsing
+
+    func testParseRepoForms() throws {
+        XCTAssertEqual(try PluginLibraryLogic.parseRepo("octo/lib"), LibraryRepo(owner: "octo", repo: "lib"))
+        XCTAssertEqual(try PluginLibraryLogic.parseRepo("octo/lib@v2"), LibraryRepo(owner: "octo", repo: "lib", ref: "v2"))
+        XCTAssertEqual(try PluginLibraryLogic.parseRepo("https://github.com/octo/lib.git"), LibraryRepo(owner: "octo", repo: "lib"))
+        XCTAssertEqual(try PluginLibraryLogic.parseRepo(" https://github.com/octo/lib/tree/dev/x "),
+                       LibraryRepo(owner: "octo", repo: "lib", ref: "dev/x"))
+    }
+
+    func testParseRepoRejectsGarbage() {
+        for bad in ["", "octo", "a/b/c", "http://github.com/o/r", "https://evil.com/o/r", "-o/r", "o/r@..", "o/../x", "o/r@a b"] {
+            XCTAssertThrowsError(try PluginLibraryLogic.parseRepo(bad), bad)
+        }
+    }
+
+    // MARK: URLs
+
+    func testManifestURLUsesHeadByDefault() {
+        let url = PluginLibraryLogic.manifestURL(for: LibraryRepo(owner: "o", repo: "r"))
+        XCTAssertEqual(url?.absoluteString, "https://raw.githubusercontent.com/o/r/HEAD/library.json")
+        let pinned = PluginLibraryLogic.manifestURL(for: LibraryRepo(owner: "o", repo: "r", ref: "v1"))
+        XCTAssertEqual(pinned?.absoluteString, "https://raw.githubusercontent.com/o/r/v1/library.json")
+    }
+
+    func testRelativePathTraversalRejected() {
+        for bad in ["../x", "a/../b", "/abs", "a//b", "a\\b", "https://x", "a?b", ""] {
+            XCTAssertFalse(PluginLibraryLogic.isSafeRelativePath(bad), bad)
+        }
+        XCTAssertTrue(PluginLibraryLogic.isSafeRelativePath("dist/foo-1.0.zip"))
+    }
+
+    func testDownloadURLResolution() throws {
+        let repo = LibraryRepo(owner: "o", repo: "r")
+        XCTAssertEqual(try PluginLibraryLogic.downloadURL(for: entry(), in: repo).absoluteString,
+                       "https://raw.githubusercontent.com/o/r/HEAD/dist/foo.zip")
+        let asset = entry(download: "https://github.com/o/r/releases/download/v1/foo.zip")
+        XCTAssertNoThrow(try PluginLibraryLogic.downloadURL(for: asset, in: repo))
+        for bad in ["http://github.com/o/r/a.zip", "https://evil.com/a.zip", "https://githubusercontent.com.evil.com/a.zip", "../a.zip"] {
+            XCTAssertThrowsError(try PluginLibraryLogic.downloadURL(for: entry(download: bad), in: repo), bad)
+        }
+    }
+
+    // MARK: manifest
+
+    func testParseManifestRoundTrip() throws {
+        let json = """
+        {"schemaVersion":1,"name":"Lib","plugins":[{"id":"com.example.foo","name":"Foo","kind":"detection",
+        "version":"1.2","download":"foo.zip","sha256":"\(hash)"}]}
+        """
+        let m = try PluginLibraryLogic.parseManifest(Data(json.utf8))
+        XCTAssertEqual(m.plugins.first?.kind, .detection)
+    }
+
+    func testManifestValidation() {
+        func manifest(_ plugins: [LibraryPluginEntry], schema: Int = 1, name: String = "L") -> LibraryManifest {
+            LibraryManifest(schemaVersion: schema, name: name, plugins: plugins)
+        }
+        XCTAssertThrowsError(try PluginLibraryLogic.validate(manifest([], schema: 2)))
+        XCTAssertThrowsError(try PluginLibraryLogic.validate(manifest([], name: " ")))
+        XCTAssertThrowsError(try PluginLibraryLogic.validate(manifest([entry(id: "../evil")])))
+        XCTAssertThrowsError(try PluginLibraryLogic.validate(manifest([entry(id: "a/b/c")])))
+        XCTAssertThrowsError(try PluginLibraryLogic.validate(manifest([entry(version: "1.x")])))
+        XCTAssertThrowsError(try PluginLibraryLogic.validate(manifest([entry(sha: "short")])))
+        XCTAssertThrowsError(try PluginLibraryLogic.validate(manifest([entry(), entry()])))
+        XCTAssertNoThrow(try PluginLibraryLogic.validate(manifest([entry(), entry(id: "com.example.bar")])))
+        XCTAssertThrowsError(try PluginLibraryLogic.parseManifest(Data("nope".utf8)))
+    }
+
+    func testChecksumCaseInsensitive() {
+        XCTAssertTrue(PluginLibraryLogic.checksumMatches("ABCD", "abcd"))
+        XCTAssertFalse(PluginLibraryLogic.checksumMatches("abcd", "abce"))
+    }
+
+    // MARK: state
+
+    func testInstallState() {
+        let e = entry(version: "1.2.0")
+        XCTAssertEqual(PluginLibraryLogic.state(for: e, installedVersion: nil, appVersion: "1.0.1"), .notInstalled)
+        XCTAssertEqual(PluginLibraryLogic.state(for: e, installedVersion: "1.2", appVersion: "1.0.1"), .installed(version: "1.2"))
+        XCTAssertEqual(PluginLibraryLogic.state(for: e, installedVersion: "1.1.9", appVersion: "1.0.1"),
+                       .updateAvailable(installed: "1.1.9", available: "1.2.0"))
+    }
+
+    func testIncompatibleWhenAppTooOld() {
+        let e = entry(min: "2.0")
+        XCTAssertEqual(PluginLibraryLogic.state(for: e, installedVersion: nil, appVersion: "1.0.1"), .incompatible(minAppVersion: "2.0"))
+        XCTAssertEqual(PluginLibraryLogic.state(for: e, installedVersion: nil, appVersion: "2.0.0"), .notInstalled)
+    }
+}

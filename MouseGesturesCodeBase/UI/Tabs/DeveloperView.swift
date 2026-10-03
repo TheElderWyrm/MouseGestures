@@ -18,6 +18,7 @@ struct DeveloperView: View {
     @State private var selectedPluginType: UnifiedPluginType? = nil
     @State private var showingPluginDetails = false
     @State private var showingInstallPlugin = false
+    @State private var showingLibraries = false
 
     enum UnifiedPluginType: String, CaseIterable, Identifiable {
         case action = "Action"
@@ -147,6 +148,9 @@ struct DeveloperView: View {
             startPerformanceMonitoring()
         }
         .onDisappear { stopPerformanceMonitoring() }
+        .sheet(isPresented: $showingLibraries) {
+            PluginLibrariesView(onChange: { refreshUnifiedPlugins() })
+        }
         .fileImporter(
             isPresented: $showingInstallPlugin,
             allowedContentTypes: [UTType(filenameExtension: "plugin") ?? .item, .bundle],
@@ -326,6 +330,11 @@ struct DeveloperView: View {
 
                             Button(action: { refreshUnifiedPlugins() }) {
                                 Label("Refresh", systemImage: "arrow.clockwise")
+                            }
+                            .buttonStyle(.bordered)
+
+                            Button(action: { showingLibraries = true }) {
+                                Label("Browse Libraries", systemImage: "books.vertical")
                             }
                             .buttonStyle(.bordered)
 
@@ -912,9 +921,9 @@ struct DeveloperView: View {
                 name: p.name,
                 type: .detection,
                 version: p.version,
-                author: "System",
+                author: DetectionPluginManager.shared.isExternalPlugin(identifier: p.identifier) ? "External" : "System",
                 description: p.description,
-                isBuiltIn: true,
+                isBuiltIn: !DetectionPluginManager.shared.isExternalPlugin(identifier: p.identifier),
                 isEnabled: p.isEnabled,
                 permissions: "Low-level Input"
             ))
@@ -978,6 +987,7 @@ struct DeveloperView: View {
         switch plugin.type {
         case .action:
             if enabled { _ = uiServices.reloadPlugin(plugin.identifier) } else { _ = uiServices.uninstallPlugin(plugin.identifier) }
+            PluginLibraryService.shared.reconcile()
         case .detection:
             DetectionPluginManager.shared.setPluginEnabled(plugin.identifier, enabled: enabled)
         case .service:
@@ -1031,8 +1041,11 @@ struct DeveloperView: View {
         case .action: _ = uiServices.uninstallPlugin(plugin.identifier)
         case .service: _ = servicePluginManager.uninstallPlugin(identifier: plugin.identifier)
         case .ui: errorMessage = "Manually remove from UIPlugins folder"
-        default: break
+        case .detection:
+            do { try DetectionPluginManager.shared.uninstallExternalPlugin(identifier: plugin.identifier) }
+            catch { errorMessage = "Failed to uninstall detection plugin: \(error.localizedDescription)" }
         }
+        PluginLibraryService.shared.reconcile()
         refreshUnifiedPlugins()
         selectedUnifiedPlugin = nil
     }
