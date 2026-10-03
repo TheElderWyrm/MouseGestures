@@ -10,7 +10,8 @@ class AccessibilityPermissionManager {
     private weak var delegate: AccessibilityPermissionManagerDelegate?
     private var isCheckingPermissions = false
     private var lastPermissionStatus = false
-    private var helpPanel: NSPanel?
+    /// Shows / hides the setup steps (rendered in the menu bar menu by MenuIcon)
+    var onShowHelp: (() -> Void)?
 
     // MARK: - Initialization
 
@@ -156,72 +157,12 @@ class AccessibilityPermissionManager {
         }
     }
 
-    // MARK: - Help Panel
+    // MARK: - Help
 
-    /// Shows a small floating window in the top-right corner listing the steps to grant access
-    func showHelpPanel() {
-        if let panel = helpPanel {
-            panel.orderFrontRegardless()
-            return
-        }
+    func showHelpPanel() { onShowHelp?() }
 
-        let width: CGFloat = 320
-        let title = NSTextField(labelWithString: "Grant Accessibility Access")
-        title.font = .boldSystemFont(ofSize: 14)
-
-        let steps = NSTextField(wrappingLabelWithString: """
-        1. Click "Open System Settings" below.
-        2. Find "MouseGestures" in the Accessibility list.
-        3. Turn its switch on (enter your password if asked).
-        4. If it's already on but not working, select it, click "–" to remove it, then add it back with "+".
-
-        This window closes automatically once access is granted.
-        """)
-        steps.font = .systemFont(ofSize: 12)
-        steps.preferredMaxLayoutWidth = width - 32
-
-        let open = NSButton(title: "Open System Settings", target: self, action: #selector(helpOpenSettings))
-        open.bezelStyle = .rounded
-        open.keyEquivalent = "\r"
-        let close = NSButton(title: "Dismiss", target: self, action: #selector(helpDismiss))
-        close.bezelStyle = .rounded
-        let buttons = NSStackView(views: [open, close])
-        buttons.spacing = 8
-
-        let stack = NSStackView(views: [title, steps, buttons])
-        stack.orientation = .vertical
-        stack.alignment = .leading
-        stack.spacing = 10
-        stack.edgeInsets = NSEdgeInsets(top: 14, left: 16, bottom: 14, right: 16)
-        stack.frame = NSRect(origin: .zero, size: stack.fittingSize)
-        stack.setFrameSize(NSSize(width: width, height: stack.fittingSize.height))
-
-        let panel = NSPanel(contentRect: stack.frame,
-                            styleMask: [.titled, .closable, .utilityWindow, .nonactivatingPanel],
-                            backing: .buffered, defer: false)
-        panel.title = "MouseGestures Setup"
-        panel.level = .floating
-        panel.isReleasedWhenClosed = false
-        panel.hidesOnDeactivate = false
-        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        panel.contentView = stack
-
-        let screen = NSScreen.main ?? NSScreen.screens.first
-        if let vf = screen?.visibleFrame {
-            let size = panel.frame.size
-            panel.setFrameOrigin(NSPoint(x: vf.maxX - size.width - 16, y: vf.maxY - size.height - 16))
-        }
-        panel.orderFrontRegardless()
-        helpPanel = panel
-    }
-
-    func hideHelpPanel() {
-        helpPanel?.close()
-        helpPanel = nil
-    }
-
-    @objc private func helpOpenSettings() { openSystemPreferences() }
-    @objc private func helpDismiss() { hideHelpPanel() }
+    /// The menu rebuilds its help section from live permission state each time it opens
+    func hideHelpPanel() {}
 
     // MARK: - Private Methods
 

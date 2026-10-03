@@ -59,6 +59,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Initialize menu icon
         menuIcon = MenuIcon(delegate: self)
+        accessibilityManager.onShowHelp = { [weak self] in self?.menuIcon?.showAccessibilityHelp() }
 
         // Listen for trial expiration
         NotificationCenter.default.addObserver(
