@@ -8,6 +8,22 @@ public enum LibraryPluginKind: String, Codable, Equatable, CaseIterable {
     case detection
 }
 
+/// Capabilities a plugin may ask for. They're shown to the user at install time
+/// and applied to the plugin's sandbox on load; anything not listed stays denied.
+public enum LibraryPermission: String, CaseIterable, Codable {
+    case systemAPIs, windowManager, fileSystem, executeActions, configuration
+
+    public var summary: String {
+        switch self {
+        case .systemAPIs: return "Send keystrokes and run AppleScript"
+        case .windowManager: return "Read and move windows"
+        case .fileSystem: return "Read and write files in its own data folder"
+        case .executeActions: return "Run other gesture actions"
+        case .configuration: return "Read your MouseGestures configuration"
+        }
+    }
+}
+
 /// One installable plugin advertised by a library's `library.json`.
 public struct LibraryPluginEntry: Codable, Equatable, Identifiable {
     public let id: String
@@ -22,10 +38,13 @@ public struct LibraryPluginEntry: Codable, Equatable, Identifiable {
     public let download: String
     /// Lowercase/uppercase hex SHA-256 of the zip.
     public let sha256: String
+    /// Names from `LibraryPermission`. Action plugins are sandboxed to these; omit for none.
+    public let permissions: [String]?
 
     public init(id: String, name: String, kind: LibraryPluginKind, version: String,
                 author: String? = nil, description: String? = nil, minAppVersion: String? = nil,
-                download: String, sha256: String) {
+                download: String, sha256: String, permissions: [String]? = nil) {
+        self.permissions = permissions
         self.id = id; self.name = name; self.kind = kind; self.version = version
         self.author = author; self.description = description; self.minAppVersion = minAppVersion
         self.download = download; self.sha256 = sha256
@@ -66,10 +85,14 @@ public struct InstalledLibraryPlugin: Codable, Equatable {
     public let kind: LibraryPluginKind
     public let version: String
     public let libraryId: String
+    /// `LibraryPermission` names granted at install time (applied when the plugin loads).
+    public var grants: [String]?
     /// True when files are on disk but the code can't be (re)loaded until relaunch.
     public var needsRestart: Bool
 
-    public init(pluginId: String, kind: LibraryPluginKind, version: String, libraryId: String, needsRestart: Bool = false) {
+    public init(pluginId: String, kind: LibraryPluginKind, version: String, libraryId: String,
+                grants: [String]? = nil, needsRestart: Bool = false) {
+        self.grants = grants
         self.pluginId = pluginId; self.kind = kind; self.version = version
         self.libraryId = libraryId; self.needsRestart = needsRestart
     }
@@ -94,6 +117,7 @@ public enum PluginLibraryError: Error, Equatable, LocalizedError {
     case identifierMismatch(expected: String, found: String?)
     case loadFailed(String)
     case incompatible(String)
+    case unknownPermission(String)
 
     public var errorDescription: String? {
         switch self {
@@ -109,6 +133,7 @@ public enum PluginLibraryError: Error, Equatable, LocalizedError {
             return "The plugin identified itself as \(found ?? "nothing") instead of \(expected), so it was removed."
         case .loadFailed(let s): return "The plugin was installed but failed to load: \(s)"
         case .incompatible(let v): return "This plugin requires MouseGestures \(v) or newer."
+        case .unknownPermission(let p): return "The library asks for a permission this version doesn't know (\(p)). Update the app."
         }
     }
 }
@@ -234,7 +259,15 @@ public enum PluginLibraryLogic {
             guard isValidVersion(p.version) else { throw PluginLibraryError.invalidManifest("bad version '\(p.version)' for \(p.id)") }
             if let min = p.minAppVersion, !isValidVersion(min) { throw PluginLibraryError.invalidManifest("bad minAppVersion for \(p.id)") }
             guard isValidSHA256(p.sha256) else { throw PluginLibraryError.invalidManifest("bad sha256 for \(p.id)") }
+            _ = try parsePermissions(p.permissions)
             guard !p.name.isEmpty, !p.download.isEmpty else { throw PluginLibraryError.invalidManifest("incomplete entry \(p.id)") }
+        }
+    }
+
+    public static func parsePermissions(_ raw: [String]?) throws -> [LibraryPermission] {
+        try (raw ?? []).map {
+            guard let p = LibraryPermission(rawValue: $0) else { throw PluginLibraryError.unknownPermission($0) }
+            return p
         }
     }
 

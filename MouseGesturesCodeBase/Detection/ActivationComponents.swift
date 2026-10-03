@@ -40,6 +40,19 @@ struct ModifierKeyConfig: ActivationComponentConfig {
     }
 }
 
+/// A trigger declared by an external detection plugin (see ExternalTriggerAPI.swift).
+struct ExternalTriggerConfig: ActivationComponentConfig {
+    var isEnabled: Bool = false
+    var pluginId: String = ""
+    var triggerId: String = ""
+    var displayName: String = ""
+
+    var displayValue: String {
+        guard isEnabled else { return "Not configured" }
+        return displayName.isEmpty ? triggerId : displayName
+    }
+}
+
 struct ScreenZoneConfig: ActivationComponentConfig {
     var isEnabled: Bool = false
     var zone: ScreenZone = .topRight
@@ -110,6 +123,7 @@ struct GestureActivationComponents: Codable, Equatable {
     var dragType: DragTypeConfig? = nil
     var mouseButton: MouseButtonConfig? = nil
     var keyboardShortcut: KeyboardShortcutConfig? = nil
+    var externalTrigger: ExternalTriggerConfig? = nil
     /// When true, the gesture will NOT fire if any mouse button is currently pressed
     var requireNoMouse: Bool = false
 
@@ -135,7 +149,7 @@ struct GestureActivationComponents: Codable, Equatable {
 
     /// Check if gesture is valid (has at least one enabled component)
     var isValid: Bool {
-        return !enabledTypes.isEmpty || requireNoMouse
+        return !enabledTypes.isEmpty || requireNoMouse || externalTrigger?.isEnabled == true
     }
 
     /// All registered components as (label, config) pairs in display order
@@ -146,6 +160,7 @@ struct GestureActivationComponents: Codable, Equatable {
         if let c = dragType { result.append(("Drag", c)) }
         if let c = mouseButton { result.append(("Mouse Button", c)) }
         if let c = keyboardShortcut { result.append(("Keyboard", c)) }
+        if let c = externalTrigger { result.append(("Plugin", c)) }
         return result
     }
 

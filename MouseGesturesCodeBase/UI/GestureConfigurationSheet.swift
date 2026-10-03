@@ -24,7 +24,6 @@ struct GestureConfigurationSheet: View {
     @State private var conflictMessage = ""
     @State private var pendingGesture: Gesture?
     /// Enabled state for third-party trigger plugins (keyed by plugin identifier)
-    @State private var externalTriggerStates: [String: Bool] = [:]
 
     enum Mode {
         case add, edit
@@ -143,6 +142,9 @@ struct GestureConfigurationSheet: View {
         }
         if components.keyboardShortcut?.isEnabled == true {
             triggerParts.append(components.keyboardShortcut?.keyboardTrigger?.displayString ?? "Key")
+        }
+        if components.externalTrigger?.isEnabled == true {
+            triggerParts.append(components.externalTrigger?.displayValue ?? "Plugin")
         }
 
         let trigger = triggerParts.isEmpty ? "No trigger" : triggerParts.joined(separator: " + ")
@@ -294,15 +296,7 @@ struct GestureConfigurationSheet: View {
 
                     // Dynamic: third-party plugins that provide trigger UI
                     ForEach(unknownTriggerPlugins, id: \.identifier) { plugin in
-                        ComponentToggleCard(
-                            icon: plugin.triggerIcon,
-                            title: plugin.triggerTitle,
-                            description: plugin.triggerDescription,
-                            isEnabled: Binding(
-                                get: { externalTriggerStates[plugin.identifier] ?? false },
-                                set: { externalTriggerStates[plugin.identifier] = $0 }
-                            )
-                        )
+                        externalTriggerCard(plugin)
                     }
                 }
 
@@ -319,6 +313,50 @@ struct GestureConfigurationSheet: View {
                 }
             }
             .padding(.vertical, MGStyle.Spacing.xs)
+        }
+    }
+
+    // MARK: - External Trigger Plugins
+
+    @ViewBuilder
+    private func externalTriggerCard(_ plugin: DetectionPlugin) -> some View {
+        let adapter = plugin as? ExternalTriggerAdapter
+        let isOn = components.externalTrigger?.isEnabled == true && components.externalTrigger?.pluginId == plugin.identifier
+        ComponentToggleCard(
+            icon: plugin.triggerIcon,
+            title: plugin.triggerTitle,
+            description: plugin.triggerDescription,
+            isEnabled: Binding(
+                get: { isOn },
+                set: { enabled in
+                    if enabled, let first = adapter?.triggers.first {
+                        components.externalTrigger = ExternalTriggerConfig(
+                            isEnabled: true, pluginId: plugin.identifier, triggerId: first.id,
+                            displayName: "\(plugin.triggerTitle): \(first.name)")
+                    } else if isOn {
+                        components.externalTrigger?.isEnabled = false
+                    }
+                }
+            )
+        )
+        if isOn, let adapter = adapter {
+            HStack {
+                Text("Trigger").font(.caption).foregroundColor(.secondary)
+                Picker("", selection: Binding(
+                    get: { components.externalTrigger?.triggerId ?? "" },
+                    set: { id in
+                        guard let t = adapter.triggers.first(where: { $0.id == id }) else { return }
+                        components.externalTrigger?.triggerId = id
+                        components.externalTrigger?.displayName = "\(plugin.triggerTitle): \(t.name)"
+                    }
+                )) {
+                    ForEach(adapter.triggers, id: \.id) { Text($0.name).tag($0.id) }
+                }
+                .labelsHidden()
+                Spacer()
+            }
+            .padding(.horizontal, MGStyle.Spacing.lg)
+            .padding(.bottom, MGStyle.Spacing.sm)
         }
     }
 

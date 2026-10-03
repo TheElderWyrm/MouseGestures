@@ -146,7 +146,8 @@ public class PluginManager: NSObject {
         }
 
         // Determine permissions for external plugin
-        let permissions = isSystem ? PluginPermissions.default : PluginPermissions.restricted
+        let permissions = isSystem ? PluginPermissions.default
+            : PluginPermissions.restricted.granting(PluginLibraryService.installedGrants(for: plugin.identifier))
 
         // Set external flag (if it's not a system plugin)
         plugin.isExternal = !isSystem

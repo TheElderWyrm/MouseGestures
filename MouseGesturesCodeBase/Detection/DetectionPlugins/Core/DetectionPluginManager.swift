@@ -114,9 +114,19 @@ class DetectionPluginManager: NSObject {
             log.log("DetectionPluginManager: failed to load bundle at \(url.lastPathComponent)")
             return nil
         }
-        guard let cls = bundle.principalClass as? NSObject.Type,
-              let plugin = cls.init() as? DetectionPlugin else {
-            log.log("DetectionPluginManager: principal class in \(url.lastPathComponent) does not conform to DetectionPlugin")
+        guard let cls = bundle.principalClass as? NSObject.Type else {
+            log.log("DetectionPluginManager: no principal class in \(url.lastPathComponent)")
+            bundle.unload()
+            return nil
+        }
+        let instance = cls.init()
+        let plugin: DetectionPlugin
+        if let native = instance as? DetectionPlugin {
+            plugin = native
+        } else if let external = instance as? ExternalTriggerPlugin {
+            plugin = ExternalTriggerAdapter(external)
+        } else {
+            log.log("DetectionPluginManager: principal class in \(url.lastPathComponent) is not a detection plugin")
             bundle.unload()
             return nil
         }

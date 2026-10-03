@@ -813,3 +813,27 @@ public protocol PluginRequestHandler: AnyObject {
     func handleRequest(_ request: PluginRequest, completion: @escaping (Result<Any?, Error>) -> Void)
     func shouldAutoApprove(_ request: PluginRequest) -> Bool
 }
+
+
+// MARK: - Library grants
+
+extension PluginPermissions {
+    /// Applies the permissions a user approved when installing a library plugin
+    /// (names from `LibraryPermission`). Unknown names are ignored.
+    func granting(_ grants: [String]) -> PluginPermissions {
+        guard !grants.isEmpty else { return self }
+        var p = self
+        for name in grants {
+            switch LibraryPermission(rawValue: name) {
+            case .systemAPIs: p.canAccessSystemAPIs = true
+            case .windowManager: p.canAccessWindowManager = true
+            case .fileSystem: p.canAccessFileSystem = true
+            case .executeActions: p.canExecuteOtherActions = true
+            case .configuration: p.canAccessConfiguration = true
+            case nil: break
+            }
+        }
+        p.executionTimeout = max(p.executionTimeout, 10.0)
+        return p
+    }
+}

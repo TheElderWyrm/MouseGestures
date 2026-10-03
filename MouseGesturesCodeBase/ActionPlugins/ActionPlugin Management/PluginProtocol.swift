@@ -68,14 +68,14 @@ public protocol GestureActionPlugin: AnyObject {
 
 // MARK: - Default Implementations
 extension GestureActionPlugin {
-    var isAdvanced: Bool { false }
-    var isExternal: Bool {
+    public var isAdvanced: Bool { false }
+    public var isExternal: Bool {
         get { false }
         set { }
     }
-    func configurationView(for action: PluginAction) -> NSView? { nil }
-    func hasAdvancedConfiguration(for action: PluginAction) -> Bool { false }
-    func presentAdvancedConfiguration(
+    public func configurationView(for action: PluginAction) -> NSView? { nil }
+    public func hasAdvancedConfiguration(for action: PluginAction) -> Bool { false }
+    public func presentAdvancedConfiguration(
         for action: PluginAction,
         currentParameters: [String: AnyCodable],
         parentWindow: NSWindow,

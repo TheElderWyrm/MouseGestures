@@ -153,7 +153,9 @@ struct PluginLibrariesView: View {
     private func confirmAndInstall(_ entry: LibraryPluginEntry, repo: LibraryRepo, verb: String) {
         let alert = NSAlert()
         alert.messageText = "\(verb) “\(entry.name)”?"
-        alert.informativeText = "This downloads native code from \(repo.displayName) and runs it inside MouseGestures, with the same access to your Mac (including Accessibility). Only continue if you trust the library's author."
+        let perms = ((try? PluginLibraryLogic.parsePermissions(entry.permissions)) ?? []).map { "• " + $0.summary }
+        let asks = perms.isEmpty ? "It asks for no special permissions." : "It asks to:\n" + perms.joined(separator: "\n")
+        alert.informativeText = "This downloads native code from \(repo.displayName) and runs it inside MouseGestures, with the same access to your Mac (including Accessibility). Only continue if you trust the library's author.\n\n\(asks)"
         alert.alertStyle = .warning
         alert.addButton(withTitle: verb)
         alert.addButton(withTitle: "Cancel")

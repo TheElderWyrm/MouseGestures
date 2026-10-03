@@ -79,6 +79,16 @@ final class PluginLibraryLogicTests: XCTestCase {
         XCTAssertThrowsError(try PluginLibraryLogic.parseManifest(Data("nope".utf8)))
     }
 
+    func testPermissionsParsing() throws {
+        XCTAssertEqual(try PluginLibraryLogic.parsePermissions(nil), [])
+        XCTAssertEqual(try PluginLibraryLogic.parsePermissions(["systemAPIs", "fileSystem"]), [.systemAPIs, .fileSystem])
+        XCTAssertThrowsError(try PluginLibraryLogic.parsePermissions(["root"]))
+        let bad = LibraryManifest(schemaVersion: 1, name: "L", plugins: [
+            LibraryPluginEntry(id: "com.example.foo", name: "Foo", kind: .action, version: "1.0",
+                               download: "a.zip", sha256: goodSHA, permissions: ["everything"])])
+        XCTAssertThrowsError(try PluginLibraryLogic.validate(bad))
+    }
+
     func testChecksumCaseInsensitive() {
         XCTAssertTrue(PluginLibraryLogic.checksumMatches("ABCD", "abcd"))
         XCTAssertFalse(PluginLibraryLogic.checksumMatches("abcd", "abce"))

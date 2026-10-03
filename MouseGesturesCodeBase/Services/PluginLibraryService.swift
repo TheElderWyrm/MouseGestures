@@ -37,6 +37,15 @@ final class PluginLibraryService: ObservableObject {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0"
     }
 
+    /// Grants recorded at install time, read straight from disk so the plugin
+    /// loader can use them during app launch (before this service exists).
+    nonisolated static func installedGrants(for pluginId: String) -> [String] {
+        let file = Configuration.applicationSupportDirectory
+            .appendingPathComponent("PluginLibraries", isDirectory: true).appendingPathComponent("installed.json")
+        let records = read([InstalledLibraryPlugin].self, from: file) ?? []
+        return records.first { $0.pluginId == pluginId }?.grants ?? []
+    }
+
     private init() {
         directory = Configuration.applicationSupportDirectory.appendingPathComponent("PluginLibraries", isDirectory: true)
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -47,7 +56,7 @@ final class PluginLibraryService: ObservableObject {
 
     // MARK: Persistence
 
-    private static func read<T: Decodable>(_ type: T.Type, from url: URL) -> T? {
+    nonisolated private static func read<T: Decodable>(_ type: T.Type, from url: URL) -> T? {
         guard let data = try? Data(contentsOf: url) else { return nil }
         return try? JSONDecoder().decode(type, from: data)
     }
@@ -192,10 +201,21 @@ final class PluginLibraryService: ObservableObject {
         let wasLoaded = isLoaded(entry)
         let before = loadedIdentifiers(entry.kind)
         var needsRestart = wasLoaded
-        switch entry.kind {
-        case .action: try PluginManager.shared.installPlugin(from: staged, loadNow: !wasLoaded)
-        case .detection: try DetectionPluginManager.shared.installExternalPlugin(from: staged, loadNow: !wasLoaded)
-        }
+
+        // The permission grant must be on disk BEFORE the plugin loads (the loader reads it).
+        let previous = installed[entry.id]
+        let grants = try PluginLibraryLogic.parsePermissions(entry.permissions).map { $0.rawValue }
+        installed[entry.id] = InstalledLibraryPlugin(pluginId: entry.id, kind: entry.kind, version: entry.version,
+                                                     libraryId: repo.id, grants: grants, needsRestart: wasLoaded)
+        save()
+        func rollback() { installed[entry.id] = previous; save() }
+
+        do {
+            switch entry.kind {
+            case .action: try PluginManager.shared.installPlugin(from: staged, loadNow: !wasLoaded)
+            case .detection: try DetectionPluginManager.shared.installExternalPlugin(from: staged, loadNow: !wasLoaded)
+            }
+        } catch { rollback(); throw error }
 
         // 5. A freshly loaded plugin must be exactly the one the manifest promised.
         if !wasLoaded {
@@ -203,14 +223,14 @@ final class PluginLibraryService: ObservableObject {
             guard added == [entry.id] else {
                 for id in added { try? uninstallLoaded(id: id, kind: entry.kind) }
                 try? FileManager.default.removeItem(at: installDirectory(for: entry.kind).appendingPathComponent("\(entry.id).plugin"))
+                rollback()
                 if added.isEmpty { throw PluginLibraryError.loadFailed("see the log for details") }
                 throw PluginLibraryError.identifierMismatch(expected: entry.id, found: added.first)
             }
             needsRestart = false
         }
 
-        installed[entry.id] = InstalledLibraryPlugin(pluginId: entry.id, kind: entry.kind, version: entry.version,
-                                                     libraryId: repo.id, needsRestart: needsRestart)
+        installed[entry.id]?.needsRestart = needsRestart
         save()
         log.log("PluginLibrary: installed \(entry.id) \(entry.version) from \(repo.id)\(needsRestart ? " (restart required)" : "")")
     }
