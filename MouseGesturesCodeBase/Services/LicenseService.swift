@@ -266,7 +266,10 @@ public class LicenseService: ObservableObject {
         case success
         case invalidKey
         case activationLimitReached
-        case networkError
+        /// Transport failure — the request never got a response (offline, VPN/firewall block, DNS, TLS).
+        case networkError(String)
+        /// A response arrived but wasn't a usable License API reply (rate limit, proxy/captive-portal HTML, outage).
+        case serverError(String)
     }
 
     /// Validates and, if valid, stores a license key to unlock Pro.
@@ -296,12 +299,18 @@ public class LicenseService: ObservableObject {
         let instanceName = Host.current().localizedName ?? "Mac"
         let request = LemonSqueezyLicense.activateRequest(licenseKey: trimmedKey, instanceName: instanceName)
 
-        URLSession.shared.dataTask(with: request) { [weak self] data, _, error in
+        URLSession.shared.dataTask(with: request) { [weak self] data, urlResponse, error in
             DispatchQueue.main.async {
                 guard let self = self else { return }
-                guard error == nil, let data = data,
+                if let error = error {
+                    completion(.networkError((error as NSError).domain + " " + String((error as NSError).code)
+                                             + ": " + error.localizedDescription))
+                    return
+                }
+                guard let data = data,
                       let response = try? LemonSqueezyLicense.parseActivateResponse(data) else {
-                    completion(.networkError)
+                    let status = (urlResponse as? HTTPURLResponse)?.statusCode
+                    completion(.serverError(LemonSqueezyLicense.describeUnusableReply(statusCode: status, data: data)))
                     return
                 }
                 guard response.activated, let instance = response.instance else {

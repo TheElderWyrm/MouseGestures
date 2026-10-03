@@ -242,4 +242,12 @@ final class LemonSqueezyLicenseTests: XCTestCase {
         let decoded = components.queryItems?.first(where: { $0.name == "license_key" })?.value
         XCTAssertEqual(decoded, tricky)
     }
+
+    func testDescribeUnusableReplyIncludesStatusAndSnippet() {
+        let html = Data("<html>Too Many Requests</html>".utf8)
+        XCTAssertEqual(LemonSqueezyLicense.describeUnusableReply(statusCode: 429, data: html),
+                       "HTTP 429: <html>Too Many Requests</html>")
+        XCTAssertEqual(LemonSqueezyLicense.describeUnusableReply(statusCode: 502, data: Data()), "HTTP 502")
+        XCTAssertEqual(LemonSqueezyLicense.describeUnusableReply(statusCode: nil, data: nil), "no HTTP status")
+    }
 }

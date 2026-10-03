@@ -168,6 +168,15 @@ public enum LemonSqueezyLicense {
                 params: [("license_key", licenseKey), ("instance_id", instanceId)])
     }
 
+    /// Short human-readable description of a reply that couldn't be parsed as License API JSON.
+    static func describeUnusableReply(statusCode: Int?, data: Data?) -> String {
+        let status = statusCode.map { "HTTP \($0)" } ?? "no HTTP status"
+        let snippet = data.flatMap { String(data: $0.prefix(80), encoding: .utf8) }?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "\n", with: " ") ?? ""
+        return snippet.isEmpty ? status : "\(status): \(snippet)"
+    }
+
     // MARK: - Response parsing (pure — no I/O)
 
     public static func parseActivateResponse(_ data: Data) throws -> ActivateResponse {

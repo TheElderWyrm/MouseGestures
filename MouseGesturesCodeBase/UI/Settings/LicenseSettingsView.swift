@@ -170,8 +170,13 @@ struct LicenseSettingsView: View {
             case .activationLimitReached:
                 activationError = "This license is already active on its maximum number of Macs. "
                     + "Deactivate it on another Mac first, or email support@mousegestures.app."
-            case .networkError:
-                activationError = "Couldn't reach the license server. Check your internet connection and try again."
+            case .networkError(let detail):
+                activationError = "Couldn't connect to the license server (\(detail)). Check your internet connection, "
+                    + "and any VPN, firewall or content blocker that might block api.lemonsqueezy.com, then try again."
+            case .serverError(let detail):
+                activationError = "The license server sent an unexpected reply (\(detail)). "
+                    + "This is usually temporary, or a proxy/captive portal in the way. Try again shortly, "
+                    + "or email support@mousegestures.app."
             }
         }
     }
