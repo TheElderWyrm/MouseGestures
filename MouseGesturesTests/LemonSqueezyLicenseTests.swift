@@ -250,4 +250,21 @@ final class LemonSqueezyLicenseTests: XCTestCase {
         XCTAssertEqual(LemonSqueezyLicense.describeUnusableReply(statusCode: 502, data: Data()), "HTTP 502")
         XCTAssertEqual(LemonSqueezyLicense.describeUnusableReply(statusCode: nil, data: nil), "no HTTP status")
     }
+
+    func testSanitizedInstanceNameMeetsServerMinimumLength() {
+        XCTAssertEqual(LemonSqueezyLicense.sanitizedInstanceName("CS"), "CS-Mac")
+        XCTAssertEqual(LemonSqueezyLicense.sanitizedInstanceName("A"), "A-Mac")
+        XCTAssertEqual(LemonSqueezyLicense.sanitizedInstanceName(" CS "), "CS-Mac")
+        XCTAssertEqual(LemonSqueezyLicense.sanitizedInstanceName(""), "Mac")
+        XCTAssertEqual(LemonSqueezyLicense.sanitizedInstanceName("   "), "Mac")
+        XCTAssertEqual(LemonSqueezyLicense.sanitizedInstanceName(nil), "Mac")
+        XCTAssertEqual(LemonSqueezyLicense.sanitizedInstanceName("Bob's MacBook"), "Bob's MacBook")
+        XCTAssertEqual(LemonSqueezyLicense.sanitizedInstanceName(String(repeating: "x", count: 300)).count, 255)
+    }
+
+    func testDescribeUnusableReplyPrefersValidationMessage() {
+        let body = Data(#"{"message":"The instance name field must be at least 3 characters.","errors":{}}"#.utf8)
+        XCTAssertEqual(LemonSqueezyLicense.describeUnusableReply(statusCode: 422, data: body),
+                       "HTTP 422: The instance name field must be at least 3 characters.")
+    }
 }

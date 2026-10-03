@@ -10,7 +10,9 @@ root — this file is the curated, user-facing subset of that log.
 
 ## [Unreleased]
 
-_Nothing yet._
+### Fixed
+- License activation failed on Macs whose computer name is shorter than 3 characters (e.g. "CS"): the license server rejects such names, and the app reported it as a connection problem. Short names are now padded automatically.
+- Activation errors now say what actually went wrong (no connection vs. an unexpected server reply, with details) instead of always blaming the internet connection.
 
 ## [1.0.1] — 2026-08-08
 

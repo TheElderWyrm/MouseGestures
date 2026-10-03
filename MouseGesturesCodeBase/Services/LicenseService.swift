@@ -296,7 +296,7 @@ public class LicenseService: ObservableObject {
             return
         }
 
-        let instanceName = Host.current().localizedName ?? "Mac"
+        let instanceName = LemonSqueezyLicense.sanitizedInstanceName(Host.current().localizedName)
         let request = LemonSqueezyLicense.activateRequest(licenseKey: trimmedKey, instanceName: instanceName)
 
         URLSession.shared.dataTask(with: request) { [weak self] data, urlResponse, error in

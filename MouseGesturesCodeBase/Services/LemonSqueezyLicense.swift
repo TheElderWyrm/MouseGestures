@@ -168,9 +168,26 @@ public enum LemonSqueezyLicense {
                 params: [("license_key", licenseKey), ("instance_id", instanceId)])
     }
 
+    /// The License API rejects `instance_name` values shorter than 3 characters
+    /// (HTTP 422) — a Mac named "CS" could never activate. Trims, falls back to
+    /// "Mac" when empty, pads short names with "-Mac", and caps at 255 characters.
+    static func sanitizedInstanceName(_ raw: String?) -> String {
+        var name = (raw ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        if name.isEmpty { return "Mac" }
+        if name.count < 3 { name += "-Mac" }
+        return String(name.prefix(255))
+    }
+
     /// Short human-readable description of a reply that couldn't be parsed as License API JSON.
+    /// Laravel-style validation failures (HTTP 422) carry a top-level `message`, which is
+    /// more useful to show than the raw body.
     static func describeUnusableReply(statusCode: Int?, data: Data?) -> String {
         let status = statusCode.map { "HTTP \($0)" } ?? "no HTTP status"
+        if let data = data,
+           let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let message = obj["message"] as? String, !message.isEmpty {
+            return "\(status): \(message)"
+        }
         let snippet = data.flatMap { String(data: $0.prefix(80), encoding: .utf8) }?
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .replacingOccurrences(of: "\n", with: " ") ?? ""
