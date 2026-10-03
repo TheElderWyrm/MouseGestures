@@ -39,6 +39,20 @@ install, update and remove its **action** and **detection** plugins.
   (`ditto -c -k --keepParent Foo.plugin foo.zip`). The bundle must carry at least an
   ad-hoc signature (`codesign --force -s - Foo.plugin`).
 
+- `permissions` (optional): any of `systemAPIs` (keystrokes + AppleScript), `windowManager`,
+  `fileSystem`, `executeActions`, `configuration`. Shown in the install prompt and applied to
+  the plugin's sandbox when it loads; anything unlisted is denied.
+
+## Plugin types
+
+- **Action** plugin: subclass `NSObject`, conform to `GestureActionPlugin`, `@objc(Name)`, set `NSPrincipalClass`.
+- **Detection** plugin: subclass `NSObject`, conform to `ExternalTriggerPlugin` (`ExternalTriggerAPI.swift`),
+  declare `triggers`, and call `host.fire(triggerId:)`. In the gesture editor it appears as a *Plugin* trigger.
+
+Plugins `import MouseGestures` and are compiled against a Release build's `MouseGestures.swiftmodule`
+with `-Xlinker -undefined -Xlinker dynamic_lookup` (the app links with `-export_dynamic`).
+See the official library's `build.py` for a working recipe.
+
 ## What the app enforces
 
 1. SHA-256 of the download must match the manifest (checked before unzipping).
