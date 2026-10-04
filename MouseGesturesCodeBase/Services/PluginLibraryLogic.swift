@@ -56,11 +56,15 @@ public struct LibraryPluginEntry: Codable, Equatable, Identifiable {
     public let sha256: String
     /// Names from `LibraryPermission`. Action plugins are sandboxed to these; omit for none.
     public let permissions: [String]?
+    /// Other plugins this one needs, as `"plugin.id"` or `"plugin.id>=1.2"`. They are
+    /// installed first (from any connected library) and block removal while this is installed.
+    public let requires: [String]?
 
     public init(id: String, name: String, kind: LibraryPluginKind, version: String,
                 author: String? = nil, description: String? = nil, minAppVersion: String? = nil,
-                download: String, sha256: String, permissions: [String]? = nil) {
+                download: String, sha256: String, permissions: [String]? = nil, requires: [String]? = nil) {
         self.permissions = permissions
+        self.requires = requires
         self.id = id; self.name = name; self.kind = kind; self.version = version
         self.author = author; self.description = description; self.minAppVersion = minAppVersion
         self.download = download; self.sha256 = sha256
@@ -103,12 +107,15 @@ public struct InstalledLibraryPlugin: Codable, Equatable {
     public let libraryId: String
     /// `LibraryPermission` names granted at install time (applied when the plugin loads).
     public var grants: [String]?
+    /// The `requires` list this plugin was installed with (drives removal warnings).
+    public var requires: [String]?
     /// True when files are on disk but the code can't be (re)loaded until relaunch.
     public var needsRestart: Bool
 
     public init(pluginId: String, kind: LibraryPluginKind, version: String, libraryId: String,
-                grants: [String]? = nil, needsRestart: Bool = false) {
+                grants: [String]? = nil, needsRestart: Bool = false, requires: [String]? = nil) {
         self.grants = grants
+        self.requires = requires
         self.pluginId = pluginId; self.kind = kind; self.version = version
         self.libraryId = libraryId; self.needsRestart = needsRestart
     }
@@ -141,6 +148,10 @@ public enum PluginLibraryError: Error, Equatable, LocalizedError {
     case loadFailed(String)
     case incompatible(String)
     case unknownPermission(String)
+    case missingDependency(id: String, requiredBy: String)
+    case dependencyVersion(id: String, minVersion: String, requiredBy: String)
+    case dependencyCycle(String)
+    case invalidRequirement(String)
 
     public var errorDescription: String? {
         switch self {
@@ -156,6 +167,10 @@ public enum PluginLibraryError: Error, Equatable, LocalizedError {
             return "The plugin identified itself as \(found ?? "nothing") instead of \(expected), so it was removed."
         case .loadFailed(let s): return "The plugin was installed but failed to load: \(s)"
         case .incompatible(let v): return "This plugin requires MouseGestures \(v) or newer."
+        case .missingDependency(let id, let by): return "\(by) requires \(id), which isn't available in any connected library."
+        case .dependencyVersion(let id, let min, let by): return "\(by) requires \(id) \(min) or newer, but no connected library offers it."
+        case .dependencyCycle(let id): return "Plugins require each other in a loop (\(id))."
+        case .invalidRequirement(let r): return "Invalid plugin requirement '\(r)'."
         case .unknownPermission(let p): return "The library asks for a permission this version doesn't know (\(p)). Update the app."
         }
     }
@@ -286,6 +301,9 @@ public enum PluginLibraryLogic {
             if let min = p.minAppVersion, !isValidVersion(min) { throw PluginLibraryError.invalidManifest("bad minAppVersion for \(p.id)") }
             guard isValidSHA256(p.sha256) else { throw PluginLibraryError.invalidManifest("bad sha256 for \(p.id)") }
             _ = try parsePermissions(p.permissions)
+            for r in p.requires ?? [] {
+                guard let req = parseRequirement(r), req.id != p.id else { throw PluginLibraryError.invalidRequirement(r) }
+            }
             guard !p.name.isEmpty, !p.download.isEmpty else { throw PluginLibraryError.invalidManifest("incomplete entry \(p.id)") }
         }
     }
@@ -348,6 +366,86 @@ public enum PluginLibraryLogic {
         let haystack = [entry.name, entry.description ?? "", entry.author ?? "", entry.id, entry.kind.label]
             .joined(separator: " ")
         return words.allSatisfy { haystack.range(of: String($0), options: [.caseInsensitive, .diacriticInsensitive]) != nil }
+    }
+
+    // MARK: Dependencies
+
+    public struct Requirement: Equatable {
+        public let id: String
+        public let minVersion: String?
+    }
+
+    /// Parses `"id"` or `"id>=1.2"`.
+    public static func parseRequirement(_ raw: String) -> Requirement? {
+        let parts = raw.components(separatedBy: ">=").map { $0.trimmingCharacters(in: .whitespaces) }
+        guard parts.count <= 2, let id = parts.first, isValidPluginId(id) else { return nil }
+        if parts.count == 2 {
+            guard isValidVersion(parts[1]) else { return nil }
+            return Requirement(id: id, minVersion: parts[1])
+        }
+        return Requirement(id: id, minVersion: nil)
+    }
+
+    /// Everything that must be installed or updated, in order (dependencies first,
+    /// `entry` last), so that `entry` and all it requires — transitively — are present.
+    /// Already-satisfied requirements are skipped. Throws when a requirement can't be met.
+    public static func resolveInstallPlan(for entry: LibraryPluginEntry,
+                                          catalog: [String: LibraryPluginEntry],
+                                          installedVersions: [String: String],
+                                          appVersion: String) throws -> [LibraryPluginEntry] {
+        var plan: [LibraryPluginEntry] = []
+        var done = Set<String>()
+        var visiting = Set<String>()
+
+        func visit(_ e: LibraryPluginEntry) throws {
+            guard !done.contains(e.id) else { return }
+            guard visiting.insert(e.id).inserted else { throw PluginLibraryError.dependencyCycle(e.id) }
+            for raw in e.requires ?? [] {
+                guard let req = parseRequirement(raw) else { throw PluginLibraryError.invalidRequirement(raw) }
+                if let have = installedVersions[req.id],
+                   req.minVersion.map({ !UpdateLogic.isUpdateAvailable(current: have, remote: $0) }) ?? true {
+                    continue
+                }
+                guard let dep = catalog[req.id] else { throw PluginLibraryError.missingDependency(id: req.id, requiredBy: e.name) }
+                if let min = req.minVersion, UpdateLogic.isUpdateAvailable(current: dep.version, remote: min) {
+                    throw PluginLibraryError.dependencyVersion(id: req.id, minVersion: min, requiredBy: e.name)
+                }
+                if case .incompatible(let m) = state(for: dep, installedVersion: nil, appVersion: appVersion) {
+                    throw PluginLibraryError.incompatible(m)
+                }
+                try visit(dep)
+            }
+            visiting.remove(e.id)
+            done.insert(e.id)
+            plan.append(e)
+        }
+        try visit(entry)
+        return plan
+    }
+
+    /// Ids of installed plugins that (transitively) require `id`.
+    public static func dependents(of id: String, requirements: [String: [String]]) -> [String] {
+        var found = Set<String>()
+        var queue = [id]
+        while let current = queue.popLast() {
+            for (other, reqs) in requirements where !found.contains(other) && other != id {
+                if reqs.contains(where: { parseRequirement($0)?.id == current }) {
+                    found.insert(other); queue.append(other)
+                }
+            }
+        }
+        return found.sorted()
+    }
+
+    // MARK: On-disk names
+
+    /// Versioned so an update lands at a NEW path: macOS caches loaded bundles by
+    /// path, so re-loading a replaced bundle at the same path runs the OLD code.
+    public static func bundleFileName(id: String, version: String) -> String { "\(id)@\(version).plugin" }
+
+    /// True for `<id>.plugin` (legacy) and `<id>@<version>.plugin`.
+    public static func isBundleFile(_ fileName: String, for id: String) -> Bool {
+        fileName == "\(id).plugin" || (fileName.hasPrefix("\(id)@") && fileName.hasSuffix(".plugin"))
     }
 
     public static let bundleExtensions: Set<String> = ["plugin", "bundle"]

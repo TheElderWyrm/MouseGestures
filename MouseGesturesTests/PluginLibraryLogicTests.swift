@@ -135,4 +135,50 @@ final class PluginLibraryLogicTests: XCTestCase {
         XCTAssertTrue(m(e, .notInstalled, "", nil, .available))
         XCTAssertFalse(m(e, .installed(version: "1.0"), "", nil, .available))
     }
+
+    // MARK: dependencies
+
+    private func dep(_ id: String, version: String = "1.0", requires: [String]? = nil) -> LibraryPluginEntry {
+        LibraryPluginEntry(id: id, name: id, kind: .action, version: version, download: "d.zip", sha256: goodSHA, requires: requires)
+    }
+
+    func testParseRequirement() {
+        XCTAssertEqual(PluginLibraryLogic.parseRequirement("com.a.b"), .init(id: "com.a.b", minVersion: nil))
+        XCTAssertEqual(PluginLibraryLogic.parseRequirement("com.a.b>=1.2"), .init(id: "com.a.b", minVersion: "1.2"))
+        XCTAssertNil(PluginLibraryLogic.parseRequirement("com.a.b>=x"))
+        XCTAssertNil(PluginLibraryLogic.parseRequirement("a"))
+    }
+
+    func testPlanOrdersDependenciesFirstAndSkipsSatisfied() throws {
+        let a = dep("com.x.a"), b = dep("com.x.b", requires: ["com.x.a"]), c = dep("com.x.c", requires: ["com.x.b", "com.x.a>=1.0"])
+        let cat = ["com.x.a": a, "com.x.b": b, "com.x.c": c]
+        let plan = try PluginLibraryLogic.resolveInstallPlan(for: c, catalog: cat, installedVersions: [:], appVersion: "1.1")
+        XCTAssertEqual(plan.map { $0.id }, ["com.x.a", "com.x.b", "com.x.c"])
+        let partial = try PluginLibraryLogic.resolveInstallPlan(for: c, catalog: cat, installedVersions: ["com.x.a": "1.0"], appVersion: "1.1")
+        XCTAssertEqual(partial.map { $0.id }, ["com.x.b", "com.x.c"])
+    }
+
+    func testPlanFailures() {
+        let b = dep("com.x.b", requires: ["com.x.a"])
+        XCTAssertThrowsError(try PluginLibraryLogic.resolveInstallPlan(for: b, catalog: [:], installedVersions: [:], appVersion: "1.1"))
+        let needsNew = dep("com.x.n", requires: ["com.x.a>=2.0"])
+        XCTAssertThrowsError(try PluginLibraryLogic.resolveInstallPlan(for: needsNew, catalog: ["com.x.a": dep("com.x.a")], installedVersions: [:], appVersion: "1.1"))
+        // installed but too old, and the library has nothing newer
+        XCTAssertThrowsError(try PluginLibraryLogic.resolveInstallPlan(for: needsNew, catalog: ["com.x.a": dep("com.x.a")], installedVersions: ["com.x.a": "1.0"], appVersion: "1.1"))
+        let p = dep("com.x.p", requires: ["com.x.q"]), q = dep("com.x.q", requires: ["com.x.p"])
+        XCTAssertThrowsError(try PluginLibraryLogic.resolveInstallPlan(for: p, catalog: ["com.x.p": p, "com.x.q": q], installedVersions: [:], appVersion: "1.1"))
+    }
+
+    func testDependentsAreTransitive() {
+        let reqs = ["com.x.b": ["com.x.a"], "com.x.c": ["com.x.b>=1.0"], "com.x.d": []]
+        XCTAssertEqual(PluginLibraryLogic.dependents(of: "com.x.a", requirements: reqs), ["com.x.b", "com.x.c"])
+        XCTAssertEqual(PluginLibraryLogic.dependents(of: "com.x.c", requirements: reqs), [])
+    }
+
+    func testBundleFileNaming() {
+        XCTAssertEqual(PluginLibraryLogic.bundleFileName(id: "com.x.a", version: "1.2"), "com.x.a@1.2.plugin")
+        XCTAssertTrue(PluginLibraryLogic.isBundleFile("com.x.a@1.2.plugin", for: "com.x.a"))
+        XCTAssertTrue(PluginLibraryLogic.isBundleFile("com.x.a.plugin", for: "com.x.a"))
+        XCTAssertFalse(PluginLibraryLogic.isBundleFile("com.x.a-b@1.plugin", for: "com.x.a"))
+    }
 }

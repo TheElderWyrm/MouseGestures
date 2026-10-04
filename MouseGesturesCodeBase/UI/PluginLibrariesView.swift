@@ -35,11 +35,27 @@ struct PluginLibrariesView: View {
                 Button { showingFilePicker = true } label: { Label("Install from File…", systemImage: "doc.badge.plus") }
                 Button { Task { await service.refreshAll() } } label: { Label("Check for Updates", systemImage: "arrow.clockwise") }
                     .disabled(service.isRefreshing)
+                if service.updatesAvailableCount > 0 {
+                    Button { updateAll() } label: { Label("Update All (\(service.updatesAvailableCount))", systemImage: "arrow.up.circle") }
+                        .disabled(!service.busyPluginIds.isEmpty)
+                }
                 Button("Done") { dismiss() }.keyboardShortcut(.defaultAction)
             }
 
             Text("Plugins are native code that runs with MouseGestures' permissions — only install ones you trust. More GitHub libraries can be connected under Developer Settings ▸ Plugin Sources.")
                 .font(.caption).foregroundColor(.secondary)
+
+            if service.pendingRestartCount > 0 {
+                HStack(spacing: 8) {
+                    Image(systemName: "arrow.triangle.2.circlepath").foregroundColor(.orange)
+                    Text("\(service.pendingRestartCount) plugin\(service.pendingRestartCount == 1 ? "" : "s") will finish installing when MouseGestures restarts.")
+                        .font(.caption)
+                    Spacer()
+                    Button("Restart Now") { service.restartApp() }.controlSize(.small)
+                }
+                .padding(8)
+                .background(RoundedRectangle(cornerRadius: 6).fill(Color.orange.opacity(0.15)))
+            }
 
             if let message {
                 Text(message).font(.caption).foregroundColor(messageIsError ? .red : .green)
@@ -65,7 +81,7 @@ struct PluginLibrariesView: View {
             }
         }
         .padding(MGStyle.Spacing.xl)
-        .frame(minWidth: 640, minHeight: 500)
+        .frame(minWidth: 760, minHeight: 500)
         .onAppear { service.reconcile() }
         .task { await service.refreshAll() }
         .fileImporter(isPresented: $showingFilePicker,
@@ -172,8 +188,10 @@ struct PluginLibrariesView: View {
                 }
                 if let d = entry.description { Text(d).font(.caption).foregroundColor(.secondary) }
                 if let a = entry.author { Text("by \(a)").font(.caption2).foregroundColor(.secondary) }
+                permissionLine(entry)
+                dependencyLines(entry)
                 if service.installed[entry.id]?.needsRestart == true {
-                    Text("Restart MouseGestures to finish updating.").font(.caption2).foregroundColor(.orange)
+                    Text("Restart MouseGestures to finish installing this version.").font(.caption2).foregroundColor(.orange)
                 }
                 if case .incompatible(let min) = state {
                     Text("Requires MouseGestures \(min) or newer.").font(.caption2).foregroundColor(.orange)
@@ -207,28 +225,87 @@ struct PluginLibrariesView: View {
         }
     }
 
+    // MARK: Permissions & dependencies
+
+    @ViewBuilder private func permissionLine(_ entry: LibraryPluginEntry) -> some View {
+        let perms = ((try? PluginLibraryLogic.parsePermissions(entry.permissions)) ?? []).map { $0.summary }
+        Label(perms.isEmpty ? "No special permissions" : "Can: " + perms.joined(separator: " · "),
+              systemImage: perms.isEmpty ? "lock.shield" : "lock.open")
+            .font(.caption2).foregroundColor(perms.isEmpty ? .secondary : .orange)
+    }
+
+    @ViewBuilder private func dependencyLines(_ entry: LibraryPluginEntry) -> some View {
+        let reqs = (entry.requires ?? []).compactMap { PluginLibraryLogic.parseRequirement($0) }
+        if !reqs.isEmpty {
+            let parts = reqs.map { r -> String in
+                let name = service.entry(id: r.id)?.name ?? r.id
+                let ok = service.installedVersion(of: r.id) != nil
+                return ok ? "\(name) ✓" : "\(name) (will be installed)"
+            }
+            Label("Requires: " + parts.joined(separator: ", "), systemImage: "link").font(.caption2).foregroundColor(.secondary)
+        }
+        let by = service.installedDependents(of: entry.id)
+        if service.installed[entry.id] != nil, !by.isEmpty {
+            Label("Required by: " + by.joined(separator: ", "), systemImage: "link.badge.plus").font(.caption2).foregroundColor(.secondary)
+        }
+    }
+
     // MARK: Actions
 
+    private func permissionText(_ e: LibraryPluginEntry) -> String {
+        let perms = ((try? PluginLibraryLogic.parsePermissions(e.permissions)) ?? []).map { "    • " + $0.summary }
+        return perms.isEmpty ? "    No special permissions" : perms.joined(separator: "\n")
+    }
+
     private func confirmAndInstall(_ entry: LibraryPluginEntry, repo: LibraryRepo, verb: String) {
+        let steps: [PluginLibraryService.PlannedInstall]
+        do { steps = try service.plan(for: entry) } catch { show(error.localizedDescription, error: true); return }
+        run(steps, title: "\(verb) “\(entry.name)”?", verb: verb, focus: entry.name)
+    }
+
+    private func updateAll() {
+        let steps: [PluginLibraryService.PlannedInstall]
+        do { steps = try service.updateAllPlan() } catch { show(error.localizedDescription, error: true); return }
+        guard !steps.isEmpty else { return }
+        run(steps, title: "Update \(steps.count) plugin\(steps.count == 1 ? "" : "s")?", verb: "Update", focus: nil)
+    }
+
+    private func run(_ steps: [PluginLibraryService.PlannedInstall], title: String, verb: String, focus: String?) {
         let alert = NSAlert()
-        alert.messageText = "\(verb) “\(entry.name)”?"
-        let perms = ((try? PluginLibraryLogic.parsePermissions(entry.permissions)) ?? []).map { "• " + $0.summary }
-        let asks = perms.isEmpty ? "It asks for no special permissions." : "It asks to:\n" + perms.joined(separator: "\n")
-        alert.informativeText = "This downloads native code from \(repo.displayName) and runs it inside MouseGestures, with the same access to your Mac (including Accessibility). Only continue if you trust the library's author.\n\n\(asks)"
+        alert.messageText = title
+        let sources = Set(steps.map { $0.repo.displayName }).sorted().joined(separator: ", ")
+        var info = "This downloads native code from \(sources) and runs it inside MouseGestures, with the same access to your Mac (including Accessibility). Only continue if you trust the library's author.\n"
+        for step in steps {
+            let tag = step.entry.name == focus || focus == nil ? "" : " (required)"
+            info += "\n\(step.entry.name) \(step.entry.version)\(tag) asks to:\n\(permissionText(step.entry))\n"
+        }
+        alert.informativeText = info
         alert.alertStyle = .warning
         alert.addButton(withTitle: verb)
         alert.addButton(withTitle: "Cancel")
         guard alert.runModal() == .alertFirstButtonReturn else { return }
         Task {
             do {
-                try await service.install(entry, from: repo)
-                show("\(entry.name) \(verb == "Update" ? "updated" : "installed").", error: false)
+                try await service.install(plan: steps)
+                let done = steps.count == 1 ? steps[0].entry.name : "\(steps.count) plugins"
+                let restart = service.pendingRestartCount > 0 ? " Restart to finish." : ""
+                show("\(done) \(verb == "Update" ? "updated" : "installed").\(restart)", error: false)
             } catch { show(error.localizedDescription, error: true) }
             onChange()
         }
     }
 
     private func uninstall(_ entry: LibraryPluginEntry) {
+        let by = service.installedDependents(of: entry.id)
+        if !by.isEmpty {
+            let alert = NSAlert()
+            alert.messageText = "Remove “\(entry.name)”?"
+            alert.informativeText = "\(by.joined(separator: ", ")) \(by.count == 1 ? "requires" : "require") it and may stop working."
+            alert.alertStyle = .warning
+            alert.addButton(withTitle: "Remove Anyway")
+            alert.addButton(withTitle: "Cancel")
+            guard alert.runModal() == .alertFirstButtonReturn else { return }
+        }
         do {
             try service.uninstall(pluginId: entry.id)
             show("\(entry.name) removed.", error: false)

@@ -1,5 +1,6 @@
 import Foundation
 import CryptoKit
+import AppKit
 
 // MARK: - PluginLibraryService
 // Plugin libraries are GitHub repositories with a `library.json` manifest that
@@ -33,6 +34,16 @@ final class PluginLibraryService: ObservableObject {
 
     private static let maxManifestBytes = 1_000_000
 
+    /// Versions whose code is mapped into THIS process. Unloading can't unmap a bundle,
+    /// so re-installing the same version is safe to load live; a different one isn't.
+    private var residentVersions: [String: String] = [:]
+
+    struct PlannedInstall: Identifiable {
+        let entry: LibraryPluginEntry
+        let repo: LibraryRepo
+        var id: String { entry.id }
+    }
+
     var appVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0"
     }
@@ -53,6 +64,9 @@ final class PluginLibraryService: ObservableObject {
         libraries = [PluginLibraryLogic.officialRepo] + custom
         installed = Dictionary(uniqueKeysWithValues:
             (Self.read([InstalledLibraryPlugin].self, from: installedFile) ?? []).map { ($0.pluginId, $0) })
+        // A fresh process has loaded whatever is on disk, so nothing is pending any more.
+        for id in installed.keys { installed[id]?.needsRestart = false }
+        residentVersions = installed.mapValues { $0.version }
     }
 
     // MARK: Persistence
@@ -127,7 +141,7 @@ final class PluginLibraryService: ObservableObject {
         let stale = installed.values.filter { rec in
             let loaded = rec.kind == .action ? PluginManager.shared.getPlugin(identifier: rec.pluginId) != nil
                                              : DetectionPluginManager.shared.isExternalPlugin(identifier: rec.pluginId)
-            let onDisk = fm.fileExists(atPath: installDirectory(for: rec.kind).appendingPathComponent("\(rec.pluginId).plugin").path)
+            let onDisk = !bundleFiles(for: rec.pluginId, kind: rec.kind).isEmpty
             return !loaded && !onDisk
         }
         guard !stale.isEmpty else { return }
@@ -136,6 +150,68 @@ final class PluginLibraryService: ObservableObject {
     }
 
     // MARK: Queries
+
+    var pendingRestartCount: Int { installed.values.filter { $0.needsRestart }.count }
+
+    /// id -> (entry, library) across all connected libraries; earlier libraries win.
+    private var catalog: [String: PlannedInstall] {
+        var result: [String: PlannedInstall] = [:]
+        for repo in libraries {
+            for e in manifests[repo.id]?.plugins ?? [] where result[e.id] == nil { result[e.id] = PlannedInstall(entry: e, repo: repo) }
+        }
+        return result
+    }
+
+    func entry(id: String) -> LibraryPluginEntry? { catalog[id]?.entry }
+
+    /// What installing `entry` involves: its missing dependencies first, then itself.
+    func plan(for entry: LibraryPluginEntry) throws -> [PlannedInstall] {
+        let cat = catalog
+        let steps = try PluginLibraryLogic.resolveInstallPlan(
+            for: entry, catalog: cat.mapValues { $0.entry },
+            installedVersions: installed.mapValues { $0.version }, appVersion: appVersion)
+        return steps.compactMap { step in cat[step.id] }
+    }
+
+    /// Every available update (plus any dependencies they newly need), deduplicated and ordered.
+    func updateAllPlan() throws -> [PlannedInstall] {
+        var seen = Set<String>(), result: [PlannedInstall] = []
+        for item in catalog.values.sorted(by: { $0.entry.name < $1.entry.name }) {
+            guard case .updateAvailable = state(of: item.entry) else { continue }
+            for step in try plan(for: item.entry) where seen.insert(step.id).inserted { result.append(step) }
+        }
+        return result
+    }
+
+    /// Names of installed plugins that require `pluginId` (directly or indirectly).
+    func installedDependents(of pluginId: String) -> [String] {
+        let reqs = installed.compactMapValues { $0.requires }
+        return PluginLibraryLogic.dependents(of: pluginId, requirements: reqs)
+            .map { entry(id: $0)?.name ?? $0 }
+    }
+
+    /// Relaunches the app so staged plugin updates load.
+    func restartApp() {
+        let path = Bundle.main.bundlePath.replacingOccurrences(of: "'", with: "'\\''")
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/bin/sh")
+        p.arguments = ["-c", "sleep 1; /usr/bin/open '\(path)'"]
+        try? p.run()
+        NSApp.terminate(nil)
+    }
+
+    private func bundleFiles(for pluginId: String, kind: LibraryPluginKind) -> [URL] {
+        let dir = installDirectory(for: kind)
+        return ((try? FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil)) ?? [])
+            .filter { PluginLibraryLogic.isBundleFile($0.lastPathComponent, for: pluginId) }
+    }
+
+    nonisolated private static func principalClassName(of bundle: URL) -> String? {
+        let plist = bundle.appendingPathComponent("Contents/Info.plist")
+        guard let d = try? Data(contentsOf: plist),
+              let dict = try? PropertyListSerialization.propertyList(from: d, format: nil) as? [String: Any] else { return nil }
+        return dict["NSPrincipalClass"] as? String
+    }
 
     func installedVersion(of pluginId: String) -> String? { installed[pluginId]?.version }
 
@@ -198,58 +274,76 @@ final class PluginLibraryService: ObservableObject {
                                failure: PluginLibraryError.notSigned("codesign --verify failed"))
         }
 
-        // 3. Name the bundle after its id (filename = identity on disk).
-        let staged = work.appendingPathComponent("\(entry.id).plugin", isDirectory: true)
+        // 3. Name the bundle after its id AND version: an update must land at a new path,
+        // because macOS caches loaded bundles by path (a same-path reload runs the old code).
+        let fileName = PluginLibraryLogic.bundleFileName(id: entry.id, version: entry.version)
+        let staged = work.appendingPathComponent(fileName, isDirectory: true)
         try FileManager.default.moveItem(at: bundle, to: staged)
 
-        // 4. Install. An already-loaded bundle can't be swapped in-process, so updates stage on disk.
+        // 4. Decide whether the new code can go live now. Loaded code can't be unmapped, so a
+        // bundle whose principal class name is already registered would silently run the OLD
+        // class. A new class name (the official library suffixes it per version) is safe to
+        // swap in live; anything else stages for the next launch.
         let wasLoaded = isLoaded(entry)
-        let before = loadedIdentifiers(entry.kind)
-        var needsRestart = wasLoaded
+        let className = Self.principalClassName(of: staged)
+        let collides = className.map { NSClassFromString($0) != nil } ?? true
+        let canLoadNow = !collides || (!wasLoaded && residentVersions[entry.id] == entry.version)
+        let hotSwap = wasLoaded && canLoadNow
 
         // The permission grant must be on disk BEFORE the plugin loads (the loader reads it).
         let previous = installed[entry.id]
         let grants = try PluginLibraryLogic.parsePermissions(entry.permissions).map { $0.rawValue }
         installed[entry.id] = InstalledLibraryPlugin(pluginId: entry.id, kind: entry.kind, version: entry.version,
-                                                     libraryId: repo.id, grants: grants, needsRestart: wasLoaded)
+                                                     libraryId: repo.id, grants: grants, needsRestart: !canLoadNow,
+                                                     requires: entry.requires)
         save()
-        func rollback() { installed[entry.id] = previous; save() }
+        func rollback() { installed[entry.id] = hotSwap ? nil : previous; save() }
+
+        // Remove superseded files so only the new version loads at next launch. A loaded
+        // bundle's file may be deleted safely; its code stays mapped until relaunch.
+        if hotSwap { try? uninstallLoaded(id: entry.id, kind: entry.kind) }
+        let before = loadedIdentifiers(entry.kind)
+        for old in bundleFiles(for: entry.id, kind: entry.kind) { try? FileManager.default.removeItem(at: old) }
 
         do {
             switch entry.kind {
-            case .action: try PluginManager.shared.installPlugin(from: staged, loadNow: !wasLoaded)
-            case .detection: try DetectionPluginManager.shared.installExternalPlugin(from: staged, loadNow: !wasLoaded)
+            case .action: try PluginManager.shared.installPlugin(from: staged, loadNow: canLoadNow)
+            case .detection: try DetectionPluginManager.shared.installExternalPlugin(from: staged, loadNow: canLoadNow)
             }
         } catch { rollback(); throw error }
 
         // 5. A freshly loaded plugin must be exactly the one the manifest promised.
-        if !wasLoaded {
+        if canLoadNow {
             let added = loadedIdentifiers(entry.kind).subtracting(before)
             guard added == [entry.id] else {
                 for id in added { try? uninstallLoaded(id: id, kind: entry.kind) }
-                try? FileManager.default.removeItem(at: installDirectory(for: entry.kind).appendingPathComponent("\(entry.id).plugin"))
+                for f in bundleFiles(for: entry.id, kind: entry.kind) { try? FileManager.default.removeItem(at: f) }
                 rollback()
                 if added.isEmpty { throw PluginLibraryError.loadFailed("see the log for details") }
                 throw PluginLibraryError.identifierMismatch(expected: entry.id, found: added.first)
             }
-            needsRestart = false
+            residentVersions[entry.id] = entry.version
         }
 
-        installed[entry.id]?.needsRestart = needsRestart
         save()
-        log.log("PluginLibrary: installed \(entry.id) \(entry.version) from \(repo.id)\(needsRestart ? " (restart required)" : "")")
+        log.log("PluginLibrary: installed \(entry.id) \(entry.version) from \(repo.id)\(canLoadNow ? "" : " (restart required)")")
+    }
+
+    /// Installs a plan in order (dependencies first), stopping at the first failure.
+    func install(plan: [PlannedInstall]) async throws {
+        for step in plan { try await install(step.entry, from: step.repo) }
     }
 
     func uninstall(pluginId: String) throws {
         guard let record = installed[pluginId] else { return }
-        let file = installDirectory(for: record.kind).appendingPathComponent("\(pluginId).plugin")
         let loaded = record.kind == .action ? PluginManager.shared.getPlugin(identifier: pluginId) != nil
                                             : DetectionPluginManager.shared.isExternalPlugin(identifier: pluginId)
         if loaded {
-            try uninstallLoaded(id: pluginId, kind: record.kind)
-        } else if FileManager.default.fileExists(atPath: file.path) {
-            try FileManager.default.removeItem(at: file)
+            do { try uninstallLoaded(id: pluginId, kind: record.kind) }
+            // A staged update already deleted the loaded bundle's file; that's fine.
+            catch let e as CocoaError where e.code == .fileNoSuchFile {}
         }
+        for f in bundleFiles(for: pluginId, kind: record.kind) { try FileManager.default.removeItem(at: f) }
         installed[pluginId] = nil
         PluginSettingsStore.shared.removeAll(pluginId)
         save()
