@@ -17,8 +17,8 @@ struct DeveloperView: View {
     @State private var pluginSearchText = ""
     @State private var selectedPluginType: UnifiedPluginType? = nil
     @State private var showingPluginDetails = false
-    @State private var showingInstallPlugin = false
     @State private var showingLibraries = false
+    @State private var settingsPlugin: UnifiedPluginInfo?
 
     enum UnifiedPluginType: String, CaseIterable, Identifiable {
         case action = "Action"
@@ -148,14 +148,11 @@ struct DeveloperView: View {
             startPerformanceMonitoring()
         }
         .onDisappear { stopPerformanceMonitoring() }
+        .sheet(item: $settingsPlugin) { PluginSettingsSheet(pluginId: $0.identifier, pluginName: $0.name) }
         .sheet(isPresented: $showingLibraries) {
-            PluginLibrariesView(onChange: { refreshUnifiedPlugins() })
+            PluginLibrariesView(onChange: { refreshUnifiedPlugins() },
+                                onInstallFile: { handlePluginInstall(result: $0) })
         }
-        .fileImporter(
-            isPresented: $showingInstallPlugin,
-            allowedContentTypes: [UTType(filenameExtension: "plugin") ?? .item, .bundle],
-            allowsMultipleSelection: false
-        ) { result in handlePluginInstall(result: result) }
         .fileExporter(
             isPresented: $showingExportReport,
             document: DebugReportDocument(content: debugReport),
@@ -200,6 +197,10 @@ struct DeveloperView: View {
                 .onChange(of: debugLoggingEnabled) { newValue in
                     uiServices.setDebugModeEnabled(newValue)
                 }
+
+                Divider()
+
+                PluginSourcesCard()
             }
 
             if !developerModeEnabled {
@@ -334,12 +335,7 @@ struct DeveloperView: View {
                             .buttonStyle(.bordered)
 
                             Button(action: { showingLibraries = true }) {
-                                Label("Browse Libraries", systemImage: "books.vertical")
-                            }
-                            .buttonStyle(.bordered)
-
-                            Button(action: { showingInstallPlugin = true }) {
-                                Label("Install Plugin", systemImage: "plus.circle")
+                                Label("Add Plugins", systemImage: "plus.circle")
                             }
                             .buttonStyle(.borderedProminent)
                         }
@@ -1006,7 +1002,15 @@ struct DeveloperView: View {
             // Unified installation logic: autodetect by extension
             let ext = url.pathExtension.lowercased()
 
-            if ext == "plugin" || ext == "auraplugin" {
+            if (ext == "plugin" || ext == "auraplugin"),
+               Bundle(url: url)?.object(forInfoDictionaryKey: "MGPluginKind") as? String == "detection" {
+                do {
+                    try DetectionPluginManager.shared.installExternalPlugin(from: url)
+                    successMessage = "Detection plugin installed"
+                    PluginLibraryService.shared.reconcile()
+                    refreshUnifiedPlugins()
+                } catch { errorMessage = "Failed to install detection plugin: \(error.localizedDescription)" }
+            } else if ext == "plugin" || ext == "auraplugin" {
                 if uiServices.installPlugin(from: url) {
                     successMessage = "Action plugin installed"
                     refreshUnifiedPlugins()
@@ -1070,6 +1074,9 @@ struct DeveloperView: View {
                         Text(plugin.identifier).font(.system(.caption, design: .monospaced)).foregroundColor(.secondary)
                     }
                     Spacer()
+                    if PluginExtensionManager.shared.hasSettingsUI(plugin.identifier) {
+                        Button("Settings…") { settingsPlugin = plugin }
+                    }
                     if !plugin.isBuiltIn {
                         HStack(spacing: MGStyle.Spacing.md) {
                             Button("Reload") { reloadUnifiedPlugin(plugin) }

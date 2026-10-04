@@ -179,6 +179,9 @@ public class PluginManager: NSObject {
             // Notify delegates
             lifecycleDelegates.forEach { $0.pluginDidLoad(plugin) }
 
+            // Optional settings/service/UI extensions (see PluginExtensions.swift)
+            PluginExtensionManager.shared.register(plugin, identifier: plugin.identifier, name: plugin.name)
+
             log.log("Successfully loaded plugin: \(plugin.name) v\(plugin.version) (sandboxed)")
         } catch {
             log.log("Failed to initialize plugin \(plugin.name): \(error)")
@@ -322,6 +325,7 @@ public class PluginManager: NSObject {
 
         // Notify delegates
         lifecycleDelegates.forEach { $0.pluginWillUnload(plugin) }
+        PluginExtensionManager.shared.unregister(identifier: identifier)
 
         // Clean up the sandbox first
         sandbox?.cleanup()

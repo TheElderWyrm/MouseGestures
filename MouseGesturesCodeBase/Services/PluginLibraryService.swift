@@ -49,7 +49,8 @@ final class PluginLibraryService: ObservableObject {
     private init() {
         directory = Configuration.applicationSupportDirectory.appendingPathComponent("PluginLibraries", isDirectory: true)
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        libraries = Self.read([LibraryRepo].self, from: librariesFile) ?? []
+        let custom = (Self.read([LibraryRepo].self, from: librariesFile) ?? []).filter { $0 != PluginLibraryLogic.officialRepo }
+        libraries = [PluginLibraryLogic.officialRepo] + custom
         installed = Dictionary(uniqueKeysWithValues:
             (Self.read([InstalledLibraryPlugin].self, from: installedFile) ?? []).map { ($0.pluginId, $0) })
     }
@@ -64,7 +65,8 @@ final class PluginLibraryService: ObservableObject {
     private func save() {
         let enc = JSONEncoder()
         enc.outputFormatting = [.prettyPrinted, .sortedKeys]
-        if let d = try? enc.encode(libraries) { try? d.write(to: librariesFile, options: .atomic) }
+        // The official source is built in; only user-added sources are persisted.
+        if let d = try? enc.encode(libraries.filter { !isOfficial($0) }) { try? d.write(to: librariesFile, options: .atomic) }
         if let d = try? enc.encode(Array(installed.values)) { try? d.write(to: installedFile, options: .atomic) }
     }
 
@@ -80,7 +82,10 @@ final class PluginLibraryService: ObservableObject {
         save()
     }
 
+    func isOfficial(_ repo: LibraryRepo) -> Bool { repo == PluginLibraryLogic.officialRepo }
+
     func removeLibrary(_ repo: LibraryRepo) {
+        guard !isOfficial(repo) else { return }
         libraries.removeAll { $0 == repo }
         manifests[repo.id] = nil
         loadErrors[repo.id] = nil
@@ -246,6 +251,7 @@ final class PluginLibraryService: ObservableObject {
             try FileManager.default.removeItem(at: file)
         }
         installed[pluginId] = nil
+        PluginSettingsStore.shared.removeAll(pluginId)
         save()
         log.log("PluginLibrary: uninstalled \(pluginId)")
     }

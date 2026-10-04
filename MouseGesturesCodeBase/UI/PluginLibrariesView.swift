@@ -1,46 +1,42 @@
 import SwiftUI
 import AppKit
+import UniformTypeIdentifiers
 
-// MARK: - Plugin Libraries sheet
-// Browse GitHub-hosted plugin libraries and install their action/detection plugins.
+// MARK: - Plugins sheet
+// One place to add plugins: browse the connected GitHub libraries (the official
+// one is built in; more are added under Developer Settings), or install a plugin
+// file from disk.
+
+private struct SettingsTarget: Identifiable { let id: String; let name: String }
 
 struct PluginLibrariesView: View {
     @ObservedObject private var service = PluginLibraryService.shared
+    @ObservedObject private var extensions = PluginExtensionManager.shared
     @Environment(\.dismiss) private var dismiss
 
     /// Called after anything installs/uninstalls so the host list can refresh.
     var onChange: () -> Void = {}
+    /// Handles a plugin file chosen via "Install from File…".
+    var onInstallFile: (Result<[URL], Error>) -> Void = { _ in }
 
-    @State private var newRepo = ""
-    @State private var isAdding = false
     @State private var message: String?
     @State private var messageIsError = false
+    @State private var showingFilePicker = false
+    @State private var settingsTarget: SettingsTarget?
 
     var body: some View {
         VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
             HStack {
-                Text("Plugin Libraries").font(.title2.bold())
+                Text("Add Plugins").font(.title2.bold())
                 Spacer()
-                Button { Task { await service.refreshAll() } } label: {
-                    Label("Check for Updates", systemImage: "arrow.clockwise")
-                }
-                .disabled(service.isRefreshing || service.libraries.isEmpty)
+                Button { showingFilePicker = true } label: { Label("Install from File…", systemImage: "doc.badge.plus") }
+                Button { Task { await service.refreshAll() } } label: { Label("Check for Updates", systemImage: "arrow.clockwise") }
+                    .disabled(service.isRefreshing)
                 Button("Done") { dismiss() }.keyboardShortcut(.defaultAction)
             }
 
-            Text("A library is a GitHub repository with a library.json listing downloadable plugins. Plugins are native code that runs with MouseGestures' permissions — only add libraries you trust.")
+            Text("Plugins are native code that runs with MouseGestures' permissions — only install ones you trust. More GitHub libraries can be connected under Developer Settings ▸ Plugin Sources.")
                 .font(.caption).foregroundColor(.secondary)
-
-            HStack {
-                TextField("owner/repo, owner/repo@branch, or GitHub URL", text: $newRepo)
-                    .textFieldStyle(.roundedBorder)
-                    .onSubmit(addLibrary)
-                Button(action: addLibrary) {
-                    if isAdding { ProgressView().controlSize(.small) } else { Text("Add Library") }
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(newRepo.trimmingCharacters(in: .whitespaces).isEmpty || isAdding)
-            }
 
             if let message {
                 Text(message).font(.caption).foregroundColor(messageIsError ? .red : .green)
@@ -49,18 +45,18 @@ struct PluginLibrariesView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: MGStyle.Spacing.xl) {
-                    if service.libraries.isEmpty {
-                        Text("No libraries yet. Add a repository above to browse its plugins.")
-                            .foregroundColor(.secondary).frame(maxWidth: .infinity, minHeight: 120)
-                    }
                     ForEach(service.libraries) { repo in libraryCard(repo) }
                 }
             }
         }
         .padding(MGStyle.Spacing.xl)
-        .frame(minWidth: 620, minHeight: 480)
+        .frame(minWidth: 640, minHeight: 500)
         .onAppear { service.reconcile() }
-        .task { if service.manifests.isEmpty { await service.refreshAll() } }
+        .task { await service.refreshAll() }
+        .fileImporter(isPresented: $showingFilePicker,
+                      allowedContentTypes: [UTType(filenameExtension: "plugin") ?? .item, .bundle],
+                      allowsMultipleSelection: false) { onInstallFile($0); onChange() }
+        .sheet(item: $settingsTarget) { PluginSettingsSheet(pluginId: $0.id, pluginName: $0.name) }
     }
 
     // MARK: Library card
@@ -70,12 +66,17 @@ struct PluginLibrariesView: View {
             VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(service.manifests[repo.id]?.name ?? repo.displayName).font(.headline)
+                        HStack(spacing: 6) {
+                            Text(service.manifests[repo.id]?.name ?? repo.displayName).font(.headline)
+                            if service.isOfficial(repo) {
+                                Text("OFFICIAL").font(.system(size: 9, weight: .bold)).padding(.horizontal, 5).padding(.vertical, 1)
+                                    .background(Color.accentColor.opacity(0.2)).cornerRadius(4)
+                            }
+                        }
                         Text(repo.id).font(.caption2).foregroundColor(.secondary)
                     }
                     Spacer()
-                    Button("Remove Library", role: .destructive) { service.removeLibrary(repo); onChange() }
-                        .buttonStyle(.borderless).font(.caption)
+                    if service.isRefreshing && service.manifests[repo.id] == nil { ProgressView().controlSize(.small) }
                 }
                 if let desc = service.manifests[repo.id]?.description {
                     Text(desc).font(.caption).foregroundColor(.secondary)
@@ -119,6 +120,9 @@ struct PluginLibrariesView: View {
             if busy {
                 ProgressView().controlSize(.small)
             } else {
+                if extensions.hasSettingsUI(entry.id) {
+                    Button("Settings") { settingsTarget = SettingsTarget(id: entry.id, name: entry.name) }
+                }
                 switch state {
                 case .notInstalled:
                     Button("Install") { confirmAndInstall(entry, repo: repo, verb: "Install") }
@@ -136,19 +140,6 @@ struct PluginLibrariesView: View {
     }
 
     // MARK: Actions
-
-    private func addLibrary() {
-        let text = newRepo
-        isAdding = true
-        Task {
-            defer { isAdding = false }
-            do {
-                try await service.addLibrary(text)
-                newRepo = ""
-                show("Library added.", error: false)
-            } catch { show(error.localizedDescription, error: true) }
-        }
-    }
 
     private func confirmAndInstall(_ entry: LibraryPluginEntry, repo: LibraryRepo, verb: String) {
         let alert = NSAlert()
@@ -178,4 +169,57 @@ struct PluginLibrariesView: View {
     }
 
     private func show(_ text: String, error: Bool) { message = text; messageIsError = error }
+}
+
+// MARK: - Developer Settings ▸ Plugin Sources
+
+/// Connect extra GitHub plugin libraries (the official one is always present).
+struct PluginSourcesCard: View {
+    @ObservedObject private var service = PluginLibraryService.shared
+    @State private var newRepo = ""
+    @State private var isAdding = false
+    @State private var message: String?
+    @State private var messageIsError = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
+            Text("Plugin Sources").font(.system(size: MGStyle.FontSize.body, weight: .medium))
+            Text("GitHub repositories with a library.json. The official library is connected automatically; add others (owner/repo, owner/repo@branch, or a github.com URL) to browse their plugins under Add Plugins.")
+                .font(.caption).foregroundColor(.secondary)
+            ForEach(service.libraries) { repo in
+                HStack {
+                    Image(systemName: service.isOfficial(repo) ? "checkmark.seal.fill" : "link").foregroundColor(.secondary)
+                    Text(repo.id).font(.system(.caption, design: .monospaced))
+                    if service.isOfficial(repo) { Text("official").font(.caption2).foregroundColor(.secondary) }
+                    Spacer()
+                    if !service.isOfficial(repo) {
+                        Button("Remove", role: .destructive) { service.removeLibrary(repo) }.buttonStyle(.borderless).font(.caption)
+                    }
+                }
+            }
+            HStack {
+                TextField("owner/repo", text: $newRepo).textFieldStyle(.roundedBorder).onSubmit(add)
+                Button(action: add) {
+                    if isAdding { ProgressView().controlSize(.small) } else { Text("Connect") }
+                }
+                .disabled(newRepo.trimmingCharacters(in: .whitespaces).isEmpty || isAdding)
+            }
+            if let message {
+                Text(message).font(.caption).foregroundColor(messageIsError ? .red : .green)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    private func add() {
+        let text = newRepo
+        isAdding = true
+        Task {
+            defer { isAdding = false }
+            do {
+                try await service.addLibrary(text)
+                newRepo = ""; message = "Connected."; messageIsError = false
+            } catch { message = error.localizedDescription; messageIsError = true }
+        }
+    }
 }

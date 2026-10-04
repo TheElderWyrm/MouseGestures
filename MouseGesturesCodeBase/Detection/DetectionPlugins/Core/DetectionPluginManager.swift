@@ -133,6 +133,7 @@ class DetectionPluginManager: NSObject {
         registerPlugin(plugin)
         guard plugins[plugin.identifier] != nil else { return nil }
         externalBundleURLs[plugin.identifier] = url
+        PluginExtensionManager.shared.register(instance, identifier: plugin.identifier, name: plugin.name)
         // A plugin added while detection is live must start too, or it would sit idle until relaunch.
         if isRunning, plugin.isEnabled { try? plugin.start() }
         log.log("DetectionPluginManager: loaded external plugin \(plugin.name) v\(plugin.version)")
@@ -195,6 +196,7 @@ class DetectionPluginManager: NSObject {
     /// Unregister a detection plugin
     func unregisterPlugin(identifier: String) {
         guard let plugin = plugins[identifier] else { return }
+        PluginExtensionManager.shared.unregister(identifier: identifier)
 
         // Stop if running
         if isRunning {

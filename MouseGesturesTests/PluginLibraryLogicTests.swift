@@ -89,6 +89,12 @@ final class PluginLibraryLogicTests: XCTestCase {
         XCTAssertThrowsError(try PluginLibraryLogic.validate(bad))
     }
 
+    func testOfficialRepoIsWellFormed() throws {
+        let repo = PluginLibraryLogic.officialRepo
+        XCTAssertEqual(try PluginLibraryLogic.parseRepo(repo.displayName), repo)
+        XCTAssertEqual(PluginLibraryLogic.manifestURL(for: repo)?.host, "raw.githubusercontent.com")
+    }
+
     func testChecksumCaseInsensitive() {
         XCTAssertTrue(PluginLibraryLogic.checksumMatches("ABCD", "abcd"))
         XCTAssertFalse(PluginLibraryLogic.checksumMatches("abcd", "abce"))

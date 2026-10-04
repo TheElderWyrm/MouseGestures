@@ -1,9 +1,12 @@
 # Plugin Libraries
 
 A **plugin library** is a GitHub repository that lists prebuilt MouseGestures
-plugins. Users add a repo in **Developer ▸ Plugin Management ▸ Browse Libraries**
-(`owner/repo`, `owner/repo@branch-or-tag`, or a github.com URL) and can then
-install, update and remove its **action** and **detection** plugins.
+plugins. The official library (`TheElderWyrm/MouseGestures-Plugins`) is connected
+automatically; **Developer ▸ Plugin Management ▸ Add Plugins** browses every connected
+library and can also install a plugin file from disk. Extra libraries
+(`owner/repo`, `owner/repo@branch-or-tag`, or a github.com URL) are connected under
+**Developer Settings ▸ Plugin Sources**. Libraries are only contacted when the
+Add Plugins sheet opens or you press Check for Updates.
 
 ## Repository layout
 
@@ -48,6 +51,21 @@ install, update and remove its **action** and **detection** plugins.
 - **Action** plugin: subclass `NSObject`, conform to `GestureActionPlugin`, `@objc(Name)`, set `NSPrincipalClass`.
 - **Detection** plugin: subclass `NSObject`, conform to `ExternalTriggerPlugin` (`ExternalTriggerAPI.swift`),
   declare `triggers`, and call `host.fire(triggerId:)`. In the gesture editor it appears as a *Plugin* trigger.
+
+## Settings, services and UI
+
+Any plugin may additionally conform to `PluginExtension` (`Services/PluginExtensions.swift`):
+
+- **Settings** — return `settingsFields` (toggle, text, number, choice, path, info). The app
+  renders the form in the plugin's *Settings* sheet, persists values per plugin and calls
+  `settingChanged`. Read values with `host.bool/number/string(key)`.
+- **Services** — set `runsBackgroundService`; `startService`/`stopService` run while the plugin
+  is loaded and its service switch is on (shown in the sheet). `host.storageDirectory` is a
+  private persistent folder; `host.notify` and `host.executeAction` are available.
+- **UI** — `hasCustomSettingsView` + `makeSettingsView()` supply an `NSView` shown below the form.
+
+`pluginAttached(host:)` delivers the `PluginHost`. Per-plugin actions can still add their own
+parameter UI via `configurationView(for:)`. The Focus Timer plugin uses all three.
 
 Plugins `import MouseGestures` and are compiled against a Release build's `MouseGestures.swiftmodule`
 with `-Xlinker -undefined -Xlinker dynamic_lookup` (the app links with `-export_dynamic`).

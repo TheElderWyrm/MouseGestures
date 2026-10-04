@@ -145,6 +145,9 @@ public enum PluginLibraryError: Error, Equatable, LocalizedError {
 /// so it's fully unit-testable; `PluginLibraryService` wires it to the world.
 public enum PluginLibraryLogic {
 
+    /// The built-in source every install connects to automatically.
+    public static let officialRepo = LibraryRepo(owner: "TheElderWyrm", repo: "MouseGestures-Plugins")
+
     public static let supportedSchemaVersion = 1
     public static let manifestFileName = "library.json"
     /// Hard cap on a plugin zip, to keep a hostile/broken repo from filling the disk.

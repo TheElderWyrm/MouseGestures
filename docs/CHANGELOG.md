@@ -11,7 +11,8 @@ root — this file is the curated, user-facing subset of that log.
 ## [Unreleased]
 
 ### Added
-- **Plugin libraries**: add any GitHub repository that publishes a `library.json` (Developer ▸ Plugin Management ▸ Browse Libraries) to browse, install, update and remove additional action and detection plugins. Downloads are checksum-verified, signature-checked and require confirmation. See `docs/PLUGIN_LIBRARIES.md`.
+- **Plugin libraries**: Developer ▸ Plugin Management ▸ **Add Plugins** browses the official GitHub plugin library (connected automatically) and any extra GitHub libraries added under Developer Settings ▸ Plugin Sources, and also installs plugin files from disk. Downloads are checksum-verified, signature-checked and require confirmation. See `docs/PLUGIN_LIBRARIES.md`.
+- Plugins can add their own **settings, background services and custom UI** (settings sheet per plugin), and detection plugins can provide new gesture triggers.
 - Detection plugins can now be installed and uninstalled (previously only action plugins could).
 
 ### Fixed
