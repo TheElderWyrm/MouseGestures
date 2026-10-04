@@ -23,6 +23,9 @@ struct PluginLibrariesView: View {
     @State private var messageIsError = false
     @State private var showingFilePicker = false
     @State private var settingsTarget: SettingsTarget?
+    @State private var searchText = ""
+    @State private var kindFilter: LibraryPluginKind?
+    @State private var statusFilter: LibraryStatusFilter = .all
 
     var body: some View {
         VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
@@ -43,9 +46,21 @@ struct PluginLibrariesView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
+            filterBar
+
             ScrollView {
                 VStack(alignment: .leading, spacing: MGStyle.Spacing.xl) {
-                    ForEach(service.libraries) { repo in libraryCard(repo) }
+                    ForEach(service.libraries) { repo in
+                        if !isFiltering || !visibleEntries(repo).isEmpty { libraryCard(repo) }
+                    }
+                    if isFiltering && totalMatches == 0 && !service.isRefreshing {
+                        VStack(spacing: 6) {
+                            Image(systemName: "magnifyingglass").font(.title2).foregroundColor(.secondary)
+                            Text("No plugins match your filters").font(.headline)
+                            Button("Clear Filters") { searchText = ""; kindFilter = nil; statusFilter = .all }
+                        }
+                        .frame(maxWidth: .infinity).padding(.vertical, MGStyle.Spacing.xl)
+                    }
                 }
             }
         }
@@ -57,6 +72,45 @@ struct PluginLibrariesView: View {
                       allowedContentTypes: [UTType(filenameExtension: "plugin") ?? .item, .bundle],
                       allowsMultipleSelection: false) { onInstallFile($0); onChange() }
         .sheet(item: $settingsTarget) { PluginSettingsSheet(pluginId: $0.id, pluginName: $0.name) }
+    }
+
+    // MARK: Search & filters
+
+    private var isFiltering: Bool { !searchText.trimmingCharacters(in: .whitespaces).isEmpty || kindFilter != nil || statusFilter != .all }
+
+    private func visibleEntries(_ repo: LibraryRepo) -> [LibraryPluginEntry] {
+        (service.manifests[repo.id]?.plugins ?? []).filter {
+            PluginLibraryLogic.matches($0, state: service.state(of: $0), query: searchText, kind: kindFilter, status: statusFilter)
+        }
+    }
+
+    private var totalMatches: Int { service.libraries.reduce(0) { $0 + visibleEntries($1).count } }
+
+    private var filterBar: some View {
+        HStack(spacing: MGStyle.Spacing.md) {
+            HStack(spacing: 6) {
+                Image(systemName: "magnifyingglass").foregroundColor(.secondary)
+                TextField("Search plugins", text: $searchText).textFieldStyle(.plain)
+                if !searchText.isEmpty {
+                    Button { searchText = "" } label: { Image(systemName: "xmark.circle.fill").foregroundColor(.secondary) }
+                        .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 8).padding(.vertical, 5)
+            .background(RoundedRectangle(cornerRadius: 6).fill(Color(nsColor: .controlBackgroundColor)))
+            .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.secondary.opacity(0.3)))
+
+            Picker("Type", selection: $kindFilter) {
+                Text("All Types").tag(LibraryPluginKind?.none)
+                ForEach(LibraryPluginKind.allCases, id: \.self) { Text($0.label).tag(LibraryPluginKind?.some($0)) }
+            }
+            .labelsHidden().frame(width: 120)
+
+            Picker("Status", selection: $statusFilter) {
+                ForEach(LibraryStatusFilter.allCases, id: \.self) { Text($0.label).tag($0) }
+            }
+            .labelsHidden().frame(width: 130)
+        }
     }
 
     // MARK: Library card
@@ -86,7 +140,7 @@ struct PluginLibrariesView: View {
                 }
                 if let m = service.manifests[repo.id] {
                     if m.plugins.isEmpty { Text("This library lists no plugins.").font(.caption).foregroundColor(.secondary) }
-                    ForEach(m.plugins) { entry in
+                    ForEach(visibleEntries(repo)) { entry in
                         Divider()
                         pluginRow(entry, repo: repo)
                     }
@@ -103,9 +157,18 @@ struct PluginLibrariesView: View {
                 HStack(spacing: 6) {
                     Text(entry.name).font(.system(size: 13, weight: .semibold))
                     Text("v\(entry.version)").font(.caption2).foregroundColor(.secondary)
-                    Text(entry.kind == .action ? "Action" : "Detection")
+                    Text(entry.kind.label)
                         .font(.caption2).padding(.horizontal, 6).padding(.vertical, 1)
                         .background((entry.kind == .action ? Color.blue : Color.orange).opacity(0.2)).cornerRadius(6)
+                    switch state {
+                    case .installed:
+                        Label("Installed", systemImage: "checkmark.circle.fill")
+                            .font(.caption2).foregroundColor(.green)
+                    case .updateAvailable(let installed, _):
+                        Label("v\(installed) installed", systemImage: "arrow.up.circle.fill")
+                            .font(.caption2).foregroundColor(.orange)
+                    default: EmptyView()
+                    }
                 }
                 if let d = entry.description { Text(d).font(.caption).foregroundColor(.secondary) }
                 if let a = entry.author { Text("by \(a)").font(.caption2).foregroundColor(.secondary) }
@@ -117,23 +180,28 @@ struct PluginLibrariesView: View {
                 }
             }
             Spacer()
+            // Fixed order — secondary actions left, primary right — so buttons
+            // never shift position when the install state changes.
             if busy {
                 ProgressView().controlSize(.small)
             } else {
-                if extensions.hasSettingsUI(entry.id) {
-                    Button("Settings") { settingsTarget = SettingsTarget(id: entry.id, name: entry.name) }
-                }
-                switch state {
-                case .notInstalled:
-                    Button("Install") { confirmAndInstall(entry, repo: repo, verb: "Install") }
-                case .updateAvailable(_, let available):
-                    Button("Update to \(available)") { confirmAndInstall(entry, repo: repo, verb: "Update") }
-                    Button("Remove", role: .destructive) { uninstall(entry) }
-                case .installed:
-                    Text("Installed").font(.caption).foregroundColor(.secondary)
-                    Button("Remove", role: .destructive) { uninstall(entry) }
-                case .incompatible:
-                    EmptyView()
+                HStack(spacing: MGStyle.Spacing.md) {
+                    if extensions.hasSettingsUI(entry.id), state.isInstalled {
+                        Button("Settings") { settingsTarget = SettingsTarget(id: entry.id, name: entry.name) }
+                    }
+                    switch state {
+                    case .notInstalled:
+                        Button("Install") { confirmAndInstall(entry, repo: repo, verb: "Install") }
+                            .buttonStyle(.borderedProminent)
+                    case .updateAvailable(_, let available):
+                        Button("Remove", role: .destructive) { uninstall(entry) }
+                        Button("Update to \(available)") { confirmAndInstall(entry, repo: repo, verb: "Update") }
+                            .buttonStyle(.borderedProminent)
+                    case .installed:
+                        Button("Remove", role: .destructive) { uninstall(entry) }
+                    case .incompatible:
+                        EmptyView()
+                    }
                 }
             }
         }

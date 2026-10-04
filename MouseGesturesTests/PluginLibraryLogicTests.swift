@@ -115,4 +115,24 @@ final class PluginLibraryLogicTests: XCTestCase {
         XCTAssertEqual(PluginLibraryLogic.state(for: e, installedVersion: nil, appVersion: "1.0.1"), .incompatible(minAppVersion: "2.0"))
         XCTAssertEqual(PluginLibraryLogic.state(for: e, installedVersion: nil, appVersion: "2.0.0"), .notInstalled)
     }
+
+    // MARK: search & filter
+
+    func testSearchAndFilters() {
+        let e = LibraryPluginEntry(id: "com.example.window", name: "Window Tiler", kind: .action, version: "1.0",
+                                   author: "Ada", description: "Snap windows into a grid", download: "d.zip", sha256: goodSHA)
+        let m = PluginLibraryLogic.matches
+        XCTAssertTrue(m(e, .notInstalled, "", nil, .all))
+        XCTAssertTrue(m(e, .notInstalled, "  tiler GRID ", nil, .all))   // every word, any field, any case
+        XCTAssertTrue(m(e, .notInstalled, "ada", nil, .all))             // author
+        XCTAssertFalse(m(e, .notInstalled, "tiler zebra", nil, .all))
+        XCTAssertTrue(m(e, .notInstalled, "", .action, .all))
+        XCTAssertFalse(m(e, .notInstalled, "", .detection, .all))
+        XCTAssertTrue(m(e, .installed(version: "1.0"), "", nil, .installed))
+        XCTAssertTrue(m(e, .updateAvailable(installed: "0.9", available: "1.0"), "", nil, .installed))
+        XCTAssertTrue(m(e, .updateAvailable(installed: "0.9", available: "1.0"), "", nil, .updates))
+        XCTAssertFalse(m(e, .installed(version: "1.0"), "", nil, .updates))
+        XCTAssertTrue(m(e, .notInstalled, "", nil, .available))
+        XCTAssertFalse(m(e, .installed(version: "1.0"), "", nil, .available))
+    }
 }

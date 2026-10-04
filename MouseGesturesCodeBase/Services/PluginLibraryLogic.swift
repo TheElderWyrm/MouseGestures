@@ -6,6 +6,22 @@ import Foundation
 public enum LibraryPluginKind: String, Codable, Equatable, CaseIterable {
     case action
     case detection
+
+    public var label: String { self == .action ? "Action" : "Detection" }
+}
+
+/// Install-status filter for the Add Plugins browser.
+public enum LibraryStatusFilter: String, CaseIterable {
+    case all, installed, updates, available
+
+    public var label: String {
+        switch self {
+        case .all: return "All"
+        case .installed: return "Installed"
+        case .updates: return "Updates"
+        case .available: return "Not Installed"
+        }
+    }
 }
 
 /// Capabilities a plugin may ask for. They're shown to the user at install time
@@ -103,6 +119,13 @@ public enum LibraryInstallState: Equatable {
     case installed(version: String)
     case updateAvailable(installed: String, available: String)
     case incompatible(minAppVersion: String)
+
+    public var isInstalled: Bool {
+        switch self {
+        case .installed, .updateAvailable: return true
+        default: return false
+        }
+    }
 }
 
 public enum PluginLibraryError: Error, Equatable, LocalizedError {
@@ -303,6 +326,28 @@ public enum PluginLibraryLogic {
         return UpdateLogic.isUpdateAvailable(current: installed, remote: entry.version)
             ? .updateAvailable(installed: installed, available: entry.version)
             : .installed(version: installed)
+    }
+
+    // MARK: Search & filter
+
+    /// Whether `entry` passes the browser's search text, type and status filters.
+    /// Every whitespace-separated search word must appear (case/diacritic-insensitive)
+    /// in the name, description, author, id or type label.
+    public static func matches(_ entry: LibraryPluginEntry, state: LibraryInstallState,
+                               query: String, kind: LibraryPluginKind?, status: LibraryStatusFilter) -> Bool {
+        if let kind, entry.kind != kind { return false }
+        switch (status, state) {
+        case (.all, _): break
+        case (.installed, .installed), (.installed, .updateAvailable): break
+        case (.updates, .updateAvailable): break
+        case (.available, .notInstalled): break
+        default: return false
+        }
+        let words = query.split(whereSeparator: \.isWhitespace)
+        if words.isEmpty { return true }
+        let haystack = [entry.name, entry.description ?? "", entry.author ?? "", entry.id, entry.kind.label]
+            .joined(separator: " ")
+        return words.allSatisfy { haystack.range(of: String($0), options: [.caseInsensitive, .diacriticInsensitive]) != nil }
     }
 
     public static let bundleExtensions: Set<String> = ["plugin", "bundle"]
