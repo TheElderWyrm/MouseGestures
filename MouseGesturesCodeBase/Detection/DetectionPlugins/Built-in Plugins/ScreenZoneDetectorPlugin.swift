@@ -152,6 +152,8 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     private var isDragMonitorInstalled = false
     private var hasDragGestures = false   // Cached flag, rebuilt on config change
     private var lastTriggeredZone: ScreenZone?
+    // Display index (into NSScreen.screens) that lastTriggeredZone belongs to.
+    private var lastTriggeredScreen: Int?
     private var lastTriggeredDrag: DragModifier = .none
     private var lastTriggeredModifiers: NSEvent.ModifierFlags = []
     // Debounces a mouse sample landing outside every zone before treating it
@@ -172,6 +174,7 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     private struct ZoneBounds {
         let rect: CGRect
         let zone: ScreenZone
+        let screen: Int
     }
     private var zoneBoundsCache: [ZoneBounds] = []
     // One entry per connected screen (NSScreen.screens, in its stable order) —
@@ -432,11 +435,12 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         // gesture wouldn't fire, and a no-modifier one might fire instead.
         cachedDragModifier = DragModifier.currentSystem
         cachedModifiers = NSEvent.ModifierFlags.currentHardware
-        if let zone = detectZoneFromCache(point: mouseLocation) {
+        if let hit = detectHitFromCache(point: mouseLocation) {
+            let zone = hit.zone
             if context?.logger.isDebugEnabled ?? false {
                 context?.logger.log("Mouse already in zone \(zone.rawValue) when tracking enabled", file: #file, function: #function, line: #line)
             }
-            processZoneEntry(zone)
+            processZoneEntry(zone, screen: hit.screen)
         }
     }
 
@@ -471,8 +475,8 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         cachedDragModifier = DragModifier.currentSystem
         cachedModifiers = NSEvent.ModifierFlags.currentHardware
 
-        if let zone = detectZoneFromCache(point: mouseLocation) {
-            processZoneEntry(zone)
+        if let hit = detectHitFromCache(point: mouseLocation) {
+            processZoneEntry(hit.zone, screen: hit.screen)
         } else {
             processZoneExit()
         }
@@ -480,7 +484,7 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
 
     // MARK: - Zone Processing
 
-    private func processZoneEntry(_ zone: ScreenZone) {
+    private func processZoneEntry(_ zone: ScreenZone, screen: Int) {
         // A real entry — even back into the SAME zone we were already in —
         // means we're not exiting after all. Cancel any pending debounced
         // exit so a boundary wobble that already bounced back in doesn't
@@ -494,6 +498,21 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         let currentModifiers = cachedModifiers.normalized
         let currentDrag = cachedDragModifier
 
+        // Sliding straight from a zone on one display into a zone on the
+        // adjacent display (e.g. display A's right edge into display B's left
+        // edge) is one crossing, not two gestures. Adopt the new zone as the
+        // held one WITHOUT firing; the next real trigger needs the mouse to
+        // leave all zones first. lastTriggeredZone stays non-nil through the
+        // exit debounce, so this also covers a few-pixel gap between displays.
+        if lastTriggeredZone != nil, let prev = lastTriggeredScreen, prev != screen {
+            stopRepeatTimer()
+            lastTriggeredZone = zone
+            lastTriggeredScreen = screen
+            lastTriggeredDrag = currentDrag
+            lastTriggeredModifiers = currentModifiers
+            return
+        }
+
         let isNewTrigger = lastTriggeredZone != zone ||
                            lastTriggeredDrag != currentDrag ||
                            lastTriggeredModifiers != currentModifiers
@@ -502,6 +521,7 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
             stopRepeatTimer()
 
             lastTriggeredZone = zone
+            lastTriggeredScreen = screen
             lastTriggeredDrag = currentDrag
             lastTriggeredModifiers = currentModifiers
             zoneEnterCount += 1
@@ -531,6 +551,7 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
             guard let self = self else { return }
             self.zoneExitDebounceTimer = nil
             self.lastTriggeredZone = nil
+            self.lastTriggeredScreen = nil
             self.stopRepeatTimer()
         }
     }
@@ -703,11 +724,15 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
     // MARK: - Zone Detection
 
     private func detectZoneFromCache(point: CGPoint) -> ScreenZone? {
+        return detectHitFromCache(point: point)?.zone
+    }
+
+    private func detectHitFromCache(point: CGPoint) -> (zone: ScreenZone, screen: Int)? {
         if NSScreen.screens.map({ $0.frame }) != lastScreenFrames {
             rebuildZoneBoundsCache()
         }
         for zb in zoneBoundsCache {
-            if zb.rect.contains(point) { return zb.zone }
+            if zb.rect.contains(point) { return (zb.zone, zb.screen) }
         }
         return nil
     }
@@ -731,11 +756,11 @@ class ScreenZoneDetectorPlugin: BaseDetectionPlugin, ActivationProvider {
         // arranged (non-mirrored) displays never overlap in this global
         // coordinate space, so a point falls inside at most one screen's
         // zones and a plain linear scan below still resolves unambiguously.
-        for screen in screens {
+        for (index, screen) in screens.enumerated() {
             let sf = screen.frame
             for zone in ScreenZone.allCases {
                 if let bounds = calculateZoneBounds(zone: zone, sf: sf, t: t, cs: cs, cb: cb) {
-                    zoneBoundsCache.append(ZoneBounds(rect: bounds, zone: zone))
+                    zoneBoundsCache.append(ZoneBounds(rect: bounds, zone: zone, screen: index))
                 }
             }
         }
