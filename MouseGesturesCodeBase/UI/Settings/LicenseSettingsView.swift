@@ -192,7 +192,7 @@ struct LicenseSettingsView: View {
                 featureRow(icon: "slider.horizontal.3", title: "Advanced Settings", description: "Fine-tune app behavior and performance parameters.")
                 featureRow(icon: "bolt.fill", title: "Advanced Actions", description: "Access automation, scripting, and bundled actions.")
                 featureRow(icon: "puzzlepiece.extension", title: "Plugins",
-                           description: "Install timers, schedules, text tools, clipboard history and more.")
+                           description: "Install clipboard history, system-event triggers, OCR and more.")
             }
         }
     }

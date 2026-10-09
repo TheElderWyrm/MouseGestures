@@ -9,7 +9,7 @@ class MediaControlPlugin: NSObject, GestureActionPlugin {
 
     let identifier = "com.mousegestures.media"
     let name = "Media Control"
-    override var description: String { "Control media playback and system audio" }
+    override var description: String { "Media playback, volume and sound output / input switching" }
     let version = "2.0.0"
     let author = "MouseGestures"
     let category = ActionCategory.media
@@ -17,7 +17,9 @@ class MediaControlPlugin: NSObject, GestureActionPlugin {
 
     // MARK: - Actions
 
-    lazy var providedActions: [PluginAction] = [
+    lazy var providedActions: [PluginAction] = mediaActions + AudioSwitchActions.actions
+
+    private lazy var mediaActions: [PluginAction] = [
         PluginAction(
             id: "play_pause",
             name: "Play/Pause",
@@ -178,7 +180,8 @@ class MediaControlPlugin: NSObject, GestureActionPlugin {
             }
 
         default:
-            throw PluginError.actionNotFound(action.id)
+            guard AudioSwitchActions.ids.contains(action.id) else { throw PluginError.actionNotFound(action.id) }
+            try AudioSwitchActions.execute(action, context: context)
         }
     }
 

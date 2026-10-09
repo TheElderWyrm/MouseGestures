@@ -1,19 +1,12 @@
 import Cocoa
 import MouseGestures
 
-@objc(CapturePlugin)
-public final class CapturePlugin: NSObject, GestureActionPlugin, PluginExtension {
-    public var identifier: String { "com.mousegestures.lib.capture" }
-    public var name: String { "Quick Capture" }
-    public override var description: String { "Send selected text to a file, Reminders or Notes" }
-    public var version: String { "1.0.0" }
-    public var author: String { "MouseGestures" }
-    public var category: ActionCategory { .productivity }
-    public var isExternal: Bool = false
-    public var icon: NSImage? { NSImage(systemSymbolName: "tray.and.arrow.down", accessibilityDescription: nil) }
+/// Quick Capture actions (inbox file, note files, Reminders, Apple Notes) inside the Clipboard & Capture plugin.
+enum CaptureActions {
+    private static let fromClipboard = ParameterDefinition(key: "useClipboard", name: "Capture the clipboard instead of the selection", type: .boolean,
+                                                           defaultValue: AnyCodable(false), description: "Off = copy the current selection first")
 
-    private var settings: PluginHost?
-    public var settingsFields: [PluginSettingField] {[
+    static let settingsFields: [PluginSettingField] = [
         PluginSettingField(key: "inbox", title: "Inbox file", kind: .path(directoriesOnly: false), defaultValue: AnyCodable("~/Documents/Inbox.md"),
                            help: "“Add to Inbox File” appends here (created if missing)."),
         PluginSettingField(key: "notesFolder", title: "Note files folder", kind: .path(directoriesOnly: true), defaultValue: AnyCodable("~/Documents/Notes"),
@@ -23,14 +16,9 @@ public final class CapturePlugin: NSObject, GestureActionPlugin, PluginExtension
                            help: "The first time you add to Reminders or Notes, macOS asks whether MouseGestures may control them (System Settings ▸ Privacy & Security ▸ Automation)."),
         PluginSettingField(key: "restoreClipboard", title: "Restore the clipboard afterwards", kind: .toggle, defaultValue: AnyCodable(true),
                            help: "Capturing a selection copies it first; this puts your previous clipboard back."),
-    ]}
-    public func pluginAttached(host: PluginHost) { settings = host }
-    public func pluginDetached() { settings = nil }
+    ]
 
-    private static let fromClipboard = ParameterDefinition(key: "useClipboard", name: "Capture the clipboard instead of the selection", type: .boolean,
-                                                           defaultValue: AnyCodable(false), description: "Off = copy the current selection first")
-
-    public var providedActions: [PluginAction] {[
+    static let actions: [PluginAction] = [
         PluginAction(id: "append_inbox", name: "Add to Inbox File", description: "Append the selection to your inbox file",
                      supportedParameters: [ParameterDefinition(key: "style", name: "Format", type: .selection, defaultValue: AnyCodable("bullet"), description: "How the entry looks",
                                                                validation: ValidationRule(allowedValues: CaptureFormat.styles.map { AnyCodable($0.id) }),
@@ -47,15 +35,11 @@ public final class CapturePlugin: NSObject, GestureActionPlugin, PluginExtension
                      supportedParameters: [ParameterDefinition(key: "folder", name: "Folder", type: .string, description: "Notes folder (blank = Notes)"), Self.fromClipboard],
                      icon: "note.text.badge.plus"),
         PluginAction(id: "open_inbox", name: "Open Inbox File", description: "Open the inbox file", icon: "tray.full"),
-    ]}
+    ]
 
-    public func initialize(context: PluginContext) throws {}
-    public func cleanup() {}
-    public func validate(action: PluginAction, with parameters: ActionParameters) -> ValidationResult { .valid }
+    static let ids: Set<String> = Set(actions.map { $0.id })
 
-    // MARK: execute
-
-    public func execute(action: PluginAction, with parameters: ActionParameters, context: PluginContext) throws {
+    static func execute(_ action: PluginAction, with parameters: ActionParameters, context: PluginContext, settings: PluginHost?) throws {
         let fm = FileManager.default
         func path(_ key: String, _ def: String) -> String { ((settings?.string(key, default: def) ?? def) as NSString).expandingTildeInPath }
         if action.id == "open_inbox" {
@@ -63,7 +47,7 @@ public final class CapturePlugin: NSObject, GestureActionPlugin, PluginExtension
             guard fm.fileExists(atPath: p) else { throw PluginError.executionFailed("The inbox doesn't exist yet") }
             NSWorkspace.shared.open(URL(fileURLWithPath: p)); return
         }
-        let text = try captured(parameters, context)
+        let text = try captured(parameters, context, settings)
         let source = (settings?.bool("includeSource", default: true) ?? true) ? context.getFrontmostApplication()?.localizedName : nil
         let now = Date()
 
@@ -96,7 +80,7 @@ public final class CapturePlugin: NSObject, GestureActionPlugin, PluginExtension
         case "add_apple_note":
             let (title, body) = CaptureFormat.titleAndBody(text)
             let folder = (parameters.string(for: "folder") ?? "").trimmingCharacters(in: .whitespaces)
-            let html = "<h1>\(CaptureFormat.appleScriptString(Self.escapeHTML(title)))</h1><div>" + CaptureFormat.appleScriptString(Self.escapeHTML(body)).replacingOccurrences(of: "\n", with: "<br>") + "</div>"
+            let html = "<h1>\(CaptureFormat.appleScriptString(escapeHTML(title)))</h1><div>" + CaptureFormat.appleScriptString(escapeHTML(body)).replacingOccurrences(of: "\n", with: "<br>") + "</div>"
             let at = folder.isEmpty ? "" : " at folder \"\(CaptureFormat.appleScriptString(folder))\""
             try context.executeAppleScript("tell application \"Notes\" to make new note\(at) with properties {body:\"\(html)\"}")
             context.showNotification(title: "Note added", message: title, style: .success)
@@ -109,7 +93,7 @@ public final class CapturePlugin: NSObject, GestureActionPlugin, PluginExtension
     }
 
     /// The text to capture: the clipboard, or the current selection (copied, then the clipboard is put back).
-    private func captured(_ parameters: ActionParameters, _ context: PluginContext) throws -> String {
+    private static func captured(_ parameters: ActionParameters, _ context: PluginContext, _ settings: PluginHost?) throws -> String {
         let pb = NSPasteboard.general
         if parameters.bool(for: "useClipboard") ?? false {
             guard let t = pb.string(forType: .string), !t.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw PluginError.executionFailed("The clipboard has no text") }

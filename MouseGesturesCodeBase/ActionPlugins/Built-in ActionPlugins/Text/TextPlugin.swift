@@ -1,15 +1,13 @@
 import Cocoa
-import MouseGestures
 
 /// Text management: change case, clean up, edit lines, wrap, Markdown, encode/decode, JSON, calculate, insert snippets.
 /// Everything works on the current selection (copied, transformed and pasted back) or, if
 /// "Apply to selected text" is off, on the clipboard alone. The transformations live in TextOps.swift.
-@objc(TextToolsPlugin)
-public final class TextToolsPlugin: NSObject, GestureActionPlugin, PluginExtension {
-    public var identifier: String { "com.mousegestures.lib.texttools" }
+public final class TextPlugin: NSObject, GestureActionPlugin, PluginExtension {
+    public var identifier: String { "com.mousegestures.text" }
     public var name: String { "Text" }
     public override var description: String { "Format, clean up, convert and insert text" }
-    public var version: String { "2.1.0" }
+    public var version: String { "1.0.0" }
     public var author: String { "MouseGestures" }
     public var category: ActionCategory { .productivity }
     public var isExternal: Bool = false

@@ -8,5 +8,6 @@
   "principalClass": "SystemEventsPlugin",
   "shared": [
     "AudioDevices.swift"
-  ]
+  ],
+  "recommended": true
 }

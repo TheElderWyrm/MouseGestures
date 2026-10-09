@@ -1,13 +1,13 @@
 import Cocoa
 
 /// Built-in plugin for browser-specific actions
-class BrowserActionsPlugin: NSObject, GestureActionPlugin {
+class BrowserActionsPlugin: NSObject, GestureActionPlugin, PluginExtension {
 
     // MARK: - Plugin Properties
 
     let identifier = "com.mousegestures.browser"
     let name = "Browser Actions"
-    override var description: String { "Specialized actions for web browsers (Safari, Chrome, etc.)" }
+    override var description: String { "Browser navigation, tabs and zoom, plus web search, dictionary lookup and page links" }
     let version = "1.0.0"
     let author = "MouseGestures"
     let category = ActionCategory.browser
@@ -15,7 +15,14 @@ class BrowserActionsPlugin: NSObject, GestureActionPlugin {
 
     // MARK: - Actions
 
-    lazy var providedActions: [PluginAction] = [
+    private var host: PluginHost?
+    var settingsFields: [PluginSettingField] { WebToolsActions.settingsFields }
+    func pluginAttached(host: PluginHost) { self.host = host }
+    func pluginDetached() { host = nil }
+
+    lazy var providedActions: [PluginAction] = browserActions + WebToolsActions.actions
+
+    private lazy var browserActions: [PluginAction] = [
         PluginAction(
             id: "navigation",
             name: "Browser Navigation",
@@ -172,8 +179,9 @@ class BrowserActionsPlugin: NSObject, GestureActionPlugin {
         case "zoom":
             try executeZoomAction(parameters: parameters, context: context)
         default:
-            // The identifier check is handled by the PluginManager, but we should be safe
-            break
+            if WebToolsActions.ids.contains(action.id) {
+                try WebToolsActions.execute(action, with: parameters, context: context, settings: host)
+            }
         }
     }
 

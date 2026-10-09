@@ -263,6 +263,7 @@ final class PluginLibraryService: ObservableObject {
     // MARK: Install / uninstall
 
     func install(_ entry: LibraryPluginEntry, from repo: LibraryRepo) async throws {
+        guard LicenseService.shared.isPro else { throw PluginLibraryError.proRequired }
         guard !busyPluginIds.contains(entry.id) else { return }
         busyPluginIds.insert(entry.id)
         defer { busyPluginIds.remove(entry.id) }

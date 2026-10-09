@@ -60,17 +60,15 @@ One plugin per *theme*, so each has one settings page and one background monitor
 
 | Plugin | Theme | Kind |
 |---|---|---|
-| Pointer Gestures | triggers from pointer movement | detection |
-| Scheduler | triggers from the clock | detection |
-| System Events | triggers from the state of the Mac | detection |
-| Timers & Alarms | countdowns, alarms, stopwatch (+ "then run") | action |
-| Text | everything that changes or inserts text | action |
-| Clipboard | history and clipboard handling | action |
-| Quick Capture | send text to files, Reminders, Notes | action |
-| Finder Helpers | Finder windows, files, desktop, disks | action |
-| System Toggles | switches for system settings | action |
-| Web Tools | search, lookup, links, browser page | action |
-| Screen Tools | colour picker, find the pointer | action |
+| Pointer Gestures *(built in)* | triggers from pointer movement | detection |
+| Scheduler *(built in)* | triggers from the clock | detection |
+| System Events *(library)* | triggers from the state of the Mac | detection |
+| Timers & Alarms *(built in)* | countdowns, alarms, stopwatch (+ "then run") | action |
+| Text *(built in)* | everything that changes or inserts text | action |
+| Clipboard & Capture *(library)* | clipboard history; send text to files, Reminders, Notes | action |
+| Finder Helpers *(library)* | Finder windows, files, desktop, disks | action |
+| Screen Tools *(library)* | colour picker, OCR, QR, find the pointer | action |
+| System Control, Browser Actions, Media Control *(built in)* | system switches, web search / page links, sound devices — merged into the matching built-in theme | action |
 
 Rule of thumb for a new idea: if it reacts to the *pointer* it goes in Pointer Gestures, to the *clock*
 in Scheduler, to the *Mac's state* in System Events; if it *does* something it joins the action plugin

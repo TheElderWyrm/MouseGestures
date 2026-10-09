@@ -12,6 +12,7 @@ private struct SettingsTarget: Identifiable { let id: String; let name: String }
 struct PluginLibrariesView: View {
     @ObservedObject private var service = PluginLibraryService.shared
     @ObservedObject private var extensions = PluginExtensionManager.shared
+    @ObservedObject private var license = LicenseService.shared
     @Environment(\.dismiss) private var dismiss
 
     /// Called after anything installs/uninstalls so the host list can refresh.
@@ -40,12 +41,14 @@ struct PluginLibrariesView: View {
                 }
                 Button { Task { await service.refreshAll() } } label: { Label("Check for Updates", systemImage: "arrow.clockwise") }
                     .disabled(service.isRefreshing)
-                if service.updatesAvailableCount > 0 {
+                if service.updatesAvailableCount > 0, canInstall {
                     Button { updateAll() } label: { Label("Update All (\(service.updatesAvailableCount))", systemImage: "arrow.up.circle") }
                         .disabled(!service.busyPluginIds.isEmpty)
                 }
                 if !embedded { Button("Done") { dismiss() }.keyboardShortcut(.defaultAction) }
             }
+
+            proBanner
 
             Text(embedded
                  ? "Plugins are native code that runs with MouseGestures' permissions — only install ones you trust."
@@ -104,6 +107,31 @@ struct PluginLibrariesView: View {
         if embedded { content() } else { ScrollView { content() } }
     }
 
+    // MARK: Pro
+
+    /// Browsing is free; installing and updating need Pro.
+    private var canInstall: Bool { license.isPro }
+
+    @ViewBuilder private var proBanner: some View {
+        if !canInstall {
+            HStack(spacing: 10) {
+                Image(systemName: "lock.fill").foregroundColor(.orange)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Plugins are a Pro feature").font(.system(size: 13, weight: .semibold))
+                    Text("Browse everything for free. Installing and updating plugins needs MouseGestures Pro.")
+                        .font(.caption).foregroundColor(.secondary)
+                }
+                Spacer()
+                Button("See License Options") {
+                    dismiss()
+                    NotificationCenter.default.post(name: Notification.Name("MGOpenSettingsCategory"), object: "license")
+                }
+            }
+            .padding(10)
+            .background(RoundedRectangle(cornerRadius: 8).fill(Color.orange.opacity(0.12)))
+        }
+    }
+
     // MARK: Recommended
 
     private var recommended: [(entry: LibraryPluginEntry, repo: LibraryRepo)] {
@@ -129,7 +157,7 @@ struct PluginLibrariesView: View {
                     Spacer()
                     if service.busyPluginIds.isEmpty {
                         Button("Install \(items.count) Recommended") { installRecommended(items.map { $0.entry }) }
-                            .buttonStyle(.borderedProminent)
+                            .buttonStyle(.borderedProminent).disabled(!canInstall)
                     } else { ProgressView().controlSize(.small) }
                 }
             }
@@ -266,12 +294,15 @@ struct PluginLibrariesView: View {
                     }
                     switch state {
                     case .notInstalled:
-                        Button("Install") { confirmAndInstall(entry, repo: repo, verb: "Install") }
-                            .buttonStyle(.borderedProminent)
+                        Button { confirmAndInstall(entry, repo: repo, verb: "Install") } label: {
+                            if canInstall { Text("Install") } else { Label("Install", systemImage: "lock.fill") }
+                        }
+                        .buttonStyle(.borderedProminent).disabled(!canInstall)
+                        .help(canInstall ? "" : "Installing plugins needs Pro")
                     case .updateAvailable(_, let available):
                         Button("Remove", role: .destructive) { uninstall(entry) }
                         Button("Update to \(available)") { confirmAndInstall(entry, repo: repo, verb: "Update") }
-                            .buttonStyle(.borderedProminent)
+                            .buttonStyle(.borderedProminent).disabled(!canInstall)
                     case .installed:
                         Button("Remove", role: .destructive) { uninstall(entry) }
                     case .incompatible:

@@ -6,6 +6,7 @@ import UniformTypeIdentifiers
 enum SettingsCategories {
     static let general = SettingsCategoryDescriptor(id: "general", title: "General", icon: "gear", order: 0)
     static let detection = SettingsCategoryDescriptor(id: "detection", title: "Detection", icon: "hand.tap", order: 10)
+    static let features = SettingsCategoryDescriptor(id: "features", title: "Actions & Triggers", icon: "slider.horizontal.3", order: 50)
     static let plugins = SettingsCategoryDescriptor(id: "plugins", title: "Plugins", icon: "puzzlepiece.extension", order: 60, isPro: true)
     static let license = SettingsCategoryDescriptor(id: "license", title: "License", icon: "checkmark.seal", order: 70)
     static let about = SettingsCategoryDescriptor(id: "about", title: "About", icon: "info.circle", order: 80)
@@ -82,6 +83,26 @@ struct BuiltInSettingsProvider: SettingsProvider {
                     SearchableSettingItem(title: "Report an Issue", description: "Email a diagnostic report to support, no account needed", keywords: ["report", "issue", "bug", "problem", "support", "help", "email", "contact", "feedback", "crash", "diagnostic"])
                 ],
                 viewBuilder: { _ in AnyView(AboutSettingsView()) }
+            )
+        ]
+    }
+}
+
+/// Settings ▸ Actions & Triggers: options for the built-in plugins (timers, scheduler, text, …).
+struct BuiltInPluginsSettingsProvider: SettingsProvider {
+    var settingsEntries: [SettingsEntry] {
+        [
+            SettingsEntry(
+                category: SettingsCategories.features,
+                order: 0,
+                searchableItems: [
+                    SearchableSettingItem(title: "Timers & Alarms", description: "Default timer length and alert sound", keywords: ["timer", "alarm", "pomodoro", "stopwatch", "sound"]),
+                    SearchableSettingItem(title: "Scheduler", description: "Write schedules: weekdays 8:30, every 30 min, sunset", keywords: ["schedule", "time", "sunrise", "sunset", "cron", "daily"]),
+                    SearchableSettingItem(title: "Pointer Gestures", description: "Shake, circle and corner dwell options", keywords: ["shake", "circle", "corner", "dwell", "pointer"]),
+                    SearchableSettingItem(title: "Text", description: "Text tools clipboard behaviour", keywords: ["text", "case", "format", "snippet", "clipboard"]),
+                    SearchableSettingItem(title: "Browser search engine", description: "Default engine for Search Selection", keywords: ["search", "engine", "google", "browser"])
+                ],
+                viewBuilder: { _ in AnyView(BuiltInPluginsSettingsView()) }
             )
         ]
     }
@@ -643,7 +664,8 @@ func registerAllSettings() {
     // Core app entries
     registry.register(BuiltInSettingsProvider())
 
-    // Plugins (Pro)
+    // Built-in plugin options + the plugin library (Pro to install)
+    registry.register(BuiltInPluginsSettingsProvider())
     registry.register(PluginsSettingsProvider())
 
     // License and Pro features

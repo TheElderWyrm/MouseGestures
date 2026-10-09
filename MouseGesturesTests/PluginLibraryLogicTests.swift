@@ -48,6 +48,13 @@ final class PluginLibraryLogicTests: XCTestCase {
         XCTAssertNil(try JSONDecoder().decode(LibraryPluginEntry.self, from: Data(json.utf8)).recommended)
     }
 
+    func testSupersededPluginsAreRecognised() {
+        XCTAssertTrue(PluginLibraryLogic.isSuperseded(bundleFileName: "com.mousegestures.lib.timers.plugin"))
+        XCTAssertTrue(PluginLibraryLogic.isSuperseded(bundleFileName: "com.mousegestures.lib.texttools@2.1.0.plugin"))
+        XCTAssertFalse(PluginLibraryLogic.isSuperseded(bundleFileName: "com.mousegestures.lib.clipboard.plugin"))
+        XCTAssertFalse(PluginLibraryLogic.isSuperseded(bundleFileName: "com.mousegestures.lib.timersX.plugin"))
+    }
+
     func testParseRepoRejectsGarbage() {
         for bad in ["", "octo", "a/b/../c", "a/b//c", "http://github.com/o/r", "https://evil.com/o/r", "-o/r", "o/r@..", "o/../x", "o/r@a b"] {
             XCTAssertThrowsError(try PluginLibraryLogic.parseRepo(bad), bad)

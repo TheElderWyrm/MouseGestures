@@ -1,13 +1,14 @@
 {
   "id": "com.mousegestures.lib.clipboard",
-  "name": "Clipboard",
+  "name": "Clipboard & Capture",
   "kind": "action",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": "MouseGestures",
-  "description": "A clipboard history you can open with a gesture: a menu at the pointer lists what you copied recently and pastes your pick. Also paste the previous clip, collect several selections into one, copy as plain text, and clear. History stays in memory and skips password managers.",
+  "description": "Clipboard history at the pointer (paste a recent clip, collect several selections, copy as plain text) and Quick Capture: send the selection to an inbox file, a new note file, Reminders or Apple Notes.",
   "permissions": [
     "systemAPIs",
     "notifications"
   ],
-  "principalClass": "ClipboardPlugin"
+  "principalClass": "ClipboardPlugin",
+  "recommended": true
 }

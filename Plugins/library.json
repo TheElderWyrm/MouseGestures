@@ -4,34 +4,20 @@
   "description": "First-party action and detection plugins for MouseGestures.",
   "plugins": [
     {
-      "id": "com.mousegestures.lib.capture",
-      "name": "Quick Capture",
-      "kind": "action",
-      "version": "1.0.0",
-      "author": "MouseGestures",
-      "description": "Send what you've selected (or copied) somewhere safe with one gesture: append it to an inbox file, save it as a new note file, add it to Reminders, or add it to Apple Notes.",
-      "permissions": [
-        "systemAPIs",
-        "notifications"
-      ],
-      "minAppVersion": "1.1.0",
-      "download": "dist/com.mousegestures.lib.capture-1.0.0.zip",
-      "sha256": "4e2276393f67ba7ae5eb0ae4d8397af5ab7817656323106d18072447381ceacc"
-    },
-    {
       "id": "com.mousegestures.lib.clipboard",
-      "name": "Clipboard",
+      "name": "Clipboard & Capture",
       "kind": "action",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "author": "MouseGestures",
-      "description": "A clipboard history you can open with a gesture: a menu at the pointer lists what you copied recently and pastes your pick. Also paste the previous clip, collect several selections into one, copy as plain text, and clear. History stays in memory and skips password managers.",
+      "description": "Clipboard history at the pointer (paste a recent clip, collect several selections, copy as plain text) and Quick Capture: send the selection to an inbox file, a new note file, Reminders or Apple Notes.",
       "permissions": [
         "systemAPIs",
         "notifications"
       ],
+      "recommended": true,
       "minAppVersion": "1.1.0",
-      "download": "dist/com.mousegestures.lib.clipboard-1.0.0.zip",
-      "sha256": "27185d21993b4165ea4e17b24b6b9891b92428a973499f2b2c3769692e9ffa8e"
+      "download": "dist/com.mousegestures.lib.clipboard-1.1.0.zip",
+      "sha256": "f2bf681142eb52f81197d534642e316aecf9cf2bb0e85617aede8833fd164d6a"
     },
     {
       "id": "com.mousegestures.lib.finderhelpers",
@@ -46,46 +32,7 @@
       ],
       "minAppVersion": "1.1.0",
       "download": "dist/com.mousegestures.lib.finderhelpers-1.3.0.zip",
-      "sha256": "53e080d77f63467d925bb95c9574504cb443c30cc0c9d30d2bc54ce0ed8b79cf"
-    },
-    {
-      "id": "com.mousegestures.lib.pointergestures",
-      "name": "Pointer Gestures",
-      "kind": "detection",
-      "version": "1.0.0",
-      "author": "MouseGestures",
-      "description": "Triggers from pointer movement alone: shake left-right or up-down, draw a circle clockwise or counter-clockwise, or rest the pointer in a screen corner. Optionally require a modifier key so ordinary mouse movement never triggers.",
-      "recommended": true,
-      "minAppVersion": "1.1.0",
-      "download": "dist/com.mousegestures.lib.pointergestures-1.0.0.zip",
-      "sha256": "bac8f3077b378e45921f4dadff34afd34999730f209620a7c96d89121daf3d8e"
-    },
-    {
-      "id": "com.mousegestures.lib.quicklaunch",
-      "name": "Web Tools",
-      "kind": "action",
-      "version": "1.2.0",
-      "author": "MouseGestures",
-      "description": "Search the selected text or clipboard on the web, look a word up in the Dictionary, open a selected link, and copy the front browser tab's URL or Markdown link.",
-      "permissions": [
-        "systemAPIs",
-        "notifications"
-      ],
-      "minAppVersion": "1.1.0",
-      "download": "dist/com.mousegestures.lib.quicklaunch-1.2.0.zip",
-      "sha256": "f6a7487dd37f1469f51506f142b0f45589a0e93566d7e2ba57da9b9c2eac38dd"
-    },
-    {
-      "id": "com.mousegestures.lib.scheduler",
-      "name": "Scheduler",
-      "kind": "detection",
-      "version": "1.0.0",
-      "author": "MouseGestures",
-      "description": "Run gesture actions on a schedule instead of a gesture: at a time of day, on certain weekdays, every N minutes, at sunrise or sunset, monthly, or once. Write your own schedules in the plugin's settings, then pick them as a Plugin trigger.",
-      "recommended": true,
-      "minAppVersion": "1.1.0",
-      "download": "dist/com.mousegestures.lib.scheduler-1.0.0.zip",
-      "sha256": "f9374a8306d3063db2fbc73d45ed9d53fd0fe1fe406222724cd463e072c09879"
+      "sha256": "9d6f8e098176b19bee4d0f90811346dceeaed504cc3d37beaaef10148a4c338a"
     },
     {
       "id": "com.mousegestures.lib.screentools",
@@ -99,7 +46,7 @@
       ],
       "minAppVersion": "1.1.0",
       "download": "dist/com.mousegestures.lib.screentools-1.2.0.zip",
-      "sha256": "1527e9dc941980955f709f6ce98acf1a18d3dd1050192c3c4fdb0e34919ccbcf"
+      "sha256": "bd708c84e608fafaeeec6fadf360bee40b95e2c5db94ba8587dcb3e9013dfd09"
     },
     {
       "id": "com.mousegestures.lib.systemevents",
@@ -108,56 +55,10 @@
       "version": "1.3.0",
       "author": "MouseGestures",
       "description": "Passive triggers for things that happen to your Mac: sleep and wake, lock and unlock, power plugged or unplugged, low battery, disks connected or removed, headphones or sound devices switched, something copied (or a web address), internet lost or restored, Dark/Light Mode switches, going idle or coming back, and a chosen app launching or quitting.",
+      "recommended": true,
       "minAppVersion": "1.1.0",
       "download": "dist/com.mousegestures.lib.systemevents-1.3.0.zip",
-      "sha256": "b1a9c653a0c0921cf8a7d8ec49209c876fd2a2a22f09263e545e0912709e93ca"
-    },
-    {
-      "id": "com.mousegestures.lib.systemtoggles",
-      "name": "System Toggles",
-      "kind": "action",
-      "version": "1.4.0",
-      "author": "MouseGestures",
-      "description": "One-gesture system switches the built-in actions lack: Dock auto-hide, Stage Manager, keep awake, Wi-Fi, microphone mute, next sound output or input, and the screen saver.",
-      "permissions": [
-        "notifications",
-        "systemAPIs"
-      ],
-      "minAppVersion": "1.1.0",
-      "download": "dist/com.mousegestures.lib.systemtoggles-1.4.0.zip",
-      "sha256": "aab6de9592b0064b3e122209a167ac877cf00ea4e3ba57eb4b3c58499def1d9d"
-    },
-    {
-      "id": "com.mousegestures.lib.texttools",
-      "name": "Text",
-      "kind": "action",
-      "version": "2.1.0",
-      "author": "MouseGestures",
-      "description": "Format, clean up and convert text with one gesture: change case, clean whitespace, sort and edit lines, wrap, Markdown, encode/decode, JSON, calculate, count words, and insert dates, UUIDs or your own snippets. Works on the selection or the clipboard.",
-      "permissions": [
-        "systemAPIs",
-        "notifications"
-      ],
-      "recommended": true,
-      "minAppVersion": "1.1.0",
-      "download": "dist/com.mousegestures.lib.texttools-2.1.0.zip",
-      "sha256": "5a7a36ca02c2004b0fab8cca0abe589e43a3633f2d816eb28ebdb8fd991e3424"
-    },
-    {
-      "id": "com.mousegestures.lib.timers",
-      "name": "Timers & Alarms",
-      "kind": "action",
-      "version": "1.0.0",
-      "author": "MouseGestures",
-      "description": "Countdown timers, Pomodoro cycles, alarms (once, daily or weekdays), a stopwatch and a spoken clock \u2014 each can run another gesture action when it goes off. Timers and alarms survive restarts.",
-      "permissions": [
-        "notifications",
-        "executeActions"
-      ],
-      "recommended": true,
-      "minAppVersion": "1.1.0",
-      "download": "dist/com.mousegestures.lib.timers-1.0.0.zip",
-      "sha256": "debf3b1e505dbe0576ec8ea2f1698bbee05de074e611778cf5a04edc5621c2ab"
+      "sha256": "5b15aa05076f3f64fcec6b9d853a769a805b0091c3b6f0efaea45a9d61014d99"
     }
   ]
 }

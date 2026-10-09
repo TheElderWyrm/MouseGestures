@@ -155,6 +155,7 @@ public enum PluginLibraryError: Error, Equatable, LocalizedError {
     case loadFailed(String)
     case incompatible(String)
     case unknownPermission(String)
+    case proRequired
     case missingDependency(id: String, requiredBy: String)
     case dependencyVersion(id: String, minVersion: String, requiredBy: String)
     case dependencyCycle(String)
@@ -169,6 +170,7 @@ public enum PluginLibraryError: Error, Equatable, LocalizedError {
         case .checksumMismatch: return "The downloaded file doesn't match the checksum in the library manifest, so it was discarded."
         case .archiveTooLarge: return "The plugin download is larger than the allowed size."
         case .archiveInvalid(let s): return "The plugin archive is invalid: \(s)"
+        case .proRequired: return "Installing plugins is a Pro feature. You can browse the library for free."
         case .notSigned(let s): return "The plugin has no valid code signature (\(s)). It must at least be ad-hoc signed to load on Apple Silicon."
         case .identifierMismatch(let expected, let found):
             return "The plugin identified itself as \(found ?? "nothing") instead of \(expected), so it was removed."
@@ -470,6 +472,19 @@ public enum PluginLibraryLogic {
     /// True for `<id>.plugin` (legacy) and `<id>@<version>.plugin`.
     public static func isBundleFile(_ fileName: String, for id: String) -> Bool {
         fileName == "\(id).plugin" || (fileName.hasPrefix("\(id)@") && fileName.hasSuffix(".plugin"))
+    }
+
+    /// Library plugins that became built-in plugins (or were merged into others). A leftover bundle is
+    /// removed instead of loaded, so nothing is registered twice.
+    public static let supersededPluginIds: [String] = [
+        "com.mousegestures.lib.timers", "com.mousegestures.lib.scheduler", "com.mousegestures.lib.pointergestures",
+        "com.mousegestures.lib.texttools", "com.mousegestures.lib.quicklaunch", "com.mousegestures.lib.systemtoggles",
+        "com.mousegestures.lib.capture", "com.mousegestures.lib.focustimer", "com.mousegestures.lib.mouseshake",
+        "com.mousegestures.lib.cornerdwell", "com.mousegestures.lib.shapegestures", "com.mousegestures.lib.snippets",
+    ]
+
+    public static func isSuperseded(bundleFileName name: String) -> Bool {
+        supersededPluginIds.contains { isBundleFile(name, for: $0) }
     }
 
     public static let bundleExtensions: Set<String> = ["plugin", "bundle"]

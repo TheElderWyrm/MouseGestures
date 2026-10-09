@@ -6,9 +6,9 @@ import MouseGestures
 @objc(ClipboardPlugin)
 public final class ClipboardPlugin: NSObject, GestureActionPlugin, PluginExtension {
     public var identifier: String { "com.mousegestures.lib.clipboard" }
-    public var name: String { "Clipboard" }
+    public var name: String { "Clipboard & Capture" }
     public override var description: String { "Clipboard history, paste previous, collect and clean" }
-    public var version: String { "1.0.0" }
+    public var version: String { "1.1.0" }
     public var author: String { "MouseGestures" }
     public var category: ActionCategory { .productivity }
     public var isExternal: Bool = false
@@ -22,7 +22,8 @@ public final class ClipboardPlugin: NSObject, GestureActionPlugin, PluginExtensi
 
     // MARK: settings
 
-    public var settingsFields: [PluginSettingField] {[
+    public var settingsFields: [PluginSettingField] { clipboardFields + CaptureActions.settingsFields }
+    private var clipboardFields: [PluginSettingField] {[
         PluginSettingField(key: "size", title: "Clips to remember", kind: .number(min: 5, max: 100, step: 5, unit: nil), defaultValue: AnyCodable(20)),
         PluginSettingField(key: "ignoreApps", title: "Never record from these apps", kind: .text(placeholder: "bundle ids, comma separated"),
                            defaultValue: AnyCodable("com.1password.1password,com.agilebits.onepassword7,com.bitwarden.desktop,com.apple.keychainaccess,org.keepassxc.keepassxc"),
@@ -71,7 +72,8 @@ public final class ClipboardPlugin: NSObject, GestureActionPlugin, PluginExtensi
 
     // MARK: actions
 
-    public var providedActions: [PluginAction] {[
+    public var providedActions: [PluginAction] { clipboardActions + CaptureActions.actions }
+    private var clipboardActions: [PluginAction] {[
         PluginAction(id: "show_history", name: "Clipboard History Menu", description: "Pop up recent clips at the pointer and paste the one you pick", icon: "list.clipboard"),
         PluginAction(id: "paste_previous", name: "Paste Previous Clip", description: "Paste the clip copied before the current one (or the Nth most recent)",
                      supportedParameters: [ParameterDefinition(key: "position", name: "Position", type: .number, defaultValue: AnyCodable(2),
@@ -122,7 +124,9 @@ public final class ClipboardPlugin: NSObject, GestureActionPlugin, PluginExtensi
         case "clear_history":
             lock.lock(); history.clear(); lock.unlock()
             context.showNotification(title: "Clipboard", message: "History cleared", style: .info)
-        default: throw PluginError.actionNotFound(action.id)
+        default:
+            guard CaptureActions.ids.contains(action.id) else { throw PluginError.actionNotFound(action.id) }
+            try CaptureActions.execute(action, with: parameters, context: context, settings: host)
         }
     }
 

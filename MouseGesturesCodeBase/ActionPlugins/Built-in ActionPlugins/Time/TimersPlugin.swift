@@ -1,11 +1,9 @@
 import Cocoa
-import MouseGestures
 
 /// Timers, Pomodoro, alarms and a stopwatch. State lives on the main thread, is saved to the plugin's
 /// data folder after every change, and is resumed by the background service after a restart.
-@objc(TimersPlugin)
 public final class TimersPlugin: NSObject, GestureActionPlugin, PluginExtension {
-    public var identifier: String { "com.mousegestures.lib.timers" }
+    public var identifier: String { "com.mousegestures.timers" }
     public var name: String { "Timers & Alarms" }
     public override var description: String { "Timers, Pomodoro, alarms, stopwatch and a spoken clock" }
     public var version: String { "1.0.0" }

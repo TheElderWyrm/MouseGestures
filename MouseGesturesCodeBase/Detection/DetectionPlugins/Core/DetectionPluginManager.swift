@@ -88,6 +88,14 @@ class DetectionPluginManager: NSObject {
             registerPlugin(plugin)
         }
 
+        // Built-in trigger plugins written against the plugin API (they also adopt PluginExtension for their settings).
+        let apiPlugins: [ExternalTriggerPlugin] = [SchedulerPlugin(), PointerGesturesPlugin()]
+        for external in apiPlugins {
+            let adapter = ExternalTriggerAdapter(external)
+            registerPlugin(adapter)
+            PluginExtensionManager.shared.register(external, identifier: adapter.identifier, name: adapter.name)
+        }
+
         // Load saved settings for all plugins
         loadAllPluginSettings()
 
@@ -100,6 +108,10 @@ class DetectionPluginManager: NSObject {
         try? FileManager.default.createDirectory(at: storageDirectory, withIntermediateDirectories: true)
         guard let contents = try? FileManager.default.contentsOfDirectory(at: externalPluginsDirectory, includingPropertiesForKeys: nil) else { return }
         for item in contents where item.pathExtension == "plugin" || item.pathExtension == "bundle" {
+            if PluginLibraryLogic.isSuperseded(bundleFileName: item.lastPathComponent) {
+                try? FileManager.default.removeItem(at: item)
+                continue
+            }
             loadExternalPlugin(at: item)
         }
     }

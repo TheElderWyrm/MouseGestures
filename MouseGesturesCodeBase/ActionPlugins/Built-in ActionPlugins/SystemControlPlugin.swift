@@ -4,13 +4,13 @@ import CoreGraphics
 // MARK: - System Control Plugin
 
 /// Built-in plugin for system control actions
-class SystemControlPlugin: NSObject, GestureActionPlugin {
+class SystemControlPlugin: NSObject, GestureActionPlugin, PluginExtension {
 
     // MARK: - Plugin Properties
 
     let identifier = "com.mousegestures.system"
     let name = "System Control"
-    override var description: String { "Control system settings and display" }
+    override var description: String { "Display, power and lock actions, plus system switches (Dock, Stage Manager, keep awake, Wi-Fi, microphone)" }
     let version = "2.0.0"
     let author = "MouseGestures"
     let category = ActionCategory.system
@@ -57,7 +57,13 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
 
     // MARK: - Actions
 
-    lazy var providedActions: [PluginAction] = [
+    private var host: PluginHost?
+    func pluginAttached(host: PluginHost) { self.host = host }
+    func pluginDetached() { host = nil }
+
+    lazy var providedActions: [PluginAction] = systemActions + SystemSwitchActions.actions
+
+    private lazy var systemActions: [PluginAction] = [
         // Consolidated: brightness_up + brightness_down → display_brightness
         PluginAction(
             id: "display_brightness",
@@ -384,6 +390,10 @@ class SystemControlPlugin: NSObject, GestureActionPlugin {
             emptyTrash(showConfirmation: confirm, context: context)
 
         default:
+            if SystemSwitchActions.ids.contains(action.id) {
+                try SystemSwitchActions.execute(action, with: parameters, context: context, settings: host)
+                return
+            }
             throw PluginError.actionNotFound(action.id)
         }
     }

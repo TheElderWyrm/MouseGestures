@@ -216,6 +216,16 @@ final class PluginExtensionManager: ObservableObject {
 
     // MARK: queries (for UI)
 
+    /// Plugins that ship inside the app (not installed from a library) and offer a settings page, by name.
+    func builtInPluginsWithSettings() -> [(id: String, name: String)] {
+        onMain {
+            entries.values
+                .filter { !$0.id.hasPrefix("com.mousegestures.lib.") && (!$0.ext.settingsFields.isEmpty || $0.ext.hasCustomSettingsView || $0.ext.runsBackgroundService) }
+                .map { ($0.id, $0.name) }
+                .sorted { $0.1 < $1.1 }
+        }
+    }
+
     func hasSettingsUI(_ id: String) -> Bool {
         onMain {
             guard let e = entries[id] else { return false }

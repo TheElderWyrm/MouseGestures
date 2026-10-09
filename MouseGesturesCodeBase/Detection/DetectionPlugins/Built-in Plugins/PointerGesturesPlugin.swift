@@ -1,10 +1,8 @@
 import Cocoa
-import MouseGestures
 
 /// All pointer-motion triggers behind one event monitor: shakes, circles and corner dwell.
-@objc(PointerGesturesPlugin)
 public final class PointerGesturesPlugin: NSObject, ExternalTriggerPlugin, PluginExtension {
-    public var identifier: String { "com.mousegestures.lib.pointergestures" }
+    public var identifier: String { "com.mousegestures.pointer" }
     public var name: String { "Pointer Gestures" }
     public var summary: String { "Shake, circle or rest the pointer in a corner" }
     public var version: String { "1.0.0" }

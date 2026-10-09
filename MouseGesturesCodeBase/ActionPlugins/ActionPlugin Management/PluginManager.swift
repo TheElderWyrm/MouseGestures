@@ -106,6 +106,10 @@ public class PluginManager: NSObject {
             let contents = try fileManager.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
 
             for item in contents {
+                if PluginLibraryLogic.isSuperseded(bundleFileName: item.lastPathComponent) {
+                    try? fileManager.removeItem(at: item)
+                    continue
+                }
                 if item.pathExtension == "plugin" || item.pathExtension == "bundle" {
                     loadPlugin(at: item, isSystem: isSystem)
                 }
@@ -198,7 +202,9 @@ public class PluginManager: NSObject {
             (BrowserActionsPlugin(), .builtIn),
             (SystemControlPlugin(), .builtIn),
             (AutomationPlugin(), .builtIn),
-            (BundleActionsPlugin(), .builtIn)
+            (BundleActionsPlugin(), .builtIn),
+            (TextPlugin(), .builtIn),
+            (TimersPlugin(), .builtIn)
         ]
 
         for (plugin, permissions) in builtInPlugins {
@@ -223,6 +229,9 @@ public class PluginManager: NSObject {
                         self.actionRegistry[actionId] = (plugin, action)
                     }
                 }
+
+                // Built-ins that also adopt PluginExtension get their settings form, service and custom view.
+                PluginExtensionManager.shared.register(plugin, identifier: plugin.identifier, name: plugin.name)
 
                 log.log("Loaded built-in plugin: \(plugin.name) (sandboxed)")
             } catch {
