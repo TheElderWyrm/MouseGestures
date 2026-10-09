@@ -5,8 +5,8 @@ import MouseGestures
 public final class ScreenToolsPlugin: NSObject, GestureActionPlugin, PluginExtension {
     public var identifier: String { "com.mousegestures.lib.screentools" }
     public var name: String { "Screen Tools" }
-    public override var description: String { "Colour picker and pointer finder" }
-    public var version: String { "1.1.0" }
+    public override var description: String { "Colour picker, pointer finder, screen text and QR reader" }
+    public var version: String { "1.2.0" }
     public var author: String { "MouseGestures" }
     public var category: ActionCategory { .system }
     public var isExternal: Bool = false
@@ -17,6 +17,8 @@ public final class ScreenToolsPlugin: NSObject, GestureActionPlugin, PluginExten
         PluginSettingField(key: "colorFormat", title: "Colour format", kind: .choice([
             PluginSettingChoice("hex", "Hex  #RRGGBB"), PluginSettingChoice("rgb", "RGB  rgb(r, g, b)"), PluginSettingChoice("hsl", "HSL  hsl(h, s%, l%)")]),
                            defaultValue: AnyCodable("hex"), help: "How a picked colour is copied."),
+        PluginSettingField(key: "info", title: "Permissions", kind: .info,
+                           help: "Copy Text from Screen and Scan QR Code use macOS's screenshot selector, so MouseGestures needs Screen Recording permission (System Settings ▸ Privacy & Security). Nothing is saved or sent anywhere."),
     ]}
     public func pluginAttached(host: PluginHost) { settings = host }
     public func pluginDetached() { settings = nil }
@@ -24,6 +26,8 @@ public final class ScreenToolsPlugin: NSObject, GestureActionPlugin, PluginExten
     public var providedActions: [PluginAction] {[
         PluginAction(id: "pick_color", name: "Pick Color from Screen", description: "Click anywhere to copy that pixel's colour", icon: "eyedropper"),
         PluginAction(id: "find_cursor", name: "Find Pointer", description: "Flash a ring around the pointer", icon: "scope"),
+        PluginAction(id: "read_text", name: "Copy Text from Screen", description: "Drag a box around text anywhere (even in images or videos) and copy it", icon: "text.viewfinder"),
+        PluginAction(id: "scan_code", name: "Scan QR Code", description: "Drag a box around a QR code or barcode and copy what it says", icon: "qrcode.viewfinder"),
     ]}
 
     public func initialize(context: PluginContext) throws {}
@@ -48,10 +52,42 @@ public final class ScreenToolsPlugin: NSObject, GestureActionPlugin, PluginExten
                     context.showNotification(title: "Colour copied", message: text, style: .success)
                 }
             }
+        case "read_text": Self.captureRegion(context) { image in
+            let text = ScreenReader.text(in: image)
+            guard !text.isEmpty else { context.showNotification(title: "Copy Text from Screen", message: "No text found. If the area clearly has text, allow Screen Recording for MouseGestures in System Settings ▸ Privacy & Security.", style: .warning); return }
+            Self.copy(text)
+            context.showNotification(title: "Text copied", message: String(text.prefix(100)), style: .success)
+        }
+        case "scan_code": Self.captureRegion(context) { image in
+            let codes = ScreenReader.codes(in: image)
+            guard !codes.isEmpty else { context.showNotification(title: "Scan QR Code", message: "No code found in that area", style: .warning); return }
+            Self.copy(codes.joined(separator: "\n"))
+            context.showNotification(title: "Code copied", message: String(codes[0].prefix(100)), style: .success)
+        }
         case "find_cursor":
             DispatchQueue.main.async { Self.flashRing(at: NSEvent.mouseLocation) }
         default: throw PluginError.actionNotFound(action.id)
         }
+    }
+
+    /// Lets the user drag a region (macOS's own screenshot selector), then hands the image over. Runs in the
+    /// background so the gesture returns at once; Esc cancels. Needs Screen Recording permission.
+    private static func captureRegion(_ context: PluginContext, _ handler: @escaping (CGImage) -> Void) {
+        DispatchQueue.global(qos: .userInitiated).async {
+            let file = FileManager.default.temporaryDirectory.appendingPathComponent("mg-capture-\(UUID().uuidString).png")
+            defer { try? FileManager.default.removeItem(at: file) }
+            let p = Process()
+            p.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
+            p.arguments = ["-i", "-x", file.path]
+            do { try p.run() } catch { return }
+            p.waitUntilExit()
+            guard let image = ScreenReader.load(file) else { return }     // cancelled: no file
+            handler(image)
+        }
+    }
+
+    private static func copy(_ text: String) {
+        DispatchQueue.main.async { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(text, forType: .string) }
     }
 
     static func format(_ color: NSColor, as kind: String) -> String {

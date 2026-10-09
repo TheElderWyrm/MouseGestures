@@ -2,9 +2,9 @@
   "id": "com.mousegestures.lib.screentools",
   "name": "Screen Tools",
   "kind": "action",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "author": "MouseGestures",
-  "description": "Pick a colour from anywhere on screen and copy it (hex, RGB or HSL), or flash a ring around the pointer to find it on a big or multi-monitor desktop.",
+  "description": "Read the screen: pick a colour from anywhere (hex, RGB or HSL), copy text out of any image or video by dragging a box (OCR), scan a QR code, or flash a ring around the pointer to find it.",
   "permissions": [
     "notifications"
   ],

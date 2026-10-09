@@ -1,0 +1,13 @@
+{
+  "id": "com.mousegestures.lib.clipboard",
+  "name": "Clipboard",
+  "kind": "action",
+  "version": "1.0.0",
+  "author": "MouseGestures",
+  "description": "A clipboard history you can open with a gesture: a menu at the pointer lists what you copied recently and pastes your pick. Also paste the previous clip, collect several selections into one, copy as plain text, and clear. History stays in memory and skips password managers.",
+  "permissions": [
+    "systemAPIs",
+    "notifications"
+  ],
+  "principalClass": "ClipboardPlugin"
+}

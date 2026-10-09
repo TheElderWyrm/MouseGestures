@@ -1,6 +1,7 @@
 import Cocoa
 import IOKit.ps
 import Network
+import CoreAudio
 import MouseGestures
 
 /// Passive triggers: things that happen to the Mac rather than something you do.
@@ -8,8 +9,8 @@ import MouseGestures
 public final class SystemEventsPlugin: NSObject, ExternalTriggerPlugin, PluginExtension {
     public var identifier: String { "com.mousegestures.lib.systemevents" }
     public var name: String { "System Events" }
-    public var summary: String { "Sleep, wake, lock, power, network, disks, appearance, idle and app launches" }
-    public var version: String { "1.2.0" }
+    public var summary: String { "Sleep, wake, lock, power, network, sound devices, clipboard, disks, appearance, idle and app launches" }
+    public var version: String { "1.3.0" }
     public var author: String { "MouseGestures" }
     public var icon: String { "bolt.badge.clock" }
     public var triggers: [ExternalTriggerDefinition] {[
@@ -21,6 +22,10 @@ public final class SystemEventsPlugin: NSObject, ExternalTriggerPlugin, PluginEx
         ExternalTriggerDefinition(id: "power_plugged", name: "Power adapter plugged in"),
         ExternalTriggerDefinition(id: "power_unplugged", name: "Power adapter unplugged"),
         ExternalTriggerDefinition(id: "battery_low", name: "Battery is low", summary: "Falls below the level set in this plugin's settings, while unplugged"),
+        ExternalTriggerDefinition(id: "audio_output_changed", name: "Sound output changed", summary: "Headphones or speakers plugged in, AirPods connected, output switched"),
+        ExternalTriggerDefinition(id: "audio_input_changed", name: "Microphone changed"),
+        ExternalTriggerDefinition(id: "clipboard_changed", name: "Something was copied"),
+        ExternalTriggerDefinition(id: "clipboard_url", name: "A web address was copied"),
         ExternalTriggerDefinition(id: "disk_mounted", name: "Disk or drive connected"),
         ExternalTriggerDefinition(id: "disk_unmounted", name: "Disk or drive removed"),
         ExternalTriggerDefinition(id: "network_online", name: "Internet connection came back"),
@@ -45,6 +50,9 @@ public final class SystemEventsPlugin: NSObject, ExternalTriggerPlugin, PluginEx
     private var isIdle = false
     private var batteryAlerted = false
     private var lastDark: Bool?
+    private var audioTokens: [(AudioObjectPropertyAddress, AudioObjectPropertyListenerBlock)] = []
+    private var clipTimer: Timer?
+    private var clipCount = NSPasteboard.general.changeCount
 
     public var settingsFields: [PluginSettingField] {[
         PluginSettingField(key: "displaySettle", title: "Display change settle time",
@@ -123,6 +131,16 @@ public final class SystemEventsPlugin: NSObject, ExternalTriggerPlugin, PluginEx
         monitor.start(queue: DispatchQueue(label: "com.mousegestures.lib.systemevents.net"))
         pathMonitor = monitor
 
+        // Sound devices (the callback fires on the main queue)
+        audioTokens = [AudioDevices.observeDefault(output: true) { [weak self] in self?.host?.fire(triggerId: "audio_output_changed") },
+                       AudioDevices.observeDefault(output: false) { [weak self] in self?.host?.fire(triggerId: "audio_input_changed") }]
+
+        // Clipboard: cheap changeCount check twice a second
+        clipCount = NSPasteboard.general.changeCount
+        let ct = Timer(timeInterval: 0.5, repeats: true) { [weak self] _ in self?.clipboardTick() }
+        RunLoop.main.add(ct, forMode: .common)
+        clipTimer = ct
+
         // Idle + battery level are polled
         let t = Timer(timeInterval: 10, repeats: true) { [weak self] _ in self?.poll() }
         RunLoop.main.add(t, forMode: .common)
@@ -138,10 +156,25 @@ public final class SystemEventsPlugin: NSObject, ExternalTriggerPlugin, PluginEx
         displayDebounce?.invalidate()
         pathMonitor?.cancel(); pathMonitor = nil; online = nil
         pollTimer?.invalidate(); pollTimer = nil
+        clipTimer?.invalidate(); clipTimer = nil
+        audioTokens.forEach { AudioDevices.stopObserving($0) }; audioTokens.removeAll()
         host = nil
     }
 
     // MARK: helpers
+
+    private func clipboardTick() {
+        let pb = NSPasteboard.general
+        guard pb.changeCount != clipCount else { return }
+        clipCount = pb.changeCount
+        let types = (pb.types ?? []).map { $0.rawValue }
+        guard !types.contains("org.nspasteboard.ConcealedType"), !types.contains("org.nspasteboard.TransientType") else { return }
+        host?.fire(triggerId: "clipboard_changed")
+        if let t = pb.string(forType: .string)?.trimmingCharacters(in: .whitespacesAndNewlines), !t.contains(" "), !t.contains("\n"),
+           let u = URL(string: t), ["http", "https"].contains(u.scheme?.lowercased() ?? ""), (u.host ?? "").contains(".") {
+            host?.fire(triggerId: "clipboard_url")
+        }
+    }
 
     private func isWatched(_ n: Notification) -> Bool {
         let watch = (settings?.string("watchedApp") ?? "").trimmingCharacters(in: .whitespaces).lowercased()

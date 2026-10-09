@@ -9,7 +9,7 @@ public final class TextToolsPlugin: NSObject, GestureActionPlugin, PluginExtensi
     public var identifier: String { "com.mousegestures.lib.texttools" }
     public var name: String { "Text" }
     public override var description: String { "Format, clean up, convert and insert text" }
-    public var version: String { "2.0.0" }
+    public var version: String { "2.1.0" }
     public var author: String { "MouseGestures" }
     public var category: ActionCategory { .productivity }
     public var isExternal: Bool = false
@@ -43,6 +43,7 @@ public final class TextToolsPlugin: NSObject, GestureActionPlugin, PluginExtensi
 
     private static let modes: [(id: String, label: String)] = [("pretty", "Pretty-print"), ("minify", "Minify")]
     private static let typo: [(id: String, label: String)] = [("smart", "Curly quotes, dashes and ellipses"), ("straight", "Plain straight quotes and dashes")]
+    private static let unitModes: [(id: String, label: String)] = [("replace", "Replace with the result"), ("append", "Append “= result”")]
     private static let calcModes: [(id: String, label: String)] = [("replace", "Replace with the result"), ("append", "Append “= result”")]
 
     public var providedActions: [PluginAction] {
@@ -65,6 +66,8 @@ public final class TextToolsPlugin: NSObject, GestureActionPlugin, PluginExtensi
             a("typography", "Smart / Straight Typography", "Curly vs straight quotes, dashes, ellipses", "character.cursor.ibeam", [Self.choice("mode", "Mode", Self.typo, "smart")]),
             a("slugify", "Make URL Slug", "“Hello, World!” → hello-world", "link.badge.plus"),
             a("calculate", "Calculate", "Evaluate the selected arithmetic (2+3*4)", "plus.forwardslash.minus", [Self.choice("mode", "Result", Self.calcModes, "replace")]),
+            a("convert_units", "Convert Units", "“5 km to mi”, “70 F to C”, “2 lb in kg” — length, weight, temperature, volume, speed, data", "ruler", [Self.choice("mode", "Result", Self.unitModes, "replace")]),
+            a("convert_timestamp", "Convert Timestamp", "Unix time ⇄ readable date", "clock.arrow.2.circlepath"),
             a("text_stats", "Count Words", "Show words, characters, lines and reading time", "number", apply: false),
             a("swap_clipboard", "Swap with Clipboard", "Paste the clipboard over the selection and keep the old selection on the clipboard", "arrow.left.arrow.right", apply: false),
             a("plain_paste", "Paste as Plain Text", "Paste the clipboard without formatting", "doc.plaintext", apply: false),
@@ -122,6 +125,13 @@ public final class TextToolsPlugin: NSObject, GestureActionPlugin, PluginExtensi
                 let r = TextOps.formatNumber(v)
                 return append ? text + " = " + r : r
             }
+        case "convert_units":
+            let append = s("mode", "replace") == "append"
+            try transform(apply, context) { text in
+                guard let r = TextOps.convertUnits(text) else { return nil }
+                return append ? "\(r.value) \(text.trimmingCharacters(in: .whitespacesAndNewlines).components(separatedBy: .whitespaces).dropFirst().first ?? "") = \(r.result)" : r.result
+            }
+        case "convert_timestamp": try transform(apply, context) { TextOps.convertTimestamp($0) }
         case "text_stats":
             let text = try readSelection(context)
             context.showNotification(title: "Text statistics", message: TextOps.stats(text), style: .info)

@@ -2,11 +2,15 @@
   "id": "com.mousegestures.lib.systemtoggles",
   "name": "System Toggles",
   "kind": "action",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "author": "MouseGestures",
-  "description": "One-gesture system switches the built-in actions lack: Dock auto-hide, Stage Manager, keep awake, Wi-Fi, microphone mute and the screen saver.",
+  "description": "One-gesture system switches the built-in actions lack: Dock auto-hide, Stage Manager, keep awake, Wi-Fi, microphone mute, next sound output or input, and the screen saver.",
   "permissions": [
+    "notifications",
     "systemAPIs"
   ],
-  "principalClass": "SystemTogglesPlugin"
+  "principalClass": "SystemTogglesPlugin",
+  "shared": [
+    "AudioDevices.swift"
+  ]
 }

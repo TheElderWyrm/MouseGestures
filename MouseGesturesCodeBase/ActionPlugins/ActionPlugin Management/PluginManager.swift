@@ -351,6 +351,9 @@ public class PluginManager: NSObject {
 
     // MARK: - Plugin Execution
 
+    private let proNoticeLock = NSLock()
+    private var proNoticeDates: [String: Date] = [:]
+
     public func executeAction(identifier: String, parameters: ActionParameters = ActionParameters()) throws {
         // Snapshot the (plugin, action, sandbox) under the reader lock so a
         // concurrent unloadPlugin/reload (which mutates these under a barrier)
@@ -366,6 +369,18 @@ public class PluginManager: NSObject {
             throw PluginError.actionNotFound(identifier)
         }
         guard PluginLibraryService.proGateAllows(pluginId: plugin.identifier) else {
+            // Tell the user why nothing happened, at most once every ten minutes per plugin.
+            let now = Date()
+            let tell = proNoticeLock.withLock { () -> Bool in
+                if let last = proNoticeDates[plugin.identifier], now.timeIntervalSince(last) < 600 { return false }
+                proNoticeDates[plugin.identifier] = now; return true
+            }
+            if tell {
+                DispatchQueue.main.async {
+                    self.showPluginNotification(title: "\(plugin.name) needs Pro", message: "Plugins are part of MouseGestures Pro. Open Settings ▸ License to upgrade.",
+                                                style: .warning, pluginId: plugin.identifier)
+                }
+            }
             throw PluginError.executionFailed("\(plugin.name) is a Pro plugin. Upgrade to Pro to use it.")
         }
 

@@ -6,15 +6,17 @@ Ideas for new triggers and where they belong: `docs/TRIGGER_IDEAS.md`.
 
 | Plugin | Kind | What it does | Permissions |
 |---|---|---|---|
-| Text | action | Change case, clean up, edit lines, wrap, Markdown, encode/decode, JSON, calculate, word count, insert dates / UUIDs / snippets — on the selection or the clipboard | keystrokes, notifications |
+| Text | action | Change case, clean up, edit lines, wrap, Markdown, encode/decode, JSON, calculate, convert units and timestamps, word count, insert dates / UUIDs / snippets — on the selection or the clipboard | keystrokes, notifications |
 | Timers & Alarms | action | Timers, Pomodoro, alarms (once / daily / weekdays), stopwatch, spoken clock; each can run another action when it goes off | notifications, run actions |
+| Clipboard | action | History menu at the pointer, paste previous clip, collect selections, copy as plain text, clear (memory only, skips password managers) | keystrokes, notifications |
+| Quick Capture | action | Add the selection to an inbox file, a new note file, Reminders or Apple Notes | keystrokes, notifications |
 | Web Tools | action | Search selection or clipboard, dictionary lookup, open selected link, copy page URL / Markdown link | keystrokes, notifications |
 | Finder Helpers | action | Copy paths, Terminal here, new window, hidden files, desktop icons, eject all disks | keystrokes, notifications |
-| System Toggles | action | Dock auto-hide, Stage Manager, keep awake, Wi-Fi, mic mute, screen saver | keystrokes |
-| Screen Tools | action | Pick a colour from the screen, find the pointer | notifications |
+| System Toggles | action | Dock auto-hide, Stage Manager, keep awake, Wi-Fi, mic mute, next sound output / input, screen saver | keystrokes |
+| Screen Tools | action | Pick a colour, copy text from anywhere on screen (OCR), scan QR codes, find the pointer | notifications (+ Screen Recording for OCR/QR) |
 | Scheduler | detection | Triggers at times you write: `weekdays 8:30`, `every 30 min 9:00-17:00`, `sunset -30m`, `monthly 1 9:00` | — |
 | Pointer Gestures | detection | Triggers: shake, circles, rest in a corner | — |
-| System Events | detection | Triggers: sleep/wake, lock, power, battery low, disks, network, appearance, idle, app launch/quit | — |
+| System Events | detection | Triggers: sleep/wake, lock, power, battery low, disks, network, sound device changes, clipboard changes, appearance, idle, app launch/quit | — |
 
 Detection plugins appear in the gesture editor as a **Plugin** trigger with a picker for their triggers.
 

@@ -36,10 +36,11 @@ Legend: ✅ built · 🟡 partly · 💡 idea
 | Displays | Connected / removed, mirroring, resolution change | **System Events** | 🟡 |
 | Network | Internet lost / back, Wi-Fi network joined / left, VPN up / down | **System Events** | 🟡 (online/offline only; SSID needs Location permission) |
 | Disks | Volume mounted / unmounted, USB or Thunderbolt device plugged, Time Machine finished | **System Events** | 🟡 (mount / unmount) |
-| Peripherals | Bluetooth device connected (AirPods), headphones plugged, audio output changed, camera or mic in use | — | 💡 |
+| Peripherals | Headphones plugged / audio output or microphone changed | **System Events** | ✅ |
+| Peripherals (more) | Bluetooth device connected (AirPods), camera or mic in use | — | 💡 |
 | Appearance | Dark / Light switched, Focus mode on / off | **System Events** | 🟡 (Dark / Light) |
 | Apps | A named app launched / quit / came to front; frontmost window title or browser URL changed | **System Events** | 🟡 (one watched app: launch / quit) |
-| Clipboard | Clipboard changed, matches a pattern (URL, code, number) | — | 💡 |
+| Clipboard | Something copied, a web address copied (patterns like code or numbers 💡) | **System Events** | 🟡 |
 | Files | A folder changed, a download finished, a screenshot was taken | — | 💡 |
 | System health | CPU / memory pressure, thermal state, disk space low | — | 💡 |
 | Location | Arrived at / left a place | — | 💡 (needs Location permission) |
@@ -64,6 +65,8 @@ One plugin per *theme*, so each has one settings page and one background monitor
 | System Events | triggers from the state of the Mac | detection |
 | Timers & Alarms | countdowns, alarms, stopwatch (+ "then run") | action |
 | Text | everything that changes or inserts text | action |
+| Clipboard | history and clipboard handling | action |
+| Quick Capture | send text to files, Reminders, Notes | action |
 | Finder Helpers | Finder windows, files, desktop, disks | action |
 | System Toggles | switches for system settings | action |
 | Web Tools | search, lookup, links, browser page | action |

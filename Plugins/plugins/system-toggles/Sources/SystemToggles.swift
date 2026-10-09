@@ -6,7 +6,7 @@ public final class SystemTogglesPlugin: NSObject, GestureActionPlugin, PluginExt
     public var identifier: String { "com.mousegestures.lib.systemtoggles" }
     public var name: String { "System Toggles" }
     public override var description: String { "Quick system switches" }
-    public var version: String { "1.3.0" }
+    public var version: String { "1.4.0" }
     public var author: String { "MouseGestures" }
     public var category: ActionCategory { .system }
     public var isExternal: Bool = false
@@ -23,6 +23,8 @@ public final class SystemTogglesPlugin: NSObject, GestureActionPlugin, PluginExt
         PluginAction(id: "toggle_keep_awake", name: "Toggle Keep Awake", description: "Prevent the Mac from sleeping until toggled off", icon: "cup.and.saucer"),
         PluginAction(id: "toggle_wifi", name: "Toggle Wi-Fi", description: "Turn Wi-Fi on or off", icon: "wifi"),
         PluginAction(id: "toggle_mic_mute", name: "Toggle Microphone Mute", description: "Mute or restore the system input volume", icon: "mic.slash"),
+        PluginAction(id: "cycle_audio_output", name: "Next Sound Output", description: "Switch to the next speakers / headphones / AirPlay output", icon: "hifispeaker.2"),
+        PluginAction(id: "cycle_audio_input", name: "Next Sound Input", description: "Switch to the next microphone", icon: "mic"),
         PluginAction(id: "screen_saver", name: "Start Screen Saver", description: "Start the screen saver now", icon: "sparkles.tv"),
     ]}
 
@@ -63,6 +65,14 @@ public final class SystemTogglesPlugin: NSObject, GestureActionPlugin, PluginExt
                 let back = Int(settings?.number("micVolumeBeforeMute", default: 75) ?? 75)
                 try run("/usr/bin/osascript", ["-e", "set volume input volume \(max(back, 1))"])
             }
+        case "cycle_audio_output", "cycle_audio_input":
+            let output = action.id == "cycle_audio_output"
+            let list = AudioDevices.devices(output: output)
+            guard let next = AudioDevices.next(after: AudioDevices.defaultDevice(output: output), in: list) else {
+                context.showNotification(title: output ? "Sound output" : "Sound input", message: "There's only one device", style: .info); return
+            }
+            guard AudioDevices.setDefault(next.id, output: output) else { throw PluginError.executionFailed("Couldn't switch to \(next.name)") }
+            context.showNotification(title: output ? "Sound output" : "Sound input", message: next.name, style: .success)
         case "screen_saver":
             try run("/usr/bin/open", ["-a", "ScreenSaverEngine"])
         default: throw PluginError.actionNotFound(action.id)

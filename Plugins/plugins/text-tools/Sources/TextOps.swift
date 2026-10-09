@@ -304,6 +304,69 @@ enum TextOps {
         return s
     }
 
+
+    // MARK: units + timestamps
+
+    private static let unitTable: [String: Dimension] = {
+        var t: [String: Dimension] = [:]
+        func add(_ names: [String], _ u: Dimension) { for n in names { t[n] = u } }
+        add(["m", "meter", "meters", "metre", "metres"], UnitLength.meters); add(["km", "kilometer", "kilometers", "kilometre", "kilometres"], UnitLength.kilometers)
+        add(["cm", "centimeter", "centimeters"], UnitLength.centimeters); add(["mm", "millimeter", "millimeters"], UnitLength.millimeters)
+        add(["mi", "mile", "miles"], UnitLength.miles); add(["yd", "yard", "yards"], UnitLength.yards)
+        add(["ft", "foot", "feet"], UnitLength.feet); add(["in", "inch", "inches"], UnitLength.inches)
+        add(["kg", "kilogram", "kilograms", "kilo", "kilos"], UnitMass.kilograms); add(["g", "gram", "grams"], UnitMass.grams); add(["mg", "milligram", "milligrams"], UnitMass.milligrams)
+        add(["lb", "lbs", "pound", "pounds"], UnitMass.pounds); add(["oz", "ounce", "ounces"], UnitMass.ounces); add(["st", "stone"], UnitMass.stones)
+        add(["c", "°c", "celsius"], UnitTemperature.celsius); add(["f", "°f", "fahrenheit"], UnitTemperature.fahrenheit); add(["k", "kelvin"], UnitTemperature.kelvin)
+        add(["l", "liter", "liters", "litre", "litres"], UnitVolume.liters); add(["ml", "milliliter", "milliliters"], UnitVolume.milliliters)
+        add(["gal", "gallon", "gallons"], UnitVolume.gallons); add(["qt", "quart", "quarts"], UnitVolume.quarts); add(["pt", "pint", "pints"], UnitVolume.pints)
+        add(["cup", "cups"], UnitVolume.cups); add(["floz", "fl oz"], UnitVolume.fluidOunces); add(["tbsp", "tablespoon", "tablespoons"], UnitVolume.tablespoons); add(["tsp", "teaspoon", "teaspoons"], UnitVolume.teaspoons)
+        add(["m/s", "mps"], UnitSpeed.metersPerSecond); add(["km/h", "kph", "kmh", "kmph"], UnitSpeed.kilometersPerHour); add(["mph", "mi/h"], UnitSpeed.milesPerHour); add(["kn", "kt", "knot", "knots"], UnitSpeed.knots)
+        add(["s", "sec", "secs", "second", "seconds"], UnitDuration.seconds); add(["min", "mins", "minute", "minutes"], UnitDuration.minutes); add(["h", "hr", "hrs", "hour", "hours"], UnitDuration.hours)
+        add(["b", "byte", "bytes"], UnitInformationStorage.bytes); add(["kb", "kilobyte", "kilobytes"], UnitInformationStorage.kilobytes); add(["mb", "megabyte", "megabytes"], UnitInformationStorage.megabytes)
+        add(["gb", "gigabyte", "gigabytes"], UnitInformationStorage.gigabytes); add(["tb", "terabyte", "terabytes"], UnitInformationStorage.terabytes)
+        add(["ha", "hectare", "hectares"], UnitArea.hectares); add(["acre", "acres"], UnitArea.acres); add(["m2", "m²", "sqm"], UnitArea.squareMeters); add(["ft2", "ft²", "sqft"], UnitArea.squareFeet); add(["km2", "km²"], UnitArea.squareKilometers)
+        return t
+    }()
+
+    /// "5 km to mi" → "3.10686 mi". With `target`, the text is just "5 km". nil when not understood or the units don't match.
+    static func convertUnits(_ input: String, target: String? = nil) -> (value: String, result: String)? {
+        var s = input.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        var toUnit = target?.trimmingCharacters(in: .whitespaces).lowercased()
+        if toUnit == nil || toUnit!.isEmpty {
+            guard let r = s.range(of: "\\s+(?:to|in|into|as|->|→)\\s+(\\S+)$", options: .regularExpression) else { return nil }
+            toUnit = String(s[r]).components(separatedBy: .whitespaces).last
+            s = String(s[..<r.lowerBound])
+        }
+        guard let to = toUnit, let m = s.range(of: "^(-?[0-9][0-9,]*\\.?[0-9]*(?:e-?[0-9]+)?)\\s*(.+)$", options: .regularExpression) else { return nil }
+        let whole = String(s[m])
+        let numEnd = whole.firstIndex { !("0123456789,.-e".contains($0)) } ?? whole.endIndex
+        guard let value = Double(String(whole[..<numEnd]).replacingOccurrences(of: ",", with: "")) else { return nil }
+        let fromName = String(whole[numEnd...]).trimmingCharacters(in: .whitespaces)
+        guard let from = unitTable[fromName], let dest = unitTable[to], type(of: from) == type(of: dest) else { return nil }
+        let converted = Measurement(value: value, unit: from).converted(to: dest).value
+        let digits = String(format: "%.6g", converted)
+        let shown = digits.contains("e") ? digits : (Double(digits).map { formatNumber($0) } ?? digits)
+        let typedTarget = target.map { $0.trimmingCharacters(in: .whitespaces) } ?? input.trimmingCharacters(in: .whitespacesAndNewlines).components(separatedBy: .whitespaces).last ?? to
+        return (formatNumber(value), shown + " " + typedTarget)
+    }
+
+    /// Unix seconds/milliseconds → local ISO date-time; an ISO date/date-time → unix seconds.
+    static func convertTimestamp(_ input: String, calendar: Calendar = .current) -> String? {
+        let t = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        let f = DateFormatter(); f.locale = Locale(identifier: "en_US_POSIX"); f.calendar = calendar; f.timeZone = calendar.timeZone
+        if let n = Double(t), t.count >= 9 {
+            let secs = t.count >= 13 ? n / 1000 : n
+            f.dateFormat = "yyyy-MM-dd HH:mm:ss"
+            return f.string(from: Date(timeIntervalSince1970: secs))
+        }
+        for fmt in ["yyyy-MM-dd HH:mm:ss", "yyyy-MM-dd HH:mm", "yyyy-MM-dd'T'HH:mm:ss", "yyyy-MM-dd"] {
+            f.dateFormat = fmt
+            if let d = f.date(from: t) { return String(Int(d.timeIntervalSince1970)) }
+        }
+        if let d = ISO8601DateFormatter().date(from: t) { return String(Int(d.timeIntervalSince1970)) }
+        return nil
+    }
+
     // MARK: insert
 
     static let dateFormats: [(id: String, label: String, pattern: String)] = [

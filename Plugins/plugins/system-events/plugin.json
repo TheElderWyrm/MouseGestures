@@ -2,8 +2,11 @@
   "id": "com.mousegestures.lib.systemevents",
   "name": "System Events",
   "kind": "detection",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "author": "MouseGestures",
-  "description": "Passive triggers for things that happen to your Mac: sleep and wake, lock and unlock, power plugged or unplugged, low battery, disks connected or removed, internet lost or restored, Dark/Light Mode switches, going idle or coming back, and a chosen app launching or quitting.",
-  "principalClass": "SystemEventsPlugin"
+  "description": "Passive triggers for things that happen to your Mac: sleep and wake, lock and unlock, power plugged or unplugged, low battery, disks connected or removed, headphones or sound devices switched, something copied (or a web address), internet lost or restored, Dark/Light Mode switches, going idle or coming back, and a chosen app launching or quitting.",
+  "principalClass": "SystemEventsPlugin",
+  "shared": [
+    "AudioDevices.swift"
+  ]
 }
