@@ -32,6 +32,7 @@ struct DeveloperView: View {
     enum DeveloperSection: String, CaseIterable {
         case settings = "Developer Settings"
         case logging = "Logging"
+        case plugins = "Plugin Management"
         case actionRunner = "Action Runner"
         case coordinator = "Activation Coordinator"
         case performance = "Performance"
@@ -41,6 +42,7 @@ struct DeveloperView: View {
             switch self {
             case .settings: return "gearshape"
             case .logging: return "doc.text"
+            case .plugins: return "puzzlepiece.extension"
             case .actionRunner: return "play.circle"
             case .coordinator: return "flowchart"
             case .performance: return "speedometer"
@@ -76,6 +78,7 @@ struct DeveloperView: View {
                     switch selectedSection {
                     case .settings: developerSettingsSection
                     case .logging: loggingSection
+                    case .plugins: PluginManagementView()
                     case .actionRunner: actionRunnerSection
                     case .coordinator: coordinatorSection
                     case .performance: performanceSection

@@ -2,13 +2,12 @@ import SwiftUI
 import AppKit
 import UniformTypeIdentifiers
 
-// MARK: - Plugins (Settings ▸ Plugins, Pro)
+// MARK: - Plugin Management (Developer tab)
 // Everything about installed plugins: the unified list (action, detection, service, UI),
-// enable/disable, details, reload/uninstall, and the Add Plugins sheet. Moved here from the Developer tab.
+// enable/disable, details, reload/uninstall, and the full Add Plugins sheet (including install from file).
 
 struct PluginManagementView: View {
     @StateObject private var uiServices = UIServices.shared
-    @ObservedObject private var license = LicenseService.shared
 
     @State private var unifiedPlugins: [UnifiedPluginInfo] = []
     @State private var selectedUnifiedPlugin: UnifiedPluginInfo?
@@ -68,36 +67,13 @@ struct PluginManagementView: View {
 
 
     var body: some View {
-        Group {
-            if license.isPro {
-                pluginsSection
-            } else {
-                lockedCard
+        pluginsSection
+            .onAppear { refreshUnifiedPlugins() }
+            .sheet(item: $settingsPlugin) { PluginSettingsSheet(pluginId: $0.identifier, pluginName: $0.name) }
+            .sheet(isPresented: $showingLibraries) {
+                PluginLibrariesView(onChange: { refreshUnifiedPlugins() },
+                                    onInstallFile: { handlePluginInstall(result: $0) })
             }
-        }
-        .onAppear { refreshUnifiedPlugins() }
-        .sheet(item: $settingsPlugin) { PluginSettingsSheet(pluginId: $0.identifier, pluginName: $0.name) }
-        .sheet(isPresented: $showingLibraries) {
-            PluginLibrariesView(onChange: { refreshUnifiedPlugins() },
-                                onInstallFile: { handlePluginInstall(result: $0) })
-        }
-    }
-
-    /// What free users see: the feature is Pro.
-    private var lockedCard: some View {
-        MGContentCard {
-            VStack(spacing: MGStyle.Spacing.lg) {
-                Image(systemName: "lock.shield.fill").font(.system(size: 40)).foregroundColor(.orange)
-                Text("Plugins are a Pro feature").font(.headline)
-                Text("Browse and install extra actions, triggers, timers and schedules from the official library, or add your own. Upgrade to Pro to unlock them.")
-                    .font(.callout).foregroundColor(.secondary).multilineTextAlignment(.center).frame(maxWidth: 420)
-                Button("See License Options") {
-                    NotificationCenter.default.post(name: Notification.Name("MGOpenSettingsCategory"), object: "license")
-                }
-                .buttonStyle(.borderedProminent)
-            }
-            .frame(maxWidth: .infinity, minHeight: 200)
-        }
     }
 
     private var messageBanner: some View {
@@ -109,6 +85,7 @@ struct PluginManagementView: View {
 
     private var pluginsSection: some View {
         VStack(alignment: .leading, spacing: MGStyle.Spacing.xxl) {
+            MGSectionHeader("Plugin Management")
             messageBanner
 
             // Search and Filters

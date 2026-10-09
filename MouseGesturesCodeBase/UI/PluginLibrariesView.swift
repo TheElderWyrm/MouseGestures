@@ -16,6 +16,9 @@ struct PluginLibrariesView: View {
 
     /// Called after anything installs/uninstalls so the host list can refresh.
     var onChange: () -> Void = {}
+    /// True when shown as a Settings page rather than a sheet: no title bar buttons, no file install,
+    /// no "Done", and the page scrolls with Settings instead of on its own.
+    var embedded = false
     /// Handles a plugin file chosen via "Install from File…".
     var onInstallFile: (Result<[URL], Error>) -> Void = { _ in }
 
@@ -30,19 +33,23 @@ struct PluginLibrariesView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
             HStack {
-                Text("Add Plugins").font(.title2.bold())
+                if !embedded { Text("Add Plugins").font(.title2.bold()) }
                 Spacer()
-                Button { showingFilePicker = true } label: { Label("Install from File…", systemImage: "doc.badge.plus") }
+                if !embedded {
+                    Button { showingFilePicker = true } label: { Label("Install from File…", systemImage: "doc.badge.plus") }
+                }
                 Button { Task { await service.refreshAll() } } label: { Label("Check for Updates", systemImage: "arrow.clockwise") }
                     .disabled(service.isRefreshing)
                 if service.updatesAvailableCount > 0 {
                     Button { updateAll() } label: { Label("Update All (\(service.updatesAvailableCount))", systemImage: "arrow.up.circle") }
                         .disabled(!service.busyPluginIds.isEmpty)
                 }
-                Button("Done") { dismiss() }.keyboardShortcut(.defaultAction)
+                if !embedded { Button("Done") { dismiss() }.keyboardShortcut(.defaultAction) }
             }
 
-            Text("Plugins are native code that runs with MouseGestures' permissions — only install ones you trust. More GitHub libraries can be connected under Developer Settings ▸ Plugin Sources.")
+            Text(embedded
+                 ? "Plugins are native code that runs with MouseGestures' permissions — only install ones you trust."
+                 : "Plugins are native code that runs with MouseGestures' permissions — only install ones you trust. More GitHub libraries can be connected under Developer Settings ▸ Plugin Sources.")
                 .font(.caption).foregroundColor(.secondary)
 
             if service.pendingRestartCount > 0 {
@@ -64,7 +71,7 @@ struct PluginLibrariesView: View {
 
             filterBar
 
-            ScrollView {
+            listContainer {
                 VStack(alignment: .leading, spacing: MGStyle.Spacing.xl) {
                     ForEach(service.libraries) { repo in
                         if !isFiltering || !visibleEntries(repo).isEmpty { libraryCard(repo) }
@@ -80,14 +87,19 @@ struct PluginLibrariesView: View {
                 }
             }
         }
-        .padding(MGStyle.Spacing.xl)
-        .frame(minWidth: 760, minHeight: 500)
+        .padding(embedded ? 0 : MGStyle.Spacing.xl)
+        .frame(minWidth: embedded ? 0 : 760, minHeight: embedded ? 0 : 500)
         .onAppear { service.reconcile() }
         .task { await service.refreshAll() }
         .fileImporter(isPresented: $showingFilePicker,
                       allowedContentTypes: [UTType(filenameExtension: "plugin") ?? .item, .bundle],
                       allowsMultipleSelection: false) { onInstallFile($0); onChange() }
         .sheet(item: $settingsTarget) { PluginSettingsSheet(pluginId: $0.id, pluginName: $0.name) }
+    }
+
+    /// Sheet: the list scrolls on its own. Settings page: the page scrolls, so no inner scroll view.
+    @ViewBuilder private func listContainer<C: View>(@ViewBuilder _ content: () -> C) -> some View {
+        if embedded { content() } else { ScrollView { content() } }
     }
 
     // MARK: Search & filters

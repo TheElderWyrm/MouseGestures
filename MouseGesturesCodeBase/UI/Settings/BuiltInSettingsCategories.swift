@@ -87,7 +87,7 @@ struct BuiltInSettingsProvider: SettingsProvider {
     }
 }
 
-/// Settings ▸ Plugins (Pro): installed plugins, the plugin library, per-plugin settings.
+/// Settings ▸ Plugins (Pro): browse and install plugins from the library.
 struct PluginsSettingsProvider: SettingsProvider {
     var settingsEntries: [SettingsEntry] {
         [
@@ -95,9 +95,9 @@ struct PluginsSettingsProvider: SettingsProvider {
                 category: SettingsCategories.plugins,
                 order: 0,
                 searchableItems: [
-                    SearchableSettingItem(title: "Plugins", description: "Install, update and manage plugins from the official library", keywords: ["plugin", "plugins", "library", "install", "extension", "timer", "alarm", "schedule", "pro"])
+                    SearchableSettingItem(title: "Plugins", description: "Browse, install and update plugins from the official library", keywords: ["plugin", "plugins", "library", "install", "extension", "timer", "alarm", "schedule", "pro"])
                 ],
-                viewBuilder: { _ in AnyView(PluginManagementView()) }
+                viewBuilder: { _ in AnyView(PluginStoreSettingsView()) }
             )
         ]
     }
