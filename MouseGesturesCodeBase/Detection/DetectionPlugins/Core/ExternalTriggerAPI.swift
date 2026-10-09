@@ -70,14 +70,45 @@ final class ExternalTriggerAdapter: BaseDetectionPlugin, ExternalTriggerHost {
 
     override func start() throws {
         try super.start()
-        guard !started else { return }
-        try external.start(host: self)
-        started = true
+        reconcile()
     }
 
     override func stop() {
         if started { external.stop(); started = false }
         super.stop()
+    }
+
+    override func configurationChanged() {
+        super.configurationChanged()
+        reconcile()
+    }
+
+    // MARK: Run only while needed
+    // A trigger plugin's event monitors and timers cost battery, so it runs only while at least one
+    // enabled gesture uses one of its triggers (and, for library plugins, while the license allows it).
+
+    private var hasBoundGestures: Bool {
+        guard let gestures = context?.configuration.gestures else { return false }
+        return gestures.contains { g in
+            guard g.isEnabled, let trigger = g.components.externalTrigger, trigger.isEnabled else { return false }
+            return trigger.pluginId == identifier
+        }
+    }
+
+    private func reconcile() {
+        guard state == .running else { return }
+        let wanted = hasBoundGestures && PluginLibraryService.proGateAllows(pluginId: identifier)
+        if wanted, !started {
+            do {
+                try external.start(host: self)
+                started = true
+            } catch {
+                log("Could not start: \(error.localizedDescription)")
+            }
+        } else if !wanted, started {
+            external.stop(); started = false
+            log("Stopped (no gesture uses it)")
+        }
     }
 
     // MARK: ExternalTriggerHost

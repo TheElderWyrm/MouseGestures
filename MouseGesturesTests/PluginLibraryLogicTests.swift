@@ -33,6 +33,21 @@ final class PluginLibraryLogicTests: XCTestCase {
         XCTAssertEqual(PluginLibraryLogic.officialRepo.subpath, "Plugins")
     }
 
+    func testRecommendedToInstall() throws {
+        func entry(_ id: String, rec: Bool?) -> LibraryPluginEntry {
+            LibraryPluginEntry(id: id, name: id, kind: .action, version: "1.0", download: "d.zip",
+                               sha256: String(repeating: "0", count: 64), recommended: rec)
+        }
+        let list = [entry("a", rec: true), entry("b", rec: nil), entry("c", rec: true), entry("d", rec: true), entry("e", rec: false)]
+        let states: [String: LibraryInstallState] = ["a": .notInstalled, "c": .installed(version: "1.0"),
+                                                      "d": .incompatible(minAppVersion: "9.0")]
+        XCTAssertEqual(PluginLibraryLogic.recommendedToInstall(list, states: states).map { $0.id }, ["a"])
+        // a manifest without the field still decodes
+        let zeros = String(repeating: "0", count: 64)
+        let json = #"{"id":"x.y","name":"X","kind":"action","version":"1.0","download":"d.zip","sha256":"\#(zeros)"}"#
+        XCTAssertNil(try JSONDecoder().decode(LibraryPluginEntry.self, from: Data(json.utf8)).recommended)
+    }
+
     func testParseRepoRejectsGarbage() {
         for bad in ["", "octo", "a/b/../c", "a/b//c", "http://github.com/o/r", "https://evil.com/o/r", "-o/r", "o/r@..", "o/../x", "o/r@a b"] {
             XCTAssertThrowsError(try PluginLibraryLogic.parseRepo(bad), bad)

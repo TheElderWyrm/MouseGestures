@@ -81,6 +81,7 @@ def main():
         e = {k: meta[k] for k in ("id", "name", "kind", "version", "author", "description") if k in meta}
         if meta.get("permissions"): e["permissions"] = meta["permissions"]
         if meta.get("requires"): e["requires"] = meta["requires"]
+        if meta.get("recommended"): e["recommended"] = True
         e["minAppVersion"] = meta.get("minAppVersion", "1.1.0")
         e["download"] = f"dist/{zip_name}"; e["sha256"] = digest
         entries.append(e)

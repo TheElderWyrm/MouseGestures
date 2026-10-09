@@ -16,7 +16,7 @@
       ],
       "minAppVersion": "1.1.0",
       "download": "dist/com.mousegestures.lib.capture-1.0.0.zip",
-      "sha256": "21b68c3e9cd8b9e220d3726007b413f49520af4976e2281b8208b5db441d538d"
+      "sha256": "4e2276393f67ba7ae5eb0ae4d8397af5ab7817656323106d18072447381ceacc"
     },
     {
       "id": "com.mousegestures.lib.clipboard",
@@ -31,7 +31,7 @@
       ],
       "minAppVersion": "1.1.0",
       "download": "dist/com.mousegestures.lib.clipboard-1.0.0.zip",
-      "sha256": "de42ffe947191d8bc35073bf8d948164b095f1eb9f9a831b463a09ba28bc2598"
+      "sha256": "27185d21993b4165ea4e17b24b6b9891b92428a973499f2b2c3769692e9ffa8e"
     },
     {
       "id": "com.mousegestures.lib.finderhelpers",
@@ -46,7 +46,7 @@
       ],
       "minAppVersion": "1.1.0",
       "download": "dist/com.mousegestures.lib.finderhelpers-1.3.0.zip",
-      "sha256": "904fe0f738bab3ce9d02440e2d2d971f95ebcfb15ade5e778fe8e89d9b4210b8"
+      "sha256": "53e080d77f63467d925bb95c9574504cb443c30cc0c9d30d2bc54ce0ed8b79cf"
     },
     {
       "id": "com.mousegestures.lib.pointergestures",
@@ -55,9 +55,10 @@
       "version": "1.0.0",
       "author": "MouseGestures",
       "description": "Triggers from pointer movement alone: shake left-right or up-down, draw a circle clockwise or counter-clockwise, or rest the pointer in a screen corner. Optionally require a modifier key so ordinary mouse movement never triggers.",
+      "recommended": true,
       "minAppVersion": "1.1.0",
       "download": "dist/com.mousegestures.lib.pointergestures-1.0.0.zip",
-      "sha256": "a17dd4df9d48433c83eadb042d585943d09c204bc84402eb018435a6583b8d63"
+      "sha256": "bac8f3077b378e45921f4dadff34afd34999730f209620a7c96d89121daf3d8e"
     },
     {
       "id": "com.mousegestures.lib.quicklaunch",
@@ -72,7 +73,7 @@
       ],
       "minAppVersion": "1.1.0",
       "download": "dist/com.mousegestures.lib.quicklaunch-1.2.0.zip",
-      "sha256": "940c3651ba98e218c059c7f944b6e0deba13da9eb1a30c2a5b3c437de6af7ccc"
+      "sha256": "f6a7487dd37f1469f51506f142b0f45589a0e93566d7e2ba57da9b9c2eac38dd"
     },
     {
       "id": "com.mousegestures.lib.scheduler",
@@ -81,9 +82,10 @@
       "version": "1.0.0",
       "author": "MouseGestures",
       "description": "Run gesture actions on a schedule instead of a gesture: at a time of day, on certain weekdays, every N minutes, at sunrise or sunset, monthly, or once. Write your own schedules in the plugin's settings, then pick them as a Plugin trigger.",
+      "recommended": true,
       "minAppVersion": "1.1.0",
       "download": "dist/com.mousegestures.lib.scheduler-1.0.0.zip",
-      "sha256": "b6df3e7ed27d694c51be06fff4a96133a5e7ac946d835c9d39051331a7381ea5"
+      "sha256": "f9374a8306d3063db2fbc73d45ed9d53fd0fe1fe406222724cd463e072c09879"
     },
     {
       "id": "com.mousegestures.lib.screentools",
@@ -97,7 +99,7 @@
       ],
       "minAppVersion": "1.1.0",
       "download": "dist/com.mousegestures.lib.screentools-1.2.0.zip",
-      "sha256": "1ab65ece655c696cbc840869d8a3950a626068cf0e3874b9f87b97434f860285"
+      "sha256": "1527e9dc941980955f709f6ce98acf1a18d3dd1050192c3c4fdb0e34919ccbcf"
     },
     {
       "id": "com.mousegestures.lib.systemevents",
@@ -108,7 +110,7 @@
       "description": "Passive triggers for things that happen to your Mac: sleep and wake, lock and unlock, power plugged or unplugged, low battery, disks connected or removed, headphones or sound devices switched, something copied (or a web address), internet lost or restored, Dark/Light Mode switches, going idle or coming back, and a chosen app launching or quitting.",
       "minAppVersion": "1.1.0",
       "download": "dist/com.mousegestures.lib.systemevents-1.3.0.zip",
-      "sha256": "59853915df5f1e8dece234fcae3c3c3d23ca9bd24cef28634e15c00032eb1517"
+      "sha256": "b1a9c653a0c0921cf8a7d8ec49209c876fd2a2a22f09263e545e0912709e93ca"
     },
     {
       "id": "com.mousegestures.lib.systemtoggles",
@@ -123,7 +125,7 @@
       ],
       "minAppVersion": "1.1.0",
       "download": "dist/com.mousegestures.lib.systemtoggles-1.4.0.zip",
-      "sha256": "1414957bae3e9426edc9c20f011e73e229d07afda9d287ae23e34327fb349e1e"
+      "sha256": "aab6de9592b0064b3e122209a167ac877cf00ea4e3ba57eb4b3c58499def1d9d"
     },
     {
       "id": "com.mousegestures.lib.texttools",
@@ -136,9 +138,10 @@
         "systemAPIs",
         "notifications"
       ],
+      "recommended": true,
       "minAppVersion": "1.1.0",
       "download": "dist/com.mousegestures.lib.texttools-2.1.0.zip",
-      "sha256": "f8ed029b468223a4c08dbea9b2c334c6acd84adf18b6b9b1dcb013afcf4f20f4"
+      "sha256": "5a7a36ca02c2004b0fab8cca0abe589e43a3633f2d816eb28ebdb8fd991e3424"
     },
     {
       "id": "com.mousegestures.lib.timers",
@@ -151,9 +154,10 @@
         "notifications",
         "executeActions"
       ],
+      "recommended": true,
       "minAppVersion": "1.1.0",
       "download": "dist/com.mousegestures.lib.timers-1.0.0.zip",
-      "sha256": "6bc2279e07fb6442557d1cd34f05dffe6e2c2e688837a8f0a3b98a50aaf15c74"
+      "sha256": "debf3b1e505dbe0576ec8ea2f1698bbee05de074e611778cf5a04edc5621c2ab"
     }
   ]
 }

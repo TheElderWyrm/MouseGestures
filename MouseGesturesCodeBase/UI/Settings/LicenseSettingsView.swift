@@ -191,7 +191,8 @@ struct LicenseSettingsView: View {
                 featureRow(icon: "app.badge", title: "App-Specific Targeting", description: "Automatically switch profiles when switching apps.")
                 featureRow(icon: "slider.horizontal.3", title: "Advanced Settings", description: "Fine-tune app behavior and performance parameters.")
                 featureRow(icon: "bolt.fill", title: "Advanced Actions", description: "Access automation, scripting, and bundled actions.")
-                featureRow(icon: "gearshape.2", title: "Services & Plugins", description: "Extend functionality with custom service plugins.")
+                featureRow(icon: "puzzlepiece.extension", title: "Plugins",
+                           description: "Install timers, schedules, text tools, clipboard history and more.")
             }
         }
     }

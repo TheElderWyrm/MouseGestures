@@ -60,12 +60,16 @@ public struct LibraryPluginEntry: Codable, Equatable, Identifiable {
     /// Other plugins this one needs, as `"plugin.id"` or `"plugin.id>=1.2"`. They are
     /// installed first (from any connected library) and block removal while this is installed.
     public let requires: [String]?
+    /// Worth offering to everyone: the browser shows these in a "Recommended" strip with a one-click install.
+    public let recommended: Bool?
 
     public init(id: String, name: String, kind: LibraryPluginKind, version: String,
                 author: String? = nil, description: String? = nil, minAppVersion: String? = nil,
-                download: String, sha256: String, permissions: [String]? = nil, requires: [String]? = nil) {
+                download: String, sha256: String, permissions: [String]? = nil, requires: [String]? = nil,
+                recommended: Bool? = nil) {
         self.permissions = permissions
         self.requires = requires
+        self.recommended = recommended
         self.id = id; self.name = name; self.kind = kind; self.version = version
         self.author = author; self.description = description; self.minAppVersion = minAppVersion
         self.download = download; self.sha256 = sha256
@@ -354,6 +358,16 @@ public enum PluginLibraryLogic {
         return UpdateLogic.isUpdateAvailable(current: installed, remote: entry.version)
             ? .updateAvailable(installed: installed, available: entry.version)
             : .installed(version: installed)
+    }
+
+    /// Recommended plugins that can be installed right now (not installed, compatible), in manifest order.
+    public static func recommendedToInstall(_ entries: [LibraryPluginEntry],
+                                            states: [String: LibraryInstallState]) -> [LibraryPluginEntry] {
+        entries.filter { entry in
+            guard entry.recommended == true else { return false }
+            if case .notInstalled = states[entry.id] ?? .notInstalled { return true }
+            return false
+        }
     }
 
     // MARK: Search & filter

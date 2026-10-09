@@ -4,7 +4,7 @@
   "kind": "action",
   "version": "1.0.0",
   "author": "MouseGestures",
-  "description": "Countdown timers, Pomodoro cycles, alarms (once, daily or weekdays), a stopwatch and a spoken clock — each can run another gesture action when it goes off. Timers and alarms survive restarts.",
+  "description": "Countdown timers, Pomodoro cycles, alarms (once, daily or weekdays), a stopwatch and a spoken clock \u2014 each can run another gesture action when it goes off. Timers and alarms survive restarts.",
   "permissions": [
     "notifications",
     "executeActions"
@@ -12,5 +12,6 @@
   "shared": [
     "TimeLogic.swift"
   ],
-  "principalClass": "TimersPlugin"
+  "principalClass": "TimersPlugin",
+  "recommended": true
 }

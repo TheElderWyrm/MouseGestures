@@ -9,5 +9,6 @@
     "systemAPIs",
     "notifications"
   ],
-  "principalClass": "TextToolsPlugin"
+  "principalClass": "TextToolsPlugin",
+  "recommended": true
 }

@@ -10,8 +10,12 @@ root — this file is the curated, user-facing subset of that log.
 
 ## [Unreleased]
 
+_Nothing yet._
+
+## [1.1.0] - 2026-10-09
+
 ### Added
-- **Plugins moved to Settings ▸ Plugins** (Pro). Browse, install, update and manage plugins there; free users see what they unlock. Library plugins stay inert without a Pro license. The official library now lives in this repository's `Plugins/` folder.
+- **Settings ▸ Plugins** (Pro): a clean page to install plugins from the official library, with a **Recommended** one-click set (Timers & Alarms, Scheduler, Pointer Gestures, Text). Free users see what they unlock, and library plugins stay inert without a Pro license (with a notice). Full plugin management stays in the Developer tab. The official library now lives in this repository's `Plugins/` folder. Trigger plugins run only while a gesture uses them, so installing them costs no battery.
 - **More official plugins**: Clipboard (history menu at the pointer), Quick Capture (inbox file, note files, Reminders, Notes), Screen Tools gains Copy Text from Screen (OCR) and Scan QR Code, Text gains unit and timestamp conversion, System Toggles cycles sound output/input, System Events adds sound-device and clipboard triggers. Library plugins now tell free users they need Pro.
 - **Official plugins**: Timers & Alarms (timers, Pomodoro, alarms, stopwatch, spoken clock; can run an action when they go off), Scheduler (run actions at times you write — weekdays 8:30, every 30 min, sunset −30m), Text (case, cleanup, lines, Markdown, encode/decode, JSON, calculate, snippets), Pointer Gestures (shake, circles, corner dwell), System Events (sleep/wake, lock, power, battery, disks, network, appearance, idle, app launch/quit), plus Web Tools, Finder Helpers, System Toggles and Screen Tools.
 - **Plugin libraries**: **Add Plugins** browses the official GitHub plugin library (connected automatically) and any extra GitHub libraries added under Developer Settings ▸ Plugin Sources, and also installs plugin files from disk. Downloads are checksum-verified, signature-checked and require confirmation. See `docs/PLUGIN_LIBRARIES.md`.

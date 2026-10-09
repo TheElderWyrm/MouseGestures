@@ -8,5 +8,6 @@
   "shared": [
     "TimeLogic.swift"
   ],
-  "principalClass": "SchedulerPlugin"
+  "principalClass": "SchedulerPlugin",
+  "recommended": true
 }

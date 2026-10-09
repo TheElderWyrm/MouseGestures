@@ -69,6 +69,8 @@ struct PluginLibrariesView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
+            recommendedStrip
+
             filterBar
 
             listContainer {
@@ -100,6 +102,49 @@ struct PluginLibrariesView: View {
     /// Sheet: the list scrolls on its own. Settings page: the page scrolls, so no inner scroll view.
     @ViewBuilder private func listContainer<C: View>(@ViewBuilder _ content: () -> C) -> some View {
         if embedded { content() } else { ScrollView { content() } }
+    }
+
+    // MARK: Recommended
+
+    private var recommended: [(entry: LibraryPluginEntry, repo: LibraryRepo)] {
+        guard let repo = service.libraries.first(where: { service.isOfficial($0) }),
+              let plugins = service.manifests[repo.id]?.plugins else { return [] }
+        let states = Dictionary(uniqueKeysWithValues: plugins.map { ($0.id, service.state(of: $0)) })
+        return PluginLibraryLogic.recommendedToInstall(plugins, states: states).map { ($0, repo) }
+    }
+
+    @ViewBuilder private var recommendedStrip: some View {
+        let items = recommended
+        if !items.isEmpty && !isFiltering {
+            MGContentCard {
+                HStack(alignment: .top, spacing: MGStyle.Spacing.lg) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Label("Recommended to start", systemImage: "star.fill")
+                            .font(.system(size: 13, weight: .semibold)).foregroundColor(.accentColor)
+                        Text(items.map { $0.entry.name }.joined(separator: " · ")).font(.caption)
+                        Text("The most useful ones: new triggers, timers and schedules, and text tools. "
+                             + "You'll see exactly what each can do before anything installs.")
+                            .font(.caption2).foregroundColor(.secondary)
+                    }
+                    Spacer()
+                    if service.busyPluginIds.isEmpty {
+                        Button("Install \(items.count) Recommended") { installRecommended(items.map { $0.entry }) }
+                            .buttonStyle(.borderedProminent)
+                    } else { ProgressView().controlSize(.small) }
+                }
+            }
+        }
+    }
+
+    private func installRecommended(_ entries: [LibraryPluginEntry]) {
+        var seen = Set<String>(), steps: [PluginLibraryService.PlannedInstall] = []
+        do {
+            for entry in entries {
+                for step in try service.plan(for: entry) where seen.insert(step.id).inserted { steps.append(step) }
+            }
+        } catch { show(error.localizedDescription, error: true); return }
+        guard !steps.isEmpty else { return }
+        run(steps, title: "Install \(steps.count) recommended plugin\(steps.count == 1 ? "" : "s")?", verb: "Install", focus: nil)
     }
 
     // MARK: Search & filters
