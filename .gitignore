@@ -24,3 +24,6 @@ portable_swiftlint.zip
 # into this repo; ignored so the two git histories stay separate.
 homebrew-tap/
 Plugins/.build/
+
+# the plugin library serves its zips from the repo
+!Plugins/dist/
