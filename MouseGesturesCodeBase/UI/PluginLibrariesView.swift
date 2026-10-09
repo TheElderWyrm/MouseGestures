@@ -176,17 +176,17 @@ struct PluginLibrariesView: View {
                     Text(entry.kind.label)
                         .font(.caption2).padding(.horizontal, 6).padding(.vertical, 1)
                         .background((entry.kind == .action ? Color.blue : Color.orange).opacity(0.2)).cornerRadius(6)
-                    switch state {
-                    case .installed:
-                        Label("Installed", systemImage: "checkmark.circle.fill")
-                            .font(.caption2).foregroundColor(.green)
-                    case .updateAvailable(let installed, _):
-                        Label("v\(installed) installed", systemImage: "arrow.up.circle.fill")
-                            .font(.caption2).foregroundColor(.orange)
-                    default: EmptyView()
-                    }
                 }
                 if let d = entry.description { Text(d).font(.caption).foregroundColor(.secondary) }
+                switch state {
+                case .installed:
+                    Label("Installed", systemImage: "checkmark.circle.fill")
+                        .font(.caption2).foregroundColor(.green)
+                case .updateAvailable(let installed, _):
+                    Label("v\(installed) installed", systemImage: "arrow.up.circle.fill")
+                        .font(.caption2).foregroundColor(.orange)
+                default: EmptyView()
+                }
                 if let a = entry.author { Text("by \(a)").font(.caption2).foregroundColor(.secondary) }
                 permissionLine(entry)
                 dependencyLines(entry)

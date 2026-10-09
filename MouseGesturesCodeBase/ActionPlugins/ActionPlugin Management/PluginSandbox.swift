@@ -830,6 +830,7 @@ extension PluginPermissions {
             case .fileSystem: p.canAccessFileSystem = true
             case .executeActions: p.canExecuteOtherActions = true
             case .configuration: p.canAccessConfiguration = true
+            case .notifications: p.canShowNotifications = true
             case nil: break
             }
         }

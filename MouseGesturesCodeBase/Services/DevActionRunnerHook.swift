@@ -64,8 +64,10 @@ enum DevActionRunnerHook {
         do {
             try PluginManager.shared.executeAction(identifier: identifier, parameters: parameters)
             print("MG_ACTION_RESULT: ok")
+            Logger.shared.log("DevActionRunner: \(identifier) ok")
         } catch {
             print("MG_ACTION_RESULT: error \(error.localizedDescription)")
+            Logger.shared.log("DevActionRunner: \(identifier) FAILED: \(error.localizedDescription)")
         }
         if exitAfter { exit(0) }
     }

@@ -43,7 +43,7 @@ Add Plugins sheet opens or you press Check for Updates.
   ad-hoc signature (`codesign --force -s - Foo.plugin`).
 
 - `permissions` (optional): any of `systemAPIs` (keystrokes + AppleScript), `windowManager`,
-  `fileSystem`, `executeActions`, `configuration`. Shown in the install prompt and applied to
+  `fileSystem`, `executeActions`, `configuration`, `notifications` (show notifications). Shown in the install prompt and applied to
   the plugin's sandbox when it loads; anything unlisted is denied.
 
 ## Plugin types

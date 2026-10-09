@@ -83,6 +83,8 @@ final class PluginLibraryLogicTests: XCTestCase {
         XCTAssertEqual(try PluginLibraryLogic.parsePermissions(nil), [])
         XCTAssertEqual(try PluginLibraryLogic.parsePermissions(["systemAPIs", "fileSystem"]), [.systemAPIs, .fileSystem])
         XCTAssertThrowsError(try PluginLibraryLogic.parsePermissions(["root"]))
+        XCTAssertEqual(try PluginLibraryLogic.parsePermissions(["notifications"]), [.notifications])
+        XCTAssertFalse(LibraryPermission.notifications.summary.isEmpty)
         let bad = LibraryManifest(schemaVersion: 1, name: "L", plugins: [
             LibraryPluginEntry(id: "com.example.foo", name: "Foo", kind: .action, version: "1.0",
                                download: "a.zip", sha256: goodSHA, permissions: ["everything"])])

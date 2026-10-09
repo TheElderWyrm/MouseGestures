@@ -27,7 +27,7 @@ public enum LibraryStatusFilter: String, CaseIterable {
 /// Capabilities a plugin may ask for. They're shown to the user at install time
 /// and applied to the plugin's sandbox on load; anything not listed stays denied.
 public enum LibraryPermission: String, CaseIterable, Codable {
-    case systemAPIs, windowManager, fileSystem, executeActions, configuration
+    case systemAPIs, windowManager, fileSystem, executeActions, configuration, notifications
 
     public var summary: String {
         switch self {
@@ -36,6 +36,7 @@ public enum LibraryPermission: String, CaseIterable, Codable {
         case .fileSystem: return "Read and write files in its own data folder"
         case .executeActions: return "Run other gesture actions"
         case .configuration: return "Read your MouseGestures configuration"
+        case .notifications: return "Show notifications"
         }
     }
 }
