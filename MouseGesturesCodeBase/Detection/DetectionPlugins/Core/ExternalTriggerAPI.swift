@@ -92,7 +92,8 @@ final class ExternalTriggerAdapter: BaseDetectionPlugin, ExternalTriggerHost {
 
     func fire(triggerId: String) {
         DispatchQueue.main.async { [weak self] in
-            guard let self = self, self.started, self.shouldContinue(), let context = self.context else { return }
+            guard let self = self, self.started, self.shouldContinue(), let context = self.context,
+                  PluginLibraryService.proGateAllows(pluginId: self.identifier) else { return }
             let matches = context.configuration.gestures.filter {
                 guard $0.isEnabled, let t = $0.components.externalTrigger, t.isEnabled else { return false }
                 return t.pluginId == self.identifier && t.triggerId == triggerId

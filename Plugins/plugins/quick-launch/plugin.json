@@ -1,0 +1,13 @@
+{
+  "id": "com.mousegestures.lib.quicklaunch",
+  "name": "Web Tools",
+  "kind": "action",
+  "version": "1.2.0",
+  "author": "MouseGestures",
+  "description": "Search the selected text or clipboard on the web, look a word up in the Dictionary, open a selected link, and copy the front browser tab's URL or Markdown link.",
+  "permissions": [
+    "systemAPIs",
+    "notifications"
+  ],
+  "principalClass": "QuickLaunchPlugin"
+}

@@ -19,6 +19,8 @@ struct SettingsCategoryDescriptor {
     let icon: String
     /// Sidebar sort order — lower values appear higher
     let order: Int
+    /// Pro-only category: free users see a lock in the sidebar (the content explains the upgrade).
+    var isPro: Bool = false
 }
 
 // MARK: - Settings Subcategory Descriptor
@@ -107,6 +109,7 @@ struct ResolvedCategory {
     let title: String
     let icon: String
     let order: Int
+    let isPro: Bool
     /// Entries that have no subcategory (rendered directly)
     let topLevelEntries: [SettingsEntry]
     /// Subcategories with their entries (rendered behind a segmented picker)
@@ -206,6 +209,7 @@ class SettingsCategoryRegistry: ObservableObject {
                 title: info.descriptor.title,
                 icon: info.descriptor.icon,
                 order: info.descriptor.order,
+                isPro: info.descriptor.isPro,
                 topLevelEntries: topLevel,
                 subcategories: subs
             )

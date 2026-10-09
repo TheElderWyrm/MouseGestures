@@ -1,0 +1,13 @@
+{
+  "id": "com.mousegestures.lib.finderhelpers",
+  "name": "Finder Helpers",
+  "kind": "action",
+  "version": "1.3.0",
+  "author": "MouseGestures",
+  "description": "Finder and desktop helpers: copy the path of the selected items, open Terminal at the current folder, open a new Finder window, show or hide hidden files, toggle desktop icons, and eject all disks.",
+  "permissions": [
+    "systemAPIs",
+    "notifications"
+  ],
+  "principalClass": "FinderHelpersPlugin"
+}

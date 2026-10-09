@@ -20,8 +20,21 @@ final class PluginLibraryLogicTests: XCTestCase {
                        LibraryRepo(owner: "octo", repo: "lib", ref: "dev/x"))
     }
 
+    func testSubfolderLibraries() throws {
+        let repo = try PluginLibraryLogic.parseRepo("octo/mono/Plugins")
+        XCTAssertEqual(repo, LibraryRepo(owner: "octo", repo: "mono", subpath: "Plugins"))
+        XCTAssertEqual(repo.id, "octo/mono/Plugins")
+        XCTAssertEqual(PluginLibraryLogic.manifestURL(for: repo)?.absoluteString,
+                       "https://raw.githubusercontent.com/octo/mono/HEAD/Plugins/library.json")
+        let entry = LibraryPluginEntry(id: "a.b", name: "A", kind: .action, version: "1.0", download: "dist/a.zip", sha256: String(repeating: "0", count: 64))
+        XCTAssertEqual(try PluginLibraryLogic.downloadURL(for: entry, in: repo).absoluteString,
+                       "https://raw.githubusercontent.com/octo/mono/HEAD/Plugins/dist/a.zip")
+        XCTAssertThrowsError(try PluginLibraryLogic.parseRepo("octo/mono/../x"))
+        XCTAssertEqual(PluginLibraryLogic.officialRepo.subpath, "Plugins")
+    }
+
     func testParseRepoRejectsGarbage() {
-        for bad in ["", "octo", "a/b/c", "http://github.com/o/r", "https://evil.com/o/r", "-o/r", "o/r@..", "o/../x", "o/r@a b"] {
+        for bad in ["", "octo", "a/b/../c", "a/b//c", "http://github.com/o/r", "https://evil.com/o/r", "-o/r", "o/r@..", "o/../x", "o/r@a b"] {
             XCTAssertThrowsError(try PluginLibraryLogic.parseRepo(bad), bad)
         }
     }

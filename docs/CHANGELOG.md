@@ -11,7 +11,9 @@ root — this file is the curated, user-facing subset of that log.
 ## [Unreleased]
 
 ### Added
-- **Plugin libraries**: Developer ▸ Plugin Management ▸ **Add Plugins** browses the official GitHub plugin library (connected automatically) and any extra GitHub libraries added under Developer Settings ▸ Plugin Sources, and also installs plugin files from disk. Downloads are checksum-verified, signature-checked and require confirmation. See `docs/PLUGIN_LIBRARIES.md`.
+- **Plugins moved to Settings ▸ Plugins** (Pro). Browse, install, update and manage plugins there; free users see what they unlock. Library plugins stay inert without a Pro license. The official library now lives in this repository's `Plugins/` folder.
+- **Official plugins**: Timers & Alarms (timers, Pomodoro, alarms, stopwatch, spoken clock; can run an action when they go off), Scheduler (run actions at times you write — weekdays 8:30, every 30 min, sunset −30m), Text (case, cleanup, lines, Markdown, encode/decode, JSON, calculate, snippets), Pointer Gestures (shake, circles, corner dwell), System Events (sleep/wake, lock, power, battery, disks, network, appearance, idle, app launch/quit), plus Web Tools, Finder Helpers, System Toggles and Screen Tools.
+- **Plugin libraries**: **Add Plugins** browses the official GitHub plugin library (connected automatically) and any extra GitHub libraries added under Developer Settings ▸ Plugin Sources, and also installs plugin files from disk. Downloads are checksum-verified, signature-checked and require confirmation. See `docs/PLUGIN_LIBRARIES.md`.
 - Plugins can add their own **settings, background services and custom UI** (settings sheet per plugin), and detection plugins can provide new gesture triggers.
 - Detection plugins can now be installed and uninstalled (previously only action plugins could).
 

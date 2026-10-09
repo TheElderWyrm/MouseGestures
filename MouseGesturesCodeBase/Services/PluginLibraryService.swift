@@ -50,6 +50,30 @@ final class PluginLibraryService: ObservableObject {
 
     /// Grants recorded at install time, read straight from disk so the plugin
     /// loader can use them during app launch (before this service exists).
+    // MARK: Pro gate
+    // Plugins installed from a library are a Pro feature: they keep their files but stay inert
+    // (no actions, no triggers) while the license isn't Pro, and wake up again the moment it is.
+
+    private nonisolated static let gateLock = NSLock()
+    private nonisolated(unsafe) static var gateCache: (stamp: Date, ids: Set<String>)?
+
+    /// Ids of every plugin installed through a library, cached until `installed.json` changes.
+    nonisolated static func libraryPluginIds() -> Set<String> {
+        let file = Configuration.applicationSupportDirectory
+            .appendingPathComponent("PluginLibraries", isDirectory: true).appendingPathComponent("installed.json")
+        let stamp = (try? FileManager.default.attributesOfItem(atPath: file.path)[.modificationDate] as? Date) ?? .distantPast
+        gateLock.lock(); defer { gateLock.unlock() }
+        if let c = gateCache, c.stamp == stamp { return c.ids }
+        let ids = Set((read([InstalledLibraryPlugin].self, from: file) ?? []).map { $0.pluginId })
+        gateCache = (stamp, ids)
+        return ids
+    }
+
+    /// False for a library plugin when the license doesn't include Pro features.
+    nonisolated static func proGateAllows(pluginId: String) -> Bool {
+        LicenseService.shared.isPro || !libraryPluginIds().contains(pluginId)
+    }
+
     nonisolated static func installedGrants(for pluginId: String) -> [String] {
         let file = Configuration.applicationSupportDirectory
             .appendingPathComponent("PluginLibraries", isDirectory: true).appendingPathComponent("installed.json")

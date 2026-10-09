@@ -1,0 +1,9 @@
+{
+  "id": "com.mousegestures.lib.pointergestures",
+  "name": "Pointer Gestures",
+  "kind": "detection",
+  "version": "1.0.0",
+  "author": "MouseGestures",
+  "description": "Triggers from pointer movement alone: shake left-right or up-down, draw a circle clockwise or counter-clockwise, or rest the pointer in a screen corner. Optionally require a modifier key so ordinary mouse movement never triggers.",
+  "principalClass": "PointerGesturesPlugin"
+}

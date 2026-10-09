@@ -6,6 +6,7 @@ import UniformTypeIdentifiers
 enum SettingsCategories {
     static let general = SettingsCategoryDescriptor(id: "general", title: "General", icon: "gear", order: 0)
     static let detection = SettingsCategoryDescriptor(id: "detection", title: "Detection", icon: "hand.tap", order: 10)
+    static let plugins = SettingsCategoryDescriptor(id: "plugins", title: "Plugins", icon: "puzzlepiece.extension", order: 60, isPro: true)
     static let license = SettingsCategoryDescriptor(id: "license", title: "License", icon: "checkmark.seal", order: 70)
     static let about = SettingsCategoryDescriptor(id: "about", title: "About", icon: "info.circle", order: 80)
 }
@@ -81,6 +82,22 @@ struct BuiltInSettingsProvider: SettingsProvider {
                     SearchableSettingItem(title: "Report an Issue", description: "Email a diagnostic report to support, no account needed", keywords: ["report", "issue", "bug", "problem", "support", "help", "email", "contact", "feedback", "crash", "diagnostic"])
                 ],
                 viewBuilder: { _ in AnyView(AboutSettingsView()) }
+            )
+        ]
+    }
+}
+
+/// Settings ▸ Plugins (Pro): installed plugins, the plugin library, per-plugin settings.
+struct PluginsSettingsProvider: SettingsProvider {
+    var settingsEntries: [SettingsEntry] {
+        [
+            SettingsEntry(
+                category: SettingsCategories.plugins,
+                order: 0,
+                searchableItems: [
+                    SearchableSettingItem(title: "Plugins", description: "Install, update and manage plugins from the official library", keywords: ["plugin", "plugins", "library", "install", "extension", "timer", "alarm", "schedule", "pro"])
+                ],
+                viewBuilder: { _ in AnyView(PluginManagementView()) }
             )
         ]
     }
@@ -625,6 +642,9 @@ func registerAllSettings() {
 
     // Core app entries
     registry.register(BuiltInSettingsProvider())
+
+    // Plugins (Pro)
+    registry.register(PluginsSettingsProvider())
 
     // License and Pro features
     registry.register(LicenseSettingsProvider())

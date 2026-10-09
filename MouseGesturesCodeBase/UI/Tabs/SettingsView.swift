@@ -4,6 +4,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @StateObject private var registry = SettingsCategoryRegistry.shared
+    @ObservedObject private var license = LicenseService.shared
 
     @State private var selectedCategoryId: String = "general"
     @State private var showAdvanced: Bool = false
@@ -34,6 +35,9 @@ struct SettingsView: View {
                 .frame(minWidth: 400)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("MGOpenSettingsCategory"))) { note in
+            if let id = note.object as? String { selectedCategoryId = id }
+        }
         .onAppear {
             if registry.entries.isEmpty {
                 registerAllSettings()
@@ -51,7 +55,8 @@ struct SettingsView: View {
             ForEach(filteredCategories, id: \.id) { cat in
                 MGSidebarItem(
                     title: cat.title,
-                    icon: cat.icon,
+                    icon: cat.isPro && !license.isPro ? "lock.fill" : cat.icon,
+                    badge: cat.isPro ? "PRO" : nil,
                     isSelected: cat.id == selectedCategoryId,
                     action: { selectedCategoryId = cat.id }
                 )

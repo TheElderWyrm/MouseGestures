@@ -91,13 +91,15 @@ public struct LibraryRepo: Codable, Equatable, Hashable, Identifiable {
     public let repo: String
     /// Branch, tag or commit. `nil` means the repository's default branch.
     public let ref: String?
+    /// Folder inside the repository that holds `library.json` (a library that lives in a bigger repo). `nil` = the root.
+    public let subpath: String?
 
-    public init(owner: String, repo: String, ref: String? = nil) {
-        self.owner = owner; self.repo = repo; self.ref = ref
+    public init(owner: String, repo: String, ref: String? = nil, subpath: String? = nil) {
+        self.owner = owner; self.repo = repo; self.ref = ref; self.subpath = subpath
     }
 
-    public var id: String { ref.map { "\(owner)/\(repo)@\($0)" } ?? "\(owner)/\(repo)" }
-    public var displayName: String { "\(owner)/\(repo)" }
+    public var displayName: String { subpath.map { "\(owner)/\(repo)/\($0)" } ?? "\(owner)/\(repo)" }
+    public var id: String { ref.map { "\(displayName)@\($0)" } ?? displayName }
 }
 
 /// What the app records after installing a plugin from a library.
@@ -184,8 +186,8 @@ public enum PluginLibraryError: Error, Equatable, LocalizedError {
 /// so it's fully unit-testable; `PluginLibraryService` wires it to the world.
 public enum PluginLibraryLogic {
 
-    /// The built-in source every install connects to automatically.
-    public static let officialRepo = LibraryRepo(owner: "TheElderWyrm", repo: "MouseGestures-Plugins")
+    /// The built-in source every install connects to automatically: the `Plugins` folder of the app's own repository.
+    public static let officialRepo = LibraryRepo(owner: "TheElderWyrm", repo: "MouseGestures", subpath: "Plugins")
 
     public static let supportedSchemaVersion = 1
     public static let manifestFileName = "library.json"
@@ -194,7 +196,7 @@ public enum PluginLibraryLogic {
 
     // MARK: Repo references
 
-    /// Parses "owner/repo", "owner/repo@ref", or a github.com URL
+    /// Parses "owner/repo", "owner/repo/folder", "owner/repo@ref", or a github.com URL
     /// (optionally `/tree/<ref>`), with or without `.git`.
     public static func parseRepo(_ input: String) throws -> LibraryRepo {
         var text = input.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -219,11 +221,17 @@ public enum PluginLibraryLogic {
 
         if text.hasSuffix(".git") { text = String(text.dropLast(4)) }
         let parts = text.split(separator: "/", omittingEmptySubsequences: false).map(String.init)
-        guard parts.count == 2, isValidOwner(parts[0]), isValidRepoName(parts[1]) else {
+        guard parts.count >= 2, isValidOwner(parts[0]), isValidRepoName(parts[1]) else {
             throw PluginLibraryError.invalidRepo(input)
         }
+        var subpath: String?
+        if parts.count > 2 {
+            let sub = parts[2...].joined(separator: "/")
+            guard isSafeRelativePath(sub) else { throw PluginLibraryError.invalidRepo(input) }
+            subpath = sub
+        }
         if let r = ref, !isValidRef(r) { throw PluginLibraryError.invalidRepo(input) }
-        return LibraryRepo(owner: parts[0], repo: parts[1], ref: ref?.isEmpty == true ? nil : ref)
+        return LibraryRepo(owner: parts[0], repo: parts[1], ref: ref?.isEmpty == true ? nil : ref, subpath: subpath)
     }
 
     static func isValidOwner(_ s: String) -> Bool {
@@ -246,7 +254,8 @@ public enum PluginLibraryLogic {
     public static func rawURL(for repo: LibraryRepo, path: String) -> URL? {
         guard isSafeRelativePath(path) else { return nil }
         let ref = repo.ref ?? "HEAD"
-        let encoded = path.split(separator: "/").compactMap {
+        let full = repo.subpath.map { $0 + "/" + path } ?? path
+        let encoded = full.split(separator: "/").compactMap {
             String($0).addingPercentEncoding(withAllowedCharacters: .urlPathAllowed)
         }.joined(separator: "/")
         return URL(string: "https://raw.githubusercontent.com/\(repo.owner)/\(repo.repo)/\(ref)/\(encoded)")

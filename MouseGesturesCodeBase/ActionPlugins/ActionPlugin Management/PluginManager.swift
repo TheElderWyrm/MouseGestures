@@ -365,6 +365,9 @@ public class PluginManager: NSObject {
         guard let (plugin, action, sandbox) = snapshot else {
             throw PluginError.actionNotFound(identifier)
         }
+        guard PluginLibraryService.proGateAllows(pluginId: plugin.identifier) else {
+            throw PluginError.executionFailed("\(plugin.name) is a Pro plugin. Upgrade to Pro to use it.")
+        }
 
         // Use sandboxed execution if available
         if let sandbox = sandbox {

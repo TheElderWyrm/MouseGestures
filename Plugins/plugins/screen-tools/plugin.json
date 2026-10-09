@@ -1,0 +1,12 @@
+{
+  "id": "com.mousegestures.lib.screentools",
+  "name": "Screen Tools",
+  "kind": "action",
+  "version": "1.1.0",
+  "author": "MouseGestures",
+  "description": "Pick a colour from anywhere on screen and copy it (hex, RGB or HSL), or flash a ring around the pointer to find it on a big or multi-monitor desktop.",
+  "permissions": [
+    "notifications"
+  ],
+  "principalClass": "ScreenToolsPlugin"
+}

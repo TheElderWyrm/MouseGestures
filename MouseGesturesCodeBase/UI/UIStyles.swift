@@ -378,6 +378,7 @@ struct MGListSectionHeader: View {
 struct MGSidebarItem: View {
     let title: String
     let icon: String
+    var badge: String? = nil
     let isSelected: Bool
     let action: () -> Void
 
@@ -391,6 +392,13 @@ struct MGSidebarItem: View {
                     .fontWeight(isSelected ? .medium : .regular)
                     .foregroundColor(isSelected ? .white : .primary)
                 Spacer()
+                if let badge = badge {
+                    Text(badge)
+                        .font(.system(size: 9, weight: .bold))
+                        .padding(.horizontal, 5).padding(.vertical, 1)
+                        .background(Capsule().fill(isSelected ? Color.white.opacity(0.25) : Color.orange.opacity(0.2)))
+                        .foregroundColor(isSelected ? .white : .orange)
+                }
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 6)

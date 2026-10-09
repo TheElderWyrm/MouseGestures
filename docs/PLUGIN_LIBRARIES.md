@@ -1,14 +1,15 @@
 # Plugin Libraries
 
-A **plugin library** is a GitHub repository that lists prebuilt MouseGestures
-plugins. The official library (`TheElderWyrm/MouseGestures-Plugins`) is connected
-automatically; **Developer ▸ Plugin Management ▸ Add Plugins** browses every connected
-library and can also install a plugin file from disk. Extra libraries
-(`owner/repo`, `owner/repo@branch-or-tag`, or a github.com URL) are connected under
-**Developer Settings ▸ Plugin Sources**. Libraries are only contacted when the
+A **plugin library** is a GitHub repository (or a folder inside one) that lists prebuilt
+MouseGestures plugins. The official library is the `Plugins/` folder of this repository
+(`TheElderWyrm/MouseGestures/Plugins`); it is connected automatically. **Settings ▸ Plugins ▸
+Add Plugins** (a Pro feature) browses every connected library and can also install a plugin file
+from disk. Extra libraries (`owner/repo`, `owner/repo/folder`, `owner/repo@branch-or-tag`, or a
+github.com URL) are connected under **Developer Settings ▸ Plugin Sources**. A library in a folder
+keeps `library.json` and `dist/` inside that folder; download paths are relative to it. Libraries are only contacted when the
 Add Plugins sheet opens or you press Check for Updates.
 
-## Repository layout
+## Repository layout (the library root is the repo, or the folder)
 
 `library.json` at the repo root (public repos only):
 

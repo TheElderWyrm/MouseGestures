@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 1,
+  "name": "MouseGestures Official Plugins",
+  "description": "First-party action and detection plugins for MouseGestures.",
+  "plugins": [
+    {
+      "id": "com.mousegestures.lib.finderhelpers",
+      "name": "Finder Helpers",
+      "kind": "action",
+      "version": "1.3.0",
+      "author": "MouseGestures",
+      "description": "Finder and desktop helpers: copy the path of the selected items, open Terminal at the current folder, open a new Finder window, show or hide hidden files, toggle desktop icons, and eject all disks.",
+      "permissions": [
+        "systemAPIs",
+        "notifications"
+      ],
+      "minAppVersion": "1.1.0",
+      "download": "dist/com.mousegestures.lib.finderhelpers-1.3.0.zip",
+      "sha256": "1dc1ba8d6dcddf4c3879ad972875c9e7de5c99e6a0466d568f71e04b4f03da18"
+    },
+    {
+      "id": "com.mousegestures.lib.pointergestures",
+      "name": "Pointer Gestures",
+      "kind": "detection",
+      "version": "1.0.0",
+      "author": "MouseGestures",
+      "description": "Triggers from pointer movement alone: shake left-right or up-down, draw a circle clockwise or counter-clockwise, or rest the pointer in a screen corner. Optionally require a modifier key so ordinary mouse movement never triggers.",
+      "minAppVersion": "1.1.0",
+      "download": "dist/com.mousegestures.lib.pointergestures-1.0.0.zip",
+      "sha256": "3aa1524c2c9f10b95e017d32688c35fa5824a4f322b1d630707352d2bbb6915d"
+    },
+    {
+      "id": "com.mousegestures.lib.quicklaunch",
+      "name": "Web Tools",
+      "kind": "action",
+      "version": "1.2.0",
+      "author": "MouseGestures",
+      "description": "Search the selected text or clipboard on the web, look a word up in the Dictionary, open a selected link, and copy the front browser tab's URL or Markdown link.",
+      "permissions": [
+        "systemAPIs",
+        "notifications"
+      ],
+      "minAppVersion": "1.1.0",
+      "download": "dist/com.mousegestures.lib.quicklaunch-1.2.0.zip",
+      "sha256": "c393fe030b0e8b381ee3370c897d184f42f26f901de5225b3ad0782becb61d08"
+    },
+    {
+      "id": "com.mousegestures.lib.scheduler",
+      "name": "Scheduler",
+      "kind": "detection",
+      "version": "1.0.0",
+      "author": "MouseGestures",
+      "description": "Run gesture actions on a schedule instead of a gesture: at a time of day, on certain weekdays, every N minutes, at sunrise or sunset, monthly, or once. Write your own schedules in the plugin's settings, then pick them as a Plugin trigger.",
+      "minAppVersion": "1.1.0",
+      "download": "dist/com.mousegestures.lib.scheduler-1.0.0.zip",
+      "sha256": "424e0b383b5e2a12e0f93cc921319e7f0b69bd9178a0a1e2222de28c83701450"
+    },
+    {
+      "id": "com.mousegestures.lib.screentools",
+      "name": "Screen Tools",
+      "kind": "action",
+      "version": "1.1.0",
+      "author": "MouseGestures",
+      "description": "Pick a colour from anywhere on screen and copy it (hex, RGB or HSL), or flash a ring around the pointer to find it on a big or multi-monitor desktop.",
+      "permissions": [
+        "notifications"
+      ],
+      "minAppVersion": "1.1.0",
+      "download": "dist/com.mousegestures.lib.screentools-1.1.0.zip",
+      "sha256": "725d6db8ceb45f0dee91a6d1f3e53a0120cf446134a1445c876e456fc455a1fa"
+    },
+    {
+      "id": "com.mousegestures.lib.systemevents",
+      "name": "System Events",
+      "kind": "detection",
+      "version": "1.2.0",
+      "author": "MouseGestures",
+      "description": "Passive triggers for things that happen to your Mac: sleep and wake, lock and unlock, power plugged or unplugged, low battery, disks connected or removed, internet lost or restored, Dark/Light Mode switches, going idle or coming back, and a chosen app launching or quitting.",
+      "minAppVersion": "1.1.0",
+      "download": "dist/com.mousegestures.lib.systemevents-1.2.0.zip",
+      "sha256": "d8fe0dfe8a00585fd225ea96cd8d3c8634d7d4837d978c92ff96ce13a305634e"
+    },
+    {
+      "id": "com.mousegestures.lib.systemtoggles",
+      "name": "System Toggles",
+      "kind": "action",
+      "version": "1.3.0",
+      "author": "MouseGestures",
+      "description": "One-gesture system switches the built-in actions lack: Dock auto-hide, Stage Manager, keep awake, Wi-Fi, microphone mute and the screen saver.",
+      "permissions": [
+        "systemAPIs"
+      ],
+      "minAppVersion": "1.1.0",
+      "download": "dist/com.mousegestures.lib.systemtoggles-1.3.0.zip",
+      "sha256": "153a7c232b87671d585c2d3353efcc3aebae031ea13b70844628e8fe9bc73bde"
+    },
+    {
+      "id": "com.mousegestures.lib.texttools",
+      "name": "Text",
+      "kind": "action",
+      "version": "2.0.0",
+      "author": "MouseGestures",
+      "description": "Format, clean up and convert text with one gesture: change case, clean whitespace, sort and edit lines, wrap, Markdown, encode/decode, JSON, calculate, count words, and insert dates, UUIDs or your own snippets. Works on the selection or the clipboard.",
+      "permissions": [
+        "systemAPIs",
+        "notifications"
+      ],
+      "minAppVersion": "1.1.0",
+      "download": "dist/com.mousegestures.lib.texttools-2.0.0.zip",
+      "sha256": "8643e66b6c60547b0881c67f435325f8306130cebd3f350fa7eb6ffb7b00bc0d"
+    },
+    {
+      "id": "com.mousegestures.lib.timers",
+      "name": "Timers & Alarms",
+      "kind": "action",
+      "version": "1.0.0",
+      "author": "MouseGestures",
+      "description": "Countdown timers, Pomodoro cycles, alarms (once, daily or weekdays), a stopwatch and a spoken clock \u2014 each can run another gesture action when it goes off. Timers and alarms survive restarts.",
+      "permissions": [
+        "notifications",
+        "executeActions"
+      ],
+      "minAppVersion": "1.1.0",
+      "download": "dist/com.mousegestures.lib.timers-1.0.0.zip",
+      "sha256": "400c3e1bc0c5df235bf64b9d3667d39a6085593eba55d556bdd5213318f8e005"
+    }
+  ]
+}
