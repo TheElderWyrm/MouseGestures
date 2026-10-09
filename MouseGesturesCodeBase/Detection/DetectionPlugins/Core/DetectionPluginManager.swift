@@ -89,7 +89,7 @@ class DetectionPluginManager: NSObject {
         }
 
         // Built-in trigger plugins written against the plugin API (they also adopt PluginExtension for their settings).
-        let apiPlugins: [ExternalTriggerPlugin] = [SchedulerPlugin(), PointerGesturesPlugin()]
+        let apiPlugins: [ExternalTriggerPlugin] = [PointerGesturesPlugin()]
         for external in apiPlugins {
             let adapter = ExternalTriggerAdapter(external)
             registerPlugin(adapter)

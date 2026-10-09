@@ -477,7 +477,7 @@ public enum PluginLibraryLogic {
     /// Library plugins that became built-in plugins (or were merged into others). A leftover bundle is
     /// removed instead of loaded, so nothing is registered twice.
     public static let supersededPluginIds: [String] = [
-        "com.mousegestures.lib.timers", "com.mousegestures.lib.scheduler", "com.mousegestures.lib.pointergestures",
+        "com.mousegestures.lib.timers", "com.mousegestures.lib.pointergestures",
         "com.mousegestures.lib.texttools", "com.mousegestures.lib.quicklaunch", "com.mousegestures.lib.systemtoggles",
         "com.mousegestures.lib.capture", "com.mousegestures.lib.focustimer", "com.mousegestures.lib.mouseshake",
         "com.mousegestures.lib.cornerdwell", "com.mousegestures.lib.shapegestures", "com.mousegestures.lib.snippets",

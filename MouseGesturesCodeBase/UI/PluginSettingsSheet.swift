@@ -6,6 +6,8 @@ import AppKit
 struct PluginSettingsSheet: View {
     let pluginId: String
     let pluginName: String
+    /// Shown as a Settings tab instead of a sheet: no title or Done button, and Settings does the scrolling.
+    var embedded = false
     @ObservedObject private var manager = PluginExtensionManager.shared
     @Environment(\.dismiss) private var dismiss
     @State private var customView: NSView?
@@ -13,12 +15,14 @@ struct PluginSettingsSheet: View {
     var body: some View {
         let _ = manager.revision // re-render when a value changes
         VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
-            HStack {
-                Text("\(pluginName) Settings").font(.title2.bold())
-                Spacer()
-                Button("Done") { dismiss() }.keyboardShortcut(.defaultAction)
+            if !embedded {
+                HStack {
+                    Text("\(pluginName) Settings").font(.title2.bold())
+                    Spacer()
+                    Button("Done") { dismiss() }.keyboardShortcut(.defaultAction)
+                }
             }
-            ScrollView {
+            scrolling {
                 VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
                     if manager.runsService(pluginId) {
                         Toggle(isOn: Binding(get: { manager.serviceEnabled(pluginId) },
@@ -38,9 +42,13 @@ struct PluginSettingsSheet: View {
                 }
             }
         }
-        .padding(MGStyle.Spacing.xl)
-        .frame(minWidth: 460, minHeight: 320)
+        .padding(embedded ? 0 : MGStyle.Spacing.xl)
+        .frame(minWidth: embedded ? 0 : 460, minHeight: embedded ? 0 : 320)
         .onAppear { customView = manager.makeCustomView(pluginId) }
+    }
+
+    @ViewBuilder private func scrolling<C: View>(@ViewBuilder _ content: () -> C) -> some View {
+        if embedded { content() } else { ScrollView { content() } }
     }
 
     // MARK: fields

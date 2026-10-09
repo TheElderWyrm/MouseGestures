@@ -1,9 +1,11 @@
 import Cocoa
+import MouseGestures
 
 /// Time-based triggers. Built-in triggers (top of the hour, midnight, noon, sunrise, sunset) plus ten
 /// user-written schedules, e.g. "weekdays 8:30", "every 30 min 9:00-17:00", "sunset -30m", "monthly 1 9:00".
+@objc(SchedulerPlugin)
 public final class SchedulerPlugin: NSObject, ExternalTriggerPlugin, PluginExtension {
-    public var identifier: String { "com.mousegestures.scheduler" }
+    public var identifier: String { "com.mousegestures.lib.scheduler" }
     public var name: String { "Scheduler" }
     public var summary: String { "Run actions at times you choose" }
     public var version: String { "1.0.0" }

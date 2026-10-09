@@ -61,7 +61,7 @@ One plugin per *theme*, so each has one settings page and one background monitor
 | Plugin | Theme | Kind |
 |---|---|---|
 | Pointer Gestures *(built in)* | triggers from pointer movement | detection |
-| Scheduler *(built in)* | triggers from the clock | detection |
+| Scheduler *(library)* | triggers from the clock | detection |
 | System Events *(library)* | triggers from the state of the Mac | detection |
 | Timers & Alarms *(built in)* | countdowns, alarms, stopwatch (+ "then run") | action |
 | Text *(built in)* | everything that changes or inserts text | action |

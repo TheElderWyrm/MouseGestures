@@ -123,8 +123,9 @@ struct PluginLibrariesView: View {
                 }
                 Spacer()
                 Button("See License Options") {
-                    dismiss()
-                    NotificationCenter.default.post(name: Notification.Name("MGOpenSettingsCategory"), object: "license")
+                    // `dismiss` closes the surrounding window when this page isn't a sheet, so only sheets call it.
+                    if !embedded { dismiss() }
+                    NotificationCenter.default.post(name: .openUpgradeTab, object: nil)
                 }
             }
             .padding(10)

@@ -35,9 +35,6 @@ struct SettingsView: View {
                 .frame(minWidth: 400)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("MGOpenSettingsCategory"))) { note in
-            if let id = note.object as? String { selectedCategoryId = id }
-        }
         .onAppear {
             if registry.entries.isEmpty {
                 registerAllSettings()

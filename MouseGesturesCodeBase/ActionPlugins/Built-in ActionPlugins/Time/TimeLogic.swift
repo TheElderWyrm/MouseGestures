@@ -1,6 +1,7 @@
 import Foundation
 
-/// Pure date/time helpers shared by the Timers and Scheduler plugins (copied into each bundle at build time).
+/// Pure date/time helpers for Timers & Alarms (built in) and the library Scheduler plugin, which compiles this very file
+/// through the `Plugins/shared/TimeLogic.swift` symlink — keep it free of app types.
 /// Weekdays use Foundation numbering: 1 = Sunday … 7 = Saturday.
 enum TimeLogic {
 

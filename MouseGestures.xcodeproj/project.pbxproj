@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		05BA4B3FB12277A4D0DFA086 /* IssueReportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E02C4ED6A5315654922DABB4 /* IssueReportService.swift */; };
+		0B6A484D8B00925DF3E23C65 /* BuiltInPluginsSettingsProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4A84716B5B4BE979E52847B /* BuiltInPluginsSettingsProvider.swift */; };
 		0BC34EA3BF77C9894A70C892 /* TimeLogic.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24C74F69B5607A5A6E302BE6 /* TimeLogic.swift */; };
 		0E5D47AB895A8A178352C385 /* LicenseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DF54CB5B4E798FC72FBB425 /* LicenseService.swift */; };
 		19304DB7B3B4657FD5AED312 /* WindowSnapToggleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D877427F98AD9C5840A06DC9 /* WindowSnapToggleTests.swift */; };
@@ -129,8 +130,6 @@
 		9535461DB1F76EEDF4B66FE3 /* Recognizers.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA9448AEBEE0D92F2BA7481B /* Recognizers.swift */; };
 		9960454DBE0FEE05BE520654 /* BrowserActionsPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24834D81A3CF701D5ADE9D92 /* BrowserActionsPlugin.swift */; };
 		A6524EF8B885674474BE3B34 /* TimeLogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9AB44068E0E5F14E67971C0 /* TimeLogicTests.swift */; };
-		A6F34E3182A56D4C2F89B76C /* SchedulerPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7784A49B6A50402CD1EDFA8 /* SchedulerPlugin.swift */; };
-		AC014C82811C00DE2E930538 /* BuiltInPluginsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0647DFB88750E94A04EEA9 /* BuiltInPluginsSettingsView.swift */; };
 		AC7F499E98B75C5A33216284 /* IssueReportLogic.swift in Sources */ = {isa = PBXBuildFile; fileRef = 610C48FEAE8FE39F3481AACE /* IssueReportLogic.swift */; };
 		B1BE477BAC749080F46591C3 /* IssueReportLogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92BF43B1AF814394D39B19B2 /* IssueReportLogicTests.swift */; };
 		B6334DA2B441A379EF6CBDF7 /* ConditionalActionEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AFE406092050617E48F85A5 /* ConditionalActionEditorView.swift */; };
@@ -300,8 +299,6 @@
 		984443C1AFEF57DDC1EE4E15 /* UpdateNotificationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UpdateNotificationView.swift; path = MouseGesturesCodeBase/UI/UpdateNotificationView.swift; sourceTree = SOURCE_ROOT; };
 		A0E84B6BA6338D1409528A49 /* PluginManagementView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PluginManagementView.swift; path = MouseGesturesCodeBase/UI/Tabs/PluginManagementView.swift; sourceTree = SOURCE_ROOT; };
 		A6EF45BEB3CCD9DB69AAFF04 /* TimersPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TimersPlugin.swift; path = "MouseGesturesCodeBase/ActionPlugins/Built-in ActionPlugins/Time/TimersPlugin.swift"; sourceTree = SOURCE_ROOT; };
-		A7784A49B6A50402CD1EDFA8 /* SchedulerPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SchedulerPlugin.swift; path = "MouseGesturesCodeBase/Detection/DetectionPlugins/Built-in Plugins/SchedulerPlugin.swift"; sourceTree = SOURCE_ROOT; };
-		CC0647DFB88750E94A04EEA9 /* BuiltInPluginsSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BuiltInPluginsSettingsView.swift; path = MouseGesturesCodeBase/UI/Settings/BuiltInPluginsSettingsView.swift; sourceTree = SOURCE_ROOT; };
 		CE0347CE854263CC12FAA6C3 /* TutorialService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TutorialService.swift; path = MouseGesturesCodeBase/Services/TutorialService.swift; sourceTree = SOURCE_ROOT; };
 		D877427F98AD9C5840A06DC9 /* WindowSnapToggleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WindowSnapToggleTests.swift; path = MouseGesturesTests/WindowSnapToggleTests.swift; sourceTree = SOURCE_ROOT; };
 		DD0000000000000000000001 /* LicenseLogic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LicenseLogic.swift; path = MouseGesturesCodeBase/Services/LicenseLogic.swift; sourceTree = SOURCE_ROOT; };
@@ -322,6 +319,7 @@
 		DD0000000000000000000052 /* PluginExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PluginExtensions.swift; path = MouseGesturesCodeBase/Services/PluginExtensions.swift; sourceTree = SOURCE_ROOT; };
 		DD0000000000000000000054 /* PluginSettingsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PluginSettingsSheet.swift; path = MouseGesturesCodeBase/UI/PluginSettingsSheet.swift; sourceTree = SOURCE_ROOT; };
 		E02C4ED6A5315654922DABB4 /* IssueReportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = IssueReportService.swift; path = MouseGesturesCodeBase/Services/IssueReportService.swift; sourceTree = SOURCE_ROOT; };
+		E4A84716B5B4BE979E52847B /* BuiltInPluginsSettingsProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BuiltInPluginsSettingsProvider.swift; path = MouseGesturesCodeBase/UI/Settings/BuiltInPluginsSettingsProvider.swift; sourceTree = SOURCE_ROOT; };
 		EA9448AEBEE0D92F2BA7481B /* Recognizers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Recognizers.swift; path = "MouseGesturesCodeBase/Detection/DetectionPlugins/Built-in Plugins/Recognizers.swift"; sourceTree = SOURCE_ROOT; };
 		EAF8400C9E2556A05EC9A674 /* RecognizersTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RecognizersTests.swift; path = MouseGesturesTests/RecognizersTests.swift; sourceTree = SOURCE_ROOT; };
 		ECED4129ACFEFDE3F6BE95AC /* SystemSwitches.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SystemSwitches.swift; path = "MouseGesturesCodeBase/ActionPlugins/Built-in ActionPlugins/SystemSwitches.swift"; sourceTree = SOURCE_ROOT; };
@@ -439,7 +437,6 @@
 				77A1C42F2F368ED800D1FE6A /* ModifierKeyDetectorPlugin.swift */,
 				77A1C4302F368ED800D1FE6A /* MouseButtonDetectorPlugin.swift */,
 				77A1C4312F368ED800D1FE6A /* ScreenZoneDetectorPlugin.swift */,
-				A7784A49B6A50402CD1EDFA8 /* SchedulerPlugin.swift */,
 				F84A4D369DC059DAEC10B811 /* PointerGesturesPlugin.swift */,
 				EA9448AEBEE0D92F2BA7481B /* Recognizers.swift */,
 			);
@@ -708,7 +705,7 @@
 				F50141A48E3DD816B8942DA8 /* BuiltInSettingsCategories.swift */,
 				6FCB488CA68065730DE07C36 /* LicenseSettingsView.swift */,
 				2D794A24B54C9D0EF72ACBCD /* PluginStoreSettingsView.swift */,
-				CC0647DFB88750E94A04EEA9 /* BuiltInPluginsSettingsView.swift */,
+				E4A84716B5B4BE979E52847B /* BuiltInPluginsSettingsProvider.swift */,
 			);
 			name = Settings;
 			sourceTree = "<group>";
@@ -957,14 +954,13 @@
 				44234F5FA1BD06C14A3372AD /* TextPlugin.swift in Sources */,
 				4AC3419E93872CD2AE927FB6 /* TimeLogic.swift in Sources */,
 				69E148DD90FD9FF7E45C7EC0 /* TimersPlugin.swift in Sources */,
-				A6F34E3182A56D4C2F89B76C /* SchedulerPlugin.swift in Sources */,
 				76CB470D99F6FD21DCAD42D8 /* PointerGesturesPlugin.swift in Sources */,
 				F8A0416D9CD390ECF984F9AC /* Recognizers.swift in Sources */,
 				6D8B4F31B0615AE1F78EEB96 /* SystemSwitches.swift in Sources */,
 				40E94A9CA0D170E5FEA1D67E /* AudioSwitches.swift in Sources */,
 				BAD447B5BF0DEB28E1A46D3D /* AudioDevices.swift in Sources */,
 				FBF942CEA088F11C54B8AB02 /* BrowserWebTools.swift in Sources */,
-				AC014C82811C00DE2E930538 /* BuiltInPluginsSettingsView.swift in Sources */,
+				0B6A484D8B00925DF3E23C65 /* BuiltInPluginsSettingsProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

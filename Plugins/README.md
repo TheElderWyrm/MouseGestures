@@ -12,7 +12,6 @@ The everyday features are built into MouseGestures itself, free for everyone, in
 |---|---|---|
 | Text | action | Change case, clean up, edit lines, wrap, Markdown, encode/decode, JSON, calculate, convert units and timestamps, word count, insert dates / UUIDs / snippets |
 | Timers & Alarms | action | Timers, Pomodoro, alarms, stopwatch, spoken clock; each can run another action when it goes off |
-| Scheduler | detection | Triggers at times you write: `weekdays 8:30`, `every 30 min 9:00-17:00`, `sunset -30m`, `monthly 1 9:00` |
 | Pointer Gestures | detection | Shake, circles, rest in a corner |
 | Browser Actions | action | Navigation, tabs, zoom **plus** web search, dictionary lookup, open selected link, copy page URL / Markdown link |
 | System Control | action | Display, power, lock **plus** Dock auto-hide, Stage Manager, keep awake, Wi-Fi, microphone mute, screen saver |
@@ -22,6 +21,7 @@ The everyday features are built into MouseGestures itself, free for everyone, in
 
 | Plugin | Kind | What it does | Permissions |
 |---|---|---|---|
+| Scheduler | detection | Run actions at times you write: `weekdays 8:30`, `every 30 min 9:00-17:00`, `sunset -30m`, `monthly 1 9:00` | — |
 | Clipboard & Capture | action | Clipboard history menu at the pointer, paste previous, collect selections, plain text; send the selection to an inbox file, note file, Reminders or Apple Notes | keystrokes, notifications |
 | System Events | detection | Triggers: sleep/wake, lock, power, battery low, disks, network, sound device changes, clipboard changes, appearance, idle, app launch/quit | — |
 | Finder Helpers | action | Copy paths, Terminal here, new window, hidden files, desktop icons, eject all disks | keystrokes, notifications |

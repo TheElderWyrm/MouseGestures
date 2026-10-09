@@ -88,42 +88,6 @@ struct BuiltInSettingsProvider: SettingsProvider {
     }
 }
 
-/// Settings ▸ Actions & Triggers: options for the built-in plugins (timers, scheduler, text, …).
-struct BuiltInPluginsSettingsProvider: SettingsProvider {
-    var settingsEntries: [SettingsEntry] {
-        [
-            SettingsEntry(
-                category: SettingsCategories.features,
-                order: 0,
-                searchableItems: [
-                    SearchableSettingItem(title: "Timers & Alarms", description: "Default timer length and alert sound", keywords: ["timer", "alarm", "pomodoro", "stopwatch", "sound"]),
-                    SearchableSettingItem(title: "Scheduler", description: "Write schedules: weekdays 8:30, every 30 min, sunset", keywords: ["schedule", "time", "sunrise", "sunset", "cron", "daily"]),
-                    SearchableSettingItem(title: "Pointer Gestures", description: "Shake, circle and corner dwell options", keywords: ["shake", "circle", "corner", "dwell", "pointer"]),
-                    SearchableSettingItem(title: "Text", description: "Text tools clipboard behaviour", keywords: ["text", "case", "format", "snippet", "clipboard"]),
-                    SearchableSettingItem(title: "Browser search engine", description: "Default engine for Search Selection", keywords: ["search", "engine", "google", "browser"])
-                ],
-                viewBuilder: { _ in AnyView(BuiltInPluginsSettingsView()) }
-            )
-        ]
-    }
-}
-
-/// Settings ▸ Plugins (Pro): browse and install plugins from the library.
-struct PluginsSettingsProvider: SettingsProvider {
-    var settingsEntries: [SettingsEntry] {
-        [
-            SettingsEntry(
-                category: SettingsCategories.plugins,
-                order: 0,
-                searchableItems: [
-                    SearchableSettingItem(title: "Plugins", description: "Browse, install and update plugins from the official library", keywords: ["plugin", "plugins", "library", "install", "extension", "timer", "alarm", "schedule", "pro"])
-                ],
-                viewBuilder: { _ in AnyView(PluginStoreSettingsView()) }
-            )
-        ]
-    }
-}
-
 /// Settings provider for license and pro features.
 struct LicenseSettingsProvider: SettingsProvider {
     var settingsEntries: [SettingsEntry] {
