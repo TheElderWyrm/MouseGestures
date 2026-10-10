@@ -44,7 +44,7 @@
       "recommended": true,
       "minAppVersion": "1.1.0",
       "download": "dist/com.mousegestures.lib.scheduler-1.2.1.zip",
-      "sha256": "3488ddc6d9a7154f6bcd0e8e3b455ef931538db330840e805ddfea724007aa04"
+      "sha256": "908bdea7e4f0cb7cad2c847cc70f2e50940bbdb47f40df80ad0cb5238ca5dbdc"
     },
     {
       "id": "com.mousegestures.lib.screentools",

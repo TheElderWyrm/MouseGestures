@@ -11,7 +11,7 @@ public final class SchedulerPlugin: NSObject, ExternalTriggerPlugin, ExternalTri
     public var identifier: String { "com.mousegestures.lib.scheduler" }
     public var name: String { "Scheduler" }
     public var summary: String { "Run actions at times you choose" }
-    public var version: String { "1.2.0" }
+    public var version: String { "1.2.1" }
     public var author: String { "MouseGestures" }
     public var icon: String { "calendar.badge.clock" }
 
