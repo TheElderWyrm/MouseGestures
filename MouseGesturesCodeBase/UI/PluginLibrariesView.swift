@@ -254,7 +254,11 @@ struct PluginLibrariesView: View {
     private func pluginRow(_ entry: LibraryPluginEntry, repo: LibraryRepo) -> some View {
         let state = service.state(of: entry)
         let busy = service.busyPluginIds.contains(entry.id)
+        let tint: Color = entry.kind == .action ? .blue : .orange
         return HStack(alignment: .top, spacing: MGStyle.Spacing.lg) {
+            Image(systemName: PluginSymbols.symbol(for: entry.id, fallback: entry.kind == .action ? "bolt.fill" : "hand.tap.fill"))
+                .font(.system(size: 16)).foregroundColor(tint)
+                .frame(width: 28, height: 28).background(tint.opacity(0.12)).cornerRadius(MGStyle.Corner.lg)
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
                     Text(entry.name).font(.system(size: 13, weight: .semibold))

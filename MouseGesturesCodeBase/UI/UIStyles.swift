@@ -1035,3 +1035,25 @@ struct MGMenuItem: Identifiable {
         self.isDestructive = false
     }
 }
+
+
+// MARK: - Plugin symbols
+
+/// One SF Symbol per plugin, used by settings tabs and the plugin lists. Unknown plugins fall back to the caller's default.
+enum PluginSymbols {
+    static let bySymbolId: [String: String] = [
+        "com.mousegestures.timers": "timer", "com.mousegestures.pointer": "cursorarrow.motionlines",
+        "com.mousegestures.text": "textformat", "com.mousegestures.browser": "safari",
+        "com.mousegestures.system": "gearshape.2", "com.mousegestures.media": "speaker.wave.2",
+        "com.mousegestures.window": "macwindow.on.rectangle", "com.mousegestures.automation": "wand.and.stars",
+        "com.mousegestures.bundle": "square.stack.3d.up",
+        "com.mousegestures.detection.modifierkey": "command", "com.mousegestures.detection.keyboard": "keyboard",
+        "com.mousegestures.detection.screenzone": "hand.tap", "com.mousegestures.detection.appconfig": "app.badge",
+        "com.mousegestures.detection.mousebutton": "computermouse",
+        "com.mousegestures.lib.clipboard": "list.clipboard", "com.mousegestures.lib.systemevents": "bolt.badge.clock",
+        "com.mousegestures.lib.scheduler": "calendar.badge.clock", "com.mousegestures.lib.finderhelpers": "folder.badge.gearshape",
+        "com.mousegestures.lib.screentools": "eyedropper",
+    ]
+
+    static func symbol(for id: String, fallback: String = "puzzlepiece.extension") -> String { bySymbolId[id] ?? fallback }
+}

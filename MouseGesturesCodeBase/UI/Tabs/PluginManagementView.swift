@@ -196,6 +196,12 @@ struct PluginManagementView: View {
 
     private func unifiedPluginRow(_ plugin: UnifiedPluginInfo) -> some View {
         HStack(spacing: MGStyle.Spacing.lg) {
+            Image(systemName: PluginSymbols.symbol(for: plugin.identifier, fallback: plugin.type.icon))
+                .font(.system(size: 16))
+                .foregroundColor(plugin.type.color)
+                .frame(width: 28, height: 28)
+                .background(plugin.type.color.opacity(0.12))
+                .cornerRadius(MGStyle.Corner.lg)
             VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
                 HStack(spacing: MGStyle.Spacing.md) {
                     Text(plugin.name)

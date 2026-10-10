@@ -3,14 +3,7 @@ import SwiftUI
 /// Settings ▸ Actions (one tab per action plugin with options) and Settings ▸ Detection (a tab for each trigger plugin
 /// with options, beside the zone and app-profile tabs). Built-in and installed library plugins both appear.
 struct BuiltInPluginsSettingsProvider: SettingsProvider {
-    private static let icons: [String: String] = [
-        "com.mousegestures.timers": "timer", "com.mousegestures.pointer": "cursorarrow.motionlines",
-        "com.mousegestures.text": "textformat", "com.mousegestures.browser": "safari",
-        "com.mousegestures.system": "gearshape.2", "com.mousegestures.media": "speaker.wave.2",
-        "com.mousegestures.lib.clipboard": "list.clipboard", "com.mousegestures.lib.systemevents": "bolt.badge.clock",
-        "com.mousegestures.lib.scheduler": "calendar.badge.clock", "com.mousegestures.lib.finderhelpers": "folder.badge.gearshape",
-        "com.mousegestures.lib.screentools": "eyedropper"
-    ]
+    private static var icons: [String: String] { PluginSymbols.bySymbolId }
 
     /// Short tab labels, so the segmented picker never gets cramped.
     private static let tabTitles: [String: String] = [
