@@ -296,6 +296,7 @@ public enum ParameterType: String, Codable {
     case date      // calendar date, stored as "yyyy-MM-dd"
     case time      // time of day, stored as "H:mm" (24-hour)
     case weekdays  // days of the week, stored as "mon,wed,fri" ("" = every day)
+    case dateList  // a list of dates with times, stored as "2026-12-25 8:00; 2027-01-01 9:30"
 }
 
 /// Validation rules for parameters

@@ -906,7 +906,23 @@ struct GestureConfigurationSheet: View {
         return true
     }
 
+    /// Lets a plugin turn an inline-configured trigger into a permanent one (a custom schedule becomes a saved schedule).
+    private func commitPluginTriggers() {
+        for i in components.externalTriggers.indices {
+            let t = components.externalTriggers[i]
+            guard t.isEnabled,
+                  let adapter = DetectionPluginManager.shared.getAllPlugins().first(where: { $0.identifier == t.pluginId }) as? ExternalTriggerAdapter,
+                  let newId = adapter.commitTrigger(t.triggerId, options: (t.options ?? [:]).mapValues { $0.value }) else { continue }
+            components.externalTriggers[i].triggerId = newId
+            components.externalTriggers[i].options = nil
+            if let def = adapter.triggers.first(where: { $0.id == newId }) {
+                components.externalTriggers[i].displayName = "\(adapter.triggerTitle): \(def.name)"
+            }
+        }
+    }
+
     private func saveGesture() {
+        commitPluginTriggers()
         // Build a gesture that syncs component trigger data (keyboard shortcut,
         // mouse button) into genericActivation so detection plugins can find it.
         var activation = GenericActivation(isEnabled: isEnabled)

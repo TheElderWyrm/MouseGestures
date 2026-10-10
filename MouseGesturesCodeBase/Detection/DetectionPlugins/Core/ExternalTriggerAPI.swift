@@ -34,6 +34,14 @@ public protocol ExternalTriggerOptionsProviding: AnyObject {
 /// unlike the optional overrides above, the form's defaults are written when the trigger is chosen.
 public protocol ExternalTriggerParameterized: AnyObject {
     func parameters(forTrigger id: String) -> [ParameterDefinition]
+    /// Called when the gesture is saved. A plugin can turn the configured trigger into a permanent one of its own
+    /// (the Scheduler saves a custom schedule as a normal, reusable schedule) and return that trigger's id; the gesture
+    /// then points at it and drops its inline parameters. Return nil to leave the trigger as it is.
+    func commitTrigger(_ id: String, options: [String: Any]) -> String?
+}
+
+public extension ExternalTriggerParameterized {
+    func commitTrigger(_ id: String, options: [String: Any]) -> String? { nil }
 }
 
 /// The host object handed to `start` also conforms to this; cast to it to fire a specific binding.
@@ -119,6 +127,9 @@ final class ExternalTriggerAdapter: BaseDetectionPlugin, ExternalTriggerBindingH
     }
     func parameters(forTrigger id: String) -> [ParameterDefinition] {
         (external as? ExternalTriggerParameterized)?.parameters(forTrigger: id) ?? []
+    }
+    func commitTrigger(_ id: String, options: [String: Any]) -> String? {
+        (external as? ExternalTriggerParameterized)?.commitTrigger(id, options: options)
     }
 
     override func start() throws {

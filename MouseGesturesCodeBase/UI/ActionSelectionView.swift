@@ -879,6 +879,8 @@ struct ParameterFormView: View {
             }
         case .weekdays:
             paramRow(p) { weekdayToggles(p) }
+        case .dateList:
+            paramRow(p) { dateListEditor(p) }
         case .json:
             EmptyView()
         default:
@@ -913,6 +915,47 @@ struct ParameterFormView: View {
                 let c = Calendar.current.dateComponents([.hour, .minute], from: $0)
                 values[k] = AnyCodable(String(format: "%d:%02d", c.hour ?? 0, c.minute ?? 0))
             })
+    }
+
+    // MARK: date list
+
+    private static let momentFormat: DateFormatter = {
+        let f = DateFormatter(); f.locale = Locale(identifier: "en_US_POSIX"); f.dateFormat = "yyyy-MM-dd H:mm"; return f
+    }()
+
+    private func moments(_ key: String) -> [Date] {
+        ((values[key]?.value as? String) ?? "").split(separator: ";").compactMap { Self.momentFormat.date(from: $0.trimmingCharacters(in: .whitespaces)) }
+    }
+
+    private func storeMoments(_ key: String, _ list: [Date]) {
+        values[key] = AnyCodable(list.map { Self.momentFormat.string(from: $0) }.joined(separator: "; "))
+    }
+
+    /// A list of dates, each with a time: add, change and remove rows.
+    @ViewBuilder
+    private func dateListEditor(_ p: ParameterDefinition) -> some View {
+        let list = moments(p.key)
+        VStack(alignment: .leading, spacing: MGStyle.Spacing.sm) {
+            ForEach(list.indices, id: \.self) { i in
+                HStack {
+                    DatePicker("", selection: Binding(
+                        get: { let l = moments(p.key); return i < l.count ? l[i] : Date() },
+                        set: { var l = moments(p.key); if i < l.count { l[i] = $0; storeMoments(p.key, l) } }))
+                        .labelsHidden()
+                    Button {
+                        var l = moments(p.key); if i < l.count { l.remove(at: i); storeMoments(p.key, l) }
+                    } label: { Image(systemName: "minus.circle") }
+                        .buttonStyle(.borderless).help("Remove this date")
+                }
+            }
+            Button {
+                var l = moments(p.key)
+                let base = Calendar.current.date(byAdding: .day, value: 1, to: l.max() ?? Date()) ?? Date()
+                l.append(Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: base) ?? base)
+                storeMoments(p.key, l)
+            } label: { Label("Add a date", systemImage: "plus.circle") }
+                .buttonStyle(.borderless)
+        }
     }
 
     private static let weekdayKeys = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"]

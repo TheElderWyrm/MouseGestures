@@ -29,29 +29,20 @@ public final class SchedulerPlugin: NSObject, ExternalTriggerPlugin, ExternalTri
             p("noon", "Noon") { $0.hour = 12 },
             p("sunrise", "Sunrise") { $0.kind = .solar; $0.sunrise = true },
             p("sunset", "Sunset") { $0.kind = .solar; $0.sunrise = false },
-            p("preset-morning", "Every morning (8:00)") { $0.hour = 8 },
             p("preset-weekday-morning", "Weekday mornings (8:30)") { $0.days = weekdays; $0.hour = 8; $0.minute = 30 },
-            p("preset-weekday-start", "Start of the work day (9:00, weekdays)") { $0.days = weekdays; $0.hour = 9 },
             p("preset-weekday-end", "End of the work day (5:00 pm, weekdays)") { $0.days = weekdays; $0.hour = 17 },
-            p("preset-evening", "Every evening (8:00 pm)") { $0.hour = 20 },
-            p("preset-bedtime", "Bedtime (10:30 pm)") { $0.hour = 22; $0.minute = 30 },
-            p("preset-weekend-morning", "Weekend mornings (10:00)") { $0.days = [1, 7]; $0.hour = 10 },
-            p("preset-monday", "Monday mornings (9:00)") { $0.days = [2]; $0.hour = 9 },
-            p("preset-friday", "Friday afternoons (4:00 pm)") { $0.days = [6]; $0.hour = 16 },
-            p("preset-every-15", "Every 15 minutes") { $0.kind = .interval; $0.intervalMinutes = 15 },
-            p("preset-every-30", "Every 30 minutes") { $0.kind = .interval; $0.intervalMinutes = 30 },
-            p("preset-work-hours", "Every 15 minutes, work hours (weekdays 9–5)") {
-                $0.kind = .interval; $0.intervalMinutes = 15; $0.days = weekdays; $0.windowOn = true
-            },
-            p("preset-month-start", "First of the month (9:00)") { $0.kind = .monthlyDay; $0.monthDay = 1 },
-            p("preset-month-end", "Last day of the month (5:00 pm)") { $0.kind = .monthlyDay; $0.monthDay = 0; $0.hour = 17 },
-            p("preset-first-monday", "First Monday of the month (9:00)") { $0.kind = .monthlyNth; $0.nth = 1; $0.weekday = 2 },
-            p("preset-new-year", "New Year's Day (midnight)") {
-                $0.kind = .yearly; $0.hour = 0
-                $0.date = Calendar.current.date(from: DateComponents(year: 2000, month: 1, day: 1)) ?? Date()
-            },
         ]
     }()
+    /// Presets 1.2.0 added and 1.2.1 dropped as clutter; removed from existing installs only if still unedited.
+    private static let retiredPresets: [String: String] = [
+        "preset-morning": "Every morning (8:00)", "preset-weekday-start": "Start of the work day (9:00, weekdays)",
+        "preset-evening": "Every evening (8:00 pm)", "preset-bedtime": "Bedtime (10:30 pm)",
+        "preset-weekend-morning": "Weekend mornings (10:00)", "preset-monday": "Monday mornings (9:00)",
+        "preset-friday": "Friday afternoons (4:00 pm)", "preset-every-15": "Every 15 minutes", "preset-every-30": "Every 30 minutes",
+        "preset-work-hours": "Every 15 minutes, work hours (weekdays 9–5)", "preset-month-start": "First of the month (9:00)",
+        "preset-month-end": "Last day of the month (5:00 pm)", "preset-first-monday": "First Monday of the month (9:00)",
+        "preset-new-year": "New Year's Day (midnight)",
+    ]
     private var seeding = false
 
     private var settings: PluginHost?
@@ -77,16 +68,24 @@ public final class SchedulerPlugin: NSObject, ExternalTriggerPlugin, ExternalTri
         return out
     }
 
-    /// First run only (so deleting a preset sticks): add the ready-made schedules after anything already saved.
+    /// Runs once per preset-list version (so deleting a preset sticks): a fresh install gets the presets after anything
+    /// already saved; an install from 1.2.0 loses the retired presets it never edited.
     private func seedPresetsIfNeeded() {
-        guard !seeding, let settings = settings, settings.setting("presetsSeeded") == nil else { return }
+        guard !seeding, let settings = settings else { return }
+        let version = (settings.setting("presetsVersion") as? NSNumber)?.intValue ?? (settings.setting("presetsSeeded") != nil ? 1 : 0)
+        guard version < 2 else { return }
         seeding = true; defer { seeding = false }
         var saved: [ScheduleEvent] = []
         if let data = settings.string("events").data(using: .utf8),
            let list = try? JSONDecoder().decode([ScheduleEvent].self, from: data) { saved = list }
-        let have = Set(saved.map { $0.id })
-        store(Self.presets.filter { !have.contains($0.id) } + saved)
-        settings.setSetting("presetsSeeded", to: true)
+        if version == 0 {
+            let have = Set(saved.map { $0.id })
+            saved = Self.presets.filter { !have.contains($0.id) } + saved
+        } else {
+            saved.removeAll { Self.retiredPresets[$0.id] == $0.name }
+        }
+        store(saved)
+        settings.setSetting("presetsVersion", to: 2)
     }
 
     fileprivate func save(_ event: ScheduleEvent) {
@@ -114,12 +113,13 @@ public final class SchedulerPlugin: NSObject, ExternalTriggerPlugin, ExternalTri
     // MARK: triggers (read each time the gesture editor opens)
 
     public var triggers: [ExternalTriggerDefinition] {
-        var t = [ExternalTriggerDefinition(id: Self.customId, name: "Custom schedule…", summary: "Set the days and times right here")]
+        var t: [ExternalTriggerDefinition] = []
         for e in allEvents() {
             let rule = TimeLogic.parseRule(e.spec.rule())
             let what = rule.map { TimeLogic.describe($0) } ?? "not understood, check its settings"
             t.append(ExternalTriggerDefinition(id: e.id, name: e.name.isEmpty ? what : "\(e.name) (\(what))", summary: what))
         }
+        t.append(ExternalTriggerDefinition(id: Self.customId, name: "Custom schedule…", summary: "Set the days and times right here; it is saved as a schedule"))
         return t
     }
 
@@ -188,6 +188,18 @@ public final class SchedulerPlugin: NSObject, ExternalTriggerPlugin, ExternalTri
         id == Self.customId ? Self.customParameters : []
     }
 
+    /// The gesture editor calls this on save: a custom schedule becomes a normal schedule (with its name) that the
+    /// gesture points at, so it appears in Settings and in every trigger list.
+    public func commitTrigger(_ id: String, options: [String: Any]) -> String? {
+        guard id == Self.customId else { return nil }
+        let spec = ScheduleSpec(options: options)
+        guard TimeLogic.parseRule(spec.rule()) != nil else { return nil }
+        let name = (options["name"] as? String ?? "").trimmingCharacters(in: .whitespaces)
+        let event = ScheduleEvent(id: "evt-" + UUID().uuidString.prefix(8).lowercased(), name: name, spec: spec)
+        save(event)
+        return event.id
+    }
+
     private static func choice(_ key: String, _ name: String, _ items: [(String, String)], _ def: String, when: ParameterVisibilityRule? = nil) -> ParameterDefinition {
         ParameterDefinition(key: key, name: name, type: .selection, defaultValue: AnyCodable(def), description: "",
                             validation: ValidationRule(allowedValues: items.map { AnyCodable($0.0) }),
@@ -198,6 +210,7 @@ public final class SchedulerPlugin: NSObject, ExternalTriggerPlugin, ExternalTri
         func only(_ kinds: [ScheduleSpec.Kind]) -> ParameterVisibilityRule { ParameterVisibilityRule(key: "repeat", anyOf: kinds.map { $0.rawValue }) }
         let weekdayNames = [("sun", "Sunday"), ("mon", "Monday"), ("tue", "Tuesday"), ("wed", "Wednesday"), ("thu", "Thursday"), ("fri", "Friday"), ("sat", "Saturday")]
         return [
+            ParameterDefinition(key: "name", name: "Name", type: .string, description: "Optional. Saved with the schedule so you can reuse it."),
             choice("repeat", "Repeats", ScheduleSpec.Kind.allCases.map { ($0.rawValue, $0.label) }, ScheduleSpec.Kind.weekly.rawValue),
             ParameterDefinition(key: "days", name: "On these days", type: .weekdays, description: "", visibleWhen: only([.weekly, .interval, .intervalWindow, .solar])),
             ParameterDefinition(key: "time", name: "At", type: .time, defaultValue: AnyCodable("9:00"), description: "",
@@ -218,8 +231,7 @@ public final class SchedulerPlugin: NSObject, ExternalTriggerPlugin, ExternalTri
             ParameterDefinition(key: "offset", name: "Offset", type: .number, defaultValue: AnyCodable(0),
                                 description: "Minutes after (negative = before). Needs your latitude and longitude in the plugin's settings.",
                                 validation: ValidationRule(minValue: -180, maxValue: 180), visibleWhen: only([.solar]), suffix: "min"),
-            ParameterDefinition(key: "dates", name: "Dates", type: .string,
-                                description: "2026-12-25 8:00; 2027-01-01 9:00", visibleWhen: only([.dates])),
+            ParameterDefinition(key: "dates", name: "Dates", type: .dateList, description: "", visibleWhen: only([.dates])),
             ParameterDefinition(key: "rule", name: "Rule", type: .string,
                                 description: "e.g. weekdays 8:30", visibleWhen: only([.custom])),
         ]
@@ -404,10 +416,10 @@ private struct SchedulerPanelView: View {
                 Text("No schedules yet. Add one to run an action on certain days, dates, or times, then pick it as a Scheduler trigger when you create a gesture.")
                     .font(.caption).foregroundColor(.secondary).fixedSize(horizontal: false, vertical: true)
             }
+            if isNew, editing != nil { editor }
             ForEach(events) { e in
                 if editing?.id == e.id && !isNew { editor } else { row(e) }
             }
-            if isNew, editing != nil { editor }
         }
         .padding(.vertical, 4)
         .onAppear { reload() }
