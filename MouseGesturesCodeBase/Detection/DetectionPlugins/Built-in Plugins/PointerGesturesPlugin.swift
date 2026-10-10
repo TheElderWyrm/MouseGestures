@@ -1,26 +1,32 @@
 import Cocoa
 
 /// All pointer-motion triggers behind one event monitor: shakes, circles and corner dwell.
-public final class PointerGesturesPlugin: NSObject, ExternalTriggerPlugin, ExternalTriggerBindingAware, PluginExtension {
+public final class PointerGesturesPlugin: NSObject, ExternalTriggerPlugin, ExternalTriggerBindingAware, ExternalTriggerOptionsProviding, PluginExtension {
     public var identifier: String { "com.mousegestures.pointer" }
     public var name: String { "Pointer Gestures" }
     public var summary: String { "Shake, circle or rest the pointer in a corner" }
     public var version: String { "1.0.0" }
     public var author: String { "MouseGestures" }
     public var icon: String { "cursorarrow.motionlines" }
-    public var triggers: [ExternalTriggerDefinition] {
-        let shake = ["modifier", "reversals", "minStroke", "shakeWindow"], circle = ["modifier", "minSize", "circleWindow"], corner = ["dwell", "cornerSize"]
-        func opts(_ keys: [String]) -> [PluginSettingField] { keys.compactMap { k in settingsFields.first { $0.key == k } } }
-        return [
-            ExternalTriggerDefinition(id: "shake_horizontal", name: "Shake left and right", summary: "Several quick direction changes sideways", options: opts(shake)),
-            ExternalTriggerDefinition(id: "shake_vertical", name: "Shake up and down", summary: "Several quick direction changes vertically", options: opts(shake)),
-            ExternalTriggerDefinition(id: "circle_cw", name: "Circle (clockwise)", summary: "Draw a loop clockwise", options: opts(circle)),
-            ExternalTriggerDefinition(id: "circle_ccw", name: "Circle (counter-clockwise)", summary: "Draw a loop counter-clockwise", options: opts(circle)),
-            ExternalTriggerDefinition(id: "corner_top_left", name: "Rest in top-left corner", summary: "Dwell in the corner", options: opts(corner)),
-            ExternalTriggerDefinition(id: "corner_top_right", name: "Rest in top-right corner", summary: "Dwell in the corner", options: opts(corner)),
-            ExternalTriggerDefinition(id: "corner_bottom_left", name: "Rest in bottom-left corner", summary: "Dwell in the corner", options: opts(corner)),
-            ExternalTriggerDefinition(id: "corner_bottom_right", name: "Rest in bottom-right corner", summary: "Dwell in the corner", options: opts(corner)),
-        ]
+    public var triggers: [ExternalTriggerDefinition] {[
+        ExternalTriggerDefinition(id: "shake_horizontal", name: "Shake left and right", summary: "Several quick direction changes sideways"),
+        ExternalTriggerDefinition(id: "shake_vertical", name: "Shake up and down", summary: "Several quick direction changes vertically"),
+        ExternalTriggerDefinition(id: "circle_cw", name: "Circle (clockwise)", summary: "Draw a loop clockwise"),
+        ExternalTriggerDefinition(id: "circle_ccw", name: "Circle (counter-clockwise)", summary: "Draw a loop counter-clockwise"),
+        ExternalTriggerDefinition(id: "corner_top_left", name: "Rest in top-left corner", summary: "Dwell in the corner"),
+        ExternalTriggerDefinition(id: "corner_top_right", name: "Rest in top-right corner", summary: "Dwell in the corner"),
+        ExternalTriggerDefinition(id: "corner_bottom_left", name: "Rest in bottom-left corner", summary: "Dwell in the corner"),
+        ExternalTriggerDefinition(id: "corner_bottom_right", name: "Rest in bottom-right corner", summary: "Dwell in the corner"),
+    ]}
+
+    public func options(forTrigger id: String) -> [PluginSettingField] {
+        let keys: [String]
+        switch id {
+        case "shake_horizontal", "shake_vertical": keys = ["modifier", "reversals", "minStroke", "shakeWindow"]
+        case "circle_cw", "circle_ccw": keys = ["modifier", "minSize", "circleWindow"]
+        default: keys = id.hasPrefix("corner_") ? ["dwell", "cornerSize"] : []
+        }
+        return keys.compactMap { k in settingsFields.first { $0.key == k } }
     }
 
     private var settings: PluginHost?
@@ -56,6 +62,10 @@ public final class PointerGesturesPlugin: NSObject, ExternalTriggerPlugin, Exter
     private let cooldown: TimeInterval = 1.2
     private var cornerTimers: [String: Timer] = [:]      // binding key → pending dwell timer
     private var firedCorners = Set<String>()             // fired while the pointer is still resting there
+
+    private func fire(_ b: ExternalTriggerBinding) {
+        if let h = host as? ExternalTriggerBindingHost { h.fire(binding: b) } else { host?.fire(triggerId: b.triggerId) }
+    }
 
     private func num(_ k: String, _ d: Double) -> Double { settings?.number(k, default: d) ?? d }
     /// A binding's own override if the gesture set one, else the plugin-wide setting.
@@ -115,7 +125,7 @@ public final class PointerGesturesPlugin: NSObject, ExternalTriggerPlugin, Exter
             if hit {
                 lastFire = now
                 samples.removeAll()
-                host?.fire(binding: b)
+                fire(b)
                 return
             }
         }
@@ -150,7 +160,7 @@ public final class PointerGesturesPlugin: NSObject, ExternalTriggerPlugin, Exter
                 // The pointer must still be there; it re-arms only after leaving and re-entering.
                 if self.inCorner(b.triggerId, at: NSEvent.mouseLocation, size: CGFloat(self.num(b, "cornerSize", 6))) {
                     self.firedCorners.insert(b.key)
-                    self.host?.fire(binding: b)
+                    self.fire(b)
                 }
             }
         }

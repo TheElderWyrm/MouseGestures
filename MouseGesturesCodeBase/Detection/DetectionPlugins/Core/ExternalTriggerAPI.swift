@@ -12,18 +12,27 @@ public struct ExternalTriggerDefinition: Equatable {
     public let id: String
     public let name: String
     public let summary: String
-    /// Options a gesture can override for this trigger (sensitivity, timing…). Each is optional per gesture; an
-    /// unset option means "use the plugin's own setting", so the plugin must resolve its own defaults.
-    public let options: [PluginSettingField]
 
-    public init(id: String, name: String, summary: String = "", options: [PluginSettingField] = []) {
+    // Keep this layout and `ExternalTriggerHost`/`ExternalTriggerPlugin` unchanged: installed library plugins are
+    // compiled binaries, and altering a struct or protocol they use crashes them. New capabilities go in the
+    // separate protocols below, which plugins opt into.
+    public init(id: String, name: String, summary: String = "") {
         self.id = id
         self.name = name
         self.summary = summary
-        self.options = options
     }
+}
 
-    public static func == (a: Self, b: Self) -> Bool { a.id == b.id && a.name == b.name && a.summary == b.summary }
+/// Adopt to let gestures override options for a trigger (sensitivity, timing…). An unset option means "use the
+/// plugin's own setting", so the plugin resolves its own defaults.
+public protocol ExternalTriggerOptionsProviding: AnyObject {
+    func options(forTrigger id: String) -> [PluginSettingField]
+}
+
+/// The host object handed to `start` also conforms to this; cast to it to fire a specific binding.
+public protocol ExternalTriggerBindingHost: ExternalTriggerHost {
+    /// Like `fire(triggerId:)` but only runs gestures whose overrides match this binding.
+    func fire(binding: ExternalTriggerBinding)
 }
 
 /// One gesture's use of a trigger, with the options that gesture overrides (absent key = plugin default).
@@ -55,8 +64,6 @@ public protocol ExternalTriggerBindingAware: AnyObject {
 public protocol ExternalTriggerHost: AnyObject {
     /// Reports that a declared trigger just happened; runs every enabled gesture bound to it.
     func fire(triggerId: String)
-    /// Like `fire(triggerId:)` but only runs gestures whose overrides match this binding.
-    func fire(binding: ExternalTriggerBinding)
     func log(_ message: String)
     /// A private folder for the plugin's own files.
     var storageDirectory: URL { get }
@@ -81,7 +88,7 @@ public protocol ExternalTriggerPlugin: AnyObject {
 // MARK: - Adapter
 
 /// Presents an `ExternalTriggerPlugin` to the app as an ordinary detection plugin.
-final class ExternalTriggerAdapter: BaseDetectionPlugin, ExternalTriggerHost {
+final class ExternalTriggerAdapter: BaseDetectionPlugin, ExternalTriggerBindingHost {
     let external: ExternalTriggerPlugin
     private var started = false
 
@@ -100,6 +107,9 @@ final class ExternalTriggerAdapter: BaseDetectionPlugin, ExternalTriggerHost {
     override var triggerDescription: String { external.summary }
     override var providesTriggerUI: Bool { true }
     var triggers: [ExternalTriggerDefinition] { external.triggers }
+    func options(forTrigger id: String) -> [PluginSettingField] {
+        (external as? ExternalTriggerOptionsProviding)?.options(forTrigger: id) ?? []
+    }
 
     override func start() throws {
         try super.start()

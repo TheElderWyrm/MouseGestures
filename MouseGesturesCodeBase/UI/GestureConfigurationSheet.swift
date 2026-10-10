@@ -358,9 +358,10 @@ struct GestureConfigurationSheet: View {
             .padding(.horizontal, MGStyle.Spacing.lg)
             .padding(.bottom, MGStyle.Spacing.sm)
 
-            if let def = adapter.triggers.first(where: { $0.id == components.externalTrigger?.triggerId }), !def.options.isEmpty {
+            let options = adapter.options(forTrigger: components.externalTrigger?.triggerId ?? "")
+            if !options.isEmpty {
                 TriggerOverridesView(
-                    fields: def.options,
+                    fields: options,
                     overrides: Binding(get: { components.externalTrigger?.options },
                                        set: { components.externalTrigger?.options = $0 }),
                     defaultValue: { PluginExtensionManager.shared.value(plugin.identifier, $0) })
