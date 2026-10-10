@@ -38,13 +38,13 @@
       "id": "com.mousegestures.lib.scheduler",
       "name": "Scheduler",
       "kind": "detection",
-      "version": "1.2.1",
+      "version": "1.2.2",
       "author": "MouseGestures",
       "description": "Run gesture actions on a schedule instead of a gesture. Comes with a few ready-made schedules (top of the hour, midnight, noon, sunrise, sunset, weekday mornings\u2026), and you can build your own or set a custom one right in the gesture: specific dates, days of the week, every N days or weeks, monthly (a day, the last day, the 2nd Tuesday), yearly, every N minutes, or sunrise and sunset. Then pick them as a Plugin trigger.",
       "recommended": true,
       "minAppVersion": "1.1.0",
-      "download": "dist/com.mousegestures.lib.scheduler-1.2.1.zip",
-      "sha256": "908bdea7e4f0cb7cad2c847cc70f2e50940bbdb47f40df80ad0cb5238ca5dbdc"
+      "download": "dist/com.mousegestures.lib.scheduler-1.2.2.zip",
+      "sha256": "01f1ae82fa5ec1a29a3479f19ddb1720daa87f72eebd561e9c208d422742b65a"
     },
     {
       "id": "com.mousegestures.lib.screentools",

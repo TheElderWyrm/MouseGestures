@@ -11,7 +11,7 @@ public final class SchedulerPlugin: NSObject, ExternalTriggerPlugin, ExternalTri
     public var identifier: String { "com.mousegestures.lib.scheduler" }
     public var name: String { "Scheduler" }
     public var summary: String { "Run actions at times you choose" }
-    public var version: String { "1.2.1" }
+    public var version: String { "1.2.2" }
     public var author: String { "MouseGestures" }
     public var icon: String { "calendar.badge.clock" }
 
@@ -73,7 +73,7 @@ public final class SchedulerPlugin: NSObject, ExternalTriggerPlugin, ExternalTri
     private func seedPresetsIfNeeded() {
         guard !seeding, let settings = settings else { return }
         let version = (settings.setting("presetsVersion") as? NSNumber)?.intValue ?? (settings.setting("presetsSeeded") != nil ? 1 : 0)
-        guard version < 2 else { return }
+        guard version < 3 else { return }
         seeding = true; defer { seeding = false }
         var saved: [ScheduleEvent] = []
         if let data = settings.string("events").data(using: .utf8),
@@ -81,11 +81,17 @@ public final class SchedulerPlugin: NSObject, ExternalTriggerPlugin, ExternalTri
         if version == 0 {
             let have = Set(saved.map { $0.id })
             saved = Self.presets.filter { !have.contains($0.id) } + saved
-        } else {
+        } else if version == 1 {
             saved.removeAll { Self.retiredPresets[$0.id] == $0.name }
         }
+        // 3: the location moved from the general settings into each sunrise / sunset schedule
+        if let (la, lo) = legacyCoordinates {
+            for i in saved.indices where saved[i].spec.kind == .solar && saved[i].spec.coordinate == nil {
+                saved[i].spec.latitude = la; saved[i].spec.longitude = lo
+            }
+        }
         store(saved)
-        settings.setSetting("presetsVersion", to: 2)
+        settings.setSetting("presetsVersion", to: 3)
     }
 
     fileprivate func save(_ event: ScheduleEvent) {
@@ -116,7 +122,8 @@ public final class SchedulerPlugin: NSObject, ExternalTriggerPlugin, ExternalTri
         var t: [ExternalTriggerDefinition] = []
         for e in allEvents() {
             let rule = TimeLogic.parseRule(e.spec.rule())
-            let what = rule.map { TimeLogic.describe($0) } ?? "not understood, check its settings"
+            var what = rule.map { TimeLogic.describe($0) } ?? "not understood, check its settings"
+            if e.spec.kind == .solar && e.spec.coordinate == nil { what += " (add a location in Settings)" }
             t.append(ExternalTriggerDefinition(id: e.id, name: e.name.isEmpty ? what : "\(e.name) (\(what))", summary: what))
         }
         t.append(ExternalTriggerDefinition(id: Self.customId, name: "Custom schedule…", summary: "Set the days and times right here; it is saved as a schedule"))
@@ -126,8 +133,6 @@ public final class SchedulerPlugin: NSObject, ExternalTriggerPlugin, ExternalTri
     // MARK: settings
 
     public var settingsFields: [PluginSettingField] {[
-        PluginSettingField(key: "latitude", title: "Latitude", kind: .text(placeholder: "40.7128"), help: "Only for sunrise / sunset. Negative = south."),
-        PluginSettingField(key: "longitude", title: "Longitude", kind: .text(placeholder: "-74.0060"), help: "Negative = west."),
         PluginSettingField(key: "grace", title: "Catch up after sleep", kind: .number(min: 0, max: 120, step: 5, unit: "min"),
                            defaultValue: AnyCodable(5), help: "If the Mac was asleep at the scheduled time, still run it when it wakes up within this many minutes. 0 = never."),
     ]}
@@ -163,11 +168,11 @@ public final class SchedulerPlugin: NSObject, ExternalTriggerPlugin, ExternalTri
         host = nil
     }
 
-    fileprivate var coordinates: (Double, Double)? {
-        guard let la = Double((settings?.string("latitude") ?? "").trimmingCharacters(in: .whitespaces)),
-              let lo = Double((settings?.string("longitude") ?? "").trimmingCharacters(in: .whitespaces)),
-              abs(la) <= 90, abs(lo) <= 180 else { return nil }
-        return (la, lo)
+    /// The location earlier versions kept in the plugin's general settings; only read to move it into schedules.
+    private var legacyCoordinates: (String, String)? {
+        let la = (settings?.string("latitude") ?? "").trimmingCharacters(in: .whitespaces)
+        let lo = (settings?.string("longitude") ?? "").trimmingCharacters(in: .whitespaces)
+        return ScheduleSpec.coordinate(la, lo) == nil ? nil : (la, lo)
     }
 
     fileprivate func rule(for id: String) -> TimeLogic.Rule? {
@@ -229,8 +234,10 @@ public final class SchedulerPlugin: NSObject, ExternalTriggerPlugin, ExternalTri
             ParameterDefinition(key: "to", name: "Until", type: .time, defaultValue: AnyCodable("17:00"), description: "", visibleWhen: only([.intervalWindow])),
             choice("sun", "Event", [("sunrise", "Sunrise"), ("sunset", "Sunset")], "sunrise", when: only([.solar])),
             ParameterDefinition(key: "offset", name: "Offset", type: .number, defaultValue: AnyCodable(0),
-                                description: "Minutes after (negative = before). Needs your latitude and longitude in the plugin's settings.",
+                                description: "Minutes after (negative = before).",
                                 validation: ValidationRule(minValue: -180, maxValue: 180), visibleWhen: only([.solar]), suffix: "min"),
+            ParameterDefinition(key: "latitude", name: "Latitude", type: .string, description: "e.g. 40.7128 (negative = south)", visibleWhen: only([.solar])),
+            ParameterDefinition(key: "longitude", name: "Longitude", type: .string, description: "e.g. -74.0060 (negative = west)", visibleWhen: only([.solar])),
             ParameterDefinition(key: "dates", name: "Dates", type: .dateList, description: "", visibleWhen: only([.dates])),
             ParameterDefinition(key: "rule", name: "Rule", type: .string,
                                 description: "e.g. weekdays 8:30", visibleWhen: only([.custom])),
@@ -242,14 +249,14 @@ public final class SchedulerPlugin: NSObject, ExternalTriggerPlugin, ExternalTri
         let from = lastCheck
         lastCheck = now
         let grace = (settings?.number("grace", default: 5) ?? 5) * 60
-        let loc = coordinates
         // decode the schedules once per tick, not once per schedule
-        var schedules: [(id: String, rule: TimeLogic.Rule, binding: ExternalTriggerBinding?)] =
-            allEvents().compactMap { e in TimeLogic.parseRule(e.spec.rule()).map { (e.id, $0, nil) } }
+        var schedules: [(id: String, rule: TimeLogic.Rule, binding: ExternalTriggerBinding?, loc: (Double, Double)?)] =
+            allEvents().compactMap { e in TimeLogic.parseRule(e.spec.rule()).map { (e.id, $0, nil, e.spec.coordinate) } }
         for b in customBindings {
-            if let r = TimeLogic.parseRule(ScheduleSpec(options: b.options).rule()) { schedules.append(("custom", r, b)) }
+            let spec = ScheduleSpec(options: b.options)
+            if let r = TimeLogic.parseRule(spec.rule()) { schedules.append(("custom", r, b, spec.coordinate)) }
         }
-        for (id, rule, binding) in schedules {
+        for (id, rule, binding, loc) in schedules {
             // the latest occurrence in (from, now]
             var occurrence: Date?
             var cursor = from
@@ -266,8 +273,8 @@ public final class SchedulerPlugin: NSObject, ExternalTriggerPlugin, ExternalTri
 
     /// For the settings panel: when does this trigger next run?
     fileprivate func nextRun(_ id: String) -> Date? {
-        guard let rule = rule(for: id) else { return nil }
-        let loc = coordinates
+        guard let e = allEvents().first(where: { $0.id == id }), let rule = TimeLogic.parseRule(e.spec.rule()) else { return nil }
+        let loc = e.spec.coordinate
         return TimeLogic.next(rule, after: Date(), lat: loc?.0, lon: loc?.1)
     }
 }
@@ -310,7 +317,16 @@ struct ScheduleSpec: Codable, Equatable {
     var windowStart = 9 * 60, windowEnd = 17 * 60
     var sunrise = true
     var offsetMinutes = 0
+    var latitude: String?             // where "sunrise" / "sunset" are measured; optional so older saved schedules still load
+    var longitude: String?
     var text = ""
+
+    static func coordinate(_ lat: String?, _ lon: String?) -> (Double, Double)? {
+        guard let la = Double((lat ?? "").trimmingCharacters(in: .whitespaces)),
+              let lo = Double((lon ?? "").trimmingCharacters(in: .whitespaces)), abs(la) <= 90, abs(lo) <= 180 else { return nil }
+        return (la, lo)
+    }
+    var coordinate: (Double, Double)? { Self.coordinate(latitude, longitude) }
 
     private static let names = ["", "sun", "mon", "tue", "wed", "thu", "fri", "sat"]
     private var clock: String { String(format: "%d:%02d", hour, minute) }
@@ -380,6 +396,7 @@ extension ScheduleSpec {
         if let (h, m) = clock("to") { windowEnd = h * 60 + m }
         sunrise = str("sun") != "sunset"
         offsetMinutes = Int(num("offset") ?? 0)
+        latitude = str("latitude"); longitude = str("longitude")
         dates = (str("dates") ?? "").split(separator: ";").compactMap { TimeLogic.parseMoment(String($0)) }
         text = str("rule") ?? ""
     }
@@ -437,7 +454,7 @@ private struct SchedulerPanelView: View {
                 Text(e.name.isEmpty ? (rule.map { TimeLogic.describe($0) } ?? "Unreadable schedule") : e.name).font(.system(size: 12, weight: .medium))
                 if !e.name.isEmpty, let r = rule { Text(TimeLogic.describe(r)).font(.caption).foregroundColor(.secondary) }
                 Text(rule == nil ? "⚠️ Can't read “\(e.spec.rule())”"
-                     : next.map { "Next: " + $0.formatted(date: .abbreviated, time: .shortened) } ?? (e.spec.kind == .solar ? "Set latitude and longitude above" : "Nothing left to run"))
+                     : next.map { "Next: " + $0.formatted(date: .abbreviated, time: .shortened) } ?? (e.spec.kind == .solar ? "Edit it and add a latitude and longitude" : "Nothing left to run"))
                     .font(.caption).foregroundColor(rule == nil ? .red : .secondary)
             }
             Spacer()
@@ -452,8 +469,7 @@ private struct SchedulerPanelView: View {
     @ViewBuilder private var editor: some View {
         if editing != nil {
             VStack(alignment: .leading, spacing: 10) {
-                ScheduleEditor(event: Binding(get: { editing ?? ScheduleEvent(id: "", name: "", spec: ScheduleSpec()) }, set: { editing = $0 }),
-                               hasLocation: plugin.coordinates != nil)
+                ScheduleEditor(event: Binding(get: { editing ?? ScheduleEvent(id: "", name: "", spec: ScheduleSpec()) }, set: { editing = $0 }))
                 HStack {
                     Spacer()
                     Button("Cancel") { editing = nil; isNew = false }
@@ -473,7 +489,6 @@ private struct SchedulerPanelView: View {
 
 private struct ScheduleEditor: View {
     @Binding var event: ScheduleEvent
-    let hasLocation: Bool
 
     private var spec: Binding<ScheduleSpec> { $event.spec }
     private let weekdayNames = [(1, "Sun"), (2, "Mon"), (3, "Tue"), (4, "Wed"), (5, "Thu"), (6, "Fri"), (7, "Sat")]
@@ -555,7 +570,13 @@ private struct ScheduleEditor: View {
                 Stepper(event.spec.offsetMinutes == 0 ? "At the time itself"
                         : "\(abs(event.spec.offsetMinutes)) minutes \(event.spec.offsetMinutes > 0 ? "after" : "before")",
                         value: spec.offsetMinutes, in: -180...180, step: 5)
-                if !hasLocation { Text("⚠️ Set your latitude and longitude above first.").font(.caption).foregroundColor(.orange) }
+                HStack {
+                    TextField("Latitude, e.g. 40.7128", text: Binding(get: { event.spec.latitude ?? "" }, set: { event.spec.latitude = $0 }))
+                    TextField("Longitude, e.g. -74.0060", text: Binding(get: { event.spec.longitude ?? "" }, set: { event.spec.longitude = $0 }))
+                }
+                .textFieldStyle(.roundedBorder)
+                Text(event.spec.coordinate == nil ? "⚠️ Enter your latitude and longitude (negative = south / west)." : "Used to work out when the sun rises and sets for this schedule.")
+                    .font(.caption).foregroundColor(event.spec.coordinate == nil ? .orange : .secondary)
                 weekdayPicker
             case .custom:
                 TextField("e.g. weekdays 8:30 · monthly 2nd tue 9:00", text: spec.text).textFieldStyle(.roundedBorder)
@@ -596,7 +617,7 @@ private struct ScheduleEditor: View {
             if let rule = rule {
                 Text(TimeLogic.describe(rule)).font(.caption.weight(.medium))
                 let runs = upcoming(rule)
-                Text(runs.isEmpty ? (event.spec.kind == .solar && !hasLocation ? "Needs your location" : "Nothing left to run")
+                Text(runs.isEmpty ? (event.spec.kind == .solar && event.spec.coordinate == nil ? "Needs your location" : "Nothing left to run")
                      : "Next: " + runs.map { $0.formatted(date: .abbreviated, time: .shortened) }.joined(separator: "  ·  "))
                     .font(.caption).foregroundColor(.secondary).fixedSize(horizontal: false, vertical: true)
             } else {
@@ -607,7 +628,7 @@ private struct ScheduleEditor: View {
 
     private func upcoming(_ rule: TimeLogic.Rule) -> [Date] {
         var out: [Date] = [], cursor = Date()
-        while out.count < 3, let n = TimeLogic.next(rule, after: cursor, lat: nil, lon: nil) { out.append(n); cursor = n }
+        while out.count < 3, let n = TimeLogic.next(rule, after: cursor, lat: event.spec.coordinate?.0, lon: event.spec.coordinate?.1) { out.append(n); cursor = n }
         return out
     }
 }
