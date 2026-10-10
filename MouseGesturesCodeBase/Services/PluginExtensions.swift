@@ -186,6 +186,8 @@ final class PluginExtensionManager: ObservableObject {
     private var entries: [String: Entry] = [:]
     /// Bumped on every change so SwiftUI views refresh.
     @Published private(set) var revision = 0
+    /// Bumped only when a plugin is registered or removed (Settings rebuilds its plugin tabs on this).
+    @Published private(set) var registrationCount = 0
 
     private func onMain<T>(_ work: () -> T) -> T {
         Thread.isMainThread ? work() : DispatchQueue.main.sync(execute: work)
@@ -201,6 +203,7 @@ final class PluginExtensionManager: ObservableObject {
             ext.pluginAttached(host: host)
             if ext.runsBackgroundService, serviceEnabled(identifier) { startService(identifier) }
             revision += 1
+            registrationCount += 1
         }
     }
 
@@ -211,16 +214,17 @@ final class PluginExtensionManager: ObservableObject {
             e.ext.pluginDetached()
             entries[identifier] = nil
             revision += 1
+            registrationCount += 1
         }
     }
 
     // MARK: queries (for UI)
 
-    /// Plugins that ship inside the app (not installed from a library) and offer a settings page, by name.
-    func builtInPluginsWithSettings() -> [(id: String, name: String)] {
+    /// Every loaded plugin (built in or installed from a library) that offers options, by name.
+    func pluginsWithSettings() -> [(id: String, name: String)] {
         onMain {
             entries.values
-                .filter { !$0.id.hasPrefix("com.mousegestures.lib.") && (!$0.ext.settingsFields.isEmpty || $0.ext.hasCustomSettingsView || $0.ext.runsBackgroundService) }
+                .filter { !$0.ext.settingsFields.isEmpty || $0.ext.hasCustomSettingsView || $0.ext.runsBackgroundService }
                 .map { ($0.id, $0.name) }
                 .sorted { $0.1 < $1.1 }
         }

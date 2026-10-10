@@ -5,6 +5,7 @@ import SwiftUI
 struct SettingsView: View {
     @StateObject private var registry = SettingsCategoryRegistry.shared
     @ObservedObject private var license = LicenseService.shared
+    @ObservedObject private var pluginExtensions = PluginExtensionManager.shared
 
     @State private var selectedCategoryId: String = "general"
     @State private var showAdvanced: Bool = false
@@ -35,10 +36,12 @@ struct SettingsView: View {
                 .frame(minWidth: 400)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onChange(of: pluginExtensions.registrationCount) { _ in
+            registerAllSettings()   // a plugin was installed, removed or reloaded: refresh the plugin tabs
+        }
         .onAppear {
-            if registry.entries.isEmpty {
-                registerAllSettings()
-            }
+            registerAllSettings()   // plugin tabs depend on what is loaded right now
+
             if let first = registry.categories.first {
                 selectedCategoryId = first.id
             }
@@ -206,12 +209,16 @@ struct SettingsView: View {
         }
 
         if visibleSubs.count > 1 {
+            // Text-only, full-width segments with an id per category: a segmented control holding Labels is
+            // measured before its content exists and renders squeezed until it is clicked.
             Picker("", selection: subcategorySelection(for: cat, visibleSubs: visibleSubs)) {
                 ForEach(visibleSubs, id: \.id) { sub in
-                    Label(sub.title, systemImage: sub.icon).tag(sub.id)
+                    Text(sub.title).tag(sub.id)
                 }
             }
             .pickerStyle(.segmented)
+            .frame(maxWidth: .infinity)
+            .id(cat.id + visibleSubs.map { $0.id }.joined())
         }
 
         let selectedSubId = selectedSubcategoryIds[cat.id] ?? visibleSubs.first?.id ?? ""

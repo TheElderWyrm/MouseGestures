@@ -1,18 +1,23 @@
 import SwiftUI
 
-/// Settings ▸ Actions (one tab per built-in action plugin with options) and Settings ▸ Detection (a tab for each
-/// built-in trigger plugin with options, beside the zone and app-profile tabs).
+/// Settings ▸ Actions (one tab per action plugin with options) and Settings ▸ Detection (a tab for each trigger plugin
+/// with options, beside the zone and app-profile tabs). Built-in and installed library plugins both appear.
 struct BuiltInPluginsSettingsProvider: SettingsProvider {
     private static let icons: [String: String] = [
         "com.mousegestures.timers": "timer", "com.mousegestures.pointer": "cursorarrow.motionlines",
         "com.mousegestures.text": "textformat", "com.mousegestures.browser": "safari",
-        "com.mousegestures.system": "gearshape.2", "com.mousegestures.media": "speaker.wave.2"
+        "com.mousegestures.system": "gearshape.2", "com.mousegestures.media": "speaker.wave.2",
+        "com.mousegestures.lib.clipboard": "list.clipboard", "com.mousegestures.lib.systemevents": "bolt.badge.clock",
+        "com.mousegestures.lib.scheduler": "calendar.badge.clock", "com.mousegestures.lib.finderhelpers": "folder.badge.gearshape",
+        "com.mousegestures.lib.screentools": "eyedropper"
     ]
 
     /// Short tab labels, so the segmented picker never gets cramped.
     private static let tabTitles: [String: String] = [
         "com.mousegestures.timers": "Timers", "com.mousegestures.browser": "Browser",
-        "com.mousegestures.pointer": "Pointer Gestures"
+        "com.mousegestures.pointer": "Pointer Gestures", "com.mousegestures.lib.clipboard": "Clipboard",
+        "com.mousegestures.lib.systemevents": "System Events", "com.mousegestures.lib.finderhelpers": "Finder",
+        "com.mousegestures.lib.screentools": "Screen"
     ]
 
     private static let keywords: [String: [String]] = [
@@ -24,7 +29,7 @@ struct BuiltInPluginsSettingsProvider: SettingsProvider {
 
     var settingsEntries: [SettingsEntry] {
         let detectionIds = Set(DetectionPluginManager.shared.getAllPlugins().map { $0.identifier })
-        return PluginExtensionManager.shared.builtInPluginsWithSettings().enumerated().map { index, plugin in
+        return PluginExtensionManager.shared.pluginsWithSettings().enumerated().map { index, plugin in
             let isTrigger = detectionIds.contains(plugin.id)
             // Detection already has General / Zones / App Profiles tabs (0–2); ours follow.
             let sub = SettingsSubcategoryDescriptor(id: plugin.id, title: Self.tabTitles[plugin.id] ?? plugin.name,
