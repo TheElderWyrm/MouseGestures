@@ -29,6 +29,13 @@ public protocol ExternalTriggerOptionsProviding: AnyObject {
     func options(forTrigger id: String) -> [PluginSettingField]
 }
 
+/// Adopt to give a trigger real parameters (a custom schedule's days and times, say), configured per gesture in the
+/// same form actions use (`ParameterDefinition`, `visibleWhen`, groups…). Values arrive in `ExternalTriggerBinding.options`;
+/// unlike the optional overrides above, the form's defaults are written when the trigger is chosen.
+public protocol ExternalTriggerParameterized: AnyObject {
+    func parameters(forTrigger id: String) -> [ParameterDefinition]
+}
+
 /// The host object handed to `start` also conforms to this; cast to it to fire a specific binding.
 public protocol ExternalTriggerBindingHost: ExternalTriggerHost {
     /// Like `fire(triggerId:)` but only runs gestures whose overrides match this binding.
@@ -109,6 +116,9 @@ final class ExternalTriggerAdapter: BaseDetectionPlugin, ExternalTriggerBindingH
     var triggers: [ExternalTriggerDefinition] { external.triggers }
     func options(forTrigger id: String) -> [PluginSettingField] {
         (external as? ExternalTriggerOptionsProviding)?.options(forTrigger: id) ?? []
+    }
+    func parameters(forTrigger id: String) -> [ParameterDefinition] {
+        (external as? ExternalTriggerParameterized)?.parameters(forTrigger: id) ?? []
     }
 
     override func start() throws {

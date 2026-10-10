@@ -324,7 +324,15 @@ struct GestureConfigurationSheet: View {
 
     private func newExternalTrigger(_ plugin: DetectionPlugin, _ def: ExternalTriggerDefinition) -> ExternalTriggerConfig {
         ExternalTriggerConfig(isEnabled: true, pluginId: plugin.identifier, triggerId: def.id,
-                              displayName: "\(plugin.triggerTitle): \(def.name)")
+                              displayName: "\(plugin.triggerTitle): \(def.name)",
+                              options: parameterDefaults(plugin, def.id))
+    }
+
+    /// A parameterized trigger starts with its form's defaults filled in, like an action's parameters do.
+    private func parameterDefaults(_ plugin: DetectionPlugin, _ triggerId: String) -> [String: AnyCodable]? {
+        guard let adapter = plugin as? ExternalTriggerAdapter else { return nil }
+        let defaults = adapter.parameters(forTrigger: triggerId).compactMap { p in p.defaultValue.map { (p.key, $0) } }
+        return defaults.isEmpty ? nil : Dictionary(uniqueKeysWithValues: defaults)
     }
 
     /// Each plugin keeps its own triggers, so turning one plugin on never touches another's, and a plugin can
@@ -379,7 +387,7 @@ struct GestureConfigurationSheet: View {
                     guard let t = adapter.triggers.first(where: { $0.id == id }) else { return }
                     components.externalTriggers[i].triggerId = id
                     components.externalTriggers[i].displayName = "\(plugin.triggerTitle): \(t.name)"
-                    components.externalTriggers[i].options = nil
+                    components.externalTriggers[i].options = parameterDefaults(plugin, id)
                 }
             )) {
                 ForEach(adapter.triggers, id: \.id) { Text($0.name).tag($0.id) }
@@ -394,7 +402,19 @@ struct GestureConfigurationSheet: View {
         .padding(.horizontal, MGStyle.Spacing.lg)
         .padding(.bottom, MGStyle.Spacing.sm)
 
-        let options = adapter.options(forTrigger: components.externalTriggers[i].triggerId)
+        let triggerId = components.externalTriggers[i].triggerId
+        let params = adapter.parameters(forTrigger: triggerId)
+        if !params.isEmpty {
+            ParameterFormView(
+                definitions: params,
+                values: Binding(get: { i < components.externalTriggers.count ? components.externalTriggers[i].options ?? [:] : [:] },
+                                set: { if i < components.externalTriggers.count { components.externalTriggers[i].options = $0.isEmpty ? nil : $0 } }),
+                grouped: false)
+                .padding(.horizontal, MGStyle.Spacing.lg)
+                .padding(.bottom, MGStyle.Spacing.sm)
+        }
+
+        let options = adapter.options(forTrigger: triggerId)
         if !options.isEmpty {
             TriggerOverridesView(
                 fields: options,

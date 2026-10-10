@@ -324,50 +324,10 @@ struct ActionSelectionView: View {
                 }
                 let simple = action.supportedParameters.filter { $0.type != .json && !$0.isAdvancedOnly }
                 if !simple.isEmpty {
-                    let grouped = parameterGroups(simple)
-                    ForEach(grouped, id: \.name) { group in
-                        GroupBox(group.name) {
-                            VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
-                                ForEach(group.params, id: \.key) { p in
-                                    paramField(for: p)
-                                }
-                            }
-                            .padding(.vertical, MGStyle.Spacing.md)
-                        }
-                    }
+                    ParameterFormView(definitions: simple, values: $actionParameters)
                 }
             }
         }
-    }
-
-    /// Groups parameters by their `group` property for sectioned display
-    private struct ParameterGroup: Identifiable {
-        let name: String
-        let params: [ParameterDefinition]
-        var id: String { name }
-    }
-
-    private func parameterGroups(_ params: [ParameterDefinition]) -> [ParameterGroup] {
-        var groups: [ParameterGroup] = []
-        var currentGroupName: String? = nil
-        var currentParams: [ParameterDefinition] = []
-
-        for p in params {
-            let groupName = p.group ?? "Parameters"
-            if groupName != currentGroupName {
-                if !currentParams.isEmpty, let name = currentGroupName {
-                    groups.append(ParameterGroup(name: name, params: currentParams))
-                }
-                currentGroupName = groupName
-                currentParams = [p]
-            } else {
-                currentParams.append(p)
-            }
-        }
-        if !currentParams.isEmpty, let name = currentGroupName {
-            groups.append(ParameterGroup(name: name, params: currentParams))
-        }
-        return groups
     }
 
     private func advancedConfigBox(for action: PluginAction) -> some View {
@@ -397,327 +357,6 @@ struct ActionSelectionView: View {
                 Button("Configure...") { openAdvanced(for: action) }
             }
             .padding(.vertical, MGStyle.Spacing.md)
-        }
-    }
-
-    // MARK: - Parameter Fields
-
-    /// Returns true when the parameter should be displayed given current parameter values
-    private func shouldShow(_ p: ParameterDefinition) -> Bool {
-        guard let rule = p.visibleWhen else { return true }
-        if let stringVal = actionParameters[rule.key]?.value as? String {
-            return rule.matches(stringVal)
-        }
-        if let boolVal = actionParameters[rule.key]?.value as? Bool {
-            return rule.matches(boolVal ? "true" : "false")
-        }
-        let defaultStr = actionParameters[rule.key]?.value as? String ?? ""
-        return rule.matches(defaultStr)
-    }
-
-    @ViewBuilder
-    private func paramField(for p: ParameterDefinition) -> some View {
-        if shouldShow(p) { paramFieldContent(for: p) }
-    }
-
-    /// Resolves the display label for a raw selection value
-    private func displayLabel(for rawValue: String, param: ParameterDefinition) -> String {
-        if let custom = param.displayValues?[rawValue] { return custom }
-        // Auto-format: replace underscores and camelCase
-        return rawValue
-            .replacingOccurrences(of: "_", with: " ")
-            .replacingOccurrences(of: "([a-z])([A-Z])", with: "$1 $2", options: .regularExpression)
-            .localizedCapitalized
-    }
-
-    @ViewBuilder
-    private func paramFieldContent(for p: ParameterDefinition) -> some View {
-        switch p.type {
-        case .string:
-            paramRow(p) {
-                if let providerKey = p.optionProvider {
-                    let options = resolveOptionProvider(providerKey)
-                    if !options.isEmpty {
-                        // Combo: pick from known options OR type a custom value
-                        VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
-                            Picker("", selection: Binding(
-                                get: {
-                                    let v = actionParameters[p.key]?.value as? String ?? p.defaultValue?.value as? String ?? ""
-                                    return options.contains(v) ? v : ""
-                                },
-                                set: { (v: String) in actionParameters[p.key] = AnyCodable(v) }
-                            )) {
-                                Text("Custom...").tag("")
-                                ForEach(options, id: \.self) { opt in Text(opt).tag(opt) }
-                            }
-                            .pickerStyle(.menu)
-                            .labelsHidden()
-                            let current = actionParameters[p.key]?.value as? String ?? p.defaultValue?.value as? String ?? ""
-                            if current.isEmpty || !options.contains(current) {
-                                TextField("Type a name...", text: strBinding(p.key, def: p.defaultValue?.value as? String ?? ""))
-                                    .textFieldStyle(.roundedBorder)
-                            }
-                        }
-                    } else {
-                        TextField(p.description, text: strBinding(p.key, def: p.defaultValue?.value as? String ?? ""))
-                            .textFieldStyle(.roundedBorder)
-                    }
-                } else {
-                    TextField(p.description, text: strBinding(p.key, def: p.defaultValue?.value as? String ?? ""))
-                        .textFieldStyle(.roundedBorder)
-                }
-            }
-        case .path:
-            paramRow(p) {
-                HStack(spacing: MGStyle.Spacing.sm) {
-                    TextField(p.description, text: strBinding(p.key, def: p.defaultValue?.value as? String ?? ""))
-                        .textFieldStyle(.roundedBorder)
-                    Button(action: { browseForPath(paramKey: p.key) }) {
-                        Image(systemName: "folder")
-                    }
-                    .help("Browse...")
-                }
-            }
-        case .url:
-            paramRow(p) {
-                HStack(spacing: MGStyle.Spacing.sm) {
-                    TextField(p.description.isEmpty ? "https://" : p.description, text: strBinding(p.key, def: p.defaultValue?.value as? String ?? ""))
-                        .textFieldStyle(.roundedBorder)
-                    // URL validation indicator
-                    let current = actionParameters[p.key]?.value as? String ?? ""
-                    if !current.isEmpty {
-                        if URL(string: current) != nil && (!current.isEmpty) {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundColor(.green)
-                                .font(.system(size: 12))
-                        } else {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .foregroundColor(.orange)
-                                .font(.system(size: 12))
-                                .help("May not be a valid URL")
-                        }
-                    }
-                }
-            }
-        case .number:
-            paramRow(p) {
-                if let minV = p.validation?.minValue, let maxV = p.validation?.maxValue, minV < maxV {
-                    // Slider + text field for bounded ranges
-                    HStack(spacing: MGStyle.Spacing.md) {
-                        Slider(
-                            value: sliderBinding(p.key, def: p.defaultValue?.value as? Double ?? minV, min: minV, max: maxV),
-                            in: minV...maxV,
-                            step: maxV - minV > 10 ? 1 : 0.1
-                        )
-                        HStack(spacing: 2) {
-                            TextField("", text: numBinding(p.key, def: p.defaultValue?.value as? Double ?? 0))
-                                .textFieldStyle(.roundedBorder)
-                                .frame(width: 55)
-                                .multilineTextAlignment(.trailing)
-                            if let suffix = p.suffix {
-                                Text(suffix)
-                                    .font(.system(size: MGStyle.FontSize.caption))
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                    }
-                } else {
-                    // Plain text field for unbounded numbers
-                    HStack(spacing: 2) {
-                        TextField(p.description, text: numBinding(p.key, def: p.defaultValue?.value as? Double ?? 0))
-                            .textFieldStyle(.roundedBorder)
-                            .frame(width: 100)
-                        if let suffix = p.suffix {
-                            Text(suffix)
-                                .font(.system(size: MGStyle.FontSize.caption))
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                }
-            }
-        case .boolean:
-            HStack {
-                Toggle(p.name, isOn: boolBinding(p.key, def: p.defaultValue?.value as? Bool ?? false))
-                if !p.description.isEmpty {
-                    Spacer()
-                    Text(p.description)
-                        .font(.system(size: MGStyle.FontSize.badge))
-                        .foregroundColor(.secondary)
-                }
-            }
-        case .selection:
-            if let vals = p.validation?.allowedValues {
-                let options = vals.compactMap { $0.value as? String }
-                let defaultVal = (p.defaultValue?.value as? String).flatMap({ options.contains($0) ? $0 : nil }) ?? options.first ?? ""
-                paramRow(p) {
-                    Picker("", selection: strBinding(p.key, def: defaultVal)) {
-                        // Only show "Select..." if no default is available and "" is not already an option
-                        if !options.contains("") && p.defaultValue == nil {
-                            Text("Select...").tag("")
-                        }
-                        ForEach(options, id: \.self) { v in
-                            Text(displayLabel(for: v, param: p)).tag(v)
-                        }
-                    }
-                    .pickerStyle(.menu)
-                    .labelsHidden()
-                }
-            }
-        case .application:
-            paramRow(p) {
-                HStack(spacing: MGStyle.Spacing.sm) {
-                    Picker("", selection: strBinding(p.key, def: "")) {
-                        Text(p.placeholderLabel ?? "Select...").tag("")
-                        let isBrowserPicker = p.filterBrowsers == true
-                        let appList = isBrowserPicker
-                            ? WindowTargeting.getAllInstalledBrowsers()
-                            : WindowTargeting.getAllRunningApplications()
-                        let current = actionParameters[p.key]?.value as? String ?? ""
-                        if !current.isEmpty && !appList.contains(where: { $0.bundleId == current }) {
-                            let displayName = NSWorkspace.shared.urlForApplication(withBundleIdentifier: current)
-                                .flatMap { Bundle(url: $0)?.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String }
-                                ?? Bundle(url: NSWorkspace.shared.urlForApplication(withBundleIdentifier: current) ?? URL(fileURLWithPath: ""))?.object(forInfoDictionaryKey: "CFBundleName") as? String
-                                ?? current
-                            Text(displayName).tag(current)
-                            Divider()
-                        }
-                        ForEach(appList, id: \.bundleId) { app in
-                            Text(app.name).tag(app.bundleId)
-                        }
-                    }
-                    .pickerStyle(.menu)
-                    .labelsHidden()
-                    Button(action: { browseForApp(paramKey: p.key) }) {
-                        Image(systemName: "folder")
-                    }
-                    .help("Browse for any installed application")
-                }
-            }
-        case .profile:
-            paramRow(p) {
-                Picker("", selection: strBinding(p.key, def: "")) {
-                    Text("Select...").tag("")
-                    ForEach(ProfileManager.shared.sortedProfiles, id: \.name) { profile in
-                        Text(profile.name).tag(profile.name)
-                    }
-                }
-                .pickerStyle(.menu)
-                .labelsHidden()
-            }
-        case .script:
-            VStack(alignment: .leading, spacing: MGStyle.Spacing.sm) {
-                HStack {
-                    Text(p.name).font(.system(size: 12, weight: .medium))
-                    Spacer()
-                    if !p.description.isEmpty {
-                        Text(p.description)
-                            .font(.system(size: MGStyle.FontSize.badge))
-                            .foregroundColor(.secondary)
-                    }
-                }
-                let useFile = actionParameters["use_file"]?.value as? Bool ?? false
-                if useFile, let filePath = actionParameters["script_path"]?.value as? String, !filePath.isEmpty {
-                    // Show file contents as read-only preview
-                    let fileContents = (try? String(contentsOfFile: filePath, encoding: .utf8)) ?? "(unable to read file)"
-                    CodeTextEditor(text: .constant(fileContents), isEditable: false)
-                        .frame(minHeight: 80, maxHeight: 150)
-                        .border(MGStyle.Colors.separator, width: 1)
-                        .cornerRadius(MGStyle.Corner.sm)
-                        .opacity(0.75)
-                    Text("Preview of: \(filePath)")
-                        .font(.system(size: MGStyle.FontSize.badge))
-                        .foregroundColor(.secondary)
-                } else {
-                    CodeTextEditor(text: strBinding(p.key, def: p.defaultValue?.value as? String ?? ""), isEditable: true)
-                        .frame(minHeight: 80, maxHeight: 150)
-                        .border(MGStyle.Colors.separator, width: 1)
-                        .cornerRadius(MGStyle.Corner.sm)
-                }
-            }
-        case .keyboardShortcut:
-            paramRow(p) {
-                HStack(spacing: MGStyle.Spacing.md) {
-                    KeyboardShortcutFieldView(shortcut: Binding(
-                        get: {
-                            // Read from actionParameters dictionary
-                            guard let dict = actionParameters[p.key]?.value as? [String: Any],
-                                  let keyCode = dict["keyCode"] as? UInt16,
-                                  let modifiers = dict["modifiers"] as? UInt,
-                                  let displayString = dict["displayString"] as? String else {
-                                return nil
-                            }
-                            var mods = NSEvent.ModifierFlags()
-                            let flags = CGEventFlags(rawValue: UInt64(modifiers))
-                            if flags.contains(.maskCommand) { mods.insert(.command) }
-                            if flags.contains(.maskControl) { mods.insert(.control) }
-                            if flags.contains(.maskAlternate) { mods.insert(.option) }
-                            if flags.contains(.maskShift) { mods.insert(.shift) }
-                            return KeyboardTrigger(keyCode: keyCode, modifiers: mods, displayString: displayString)
-                        },
-                        set: { trigger in
-                            if let t = trigger {
-                                var cgFlags: CGEventFlags = []
-                                if t.modifiers.contains(.command) { cgFlags.insert(.maskCommand) }
-                                if t.modifiers.contains(.control) { cgFlags.insert(.maskControl) }
-                                if t.modifiers.contains(.option) { cgFlags.insert(.maskAlternate) }
-                                if t.modifiers.contains(.shift) { cgFlags.insert(.maskShift) }
-                                let dict: [String: Any] = [
-                                    "keyCode": t.keyCode,
-                                    "modifiers": UInt(cgFlags.rawValue),
-                                    "displayString": t.displayString
-                                ]
-                                actionParameters[p.key] = AnyCodable(dict)
-                            } else {
-                                actionParameters.removeValue(forKey: p.key)
-                            }
-                        }
-                    ))
-                    .frame(width: 200, height: 24)
-
-                    Button(action: { actionParameters.removeValue(forKey: p.key) }) {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(.secondary)
-                    }
-                    .buttonStyle(.plain)
-                    .help("Clear shortcut")
-                }
-            }
-        case .actionId:
-            paramRow(p) {
-                Picker("", selection: strBinding(p.key, def: "")) {
-                    Text("Select Action...").tag("")
-                    ForEach(allActionEntries, id: \.id) { entry in
-                        Text(entry.name).tag(entry.id)
-                    }
-                }
-                .pickerStyle(.menu)
-                .labelsHidden()
-            }
-        case .json:
-            EmptyView()
-        default:
-            paramRow(p) {
-                TextField(p.description, text: strBinding(p.key, def: p.defaultValue?.value as? String ?? ""))
-                    .textFieldStyle(.roundedBorder)
-            }
-        }
-    }
-
-    /// Consistent row layout for a parameter: label on the left, control on the right
-    @ViewBuilder
-    private func paramRow<Content: View>(_ p: ParameterDefinition, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
-            HStack {
-                Text(p.name)
-                    .font(.system(size: 12, weight: .medium))
-                if !p.description.isEmpty && p.type != .script {
-                    Spacer()
-                    Text(p.description)
-                        .font(.system(size: MGStyle.FontSize.badge))
-                        .foregroundColor(.secondary.opacity(0.7))
-                }
-            }
-            content()
         }
     }
 
@@ -835,73 +474,6 @@ struct ActionSelectionView: View {
         SavedActionsManager.shared.savedActions.first { $0.id.uuidString == selectedActionId }
     }
 
-    // MARK: - File/App Browsers
-
-    private func browseForPath(paramKey: String) {
-        let panel = NSOpenPanel()
-        panel.title = "Select File or Folder"
-        panel.canChooseDirectories = true
-        panel.canChooseFiles = true
-        panel.allowsMultipleSelection = false
-        panel.begin { response in
-            guard response == .OK, let url = panel.url else { return }
-            DispatchQueue.main.async {
-                actionParameters[paramKey] = AnyCodable(url.path)
-            }
-        }
-    }
-
-    private func browseForApp(paramKey: String) {
-        let panel = NSOpenPanel()
-        panel.title = "Select Application"
-        panel.canChooseDirectories = false
-        panel.canChooseFiles = true
-        panel.allowsMultipleSelection = false
-        panel.allowedContentTypes = [.application]
-        panel.directoryURL = URL(fileURLWithPath: "/Applications")
-        panel.begin { response in
-            guard response == .OK, let url = panel.url else { return }
-            // Extract bundle ID from the selected .app
-            if let bundle = Bundle(url: url),
-               let bundleId = bundle.bundleIdentifier {
-                DispatchQueue.main.async {
-                    actionParameters[paramKey] = AnyCodable(bundleId)
-                }
-            }
-        }
-    }
-
-    // MARK: - Parameter Bindings
-
-    private func strBinding(_ k: String, def d: String) -> Binding<String> {
-        Binding(get: { actionParameters[k]?.value as? String ?? d },
-                set: { actionParameters[k] = AnyCodable($0) })
-    }
-    private func numBinding(_ k: String, def d: Double) -> Binding<String> {
-        Binding(
-            get: {
-                if let v = actionParameters[k]?.value as? Double { return String(v) }
-                if let v = actionParameters[k]?.value as? Int { return String(v) }
-                return String(d)
-            },
-            set: { if let v = Double($0) { actionParameters[k] = AnyCodable(v) } }
-        )
-    }
-    private func boolBinding(_ k: String, def d: Bool) -> Binding<Bool> {
-        Binding(get: { actionParameters[k]?.value as? Bool ?? d },
-                set: { actionParameters[k] = AnyCodable($0) })
-    }
-    private func sliderBinding(_ k: String, def d: Double, min minV: Double, max maxV: Double) -> Binding<Double> {
-        Binding(
-            get: {
-                if let v = actionParameters[k]?.value as? Double { return v }
-                if let v = actionParameters[k]?.value as? Int { return Double(v) }
-                return d
-            },
-            set: { actionParameters[k] = AnyCodable($0) }
-        )
-    }
-
     // MARK: - State Management
 
     private func initDefaults() {
@@ -928,16 +500,6 @@ struct ActionSelectionView: View {
         } else { advancedConfigCount = 0 }
     }
 
-    private func resolveOptionProvider(_ key: String) -> [String] {
-        let plugin = PluginManager.shared.getPlugin(identifier: "com.mousegestures.window")
-        guard let wmp = plugin as? WindowManagementPlugin else { return [] }
-        switch key {
-        case "window.layouts":        return wmp.getAvailableLayouts()
-        case "window.position_slots": return wmp.getAvailablePositionSlots()
-        default: return []
-        }
-    }
-
     private func openAdvanced(for action: PluginAction) {
         guard let (plugin, _) = PluginManager.shared.getAction(identifier: selectedActionId),
               let window = NSApp.keyWindow else { return }
@@ -952,4 +514,532 @@ struct ActionSelectionView: View {
             }
         }
     }
+}
+
+// MARK: - Parameter form (shared by actions and plugin triggers)
+
+/// Renders `ParameterDefinition`s as a form bound to a `[String: AnyCodable]` of values. Actions use it for their
+/// parameters; detection plugins use it for trigger parameters (e.g. the Scheduler's custom schedule), so both
+/// kinds of configuration look and behave the same.
+struct ParameterFormView: View {
+    let definitions: [ParameterDefinition]
+    @Binding var values: [String: AnyCodable]
+    /// Section parameters under their `group` headers in boxes (actions); false = one plain list (triggers).
+    var grouped = true
+
+    var body: some View {
+        if grouped {
+            ForEach(parameterGroups(definitions), id: \.name) { group in
+                GroupBox(group.name) {
+                    VStack(alignment: .leading, spacing: MGStyle.Spacing.lg) {
+                        ForEach(group.params, id: \.key) { p in paramField(for: p) }
+                    }
+                    .padding(.vertical, MGStyle.Spacing.md)
+                }
+            }
+        } else {
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
+                ForEach(definitions, id: \.key) { p in paramField(for: p) }
+            }
+        }
+    }
+
+    /// Groups parameters by their `group` property for sectioned display
+    private struct ParameterGroup: Identifiable {
+        let name: String
+        let params: [ParameterDefinition]
+        var id: String { name }
+    }
+
+    private func parameterGroups(_ params: [ParameterDefinition]) -> [ParameterGroup] {
+        var groups: [ParameterGroup] = []
+        var currentGroupName: String? = nil
+        var currentParams: [ParameterDefinition] = []
+
+        for p in params {
+            let groupName = p.group ?? "Parameters"
+            if groupName != currentGroupName {
+                if !currentParams.isEmpty, let name = currentGroupName {
+                    groups.append(ParameterGroup(name: name, params: currentParams))
+                }
+                currentGroupName = groupName
+                currentParams = [p]
+            } else {
+                currentParams.append(p)
+            }
+        }
+        if !currentParams.isEmpty, let name = currentGroupName {
+            groups.append(ParameterGroup(name: name, params: currentParams))
+        }
+        return groups
+    }
+
+    // MARK: - Parameter Fields
+
+    /// Returns true when the parameter should be displayed given current parameter values
+    private func shouldShow(_ p: ParameterDefinition) -> Bool {
+        guard let rule = p.visibleWhen else { return true }
+        if let stringVal = values[rule.key]?.value as? String {
+            return rule.matches(stringVal)
+        }
+        if let boolVal = values[rule.key]?.value as? Bool {
+            return rule.matches(boolVal ? "true" : "false")
+        }
+        let defaultStr = values[rule.key]?.value as? String ?? ""
+        return rule.matches(defaultStr)
+    }
+
+    @ViewBuilder
+    private func paramField(for p: ParameterDefinition) -> some View {
+        if shouldShow(p) { paramFieldContent(for: p) }
+    }
+
+    /// Resolves the display label for a raw selection value
+    private func displayLabel(for rawValue: String, param: ParameterDefinition) -> String {
+        if let custom = param.displayValues?[rawValue] { return custom }
+        // Auto-format: replace underscores and camelCase
+        return rawValue
+            .replacingOccurrences(of: "_", with: " ")
+            .replacingOccurrences(of: "([a-z])([A-Z])", with: "$1 $2", options: .regularExpression)
+            .localizedCapitalized
+    }
+
+    @ViewBuilder
+    private func paramFieldContent(for p: ParameterDefinition) -> some View {
+        switch p.type {
+        case .string:
+            paramRow(p) {
+                if let providerKey = p.optionProvider {
+                    let options = resolveOptionProvider(providerKey)
+                    if !options.isEmpty {
+                        // Combo: pick from known options OR type a custom value
+                        VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
+                            Picker("", selection: Binding(
+                                get: {
+                                    let v = values[p.key]?.value as? String ?? p.defaultValue?.value as? String ?? ""
+                                    return options.contains(v) ? v : ""
+                                },
+                                set: { (v: String) in values[p.key] = AnyCodable(v) }
+                            )) {
+                                Text("Custom...").tag("")
+                                ForEach(options, id: \.self) { opt in Text(opt).tag(opt) }
+                            }
+                            .pickerStyle(.menu)
+                            .labelsHidden()
+                            let current = values[p.key]?.value as? String ?? p.defaultValue?.value as? String ?? ""
+                            if current.isEmpty || !options.contains(current) {
+                                TextField("Type a name...", text: strBinding(p.key, def: p.defaultValue?.value as? String ?? ""))
+                                    .textFieldStyle(.roundedBorder)
+                            }
+                        }
+                    } else {
+                        TextField(p.description, text: strBinding(p.key, def: p.defaultValue?.value as? String ?? ""))
+                            .textFieldStyle(.roundedBorder)
+                    }
+                } else {
+                    TextField(p.description, text: strBinding(p.key, def: p.defaultValue?.value as? String ?? ""))
+                        .textFieldStyle(.roundedBorder)
+                }
+            }
+        case .path:
+            paramRow(p) {
+                HStack(spacing: MGStyle.Spacing.sm) {
+                    TextField(p.description, text: strBinding(p.key, def: p.defaultValue?.value as? String ?? ""))
+                        .textFieldStyle(.roundedBorder)
+                    Button(action: { browseForPath(paramKey: p.key) }) {
+                        Image(systemName: "folder")
+                    }
+                    .help("Browse...")
+                }
+            }
+        case .url:
+            paramRow(p) {
+                HStack(spacing: MGStyle.Spacing.sm) {
+                    TextField(p.description.isEmpty ? "https://" : p.description, text: strBinding(p.key, def: p.defaultValue?.value as? String ?? ""))
+                        .textFieldStyle(.roundedBorder)
+                    // URL validation indicator
+                    let current = values[p.key]?.value as? String ?? ""
+                    if !current.isEmpty {
+                        if URL(string: current) != nil && (!current.isEmpty) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(.green)
+                                .font(.system(size: 12))
+                        } else {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundColor(.orange)
+                                .font(.system(size: 12))
+                                .help("May not be a valid URL")
+                        }
+                    }
+                }
+            }
+        case .number:
+            paramRow(p) {
+                if let minV = p.validation?.minValue, let maxV = p.validation?.maxValue, minV < maxV {
+                    // Slider + text field for bounded ranges
+                    HStack(spacing: MGStyle.Spacing.md) {
+                        Slider(
+                            value: sliderBinding(p.key, def: p.defaultValue?.value as? Double ?? minV, min: minV, max: maxV),
+                            in: minV...maxV,
+                            step: maxV - minV > 10 ? 1 : 0.1
+                        )
+                        HStack(spacing: 2) {
+                            TextField("", text: numBinding(p.key, def: p.defaultValue?.value as? Double ?? 0))
+                                .textFieldStyle(.roundedBorder)
+                                .frame(width: 55)
+                                .multilineTextAlignment(.trailing)
+                            if let suffix = p.suffix {
+                                Text(suffix)
+                                    .font(.system(size: MGStyle.FontSize.caption))
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
+                } else {
+                    // Plain text field for unbounded numbers
+                    HStack(spacing: 2) {
+                        TextField(p.description, text: numBinding(p.key, def: p.defaultValue?.value as? Double ?? 0))
+                            .textFieldStyle(.roundedBorder)
+                            .frame(width: 100)
+                        if let suffix = p.suffix {
+                            Text(suffix)
+                                .font(.system(size: MGStyle.FontSize.caption))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+            }
+        case .boolean:
+            HStack {
+                Toggle(p.name, isOn: boolBinding(p.key, def: p.defaultValue?.value as? Bool ?? false))
+                if !p.description.isEmpty {
+                    Spacer()
+                    Text(p.description)
+                        .font(.system(size: MGStyle.FontSize.badge))
+                        .foregroundColor(.secondary)
+                }
+            }
+        case .selection:
+            if let vals = p.validation?.allowedValues {
+                let options = vals.compactMap { $0.value as? String }
+                let defaultVal = (p.defaultValue?.value as? String).flatMap({ options.contains($0) ? $0 : nil }) ?? options.first ?? ""
+                paramRow(p) {
+                    Picker("", selection: strBinding(p.key, def: defaultVal)) {
+                        // Only show "Select..." if no default is available and "" is not already an option
+                        if !options.contains("") && p.defaultValue == nil {
+                            Text("Select...").tag("")
+                        }
+                        ForEach(options, id: \.self) { v in
+                            Text(displayLabel(for: v, param: p)).tag(v)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .labelsHidden()
+                }
+            }
+        case .application:
+            paramRow(p) {
+                HStack(spacing: MGStyle.Spacing.sm) {
+                    Picker("", selection: strBinding(p.key, def: "")) {
+                        Text(p.placeholderLabel ?? "Select...").tag("")
+                        let isBrowserPicker = p.filterBrowsers == true
+                        let appList = isBrowserPicker
+                            ? WindowTargeting.getAllInstalledBrowsers()
+                            : WindowTargeting.getAllRunningApplications()
+                        let current = values[p.key]?.value as? String ?? ""
+                        if !current.isEmpty && !appList.contains(where: { $0.bundleId == current }) {
+                            let displayName = NSWorkspace.shared.urlForApplication(withBundleIdentifier: current)
+                                .flatMap { Bundle(url: $0)?.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String }
+                                ?? Bundle(url: NSWorkspace.shared.urlForApplication(withBundleIdentifier: current) ?? URL(fileURLWithPath: ""))?.object(forInfoDictionaryKey: "CFBundleName") as? String
+                                ?? current
+                            Text(displayName).tag(current)
+                            Divider()
+                        }
+                        ForEach(appList, id: \.bundleId) { app in
+                            Text(app.name).tag(app.bundleId)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .labelsHidden()
+                    Button(action: { browseForApp(paramKey: p.key) }) {
+                        Image(systemName: "folder")
+                    }
+                    .help("Browse for any installed application")
+                }
+            }
+        case .profile:
+            paramRow(p) {
+                Picker("", selection: strBinding(p.key, def: "")) {
+                    Text("Select...").tag("")
+                    ForEach(ProfileManager.shared.sortedProfiles, id: \.name) { profile in
+                        Text(profile.name).tag(profile.name)
+                    }
+                }
+                .pickerStyle(.menu)
+                .labelsHidden()
+            }
+        case .script:
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.sm) {
+                HStack {
+                    Text(p.name).font(.system(size: 12, weight: .medium))
+                    Spacer()
+                    if !p.description.isEmpty {
+                        Text(p.description)
+                            .font(.system(size: MGStyle.FontSize.badge))
+                            .foregroundColor(.secondary)
+                    }
+                }
+                let useFile = values["use_file"]?.value as? Bool ?? false
+                if useFile, let filePath = values["script_path"]?.value as? String, !filePath.isEmpty {
+                    // Show file contents as read-only preview
+                    let fileContents = (try? String(contentsOfFile: filePath, encoding: .utf8)) ?? "(unable to read file)"
+                    CodeTextEditor(text: .constant(fileContents), isEditable: false)
+                        .frame(minHeight: 80, maxHeight: 150)
+                        .border(MGStyle.Colors.separator, width: 1)
+                        .cornerRadius(MGStyle.Corner.sm)
+                        .opacity(0.75)
+                    Text("Preview of: \(filePath)")
+                        .font(.system(size: MGStyle.FontSize.badge))
+                        .foregroundColor(.secondary)
+                } else {
+                    CodeTextEditor(text: strBinding(p.key, def: p.defaultValue?.value as? String ?? ""), isEditable: true)
+                        .frame(minHeight: 80, maxHeight: 150)
+                        .border(MGStyle.Colors.separator, width: 1)
+                        .cornerRadius(MGStyle.Corner.sm)
+                }
+            }
+        case .keyboardShortcut:
+            paramRow(p) {
+                HStack(spacing: MGStyle.Spacing.md) {
+                    KeyboardShortcutFieldView(shortcut: Binding(
+                        get: {
+                            // Read from values dictionary
+                            guard let dict = values[p.key]?.value as? [String: Any],
+                                  let keyCode = dict["keyCode"] as? UInt16,
+                                  let modifiers = dict["modifiers"] as? UInt,
+                                  let displayString = dict["displayString"] as? String else {
+                                return nil
+                            }
+                            var mods = NSEvent.ModifierFlags()
+                            let flags = CGEventFlags(rawValue: UInt64(modifiers))
+                            if flags.contains(.maskCommand) { mods.insert(.command) }
+                            if flags.contains(.maskControl) { mods.insert(.control) }
+                            if flags.contains(.maskAlternate) { mods.insert(.option) }
+                            if flags.contains(.maskShift) { mods.insert(.shift) }
+                            return KeyboardTrigger(keyCode: keyCode, modifiers: mods, displayString: displayString)
+                        },
+                        set: { trigger in
+                            if let t = trigger {
+                                var cgFlags: CGEventFlags = []
+                                if t.modifiers.contains(.command) { cgFlags.insert(.maskCommand) }
+                                if t.modifiers.contains(.control) { cgFlags.insert(.maskControl) }
+                                if t.modifiers.contains(.option) { cgFlags.insert(.maskAlternate) }
+                                if t.modifiers.contains(.shift) { cgFlags.insert(.maskShift) }
+                                let dict: [String: Any] = [
+                                    "keyCode": t.keyCode,
+                                    "modifiers": UInt(cgFlags.rawValue),
+                                    "displayString": t.displayString
+                                ]
+                                values[p.key] = AnyCodable(dict)
+                            } else {
+                                values.removeValue(forKey: p.key)
+                            }
+                        }
+                    ))
+                    .frame(width: 200, height: 24)
+
+                    Button(action: { values.removeValue(forKey: p.key) }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Clear shortcut")
+                }
+            }
+        case .actionId:
+            paramRow(p) {
+                Picker("", selection: strBinding(p.key, def: "")) {
+                    Text("Select Action...").tag("")
+                    ForEach(actionChoices, id: \.id) { entry in
+                        Text(entry.name).tag(entry.id)
+                    }
+                }
+                .pickerStyle(.menu)
+                .labelsHidden()
+            }
+        case .date:
+            paramRow(p) {
+                DatePicker("", selection: dateBinding(p.key, def: p.defaultValue?.value as? String), displayedComponents: .date)
+                    .labelsHidden()
+            }
+        case .time:
+            paramRow(p) {
+                DatePicker("", selection: timeBinding(p.key, def: p.defaultValue?.value as? String), displayedComponents: .hourAndMinute)
+                    .labelsHidden()
+            }
+        case .weekdays:
+            paramRow(p) { weekdayToggles(p) }
+        case .json:
+            EmptyView()
+        default:
+            paramRow(p) {
+                TextField(p.description, text: strBinding(p.key, def: p.defaultValue?.value as? String ?? ""))
+                    .textFieldStyle(.roundedBorder)
+            }
+        }
+    }
+
+    private var actionChoices: [(id: String, name: String)] {
+        PluginManager.shared.getAllActions().filter { !$0.action.hidden }.map { (id: $0.pluginId + "." + $0.action.id, name: $0.action.name) }
+    }
+
+    // `.date` is stored as "yyyy-MM-dd", `.time` as "H:mm" (24-hour), `.weekdays` as "mon,wed,fri" ("" = every day).
+    private static let dateFormat: DateFormatter = {
+        let f = DateFormatter(); f.locale = Locale(identifier: "en_US_POSIX"); f.dateFormat = "yyyy-MM-dd"; return f
+    }()
+
+    private func dateBinding(_ k: String, def: String?) -> Binding<Date> {
+        Binding(get: { Self.dateFormat.date(from: values[k]?.value as? String ?? def ?? "") ?? Date() },
+                set: { values[k] = AnyCodable(Self.dateFormat.string(from: $0)) })
+    }
+
+    private func timeBinding(_ k: String, def: String?) -> Binding<Date> {
+        Binding(
+            get: {
+                let parts = ((values[k]?.value as? String) ?? def ?? "9:00").split(separator: ":").compactMap { Int($0) }
+                return Calendar.current.date(bySettingHour: parts.first ?? 9, minute: parts.count > 1 ? parts[1] : 0, second: 0, of: Date()) ?? Date()
+            },
+            set: {
+                let c = Calendar.current.dateComponents([.hour, .minute], from: $0)
+                values[k] = AnyCodable(String(format: "%d:%02d", c.hour ?? 0, c.minute ?? 0))
+            })
+    }
+
+    private static let weekdayKeys = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"]
+    private func storeWeekdays(_ key: String, _ set: Set<String>) {
+        values[key] = AnyCodable(set.count == 7 ? "" : Self.weekdayKeys.filter { set.contains($0) }.joined(separator: ","))
+    }
+
+    @ViewBuilder
+    private func weekdayToggles(_ p: ParameterDefinition) -> some View {
+        let names = [("sun", "Sun"), ("mon", "Mon"), ("tue", "Tue"), ("wed", "Wed"), ("thu", "Thu"), ("fri", "Fri"), ("sat", "Sat")]
+        let raw = (values[p.key]?.value as? String) ?? (p.defaultValue?.value as? String) ?? ""
+        let chosen = Set(raw.split(separator: ",").map { String($0).trimmingCharacters(in: .whitespaces) })
+        let all = chosen.isEmpty
+        VStack(alignment: .leading, spacing: MGStyle.Spacing.sm) {
+            HStack(spacing: MGStyle.Spacing.sm) {
+                ForEach(names, id: \.0) { key, label in
+                    let on = all || chosen.contains(key)
+                    Button(label) {
+                        var set = all ? Set(names.map { $0.0 }) : chosen
+                        if on { set.remove(key) } else { set.insert(key) }
+                        storeWeekdays(p.key, set.isEmpty ? Set(names.map { $0.0 }) : set)
+                    }
+                    .buttonStyle(.bordered).tint(on ? .accentColor : .gray).controlSize(.small)
+                }
+            }
+            HStack(spacing: MGStyle.Spacing.md) {
+                Button("Every day") { values[p.key] = AnyCodable("") }
+                Button("Weekdays") { values[p.key] = AnyCodable("mon,tue,wed,thu,fri") }
+                Button("Weekends") { values[p.key] = AnyCodable("sun,sat") }
+            }
+            .buttonStyle(.link).font(.caption)
+        }
+    }
+
+    /// Consistent row layout for a parameter: label on the left, control on the right
+    @ViewBuilder
+    private func paramRow<Content: View>(_ p: ParameterDefinition, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: MGStyle.Spacing.xs) {
+            HStack {
+                Text(p.name)
+                    .font(.system(size: 12, weight: .medium))
+                if !p.description.isEmpty && p.type != .script {
+                    Spacer()
+                    Text(p.description)
+                        .font(.system(size: MGStyle.FontSize.badge))
+                        .foregroundColor(.secondary.opacity(0.7))
+                }
+            }
+            content()
+        }
+    }
+
+    // MARK: - File/App Browsers
+
+    private func browseForPath(paramKey: String) {
+        let panel = NSOpenPanel()
+        panel.title = "Select File or Folder"
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = true
+        panel.allowsMultipleSelection = false
+        panel.begin { response in
+            guard response == .OK, let url = panel.url else { return }
+            DispatchQueue.main.async {
+                values[paramKey] = AnyCodable(url.path)
+            }
+        }
+    }
+
+    private func browseForApp(paramKey: String) {
+        let panel = NSOpenPanel()
+        panel.title = "Select Application"
+        panel.canChooseDirectories = false
+        panel.canChooseFiles = true
+        panel.allowsMultipleSelection = false
+        panel.allowedContentTypes = [.application]
+        panel.directoryURL = URL(fileURLWithPath: "/Applications")
+        panel.begin { response in
+            guard response == .OK, let url = panel.url else { return }
+            // Extract bundle ID from the selected .app
+            if let bundle = Bundle(url: url),
+               let bundleId = bundle.bundleIdentifier {
+                DispatchQueue.main.async {
+                    values[paramKey] = AnyCodable(bundleId)
+                }
+            }
+        }
+    }
+
+    // MARK: - Parameter Bindings
+
+    private func strBinding(_ k: String, def d: String) -> Binding<String> {
+        Binding(get: { values[k]?.value as? String ?? d },
+                set: { values[k] = AnyCodable($0) })
+    }
+    private func numBinding(_ k: String, def d: Double) -> Binding<String> {
+        Binding(
+            get: {
+                if let v = values[k]?.value as? Double { return String(v) }
+                if let v = values[k]?.value as? Int { return String(v) }
+                return String(d)
+            },
+            set: { if let v = Double($0) { values[k] = AnyCodable(v) } }
+        )
+    }
+    private func boolBinding(_ k: String, def d: Bool) -> Binding<Bool> {
+        Binding(get: { values[k]?.value as? Bool ?? d },
+                set: { values[k] = AnyCodable($0) })
+    }
+    private func sliderBinding(_ k: String, def d: Double, min minV: Double, max maxV: Double) -> Binding<Double> {
+        Binding(
+            get: {
+                if let v = values[k]?.value as? Double { return v }
+                if let v = values[k]?.value as? Int { return Double(v) }
+                return d
+            },
+            set: { values[k] = AnyCodable($0) }
+        )
+    }
+
+    private func resolveOptionProvider(_ key: String) -> [String] {
+        let plugin = PluginManager.shared.getPlugin(identifier: "com.mousegestures.window")
+        guard let wmp = plugin as? WindowManagementPlugin else { return [] }
+        switch key {
+        case "window.layouts":        return wmp.getAvailableLayouts()
+        case "window.position_slots": return wmp.getAvailablePositionSlots()
+        default: return []
+        }
+    }
+
 }

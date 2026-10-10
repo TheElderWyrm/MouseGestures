@@ -293,6 +293,9 @@ public enum ParameterType: String, Codable {
     case size
     case profile
     case actionId  // Picker showing all registered action identifiers
+    case date      // calendar date, stored as "yyyy-MM-dd"
+    case time      // time of day, stored as "H:mm" (24-hour)
+    case weekdays  // days of the week, stored as "mon,wed,fri" ("" = every day)
 }
 
 /// Validation rules for parameters
