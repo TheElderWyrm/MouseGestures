@@ -21,7 +21,7 @@ The everyday features are built into MouseGestures itself, free for everyone, in
 
 | Plugin | Kind | What it does | Permissions |
 |---|---|---|---|
-| Scheduler | detection | Run actions at times you write: `weekdays 8:30`, `every 30 min 9:00-17:00`, `sunset -30m`, `monthly 1 9:00` | — |
+| Scheduler | detection | Run actions on schedules you build visually: dates, weekdays, every N days or weeks, monthly (a date, the last day, the 2nd Tuesday), yearly, intervals, sunrise and sunset. A few ready-made schedules are included, or set a custom one in the gesture | — |
 | Clipboard & Capture | action | Clipboard history menu at the pointer, paste previous, collect selections, plain text; send the selection to an inbox file, note file, Reminders or Apple Notes | keystrokes, notifications |
 | System Events | detection | Triggers: sleep/wake, lock, power, battery low, disks, network, sound device changes, clipboard changes, appearance, idle, app launch/quit | — |
 | Finder Helpers | action | Copy paths, Terminal here, new window, hidden files, desktop icons, eject all disks | keystrokes, notifications |

@@ -422,7 +422,8 @@ struct PluginSourcesCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
             Text("Plugin Sources").font(.system(size: MGStyle.FontSize.body, weight: .medium))
-            Text("GitHub repositories with a library.json. The official library is connected automatically; add others (owner/repo, owner/repo@branch, or a github.com URL) to browse their plugins under Add Plugins.")
+            Text("GitHub repositories with a library.json. The official library is connected automatically; "
+                 + "add others (owner/repo, owner/repo@branch, or a github.com URL) to browse their plugins under Add Plugins.")
                 .font(.caption).foregroundColor(.secondary)
             ForEach(service.libraries) { repo in
                 HStack {

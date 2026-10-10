@@ -27,7 +27,7 @@ Legend: ✅ built · 🟡 partly · 💡 idea
 
 | Family | Examples | Plugin | Status |
 |---|---|---|---|
-| Time of day | At 8:30, weekdays, mon/wed/fri, every 30 min, sunrise / sunset ± offset, monthly, once | **Scheduler** | ✅ |
+| Time of day | At 8:30, weekdays, mon/wed/fri, every 30 min, sunrise / sunset ± offset, monthly (date, last day, 2nd Tuesday), yearly, every N days or weeks, specific dates | **Scheduler** | ✅ |
 | Countdown | A timer / alarm / Pomodoro finished, then run something | **Timers & Alarms** ("then run action") | ✅ |
 | Calendar | An event starts / ends, a reminder is due | — | 💡 |
 | Power | Sleep, wake, plugged in / unplugged, battery low, low-power mode | **System Events** | ✅ (low-power mode 💡) |
