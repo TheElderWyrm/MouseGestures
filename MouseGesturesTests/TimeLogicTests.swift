@@ -3,6 +3,19 @@ import XCTest
 
 
 final class TimeLogicTests: XCTestCase {
+    // The rules parse dates in the system zone (as the app does) while these tests compare in New York time, so pin the
+    // system zone; otherwise they only pass on a machine that happens to be in that zone (CI runs in UTC).
+    private var savedZone: TimeZone!
+    override func setUp() {
+        super.setUp()
+        savedZone = NSTimeZone.default
+        NSTimeZone.default = TimeZone(identifier: "America/New_York")!
+    }
+    override func tearDown() {
+        NSTimeZone.default = savedZone
+        super.tearDown()
+    }
+
     private func eq<T: Equatable>(_ a: T, _ b: T, _ n: String, file: StaticString = #filePath, line: UInt = #line) {
         XCTAssertEqual(a, b, n, file: file, line: line)
     }
