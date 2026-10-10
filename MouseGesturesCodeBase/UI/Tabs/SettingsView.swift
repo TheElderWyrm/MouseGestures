@@ -209,16 +209,8 @@ struct SettingsView: View {
         }
 
         if visibleSubs.count > 1 {
-            // Text-only, full-width segments with an id per category: a segmented control holding Labels is
-            // measured before its content exists and renders squeezed until it is clicked.
-            Picker("", selection: subcategorySelection(for: cat, visibleSubs: visibleSubs)) {
-                ForEach(visibleSubs, id: \.id) { sub in
-                    Text(sub.title).tag(sub.id)
-                }
-            }
-            .pickerStyle(.segmented)
-            .frame(maxWidth: .infinity)
-            .id(cat.id + visibleSubs.map { $0.id }.joined())
+            SubcategoryTabBar(tabs: visibleSubs.map { ($0.id, $0.title, $0.icon) },
+                              selection: subcategorySelection(for: cat, visibleSubs: visibleSubs))
         }
 
         let selectedSubId = selectedSubcategoryIds[cat.id] ?? visibleSubs.first?.id ?? ""
@@ -249,5 +241,59 @@ struct SettingsView: View {
                 selectedSubcategoryIds[cat.id] = newValue
             }
         )
+    }
+}
+
+
+// MARK: - Subcategory Tab Bar
+
+/// Content-sized tabs. When every icon + title no longer fits, only the selected tab keeps its title; if even that
+/// is too wide, all tabs collapse to their symbol (the title stays available as a tooltip).
+struct SubcategoryTabBar: View {
+    let tabs: [(id: String, title: String, icon: String)]
+    @Binding var selection: String
+
+    private enum Style { case full, selectedOnly, iconOnly }
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            bar(.full)
+            bar(.selectedOnly)
+            bar(.iconOnly)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func bar(_ style: Style) -> some View {
+        HStack(spacing: MGStyle.Spacing.sm) {
+            ForEach(tabs, id: \.id) { tab in
+                let selected = tab.id == selection
+                let showTitle = style == .full || (style == .selectedOnly && selected)
+                Button { selection = tab.id } label: {
+                    HStack(spacing: MGStyle.Spacing.sm) {
+                        Image(systemName: tab.icon)
+                            .font(.system(size: MGStyle.IconSize.row))
+                        if showTitle {
+                            Text(tab.title)
+                                .font(.system(size: MGStyle.FontSize.body, weight: selected ? .semibold : .regular))
+                                .lineLimit(1)
+                                .fixedSize()
+                        }
+                    }
+                    .padding(.horizontal, MGStyle.Spacing.lg)
+                    .padding(.vertical, MGStyle.Spacing.md - 1)
+                    .foregroundColor(selected ? .accentColor : .primary)
+                    .background(
+                        RoundedRectangle(cornerRadius: MGStyle.Corner.lg)
+                            .fill(selected ? MGStyle.Colors.selectedRow : MGStyle.Colors.subtleOverlay)
+                    )
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help(tab.title)
+                .accessibilityLabel(tab.title)
+            }
+        }
+        .fixedSize(horizontal: true, vertical: false)
     }
 }
