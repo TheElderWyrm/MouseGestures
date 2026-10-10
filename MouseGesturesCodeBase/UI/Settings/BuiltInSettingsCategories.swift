@@ -6,7 +6,7 @@ import UniformTypeIdentifiers
 enum SettingsCategories {
     static let general = SettingsCategoryDescriptor(id: "general", title: "General", icon: "gear", order: 0)
     static let detection = SettingsCategoryDescriptor(id: "detection", title: "Detection", icon: "hand.tap", order: 10)
-    static let features = SettingsCategoryDescriptor(id: "features", title: "Actions & Triggers", icon: "slider.horizontal.3", order: 50)
+    static let features = SettingsCategoryDescriptor(id: "features", title: "Actions", icon: "bolt.fill", order: 50)
     static let plugins = SettingsCategoryDescriptor(id: "plugins", title: "Plugins", icon: "puzzlepiece.extension", order: 60, isPro: true)
     static let license = SettingsCategoryDescriptor(id: "license", title: "License", icon: "checkmark.seal", order: 70)
     static let about = SettingsCategoryDescriptor(id: "about", title: "About", icon: "info.circle", order: 80)

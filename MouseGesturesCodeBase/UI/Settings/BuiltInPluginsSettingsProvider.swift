@@ -1,11 +1,18 @@
 import SwiftUI
 
-/// Settings ▸ Actions & Triggers: one tab per built-in plugin that has options (like Detection's tabs).
+/// Settings ▸ Actions (one tab per built-in action plugin with options) and Settings ▸ Detection (a tab for each
+/// built-in trigger plugin with options, beside the zone and app-profile tabs).
 struct BuiltInPluginsSettingsProvider: SettingsProvider {
     private static let icons: [String: String] = [
         "com.mousegestures.timers": "timer", "com.mousegestures.pointer": "cursorarrow.motionlines",
         "com.mousegestures.text": "textformat", "com.mousegestures.browser": "safari",
         "com.mousegestures.system": "gearshape.2", "com.mousegestures.media": "speaker.wave.2"
+    ]
+
+    /// Short tab labels, so the segmented picker never gets cramped.
+    private static let tabTitles: [String: String] = [
+        "com.mousegestures.timers": "Timers", "com.mousegestures.browser": "Browser",
+        "com.mousegestures.pointer": "Pointer Gestures"
     ]
 
     private static let keywords: [String: [String]] = [
@@ -16,15 +23,20 @@ struct BuiltInPluginsSettingsProvider: SettingsProvider {
     ]
 
     var settingsEntries: [SettingsEntry] {
-        PluginExtensionManager.shared.builtInPluginsWithSettings().enumerated().map { index, plugin in
-            let sub = SettingsSubcategoryDescriptor(id: plugin.id, title: plugin.name,
-                                                    icon: Self.icons[plugin.id] ?? "puzzlepiece.extension", order: index)
+        let detectionIds = Set(DetectionPluginManager.shared.getAllPlugins().map { $0.identifier })
+        return PluginExtensionManager.shared.builtInPluginsWithSettings().enumerated().map { index, plugin in
+            let isTrigger = detectionIds.contains(plugin.id)
+            // Detection already has General / Zones / App Profiles tabs (0–2); ours follow.
+            let sub = SettingsSubcategoryDescriptor(id: plugin.id, title: Self.tabTitles[plugin.id] ?? plugin.name,
+                                                    icon: Self.icons[plugin.id] ?? "puzzlepiece.extension",
+                                                    order: isTrigger ? 10 + index : index)
             let fields = PluginExtensionManager.shared.fields(plugin.id)
             let words = Self.keywords[plugin.id] ?? [plugin.name.lowercased()]
             let items = (fields.isEmpty ? [plugin.name] : fields.map { $0.title }).map {
                 SearchableSettingItem(title: $0, description: "\(plugin.name) option", keywords: words)
             }
-            return SettingsEntry(category: SettingsCategories.features, subcategory: sub, order: index, searchableItems: items,
+            return SettingsEntry(category: isTrigger ? SettingsCategories.detection : SettingsCategories.features,
+                                 subcategory: sub, order: index, searchableItems: items,
                                  viewBuilder: { _ in AnyView(PluginSettingsSheet(pluginId: plugin.id, pluginName: plugin.name, embedded: true)) })
         }
     }
