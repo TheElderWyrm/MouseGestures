@@ -46,6 +46,8 @@ struct ExternalTriggerConfig: ActivationComponentConfig {
     var pluginId: String = ""
     var triggerId: String = ""
     var displayName: String = ""
+    /// Per-gesture overrides of the trigger's options; a missing key means the plugin's own setting.
+    var options: [String: AnyCodable]? = nil
 
     var displayValue: String {
         guard isEnabled else { return "Not configured" }

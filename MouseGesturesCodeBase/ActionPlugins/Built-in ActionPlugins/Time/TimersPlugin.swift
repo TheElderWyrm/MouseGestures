@@ -25,6 +25,8 @@ public final class TimersPlugin: NSObject, GestureActionPlugin, PluginExtension 
         var then: String?                // action identifier to run when it goes off
         var thenParams: String?
         var queue: [Phase] = []          // upcoming Pomodoro phases
+        var sound: String?               // per-gesture override: "none" or a sound name; nil = plugin setting
+        var speak: Bool?                 // per-gesture override; nil = plugin setting
     }
     struct State: Codable {
         var items: [Item] = []
@@ -46,6 +48,12 @@ public final class TimersPlugin: NSObject, GestureActionPlugin, PluginExtension 
         ParameterDefinition(key: key, name: name, type: type, defaultValue: def.map { AnyCodable($0) }, description: desc,
                             validation: (min != nil || max != nil) ? ValidationRule(minValue: min, maxValue: max) : nil)
     }
+    /// Per-gesture overrides for how it rings; "inherit" falls back to the plugin's settings.
+    private static let ringParams = [
+        choice("sound", "Sound", [("inherit", "Default (from settings)"), ("none", "No sound")] + sounds.map { ($0, $0) }, "inherit"),
+        choice("speak", "Speak the label", [("inherit", "Default (from settings)"), ("yes", "Yes"), ("no", "No")], "inherit"),
+    ]
+    private static let sounds = ["Glass", "Hero", "Ping", "Submarine", "Funk", "Sosumi", "Basso"]
     private static let thenParams = [
         param("then", "Then run action", .actionId, "Optional: another action to run when it goes off"),
         param("thenParameters", "Action parameters", .string, "key=value,key=value for that action"),
@@ -59,16 +67,16 @@ public final class TimersPlugin: NSObject, GestureActionPlugin, PluginExtension 
     public var providedActions: [PluginAction] {[
         PluginAction(id: "start_timer", name: "Start Timer", description: "Count down, then notify (and optionally run an action)",
                      supportedParameters: [Self.param("minutes", "Minutes", .number, "Length (blank = the default in settings)", min: 0.05, max: 1440),
-                                           Self.param("label", "Label", .string, "Shown when time is up")] + Self.thenParams, icon: "timer"),
+                                           Self.param("label", "Label", .string, "Shown when time is up")] + Self.ringParams + Self.thenParams, icon: "timer"),
         PluginAction(id: "start_pomodoro", name: "Start Pomodoro", description: "Work / break cycles with a notification at each switch",
                      supportedParameters: [Self.param("work", "Work minutes", .number, "Focus length", def: 25, min: 1, max: 180),
                                            Self.param("shortBreak", "Break minutes", .number, "Short break length", def: 5, min: 1, max: 60),
                                            Self.param("longBreak", "Long break minutes", .number, "Break after the last round", def: 15, min: 1, max: 120),
-                                           Self.param("rounds", "Rounds", .number, "Work sessions before the long break", def: 4, min: 1, max: 12)], icon: "brain.head.profile"),
+                                           Self.param("rounds", "Rounds", .number, "Work sessions before the long break", def: 4, min: 1, max: 12)] + Self.ringParams, icon: "brain.head.profile"),
         PluginAction(id: "set_alarm", name: "Set Alarm", description: "Ring at a clock time (7:30, 7pm, 19:30)", requiresParameters: true,
                      supportedParameters: [Self.param("time", "Time", .string, "7:30, 7pm, 19:30, noon…"),
                                            Self.param("label", "Label", .string, "Shown when it rings"),
-                                           Self.choice("repeat", "Repeat", [("once", "Once"), ("daily", "Every day"), ("weekdays", "Weekdays"), ("weekends", "Weekends")], "once")] + Self.thenParams,
+                                           Self.choice("repeat", "Repeat", [("once", "Once"), ("daily", "Every day"), ("weekdays", "Weekdays"), ("weekends", "Weekends")], "once")] + Self.ringParams + Self.thenParams,
                      icon: "alarm"),
         PluginAction(id: "add_time", name: "Add Time to Timer", description: "Extend the next timer to ring (snooze it)",
                      supportedParameters: [Self.param("minutes", "Minutes", .number, "How much to add", def: 5, min: 1, max: 240)], icon: "plus.circle"),
@@ -97,12 +105,14 @@ public final class TimersPlugin: NSObject, GestureActionPlugin, PluginExtension 
         func num(_ k: String, _ d: Double) -> Double { parameters.number(for: k) ?? d }
         let then = parameters.string(for: "then").flatMap { $0.isEmpty ? nil : $0 }
         let thenParams = parameters.string(for: "thenParameters")
+        let sound = parameters.string(for: "sound").flatMap { $0 == "inherit" || $0.isEmpty ? nil : $0 }
+        let speak: Bool? = { switch parameters.string(for: "speak") { case "yes": return true; case "no": return false; default: return nil } }()
 
         switch action.id {
         case "start_timer":
             let minutes = min(1440, max(0.05, num("minutes", defMin)))
             let label = parameters.string(for: "label").flatMap { $0.isEmpty ? nil : $0 } ?? "Timer"
-            onMain { self.add(Item(id: UUID().uuidString, kind: "timer", label: label, fire: Date().addingTimeInterval(minutes * 60), then: then, thenParams: thenParams)) }
+            onMain { self.add(Item(id: UUID().uuidString, kind: "timer", label: label, fire: Date().addingTimeInterval(minutes * 60), then: then, thenParams: thenParams, sound: sound, speak: speak)) }
             context.showNotification(title: "\(label) started", message: TimeLogic.formatDuration(minutes * 60), style: .info)
         case "start_pomodoro":
             let work = num("work", 25) * 60, short = num("shortBreak", 5) * 60, long = num("longBreak", 15) * 60
@@ -113,7 +123,7 @@ public final class TimersPlugin: NSObject, GestureActionPlugin, PluginExtension 
                 phases.append(Phase(label: r == rounds ? "Long break" : "Break", seconds: r == rounds ? long : short))
             }
             let first = phases.removeFirst()
-            onMain { self.add(Item(id: UUID().uuidString, kind: "timer", label: first.label, fire: Date().addingTimeInterval(first.seconds), queue: phases)) }
+            onMain { self.add(Item(id: UUID().uuidString, kind: "timer", label: first.label, fire: Date().addingTimeInterval(first.seconds), queue: phases, sound: sound, speak: speak)) }
             context.showNotification(title: "Pomodoro started", message: "\(first.label) — \(TimeLogic.formatDuration(first.seconds))", style: .info)
         case "set_alarm":
             guard let c = TimeLogic.parseClock(parameters.string(for: "time") ?? "") else { throw PluginError.invalidParameters("Unrecognised time") }
@@ -121,7 +131,7 @@ public final class TimersPlugin: NSObject, GestureActionPlugin, PluginExtension 
             let days: Set<Int>? = rep == "daily" ? TimeLogic.allDays : rep == "weekdays" ? [2, 3, 4, 5, 6] : rep == "weekends" ? [1, 7] : nil
             guard let fire = TimeLogic.nextClock(hour: c.hour, minute: c.minute, days: days ?? TimeLogic.allDays, after: Date()) else { throw PluginError.executionFailed("No such time") }
             let label = parameters.string(for: "label").flatMap { $0.isEmpty ? nil : $0 } ?? "Alarm"
-            onMain { self.add(Item(id: UUID().uuidString, kind: "alarm", label: label, fire: fire, clock: [c.hour, c.minute], days: days.map { Array($0).sorted() }, then: then, thenParams: thenParams)) }
+            onMain { self.add(Item(id: UUID().uuidString, kind: "alarm", label: label, fire: fire, clock: [c.hour, c.minute], days: days.map { Array($0).sorted() }, then: then, thenParams: thenParams, sound: sound, speak: speak)) }
             context.showNotification(title: "\(label) set", message: "Rings \(Self.whenText(fire))", style: .success)
         case "add_time":
             let m = num("minutes", 5)
@@ -163,9 +173,10 @@ public final class TimersPlugin: NSObject, GestureActionPlugin, PluginExtension 
     public var settingsFields: [PluginSettingField] {[
         PluginSettingField(key: "defaultMinutes", title: "Default timer length", kind: .number(min: 1, max: 240, step: 1, unit: "min"),
                            defaultValue: AnyCodable(25), help: "Used by “Start Timer” when a gesture doesn't set its own minutes."),
-        PluginSettingField(key: "playSound", title: "Play a sound when time is up", kind: .toggle, defaultValue: AnyCodable(true)),
+        PluginSettingField(key: "playSound", title: "Play a sound when time is up", kind: .toggle, defaultValue: AnyCodable(true),
+                           help: "Defaults for all timers; a gesture can override sound and speech."),
         PluginSettingField(key: "sound", title: "Sound",
-                           kind: .choice(["Glass", "Hero", "Ping", "Submarine", "Funk", "Sosumi", "Basso"].map { PluginSettingChoice($0, $0) }), defaultValue: AnyCodable("Glass")),
+                           kind: .choice(Self.sounds.map { PluginSettingChoice($0, $0) }), defaultValue: AnyCodable("Glass")),
         PluginSettingField(key: "speak", title: "Speak the label when time is up", kind: .toggle, defaultValue: AnyCodable(false)),
     ]}
 
@@ -237,17 +248,18 @@ public final class TimersPlugin: NSObject, GestureActionPlugin, PluginExtension 
             state.items.remove(at: i)
         }
         save()
-        ring(title: isAlarm ? "⏰ \(item.label)" : "\(state.lastFired ?? item.label) is done", message: message, speakText: state.lastFired ?? item.label)
+        ring(title: isAlarm ? "⏰ \(item.label)" : "\(state.lastFired ?? item.label) is done", message: message, speakText: state.lastFired ?? item.label, sound: item.sound, speak: item.speak)
         if !late, let a = item.then {
             do { try host?.executeAction(identifier: a, parameters: ActionParameters.parse(commaSeparated: item.thenParams ?? "")) }
             catch { host?.log("Follow-up action \(a) failed: \(error)") }
         }
     }
 
-    private func ring(title: String, message: String, speakText: String) {
-        if host?.bool("playSound", default: true) ?? true { NSSound(named: NSSound.Name(host?.string("sound", default: "Glass") ?? "Glass"))?.play() }
+    private func ring(title: String, message: String, speakText: String, sound: String? = nil, speak: Bool? = nil) {
+        let name = sound ?? (host?.bool("playSound", default: true) ?? true ? host?.string("sound", default: "Glass") ?? "Glass" : "none")
+        if name != "none" { NSSound(named: NSSound.Name(name))?.play() }
         host?.notify(title: title, message: message)
-        if host?.bool("speak", default: false) ?? false { Self.speak(speakText) }
+        if speak ?? host?.bool("speak", default: false) ?? false { Self.speak(speakText) }
     }
 
     private func stopwatch(_ op: String) -> String {

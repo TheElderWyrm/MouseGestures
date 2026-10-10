@@ -15,7 +15,10 @@ public final class TextPlugin: NSObject, GestureActionPlugin, PluginExtension {
 
     private var context: PluginContext?
     private var settings: PluginHost?
-    private var restoreClipboard: Bool { settings?.bool("restoreClipboard", default: true) ?? true }
+    private var settingRestoreClipboard: Bool { settings?.bool("restoreClipboard", default: true) ?? true }
+    /// Set per call from the gesture's parameters ("inherit" = the plugin setting). Actions run one at a time.
+    private var restoreOverride: Bool?
+    private var restoreClipboard: Bool { restoreOverride ?? settingRestoreClipboard }
 
     public var settingsFields: [PluginSettingField] {[
         PluginSettingField(key: "restoreClipboard", title: "Restore the clipboard afterwards", kind: .toggle,
@@ -33,6 +36,12 @@ public final class TextPlugin: NSObject, GestureActionPlugin, PluginExtension {
         key: "applyToSelection", name: "Apply to selected text", type: .boolean, defaultValue: AnyCodable(true),
         description: "Copy the current selection, transform it and paste it back. Off = transform the clipboard only.")
 
+    private static let restoreParam = ParameterDefinition(
+        key: "restoreClipboard", name: "Restore the clipboard afterwards", type: .selection, defaultValue: AnyCodable("inherit"),
+        description: "Put your previous clipboard contents back after pasting.",
+        validation: ValidationRule(allowedValues: ["inherit", "yes", "no"].map { AnyCodable($0) }),
+        displayValues: ["inherit": "Default (from settings)", "yes": "Yes", "no": "No"])
+
     private static func choice(_ key: String, _ name: String, _ items: [(id: String, label: String)], _ def: String) -> ParameterDefinition {
         ParameterDefinition(key: key, name: name, type: .selection, defaultValue: AnyCodable(def), description: name,
                             validation: ValidationRule(allowedValues: items.map { AnyCodable($0.id) }),
@@ -47,7 +56,7 @@ public final class TextPlugin: NSObject, GestureActionPlugin, PluginExtension {
     public var providedActions: [PluginAction] {
         func a(_ id: String, _ name: String, _ desc: String, _ icon: String, _ params: [ParameterDefinition] = [], apply: Bool = true) -> PluginAction {
             PluginAction(id: id, name: name, description: desc, requiresParameters: !params.isEmpty && apply,
-                         supportedParameters: params + (apply ? [Self.applyParam] : []), icon: icon)
+                         supportedParameters: params + (apply ? [Self.applyParam, Self.restoreParam] : []), icon: icon)
         }
         return [
             a("change_case", "Change Case", "UPPER, lower, Title, Sentence, camel, snake, kebab…", "textformat.size", [Self.choice("style", "Style", TextOps.caseStyles, "upper")]),
@@ -92,6 +101,8 @@ public final class TextPlugin: NSObject, GestureActionPlugin, PluginExtension {
 
     public func execute(action: PluginAction, with parameters: ActionParameters, context: PluginContext) throws {
         let apply = parameters.bool(for: "applyToSelection") ?? true
+        switch parameters.string(for: "restoreClipboard") { case "yes": restoreOverride = true; case "no": restoreOverride = false; default: restoreOverride = nil }
+        defer { restoreOverride = nil }
         func s(_ key: String, _ def: String) -> String { parameters.string(for: key) ?? def }
         func fail(_ m: String) -> PluginError { PluginError.executionFailed(m) }
 

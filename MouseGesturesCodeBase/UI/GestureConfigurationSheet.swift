@@ -357,6 +357,16 @@ struct GestureConfigurationSheet: View {
             }
             .padding(.horizontal, MGStyle.Spacing.lg)
             .padding(.bottom, MGStyle.Spacing.sm)
+
+            if let def = adapter.triggers.first(where: { $0.id == components.externalTrigger?.triggerId }), !def.options.isEmpty {
+                TriggerOverridesView(
+                    fields: def.options,
+                    overrides: Binding(get: { components.externalTrigger?.options },
+                                       set: { components.externalTrigger?.options = $0 }),
+                    defaultValue: { PluginExtensionManager.shared.value(plugin.identifier, $0) })
+                    .padding(.horizontal, MGStyle.Spacing.lg)
+                    .padding(.bottom, MGStyle.Spacing.sm)
+            }
         }
     }
 
@@ -947,6 +957,78 @@ struct EditGestureSheet: View {
     var body: some View {
         GestureConfigurationSheet(mode: .edit, existingGesture: gesture) { updated in
             _ = uiServices.updateGesture(oldGesture: gesture, newGesture: updated)
+        }
+    }
+}
+
+
+// MARK: - Per-gesture trigger overrides
+
+/// "Adjust for this gesture": each option shows the plugin-wide default until the gesture overrides it. Only
+/// overridden keys are stored, so changing the default in Settings still reaches every gesture that left it alone.
+struct TriggerOverridesView: View {
+    let fields: [PluginSettingField]
+    @Binding var overrides: [String: AnyCodable]?
+    /// The plugin-wide value for a key (nil = the field's own default).
+    let defaultValue: (String) -> Any?
+    @State private var expanded = false
+
+    var body: some View {
+        DisclosureGroup(isExpanded: $expanded) {
+            VStack(alignment: .leading, spacing: MGStyle.Spacing.md) {
+                ForEach(fields.filter { if case .info = $0.kind { return false } else { return true } }, id: \.key) { row($0) }
+            }
+            .padding(.top, MGStyle.Spacing.sm)
+        } label: {
+            let n = overrides?.count ?? 0
+            Text(n == 0 ? "Adjust for this gesture" : "Adjust for this gesture (\(n) changed)")
+                .font(.caption).foregroundColor(.secondary)
+        }
+    }
+
+    private func current(_ f: PluginSettingField) -> Any? { defaultValue(f.key) ?? f.defaultValue?.value }
+
+    private func set(_ f: PluginSettingField, _ v: Any?) {
+        var o = overrides ?? [:]
+        if let v = v { o[f.key] = AnyCodable(v) } else { o.removeValue(forKey: f.key) }
+        overrides = o.isEmpty ? nil : o
+    }
+
+    @ViewBuilder
+    private func row(_ f: PluginSettingField) -> some View {
+        let own = overrides?[f.key]?.value
+        HStack(spacing: MGStyle.Spacing.md) {
+            Text(f.title).font(.caption).frame(maxWidth: .infinity, alignment: .leading)
+            switch f.kind {
+            case .number(let lo, let hi, let step, let unit):
+                let fmt: (Double) -> String = { String(format: step < 1 ? "%.1f" : "%.0f", $0) + (unit.map { " \($0)" } ?? "") }
+                let value = (own as? NSNumber)?.doubleValue ?? (current(f) as? NSNumber)?.doubleValue ?? lo
+                Stepper(value: Binding(get: { value }, set: { set(f, $0) }), in: lo...Swift.max(lo, hi), step: step) {
+                    Text(own == nil ? "Default (\(fmt(value)))" : fmt(value))
+                        .font(.caption).monospacedDigit().foregroundColor(own == nil ? .secondary : .primary)
+                }
+            case .choice(let choices):
+                let global = current(f) as? String
+                let defaultLabel = choices.first { $0.value == global }?.label ?? global ?? ""
+                Picker("", selection: Binding(get: { (own as? String) ?? "" }, set: { set(f, $0.isEmpty ? nil : $0) })) {
+                    Text("Default (\(defaultLabel))").tag("")
+                    ForEach(choices, id: \.value) { Text($0.label).tag($0.value) }
+                }
+                .labelsHidden().fixedSize()
+            case .toggle:
+                let global = (current(f) as? NSNumber)?.boolValue ?? false
+                Picker("", selection: Binding(get: { (own as? NSNumber).map { $0.boolValue ? "on" : "off" } ?? "" },
+                                              set: { set(f, $0.isEmpty ? nil : $0 == "on") })) {
+                    Text("Default (\(global ? "On" : "Off"))").tag("")
+                    Text("On").tag("on"); Text("Off").tag("off")
+                }
+                .labelsHidden().fixedSize()
+            default:
+                EmptyView()
+            }
+            Button { set(f, nil) } label: { Image(systemName: "arrow.uturn.backward") }
+                .buttonStyle(.borderless).help("Use the default")
+                .opacity(own == nil ? 0 : 1).disabled(own == nil)
         }
     }
 }

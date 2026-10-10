@@ -19,24 +19,27 @@ enum WebToolsActions {
                            help: "Optional. Overrides the engine; %s is replaced by the selected text."),
     ]
 
+    /// "inherit" = the default engine / custom URL in Settings; a gesture can pick its own.
+    private static let engineParams: [ParameterDefinition] = [
+        ParameterDefinition(
+            key: "engine", name: "Search engine", type: .selection, defaultValue: AnyCodable("inherit"),
+            description: "Where to search",
+            validation: ValidationRule(allowedValues: (["inherit"] + engines.keys.sorted()).map { AnyCodable($0) }),
+            displayValues: ["inherit": "Default (from settings)"].merging(engines.mapValues { $0.0 }) { a, _ in a }),
+        ParameterDefinition(key: "customTemplate", name: "Custom search URL", type: .string,
+                            description: "Optional. Overrides the engine for this gesture; %s is replaced by the selected text."),
+    ]
+
     static let actions: [PluginAction] = [
         PluginAction(id: "search_selection", name: "Search Selection on the Web", description: "Search the selected text",
-                     requiresParameters: true,
-                     supportedParameters: [ParameterDefinition(
-                        key: "engine", name: "Search engine", type: .selection, defaultValue: AnyCodable("google"),
-                        description: "Where to search",
-                        validation: ValidationRule(allowedValues: engines.keys.sorted().map { AnyCodable($0) }),
-                        displayValues: Dictionary(uniqueKeysWithValues: engines.map { ($0.key, $0.value.0) }))],
+                     requiresParameters: false,
+                     supportedParameters: engineParams,
                      icon: "magnifyingglass"),
         PluginAction(id: "open_clipboard_url", name: "Open URL from Clipboard", description: "Open the web address on the clipboard", icon: "doc.on.clipboard"),
         PluginAction(id: "open_selection_url", name: "Open Selected Link", description: "Open the selected text as a web address", icon: "link.badge.plus"),
         PluginAction(id: "search_clipboard", name: "Search Clipboard on the Web", description: "Search the text on the clipboard",
-                     requiresParameters: true,
-                     supportedParameters: [ParameterDefinition(
-                        key: "engine", name: "Search engine", type: .selection, defaultValue: AnyCodable("google"),
-                        description: "Where to search",
-                        validation: ValidationRule(allowedValues: engines.keys.sorted().map { AnyCodable($0) }),
-                        displayValues: Dictionary(uniqueKeysWithValues: engines.map { ($0.key, $0.value.0) }))],
+                     requiresParameters: false,
+                     supportedParameters: engineParams,
                      icon: "doc.text.magnifyingglass"),
         PluginAction(id: "define_selection", name: "Look Up in Dictionary", description: "Define the selected text in the Dictionary app", icon: "character.book.closed"),
         PluginAction(id: "copy_page_url", name: "Copy Page URL", description: "Copy the address of the front browser tab (Safari, Chrome, Brave, Edge, Opera, Vivaldi, Arc)", icon: "link"),
@@ -76,9 +79,13 @@ enum WebToolsActions {
     }
 
     private static func search(_ text: String, parameters: ActionParameters, settings: PluginHost?) throws {
-        let custom = settings?.string("customTemplate") ?? ""
-        let engine = parameters.string(for: "engine") ?? settings?.string("defaultEngine", default: "google") ?? "google"
-        let template = custom.contains("%s") ? custom : (engines[engine]?.1 ?? engines["google"]!.1)
+        let own = parameters.string(for: "customTemplate") ?? ""
+        let picked = parameters.string(for: "engine").flatMap { $0 == "inherit" || $0.isEmpty ? nil : $0 }
+        // A custom URL (this gesture's, else the global one) overrides the engine, as the setting's help text says.
+        let global = settings?.string("customTemplate") ?? ""
+        let custom = own.contains("%s") ? own : (global.contains("%s") ? global : "")
+        let engine = picked ?? settings?.string("defaultEngine", default: "google") ?? "google"
+        let template = custom.isEmpty ? (engines[engine]?.1 ?? engines["google"]!.1) : custom
         let q = text.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed.subtracting(CharacterSet(charactersIn: "&+=#"))) ?? text
         if let url = URL(string: template.replacingOccurrences(of: "%s", with: q)) { NSWorkspace.shared.open(url) }
     }

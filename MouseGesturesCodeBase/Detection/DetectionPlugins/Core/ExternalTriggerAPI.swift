@@ -12,18 +12,51 @@ public struct ExternalTriggerDefinition: Equatable {
     public let id: String
     public let name: String
     public let summary: String
+    /// Options a gesture can override for this trigger (sensitivity, timing…). Each is optional per gesture; an
+    /// unset option means "use the plugin's own setting", so the plugin must resolve its own defaults.
+    public let options: [PluginSettingField]
 
-    public init(id: String, name: String, summary: String = "") {
+    public init(id: String, name: String, summary: String = "", options: [PluginSettingField] = []) {
         self.id = id
         self.name = name
         self.summary = summary
+        self.options = options
     }
+
+    public static func == (a: Self, b: Self) -> Bool { a.id == b.id && a.name == b.name && a.summary == b.summary }
+}
+
+/// One gesture's use of a trigger, with the options that gesture overrides (absent key = plugin default).
+/// Gestures with identical overrides share a binding, so a plugin evaluates each distinct configuration once.
+public struct ExternalTriggerBinding {
+    public let triggerId: String
+    public let options: [String: Any]
+    let key: String
+
+    init(triggerId: String, overrides: [String: AnyCodable]?) {
+        self.triggerId = triggerId
+        let o = overrides ?? [:]
+        options = o.mapValues { $0.value }
+        key = triggerId + "|" + o.keys.sorted().map { "\($0)=\(o[$0]!.value)" }.joined(separator: ",")
+    }
+
+    public func number(_ k: String, default d: Double) -> Double { (options[k] as? NSNumber)?.doubleValue ?? d }
+    public func string(_ k: String, default d: String) -> String { options[k] as? String ?? d }
+    public func bool(_ k: String, default d: Bool) -> Bool { (options[k] as? NSNumber)?.boolValue ?? d }
+}
+
+/// Adopt (besides `ExternalTriggerPlugin`) to learn which triggers are in use and with which overrides. Called after
+/// `start` and whenever gestures change; evaluate only these bindings and report them with `host.fire(binding:)`.
+public protocol ExternalTriggerBindingAware: AnyObject {
+    func bindingsChanged(_ bindings: [ExternalTriggerBinding])
 }
 
 /// Handed to the plugin on `start`. Safe to call from any thread.
 public protocol ExternalTriggerHost: AnyObject {
     /// Reports that a declared trigger just happened; runs every enabled gesture bound to it.
     func fire(triggerId: String)
+    /// Like `fire(triggerId:)` but only runs gestures whose overrides match this binding.
+    func fire(binding: ExternalTriggerBinding)
     func log(_ message: String)
     /// A private folder for the plugin's own files.
     var storageDirectory: URL { get }
@@ -105,10 +138,22 @@ final class ExternalTriggerAdapter: BaseDetectionPlugin, ExternalTriggerHost {
             } catch {
                 log("Could not start: \(error.localizedDescription)")
             }
-        } else if !wanted, started {
+        }
+        if wanted, started { (external as? ExternalTriggerBindingAware)?.bindingsChanged(currentBindings()) }
+        if !wanted, started {
             external.stop(); started = false
             log("Stopped (no gesture uses it)")
         }
+    }
+
+    private func currentBindings() -> [ExternalTriggerBinding] {
+        var seen = Set<String>(), result: [ExternalTriggerBinding] = []
+        for g in context?.configuration.gestures ?? [] where g.isEnabled {
+            guard let t = g.components.externalTrigger, t.isEnabled, t.pluginId == identifier else { continue }
+            let b = ExternalTriggerBinding(triggerId: t.triggerId, overrides: t.options)
+            if seen.insert(b.key).inserted { result.append(b) }
+        }
+        return result
     }
 
     // MARK: ExternalTriggerHost
@@ -121,13 +166,17 @@ final class ExternalTriggerAdapter: BaseDetectionPlugin, ExternalTriggerHost {
         context?.logger.log(message, file: #file, function: #function, line: #line)
     }
 
-    func fire(triggerId: String) {
+    func fire(triggerId: String) { dispatch(triggerId: triggerId, bindingKey: nil) }
+    func fire(binding: ExternalTriggerBinding) { dispatch(triggerId: binding.triggerId, bindingKey: binding.key) }
+
+    private func dispatch(triggerId: String, bindingKey: String?) {
         DispatchQueue.main.async { [weak self] in
             guard let self = self, self.started, self.shouldContinue(), let context = self.context,
                   PluginLibraryService.proGateAllows(pluginId: self.identifier) else { return }
             let matches = context.configuration.gestures.filter {
                 guard $0.isEnabled, let t = $0.components.externalTrigger, t.isEnabled else { return false }
-                return t.pluginId == self.identifier && t.triggerId == triggerId
+                guard t.pluginId == self.identifier && t.triggerId == triggerId else { return false }
+                return bindingKey == nil || ExternalTriggerBinding(triggerId: triggerId, overrides: t.options).key == bindingKey
             }
             self.statistics = DetectionPluginStatistics(
                 eventsDetected: self.statistics.eventsDetected + 1,

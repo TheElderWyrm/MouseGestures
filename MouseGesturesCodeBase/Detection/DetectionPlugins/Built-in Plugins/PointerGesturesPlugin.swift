@@ -1,23 +1,27 @@
 import Cocoa
 
 /// All pointer-motion triggers behind one event monitor: shakes, circles and corner dwell.
-public final class PointerGesturesPlugin: NSObject, ExternalTriggerPlugin, PluginExtension {
+public final class PointerGesturesPlugin: NSObject, ExternalTriggerPlugin, ExternalTriggerBindingAware, PluginExtension {
     public var identifier: String { "com.mousegestures.pointer" }
     public var name: String { "Pointer Gestures" }
     public var summary: String { "Shake, circle or rest the pointer in a corner" }
     public var version: String { "1.0.0" }
     public var author: String { "MouseGestures" }
     public var icon: String { "cursorarrow.motionlines" }
-    public var triggers: [ExternalTriggerDefinition] {[
-        ExternalTriggerDefinition(id: "shake_horizontal", name: "Shake left and right", summary: "Several quick direction changes sideways"),
-        ExternalTriggerDefinition(id: "shake_vertical", name: "Shake up and down", summary: "Several quick direction changes vertically"),
-        ExternalTriggerDefinition(id: "circle_cw", name: "Circle (clockwise)", summary: "Draw a loop clockwise"),
-        ExternalTriggerDefinition(id: "circle_ccw", name: "Circle (counter-clockwise)", summary: "Draw a loop counter-clockwise"),
-        ExternalTriggerDefinition(id: "corner_top_left", name: "Rest in top-left corner", summary: "Dwell in the corner"),
-        ExternalTriggerDefinition(id: "corner_top_right", name: "Rest in top-right corner", summary: "Dwell in the corner"),
-        ExternalTriggerDefinition(id: "corner_bottom_left", name: "Rest in bottom-left corner", summary: "Dwell in the corner"),
-        ExternalTriggerDefinition(id: "corner_bottom_right", name: "Rest in bottom-right corner", summary: "Dwell in the corner"),
-    ]}
+    public var triggers: [ExternalTriggerDefinition] {
+        let shake = ["modifier", "reversals", "minStroke", "shakeWindow"], circle = ["modifier", "minSize", "circleWindow"], corner = ["dwell", "cornerSize"]
+        func opts(_ keys: [String]) -> [PluginSettingField] { keys.compactMap { k in settingsFields.first { $0.key == k } } }
+        return [
+            ExternalTriggerDefinition(id: "shake_horizontal", name: "Shake left and right", summary: "Several quick direction changes sideways", options: opts(shake)),
+            ExternalTriggerDefinition(id: "shake_vertical", name: "Shake up and down", summary: "Several quick direction changes vertically", options: opts(shake)),
+            ExternalTriggerDefinition(id: "circle_cw", name: "Circle (clockwise)", summary: "Draw a loop clockwise", options: opts(circle)),
+            ExternalTriggerDefinition(id: "circle_ccw", name: "Circle (counter-clockwise)", summary: "Draw a loop counter-clockwise", options: opts(circle)),
+            ExternalTriggerDefinition(id: "corner_top_left", name: "Rest in top-left corner", summary: "Dwell in the corner", options: opts(corner)),
+            ExternalTriggerDefinition(id: "corner_top_right", name: "Rest in top-right corner", summary: "Dwell in the corner", options: opts(corner)),
+            ExternalTriggerDefinition(id: "corner_bottom_left", name: "Rest in bottom-left corner", summary: "Dwell in the corner", options: opts(corner)),
+            ExternalTriggerDefinition(id: "corner_bottom_right", name: "Rest in bottom-right corner", summary: "Dwell in the corner", options: opts(corner)),
+        ]
+    }
 
     private var settings: PluginHost?
     public var settingsFields: [PluginSettingField] {[
@@ -45,14 +49,23 @@ public final class PointerGesturesPlugin: NSObject, ExternalTriggerPlugin, Plugi
 
     private var monitor: Any?
     private weak var host: ExternalTriggerHost?
+    private var bindings: [ExternalTriggerBinding] = []
     private var samples: [(p: CGPoint, t: TimeInterval)] = []
     private var lastFire: TimeInterval = 0
     private let spacing: CGFloat = 6
     private let cooldown: TimeInterval = 1.2
-    private var currentCorner: String?
-    private var cornerTimer: Timer?
+    private var cornerTimers: [String: Timer] = [:]      // binding key → pending dwell timer
+    private var firedCorners = Set<String>()             // fired while the pointer is still resting there
 
     private func num(_ k: String, _ d: Double) -> Double { settings?.number(k, default: d) ?? d }
+    /// A binding's own override if the gesture set one, else the plugin-wide setting.
+    private func num(_ b: ExternalTriggerBinding, _ k: String, _ d: Double) -> Double { b.number(k, default: num(k, d)) }
+
+    public func bindingsChanged(_ bindings: [ExternalTriggerBinding]) {
+        self.bindings = bindings
+        samples.removeAll()
+        cornerTimers.values.forEach { $0.invalidate() }; cornerTimers.removeAll(); firedCorners.removeAll()
+    }
 
     public func start(host: ExternalTriggerHost) throws {
         self.host = host
@@ -64,12 +77,12 @@ public final class PointerGesturesPlugin: NSObject, ExternalTriggerPlugin, Plugi
 
     public func stop() {
         if let m = monitor { NSEvent.removeMonitor(m) }
-        monitor = nil; host = nil; samples.removeAll()
-        cornerTimer?.invalidate(); cornerTimer = nil; currentCorner = nil
+        monitor = nil; host = nil; samples.removeAll(); bindings = []
+        cornerTimers.values.forEach { $0.invalidate() }; cornerTimers.removeAll(); firedCorners.removeAll()
     }
 
-    private func modifierHeld(_ f: NSEvent.ModifierFlags) -> Bool {
-        switch settings?.string("modifier", default: "none") ?? "none" {
+    private func modifierHeld(_ f: NSEvent.ModifierFlags, _ b: ExternalTriggerBinding) -> Bool {
+        switch b.string("modifier", default: settings?.string("modifier", default: "none") ?? "none") {
         case "option": return f.contains(.option)
         case "control": return f.contains(.control)
         case "shift": return f.contains(.shift)
@@ -79,61 +92,67 @@ public final class PointerGesturesPlugin: NSObject, ExternalTriggerPlugin, Plugi
     }
 
     private func moved(_ p: NSPoint, flags: NSEvent.ModifierFlags) {
-        updateCorner(p)
-        guard modifierHeld(flags) else { samples.removeAll(); return }
+        updateCorners(p)
+        let active = bindings.filter { !$0.triggerId.hasPrefix("corner_") && modifierHeld(flags, $0) }
+        guard !active.isEmpty else { samples.removeAll(); return }
         let now = ProcessInfo.processInfo.systemUptime
         if let last = samples.last, hypot(p.x - last.p.x, p.y - last.p.y) < spacing { return }
         samples.append((p, now))
-        let window = max(num("circleWindow", 1.4), num("shakeWindow", 0.8))
+        let window = active.map { $0.triggerId.hasPrefix("shake") ? num($0, "shakeWindow", 0.8) : num($0, "circleWindow", 1.4) }.max() ?? 1.4
         samples.removeAll { now - $0.t > window }
         guard samples.count >= 6, now - lastFire > cooldown else { return }
 
-        let shakeWindow = num("shakeWindow", 0.8)
-        let recent = samples.filter { now - $0.t <= shakeWindow }.map { $0.p }
-        let reversals = Int(num("reversals", 4)), stroke = CGFloat(num("minStroke", 70))
-        var id: String?
-        if Recognizers.shake(recent, vertical: false, reversalsNeeded: reversals, minStroke: stroke) { id = "shake_horizontal" }
-        else if Recognizers.shake(recent, vertical: true, reversalsNeeded: reversals, minStroke: stroke) { id = "shake_vertical" }
-        else {
-            let circleWindow = num("circleWindow", 1.4)
-            let pts = samples.filter { now - $0.t <= circleWindow }.map { $0.p }
-            id = Recognizers.circle(pts, minSize: CGFloat(num("minSize", 90)))
-        }
-        if let id = id {
-            lastFire = now
-            samples.removeAll()
-            host?.fire(triggerId: id)
+        for b in active {
+            let hit: Bool
+            if b.triggerId.hasPrefix("shake") {
+                let recent = samples.filter { now - $0.t <= num(b, "shakeWindow", 0.8) }.map { $0.p }
+                hit = Recognizers.shake(recent, vertical: b.triggerId == "shake_vertical",
+                                        reversalsNeeded: Int(num(b, "reversals", 4)), minStroke: CGFloat(num(b, "minStroke", 70)))
+            } else {
+                let pts = samples.filter { now - $0.t <= num(b, "circleWindow", 1.4) }.map { $0.p }
+                hit = Recognizers.circle(pts, minSize: CGFloat(num(b, "minSize", 90))) == b.triggerId
+            }
+            if hit {
+                lastFire = now
+                samples.removeAll()
+                host?.fire(binding: b)
+                return
+            }
         }
     }
 
     // MARK: corner dwell
 
-    private func corner(at p: NSPoint) -> String? {
-        let size = CGFloat(num("cornerSize", 6))
+    private func inCorner(_ id: String, at p: NSPoint, size: CGFloat) -> Bool {
         for s in NSScreen.screens where s.frame.insetBy(dx: -1, dy: -1).contains(p) {
             let f = s.frame
             let left = p.x - f.minX < size, right = f.maxX - p.x < size
             let bottom = p.y - f.minY < size, top = f.maxY - p.y < size
-            switch (left, right, top, bottom) {
-            case (true, _, true, _): return "corner_top_left"
-            case (_, true, true, _): return "corner_top_right"
-            case (true, _, _, true): return "corner_bottom_left"
-            case (_, true, _, true): return "corner_bottom_right"
-            default: return nil
+            switch id {
+            case "corner_top_left": return left && top
+            case "corner_top_right": return right && top
+            case "corner_bottom_left": return left && bottom
+            case "corner_bottom_right": return right && bottom
+            default: return false
             }
         }
-        return nil
+        return false
     }
 
-    private func updateCorner(_ p: NSPoint) {
-        let c = corner(at: p)
-        guard c != currentCorner else { return }
-        currentCorner = c
-        cornerTimer?.invalidate(); cornerTimer = nil
-        guard let c = c else { return }
-        cornerTimer = Timer.scheduledTimer(withTimeInterval: num("dwell", 0.9), repeats: false) { [weak self] _ in
-            guard let self = self, self.corner(at: NSEvent.mouseLocation) == c else { return }
-            self.host?.fire(triggerId: c)
+    private func updateCorners(_ p: NSPoint) {
+        for b in bindings where b.triggerId.hasPrefix("corner_") {
+            let inside = inCorner(b.triggerId, at: p, size: CGFloat(num(b, "cornerSize", 6)))
+            if !inside { cornerTimers.removeValue(forKey: b.key)?.invalidate(); firedCorners.remove(b.key); continue }
+            guard cornerTimers[b.key] == nil, !firedCorners.contains(b.key) else { continue }
+            cornerTimers[b.key] = Timer.scheduledTimer(withTimeInterval: num(b, "dwell", 0.9), repeats: false) { [weak self] _ in
+                guard let self = self else { return }
+                self.cornerTimers[b.key] = nil
+                // The pointer must still be there; it re-arms only after leaving and re-entering.
+                if self.inCorner(b.triggerId, at: NSEvent.mouseLocation, size: CGFloat(self.num(b, "cornerSize", 6))) {
+                    self.firedCorners.insert(b.key)
+                    self.host?.fire(binding: b)
+                }
+            }
         }
     }
 }
