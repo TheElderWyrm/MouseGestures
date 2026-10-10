@@ -2,9 +2,9 @@
   "id": "com.mousegestures.lib.scheduler",
   "name": "Scheduler",
   "kind": "detection",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": "MouseGestures",
-  "description": "Run gesture actions on a schedule instead of a gesture: at a time of day, on certain weekdays, every N minutes, at sunrise or sunset, monthly, or once. Write your own schedules in the plugin's settings, then pick them as a Plugin trigger.",
+  "description": "Run gesture actions on a schedule instead of a gesture. Build schedules in the plugin's settings: specific dates, days of the week, every N days or weeks, monthly (a day, the last day, the 2nd Tuesday), yearly, every N minutes, or sunrise and sunset. Then pick them as a Plugin trigger.",
   "shared": [
     "TimeLogic.swift"
   ],

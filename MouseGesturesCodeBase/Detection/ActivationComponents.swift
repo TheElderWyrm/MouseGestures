@@ -125,12 +125,47 @@ struct GestureActivationComponents: Codable, Equatable {
     var dragType: DragTypeConfig? = nil
     var mouseButton: MouseButtonConfig? = nil
     var keyboardShortcut: KeyboardShortcutConfig? = nil
-    var externalTrigger: ExternalTriggerConfig? = nil
+    /// Plugin triggers (shake, schedule…). Any one of them fires the gesture; they may come from different plugins.
+    var externalTriggers: [ExternalTriggerConfig] = []
     /// When true, the gesture will NOT fire if any mouse button is currently pressed
     var requireNoMouse: Bool = false
 
     /// Default initializer
     init() {}
+
+    private enum CodingKeys: String, CodingKey {
+        case modifierKey, screenZone, dragType, mouseButton, keyboardShortcut, externalTriggers, requireNoMouse
+        case legacyExternalTrigger = "externalTrigger"      // before a gesture could hold several
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        modifierKey = try c.decodeIfPresent(ModifierKeyConfig.self, forKey: .modifierKey)
+        screenZone = try c.decodeIfPresent(ScreenZoneConfig.self, forKey: .screenZone)
+        dragType = try c.decodeIfPresent(DragTypeConfig.self, forKey: .dragType)
+        mouseButton = try c.decodeIfPresent(MouseButtonConfig.self, forKey: .mouseButton)
+        keyboardShortcut = try c.decodeIfPresent(KeyboardShortcutConfig.self, forKey: .keyboardShortcut)
+        requireNoMouse = try c.decodeIfPresent(Bool.self, forKey: .requireNoMouse) ?? false
+        if let many = try c.decodeIfPresent([ExternalTriggerConfig].self, forKey: .externalTriggers) {
+            externalTriggers = many
+        } else if let one = try c.decodeIfPresent(ExternalTriggerConfig.self, forKey: .legacyExternalTrigger) {
+            externalTriggers = [one]
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encodeIfPresent(modifierKey, forKey: .modifierKey)
+        try c.encodeIfPresent(screenZone, forKey: .screenZone)
+        try c.encodeIfPresent(dragType, forKey: .dragType)
+        try c.encodeIfPresent(mouseButton, forKey: .mouseButton)
+        try c.encodeIfPresent(keyboardShortcut, forKey: .keyboardShortcut)
+        if !externalTriggers.isEmpty { try c.encode(externalTriggers, forKey: .externalTriggers) }
+        try c.encode(requireNoMouse, forKey: .requireNoMouse)
+    }
+
+    /// The enabled plugin triggers.
+    var activeExternalTriggers: [ExternalTriggerConfig] { externalTriggers.filter { $0.isEnabled } }
 
     /// Get all enabled activation types
     var enabledTypes: Set<ActivationType> {
@@ -151,7 +186,7 @@ struct GestureActivationComponents: Codable, Equatable {
 
     /// Check if gesture is valid (has at least one enabled component)
     var isValid: Bool {
-        return !enabledTypes.isEmpty || requireNoMouse || externalTrigger?.isEnabled == true
+        return !enabledTypes.isEmpty || requireNoMouse || !activeExternalTriggers.isEmpty
     }
 
     /// All registered components as (label, config) pairs in display order
@@ -162,7 +197,7 @@ struct GestureActivationComponents: Codable, Equatable {
         if let c = dragType { result.append(("Drag", c)) }
         if let c = mouseButton { result.append(("Mouse Button", c)) }
         if let c = keyboardShortcut { result.append(("Keyboard", c)) }
-        if let c = externalTrigger { result.append(("Plugin", c)) }
+        for c in externalTriggers { result.append(("Plugin", c)) }
         return result
     }
 
@@ -186,7 +221,8 @@ struct GestureActivationComponents: Codable, Equatable {
         for (label, config) in allComponents where config.isEnabled {
             segments.append("\(label):\(config.displayValue)")
         }
-        return segments.joined(separator: "|")
+        // Plugin triggers are alternatives, so their order must not matter
+        return segments.sorted().joined(separator: "|")
     }
 
 }

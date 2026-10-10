@@ -104,6 +104,11 @@ enum TimeLogic {
         case every(seconds: TimeInterval, days: Set<Int>, window: (start: Int, end: Int)?)   // window in minutes since midnight
         case solar(sunrise: Bool, offset: TimeInterval, days: Set<Int>)
         case monthly(day: Int, hour: Int, minute: Int)
+        case monthlyLast(hour: Int, minute: Int)                               // last day of each month
+        case nthWeekday(nth: Int, weekday: Int, hour: Int, minute: Int)        // nth = 1…4, or -1 for the last
+        case yearly(month: Int, day: Int, hour: Int, minute: Int)
+        case period(days: Int, anchor: Date, hour: Int, minute: Int)           // every N days, counted from anchor's day
+        case dates([Date])                                                     // an explicit list of moments
         case once(Date)
 
         static func == (l: Rule, r: Rule) -> Bool { "\(l)" == "\(r)" }
@@ -115,6 +120,11 @@ enum TimeLogic {
     ///   [days] sunrise|sunset [+/-30m]      → solar (needs latitude/longitude)
     ///   monthly 15 9:00                     → day of month
     ///   2026-12-25 08:00                    → one-off
+    ///   dates 2026-12-25 08:00; 2027-01-01 9:00 → a list of one-offs
+    ///   monthly last 17:00                  → last day of the month
+    ///   monthly 2nd tue 9:00 | monthly last fri 17:00 → nth weekday of the month
+    ///   yearly 12-25 9:00                   → every year on that date
+    ///   every 2 weeks [from 2026-10-12] 9:00 | every 3 days → every N days, optionally counted from a date
     static func parseRule(_ raw: String) -> Rule? {
         var s = raw.trimmingCharacters(in: .whitespaces).lowercased()
         guard !s.isEmpty else { return nil }
@@ -125,8 +135,44 @@ enum TimeLogic {
             let df = DateFormatter(); df.locale = Locale(identifier: "en_US_POSIX"); df.dateFormat = "yyyy-MM-dd HH:mm"
             return df.date(from: String(format: "%@ %02d:%02d", parts[0], clock.hour, clock.minute)).map { .once($0) }
         }
+        if s.hasPrefix("dates ") {
+            var list: [Date] = []
+            for chunk in s.dropFirst(6).split(separator: ";") {
+                guard let d = parseMoment(String(chunk)) else { return nil }
+                list.append(d)
+            }
+            return list.isEmpty ? nil : .dates(list.sorted())
+        }
+        if s.hasPrefix("yearly ") {
+            let parts = s.dropFirst(7).split(separator: " ", maxSplits: 1).map(String.init)
+            let md = parts.first?.split(separator: "-").compactMap { Int($0) } ?? []
+            guard parts.count == 2, md.count == 2, (1...12).contains(md[0]), (1...31).contains(md[1]), let c = parseClock(parts[1]) else { return nil }
+            return .yearly(month: md[0], day: md[1], hour: c.hour, minute: c.minute)
+        }
+        if let m = s.range(of: "^every\\s+(\\d+)\\s*(days?|weeks?)(?:\\s+from\\s+(\\d{4}-\\d{2}-\\d{2}))?\\s+(\\S+(?:\\s*(?:am|pm))?)$", options: .regularExpression) {
+            let re = try! NSRegularExpression(pattern: "^every\\s+(\\d+)\\s*(days?|weeks?)(?:\\s+from\\s+(\\d{4}-\\d{2}-\\d{2}))?\\s+(\\S+(?:\\s*(?:am|pm))?)$")
+            let str = String(s[m]); let ns = str as NSString
+            guard let g = re.firstMatch(in: str, range: NSRange(location: 0, length: ns.length)),
+                  let n = Int(ns.substring(with: g.range(at: 1))), n >= 1, n <= 366,
+                  let c = parseClock(ns.substring(with: g.range(at: 4))) else { return nil }
+            let step = ns.substring(with: g.range(at: 2)).hasPrefix("week") ? n * 7 : n
+            var anchor = Date(timeIntervalSince1970: 1_704_067_200)     // 2024-01-01, a Monday, when no start date is given
+            if g.range(at: 3).location != NSNotFound {
+                guard let a = parseMoment(ns.substring(with: g.range(at: 3)) + " 0:00") else { return nil }
+                anchor = a
+            }
+            return .period(days: step, anchor: anchor, hour: c.hour, minute: c.minute)
+        }
         if s.hasPrefix("monthly ") {
             let parts = s.dropFirst(8).split(separator: " ", maxSplits: 1).map(String.init)
+            if parts.count == 2, parts[0] == "last", let c = parseClock(parts[1]) { return .monthlyLast(hour: c.hour, minute: c.minute) }
+            if parts.count == 2 {                                    // "2nd tue 9:00", "last fri 17:00"
+                let rest = parts[1].split(separator: " ", maxSplits: 1).map(String.init)
+                let ords: [String: Int] = ["1st": 1, "first": 1, "2nd": 2, "second": 2, "3rd": 3, "third": 3, "4th": 4, "fourth": 4, "last": -1]
+                if rest.count == 2, let nth = ords[parts[0]], let wd = dayNames[rest[0]], let c = parseClock(rest[1]) {
+                    return .nthWeekday(nth: nth, weekday: wd, hour: c.hour, minute: c.minute)
+                }
+            }
             guard parts.count == 2, let day = Int(parts[0].replacingOccurrences(of: "st", with: "").replacingOccurrences(of: "nd", with: "").replacingOccurrences(of: "rd", with: "").replacingOccurrences(of: "th", with: "")),
                   (1...31).contains(day), let c = parseClock(parts[1]) else { return nil }
             return .monthly(day: day, hour: c.hour, minute: c.minute)
@@ -163,11 +209,60 @@ enum TimeLogic {
         return .clock(hour: c.hour, minute: c.minute, days: days)
     }
 
+    /// "2026-12-25 8:00" / "2026-12-25 8am" → that moment in the current time zone.
+    static func parseMoment(_ raw: String) -> Date? {
+        let parts = raw.trimmingCharacters(in: .whitespaces).split(separator: " ", maxSplits: 1).map(String.init)
+        guard parts.count == 2, parts[0].range(of: "^\\d{4}-\\d{2}-\\d{2}$", options: .regularExpression) != nil, let c = parseClock(parts[1]) else { return nil }
+        let df = DateFormatter(); df.locale = Locale(identifier: "en_US_POSIX"); df.dateFormat = "yyyy-MM-dd HH:mm"
+        return df.date(from: String(format: "%@ %02d:%02d", parts[0], c.hour, c.minute))
+    }
+
     /// Next firing strictly after `after`. `lat`/`lon` are only needed for solar rules.
     static func next(_ rule: Rule, after: Date, lat: Double?, lon: Double?, calendar: Calendar = .current) -> Date? {
         switch rule {
         case .clock(let h, let m, let days): return nextClock(hour: h, minute: m, days: days, after: after, calendar: calendar)
         case .once(let d): return d > after ? d : nil
+        case .dates(let list): return list.filter { $0 > after }.min()
+        case .monthlyLast(let h, let m):
+            for offset in 0...2 {
+                guard let first = calendar.date(byAdding: .month, value: offset, to: calendar.date(from: calendar.dateComponents([.year, .month], from: after))!),
+                      let days = calendar.range(of: .day, in: .month, for: first),
+                      let lastDay = calendar.date(byAdding: .day, value: days.count - 1, to: first),
+                      let t = calendar.date(bySettingHour: h, minute: m, second: 0, of: lastDay), t > after else { continue }
+                return t
+            }
+            return nil
+        case .nthWeekday(let nth, let weekday, let h, let m):
+            for offset in 0...13 {
+                guard let first = calendar.date(byAdding: .month, value: offset, to: calendar.date(from: calendar.dateComponents([.year, .month], from: after))!),
+                      let range = calendar.range(of: .day, in: .month, for: first) else { continue }
+                let matching = range.compactMap { d -> Date? in
+                    guard let day = calendar.date(byAdding: .day, value: d - 1, to: first), calendar.component(.weekday, from: day) == weekday else { return nil }
+                    return day
+                }
+                guard let day = nth > 0 ? (nth <= matching.count ? matching[nth - 1] : nil) : matching.last,
+                      let t = calendar.date(bySettingHour: h, minute: m, second: 0, of: day), t > after else { continue }
+                return t
+            }
+            return nil
+        case .yearly(let month, let day, let h, let m):
+            let year = calendar.component(.year, from: after)
+            for y in year...(year + 8) {      // Feb 29 only exists in leap years, so look ahead
+                guard let t = calendar.date(from: DateComponents(year: y, month: month, day: day, hour: h, minute: m)),
+                      calendar.component(.day, from: t) == day, t > after else { continue }
+                return t
+            }
+            return nil
+        case .period(let days, let anchor, let h, let m):
+            let start = calendar.startOfDay(for: anchor)
+            let elapsed = calendar.dateComponents([.day], from: start, to: calendar.startOfDay(for: after)).day ?? 0
+            var k = max(0, elapsed / days - 1)
+            while k < max(0, elapsed / days) + 3 {
+                if let day = calendar.date(byAdding: .day, value: k * days, to: start),
+                   let t = calendar.date(bySettingHour: h, minute: m, second: 0, of: day), t > after { return t }
+                k += 1
+            }
+            return nil
         case .monthly(let day, let h, let m):
             for offset in 0...370 {
                 guard let d = calendar.date(byAdding: .day, value: offset, to: after), calendar.component(.day, from: d) == day,
@@ -234,6 +329,17 @@ enum TimeLogic {
             return "every \(formatDuration(s)), \(dayText(d))" + (w.map { String(format: ", %02d:%02d–%02d:%02d", $0.start / 60, $0.start % 60, $0.end / 60, $0.end % 60) } ?? "")
         case .solar(let r, let o, let d): return (r ? "sunrise" : "sunset") + (o == 0 ? "" : (o > 0 ? " +" : " −") + formatDuration(abs(o))) + ", " + dayText(d)
         case .monthly(let day, let h, let m): return String(format: "day %d of each month at %02d:%02d", day, h, m)
+        case .monthlyLast(let h, let m): return String(format: "last day of each month at %02d:%02d", h, m)
+        case .nthWeekday(let nth, let wd, let h, let m):
+            let ords = [1: "1st", 2: "2nd", 3: "3rd", 4: "4th", -1: "last"]
+            let names = ["", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+            return String(format: "%@ %@ of each month at %02d:%02d", ords[nth] ?? "\(nth)th", names[wd], h, m)
+        case .yearly(let mo, let d, let h, let m):
+            let names = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+            return String(format: "every year on %@ %d at %02d:%02d", names[mo], d, h, m)
+        case .period(let days, _, let h, let m):
+            return String(format: "every %@ at %02d:%02d", days % 7 == 0 ? (days == 7 ? "week" : "\(days / 7) weeks") : (days == 1 ? "day" : "\(days) days"), h, m)
+        case .dates(let list): return "\(list.count) chosen date\(list.count == 1 ? "" : "s")"
         case .once(let d): return "once, " + d.formatted(date: .abbreviated, time: .shortened)
         }
     }

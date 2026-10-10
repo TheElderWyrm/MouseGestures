@@ -44,4 +44,38 @@ final class TimeLogicTests: XCTestCase {
         eq(TimeLogic.next(TimeLogic.parseRule("sunrise")!,after:Date(),lat:nil,lon:nil)==nil,true,"solar no loc")
 
     }
+
+    func testCalendarRules() {
+        var cal = Calendar(identifier: .gregorian); cal.timeZone = TimeZone(identifier: "America/New_York")!
+        let f = DateFormatter(); f.calendar = cal; f.timeZone = cal.timeZone; f.dateFormat = "yyyy-MM-dd HH:mm"
+        func d(_ s: String) -> Date { f.date(from: s)! }
+        func next(_ rule: String, _ after: String) -> String {
+            guard let r = TimeLogic.parseRule(rule), let n = TimeLogic.next(r, after: d(after), lat: nil, lon: nil, calendar: cal) else { return "nil" }
+            return f.string(from: n)
+        }
+        // 2026-10-09 is a Friday
+        XCTAssertEqual(next("monthly last 17:00", "2026-10-09 09:00"), "2026-10-31 17:00")
+        XCTAssertEqual(next("monthly last 17:00", "2026-10-31 18:00"), "2026-11-30 17:00")
+        XCTAssertEqual(next("monthly last 9:00", "2027-02-01 00:00"), "2027-02-28 09:00")
+        XCTAssertEqual(next("monthly 2nd tue 9:00", "2026-10-09 09:00"), "2026-10-13 09:00")
+        XCTAssertEqual(next("monthly 2nd tue 9:00", "2026-10-13 09:00"), "2026-11-10 09:00")
+        XCTAssertEqual(next("monthly last fri 17:00", "2026-10-09 09:00"), "2026-10-30 17:00")
+        XCTAssertEqual(next("monthly 1st mon 8am", "2026-10-09 09:00"), "2026-11-02 08:00")
+        XCTAssertEqual(next("yearly 12-25 9:00", "2026-10-09 09:00"), "2026-12-25 09:00")
+        XCTAssertEqual(next("yearly 12-25 9:00", "2026-12-25 09:00"), "2027-12-25 09:00")
+        XCTAssertEqual(next("yearly 2-29 9:00", "2026-10-09 09:00"), "2028-02-29 09:00")
+        XCTAssertEqual(next("dates 2026-12-25 08:00; 2026-11-01 9:30", "2026-10-09 09:00"), "2026-11-01 09:30")
+        XCTAssertEqual(next("dates 2026-12-25 08:00; 2026-11-01 9:30", "2026-11-01 09:30"), "2026-12-25 08:00")
+        XCTAssertEqual(next("dates 2026-12-25 08:00", "2027-01-01 00:00"), "nil")
+        // every 2 weeks counted from Monday 2026-10-12
+        XCTAssertEqual(next("every 2 weeks from 2026-10-12 9:00", "2026-10-09 09:00"), "2026-10-12 09:00")
+        XCTAssertEqual(next("every 2 weeks from 2026-10-12 9:00", "2026-10-12 09:00"), "2026-10-26 09:00")
+        XCTAssertEqual(next("every 2 weeks from 2026-10-12 9:00", "2026-11-20 09:00"), "2026-11-23 09:00")
+        XCTAssertEqual(next("every 3 days from 2026-10-09 7am", "2026-10-09 07:00"), "2026-10-12 07:00")
+        // existing grammar still wins for intervals
+        XCTAssertEqual(next("every 30 min", "2026-10-09 09:10"), "2026-10-09 09:30")
+        for bad in ["monthly 5th tue 9:00", "yearly 13-1 9:00", "yearly 2-30 9:00x", "dates", "dates nonsense", "every 0 days 9:00", "every 2 weeks from 2026-13-45 9:00"] {
+            XCTAssertNil(TimeLogic.parseRule(bad), "should reject \(bad)")
+        }
+    }
 }

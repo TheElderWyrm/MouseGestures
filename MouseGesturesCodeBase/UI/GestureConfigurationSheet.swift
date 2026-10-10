@@ -143,9 +143,8 @@ struct GestureConfigurationSheet: View {
         if components.keyboardShortcut?.isEnabled == true {
             triggerParts.append(components.keyboardShortcut?.keyboardTrigger?.displayString ?? "Key")
         }
-        if components.externalTrigger?.isEnabled == true {
-            triggerParts.append(components.externalTrigger?.displayValue ?? "Plugin")
-        }
+        let pluginTriggers = components.activeExternalTriggers.map { $0.displayValue }
+        if !pluginTriggers.isEmpty { triggerParts.append(pluginTriggers.joined(separator: " or ")) }
 
         let trigger = triggerParts.isEmpty ? "No trigger" : triggerParts.joined(separator: " + ")
 
@@ -318,56 +317,92 @@ struct GestureConfigurationSheet: View {
 
     // MARK: - External Trigger Plugins
 
+    /// Indices into `components.externalTriggers` that belong to this plugin.
+    private func triggerIndices(of plugin: DetectionPlugin) -> [Int] {
+        components.externalTriggers.indices.filter { components.externalTriggers[$0].pluginId == plugin.identifier && components.externalTriggers[$0].isEnabled }
+    }
+
+    private func newExternalTrigger(_ plugin: DetectionPlugin, _ def: ExternalTriggerDefinition) -> ExternalTriggerConfig {
+        ExternalTriggerConfig(isEnabled: true, pluginId: plugin.identifier, triggerId: def.id,
+                              displayName: "\(plugin.triggerTitle): \(def.name)")
+    }
+
+    /// Each plugin keeps its own triggers, so turning one plugin on never touches another's, and a plugin can
+    /// contribute several (e.g. two schedules). The gesture fires when any of them does.
     @ViewBuilder
     private func externalTriggerCard(_ plugin: DetectionPlugin) -> some View {
         let adapter = plugin as? ExternalTriggerAdapter
-        let isOn = components.externalTrigger?.isEnabled == true && components.externalTrigger?.pluginId == plugin.identifier
+        let indices = triggerIndices(of: plugin)
         ComponentToggleCard(
             icon: plugin.triggerIcon,
             title: plugin.triggerTitle,
             description: plugin.triggerDescription,
             isEnabled: Binding(
-                get: { isOn },
+                get: { !indices.isEmpty },
                 set: { enabled in
-                    if enabled, let first = adapter?.triggers.first {
-                        components.externalTrigger = ExternalTriggerConfig(
-                            isEnabled: true, pluginId: plugin.identifier, triggerId: first.id,
-                            displayName: "\(plugin.triggerTitle): \(first.name)")
-                    } else if isOn {
-                        components.externalTrigger?.isEnabled = false
+                    if enabled, indices.isEmpty, let first = adapter?.triggers.first {
+                        components.externalTriggers.append(newExternalTrigger(plugin, first))
+                    } else if !enabled {
+                        components.externalTriggers.removeAll { $0.pluginId == plugin.identifier }
                     }
                 }
             )
         )
-        if isOn, let adapter = adapter {
-            HStack {
-                Text("Trigger").font(.caption).foregroundColor(.secondary)
-                Picker("", selection: Binding(
-                    get: { components.externalTrigger?.triggerId ?? "" },
-                    set: { id in
-                        guard let t = adapter.triggers.first(where: { $0.id == id }) else { return }
-                        components.externalTrigger?.triggerId = id
-                        components.externalTrigger?.displayName = "\(plugin.triggerTitle): \(t.name)"
-                    }
-                )) {
-                    ForEach(adapter.triggers, id: \.id) { Text($0.name).tag($0.id) }
+        if let adapter = adapter {
+            ForEach(indices, id: \.self) { i in
+                if i < components.externalTriggers.count {
+                    externalTriggerRow(adapter: adapter, plugin: plugin, index: i, canRemove: indices.count > 1)
                 }
-                .labelsHidden()
-                Spacer()
             }
-            .padding(.horizontal, MGStyle.Spacing.lg)
-            .padding(.bottom, MGStyle.Spacing.sm)
+            if !indices.isEmpty {
+                Button {
+                    // pick a trigger this plugin isn't already using, if there is one
+                    let used = Set(indices.map { components.externalTriggers[$0].triggerId })
+                    if let def = adapter.triggers.first(where: { !used.contains($0.id) }) ?? adapter.triggers.first {
+                        components.externalTriggers.append(newExternalTrigger(plugin, def))
+                    }
+                } label: { Label("Add another \(plugin.triggerTitle) trigger", systemImage: "plus.circle") }
+                .buttonStyle(.borderless).font(.caption)
+                .padding(.horizontal, MGStyle.Spacing.lg)
+                .padding(.bottom, MGStyle.Spacing.sm)
+            }
+        }
+    }
 
-            let options = adapter.options(forTrigger: components.externalTrigger?.triggerId ?? "")
-            if !options.isEmpty {
-                TriggerOverridesView(
-                    fields: options,
-                    overrides: Binding(get: { components.externalTrigger?.options },
-                                       set: { components.externalTrigger?.options = $0 }),
-                    defaultValue: { PluginExtensionManager.shared.value(plugin.identifier, $0) })
-                    .padding(.horizontal, MGStyle.Spacing.lg)
-                    .padding(.bottom, MGStyle.Spacing.sm)
+    @ViewBuilder
+    private func externalTriggerRow(adapter: ExternalTriggerAdapter, plugin: DetectionPlugin, index i: Int, canRemove: Bool) -> some View {
+        HStack {
+            Text("Trigger").font(.caption).foregroundColor(.secondary)
+            Picker("", selection: Binding(
+                get: { components.externalTriggers[i].triggerId },
+                set: { id in
+                    guard let t = adapter.triggers.first(where: { $0.id == id }) else { return }
+                    components.externalTriggers[i].triggerId = id
+                    components.externalTriggers[i].displayName = "\(plugin.triggerTitle): \(t.name)"
+                    components.externalTriggers[i].options = nil
+                }
+            )) {
+                ForEach(adapter.triggers, id: \.id) { Text($0.name).tag($0.id) }
             }
+            .labelsHidden()
+            Spacer()
+            if canRemove {
+                Button { components.externalTriggers.remove(at: i) } label: { Image(systemName: "minus.circle") }
+                    .buttonStyle(.borderless).help("Remove this trigger")
+            }
+        }
+        .padding(.horizontal, MGStyle.Spacing.lg)
+        .padding(.bottom, MGStyle.Spacing.sm)
+
+        let options = adapter.options(forTrigger: components.externalTriggers[i].triggerId)
+        if !options.isEmpty {
+            TriggerOverridesView(
+                fields: options,
+                overrides: Binding(get: { i < components.externalTriggers.count ? components.externalTriggers[i].options : nil },
+                                   set: { if i < components.externalTriggers.count { components.externalTriggers[i].options = $0 } }),
+                defaultValue: { PluginExtensionManager.shared.value(plugin.identifier, $0) })
+                .padding(.horizontal, MGStyle.Spacing.lg)
+                .padding(.bottom, MGStyle.Spacing.sm)
         }
     }
 

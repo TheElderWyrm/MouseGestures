@@ -63,6 +63,8 @@ def main():
             out = os.path.join(sdir, name); shutil.copy(os.path.join(ROOT, "shared", name), out); srcs.append(out)
         sh("xcrun", "swiftc", "-O", "-swift-version", "5", "-parse-as-library", "-module-name", exe,
            "-target", f"arm64-apple-macosx{args.min_macos}", "-I", args.sdk,
+           # SwiftUI's @State/@Observable are macros; plugins that use SwiftUI need the SDK's macro plugins
+           "-plugin-path", os.path.join(DEV, "Platforms/MacOSX.platform/Developer/usr/lib/swift/host/plugins"),
            "-Xlinker", "-bundle", "-Xlinker", "-undefined", "-Xlinker", "dynamic_lookup",
            "-emit-library", "-o", os.path.join(bundle, "Contents", "MacOS", exe), *srcs)
         plistlib.dump({

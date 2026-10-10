@@ -133,8 +133,7 @@ final class ExternalTriggerAdapter: BaseDetectionPlugin, ExternalTriggerBindingH
     private var hasBoundGestures: Bool {
         guard let gestures = context?.configuration.gestures else { return false }
         return gestures.contains { g in
-            guard g.isEnabled, let trigger = g.components.externalTrigger, trigger.isEnabled else { return false }
-            return trigger.pluginId == identifier
+            g.isEnabled && g.components.activeExternalTriggers.contains { $0.pluginId == identifier }
         }
     }
 
@@ -159,9 +158,10 @@ final class ExternalTriggerAdapter: BaseDetectionPlugin, ExternalTriggerBindingH
     private func currentBindings() -> [ExternalTriggerBinding] {
         var seen = Set<String>(), result: [ExternalTriggerBinding] = []
         for g in context?.configuration.gestures ?? [] where g.isEnabled {
-            guard let t = g.components.externalTrigger, t.isEnabled, t.pluginId == identifier else { continue }
-            let b = ExternalTriggerBinding(triggerId: t.triggerId, overrides: t.options)
-            if seen.insert(b.key).inserted { result.append(b) }
+            for t in g.components.activeExternalTriggers where t.pluginId == identifier {
+                let b = ExternalTriggerBinding(triggerId: t.triggerId, overrides: t.options)
+                if seen.insert(b.key).inserted { result.append(b) }
+            }
         }
         return result
     }
@@ -184,9 +184,11 @@ final class ExternalTriggerAdapter: BaseDetectionPlugin, ExternalTriggerBindingH
             guard let self = self, self.started, self.shouldContinue(), let context = self.context,
                   PluginLibraryService.proGateAllows(pluginId: self.identifier) else { return }
             let matches = context.configuration.gestures.filter {
-                guard $0.isEnabled, let t = $0.components.externalTrigger, t.isEnabled else { return false }
-                guard t.pluginId == self.identifier && t.triggerId == triggerId else { return false }
-                return bindingKey == nil || ExternalTriggerBinding(triggerId: triggerId, overrides: t.options).key == bindingKey
+                guard $0.isEnabled else { return false }
+                return $0.components.activeExternalTriggers.contains { t in
+                    guard t.pluginId == self.identifier && t.triggerId == triggerId else { return false }
+                    return bindingKey == nil || ExternalTriggerBinding(triggerId: triggerId, overrides: t.options).key == bindingKey
+                }
             }
             self.statistics = DetectionPluginStatistics(
                 eventsDetected: self.statistics.eventsDetected + 1,
